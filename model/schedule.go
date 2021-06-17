@@ -727,12 +727,12 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *
 
 	// add assessment
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
-		studyInput := make([]*entity.AddStudyInput, len(scheduleList))
+		studyInput := make([]*entity.AddAssessmentArgs, len(scheduleList))
 
 		for i, item := range scheduleList {
 			attendances := userRelations[item.ID]
 
-			studyInput[i] = &entity.AddStudyInput{
+			studyInput[i] = &entity.AddAssessmentArgs{
 				ScheduleID:    item.ID,
 				ClassID:       item.ClassID,
 				LessonPlanID:  item.LessonPlanID,

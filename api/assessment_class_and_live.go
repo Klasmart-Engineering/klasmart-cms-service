@@ -25,7 +25,7 @@ import (
 // @Produce json
 // @Param status query string false "status search"
 // @Param teacher_name query string false "teacher name fuzzy search"
-// @Param class_type query string false "class type"
+// @Param class_type query string false "class type" enums(OnlineClass,OfflineClass)
 // @Param page query int false "page number" default(1)
 // @Param page_size query integer false "page size" format(int) default(10)
 // @Param order_by query string false "list order by" enums(class_end_time,-class_end_time,complete_time,-complete_time) default(-class_end_time)
@@ -194,7 +194,7 @@ func (s *Server) updateAssessment(c *gin.Context) {
 // @ID addAssessment
 // @Accept json
 // @Produce json
-// @Param assessment body entity.AddAssessmentArgs true "add assessment command"
+// @Param assessment body entity.AddClassAndLiveAssessmentArgs true "add assessment command"
 // @Success 200 {object} entity.AddAssessmentResult
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -214,7 +214,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 		return
 	}
 
-	args := entity.AddAssessmentArgs{}
+	args := entity.AddClassAndLiveAssessmentArgs{}
 	if _, err := jwt.ParseWithClaims(body.Token, &args, func(token *jwt.Token) (interface{}, error) {
 		return config.Get().Assessment.AddAssessmentSecret, nil
 	}); err != nil {
@@ -257,7 +257,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 // @ID addAssessmentForTest
 // @Accept json
 // @Produce json
-// @Param assessment body entity.AddAssessmentArgs true "add assessment command"
+// @Param assessment body entity.AddClassAndLiveAssessmentArgs true "add assessment command"
 // @Success 200 {object} entity.AddAssessmentResult
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -265,7 +265,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 func (s *Server) addAssessmentForTest(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	args := entity.AddAssessmentArgs{}
+	args := entity.AddClassAndLiveAssessmentArgs{}
 	if err := c.ShouldBind(&args); err != nil {
 		log.Info(ctx, "add assessment: bind failed",
 			log.Err(err),
