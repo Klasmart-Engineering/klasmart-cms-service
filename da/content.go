@@ -442,6 +442,9 @@ func (cd *DBContentDA) SearchContentInternal(ctx context.Context, tx *dbo.DBCont
 
 func (cd *DBContentDA) GetContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error) {
 	objs := make([]*entity.ContentVisibilitySetting, 0)
+	if cid == "" {
+		return nil, nil
+	}
 	err := cd.s.QueryTx(ctx, tx, &ContentVisibilitySettingsCondition{
 		ContentIDs: []string{cid},
 	}, &objs)
@@ -457,6 +460,9 @@ func (cd *DBContentDA) GetContentVisibilitySettings(ctx context.Context, tx *dbo
 }
 
 func (cd *DBContentDA) SearchContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, condition *ContentVisibilitySettingsCondition) ([]*entity.ContentVisibilitySetting, error) {
+	if condition.Empty() {
+		return nil, nil
+	}
 	objs := make([]*entity.ContentVisibilitySetting, 0)
 	err := cd.s.QueryTx(ctx, tx, condition, &objs)
 	if err != nil {
@@ -524,6 +530,13 @@ type ContentVisibilitySettingsCondition struct {
 	Pager              utils.Pager
 }
 
+func (s *ContentVisibilitySettingsCondition) Empty() bool {
+	if len(s.IDS) == 0 && len(s.VisibilitySettings) == 0 && len(s.ContentIDs) == 0 {
+		return true
+	}
+	return false
+}
+
 func (s *ContentVisibilitySettingsCondition) GetConditions() ([]string, []interface{}) {
 	conditions := make([]string, 0)
 	params := make([]interface{}, 0)
@@ -547,6 +560,7 @@ func (s *ContentVisibilitySettingsCondition) GetConditions() ([]string, []interf
 	}
 	return conditions, params
 }
+
 func (s *ContentVisibilitySettingsCondition) GetPager() *dbo.Pager {
 	return &dbo.Pager{
 		Page:     int(s.Pager.PageIndex),
