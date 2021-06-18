@@ -24,22 +24,22 @@ type IOutcomeModel interface {
 	Get(ctx context.Context, operator *entity.Operator, outcomeID string) (*entity.Outcome, error)
 	Update(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) error
 	Delete(ctx context.Context, operator *entity.Operator, outcomeID string) error
-	Search(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
+	Search(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
 
-	Lock(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string) (string, error)
+	Lock(ctx context.Context, operator *entity.Operator, outcomeID string) (string, error)
 
 	Publish(ctx context.Context, operator *entity.Operator, outcomeID string, scope string) error
-	BulkPublish(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string, scope string) error
-	BulkDelete(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) error
+	BulkPublish(ctx context.Context, operator *entity.Operator, outcomeIDs []string, scope string) error
+	BulkDelete(ctx context.Context, operator *entity.Operator, outcomeIDs []string) error
 
-	SearchPrivate(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
-	SearchPending(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
+	SearchPrivate(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
+	SearchPending(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
 
 	GetByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
 	GetLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
 
 	Approve(ctx context.Context, operator *entity.Operator, outcomeID string) error
-	Reject(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string, reason string) error
+	Reject(ctx context.Context, operator *entity.Operator, outcomeID string, reason string) error
 
 	BulkApprove(ctx context.Context, operator *entity.Operator, outcomeIDs []string) error
 	BulkReject(ctx context.Context, operator *entity.Operator, outcomeIDs []string, reason string) error
@@ -594,7 +594,7 @@ func (ocm OutcomeModel) search(ctx context.Context, op *entity.Operator, tx *dbo
 	return total, outcomes, nil
 }
 
-func (ocm OutcomeModel) Search(ctx context.Context, user *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
+func (ocm OutcomeModel) Search(ctx context.Context, user *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
 	if condition.OrganizationID == "" {
 		condition.OrganizationID = user.OrgID
 	}
@@ -637,7 +637,7 @@ func (ocm OutcomeModel) Search(ctx context.Context, user *entity.Operator, tx *d
 	return total, outcomes, err
 }
 
-func (ocm OutcomeModel) Lock(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string) (string, error) {
+func (ocm OutcomeModel) Lock(ctx context.Context, operator *entity.Operator, outcomeID string) (string, error) {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeLock)
 	if err != nil {
 		log.Error(ctx, "Lock: NewLock failed",
@@ -776,7 +776,7 @@ func (ocm OutcomeModel) Publish(ctx context.Context, operator *entity.Operator, 
 	return err
 }
 
-func (ocm OutcomeModel) BulkPublish(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string, scope string) error {
+func (ocm OutcomeModel) BulkPublish(ctx context.Context, operator *entity.Operator, outcomeIDs []string, scope string) error {
 	if scope == "" {
 		//scopeID, _, err := ocm.getRootOrganizationByAuthorID(ctx, operator.UserID)
 		//if err != nil {
@@ -839,7 +839,7 @@ func (ocm OutcomeModel) BulkPublish(ctx context.Context, operator *entity.Operat
 	return err
 }
 
-func (ocm OutcomeModel) BulkDelete(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) error {
+func (ocm OutcomeModel) BulkDelete(ctx context.Context, operator *entity.Operator, outcomeIDs []string) error {
 	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, []external.PermissionName{
 		external.DeleteMyUnpublishedLearningOutcome,
 		external.DeleteOrgUnpublishedLearningOutcome,
@@ -909,7 +909,7 @@ func (ocm OutcomeModel) BulkDelete(ctx context.Context, operator *entity.Operato
 	return err
 }
 
-func (ocm OutcomeModel) SearchPrivate(ctx context.Context, user *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
+func (ocm OutcomeModel) SearchPrivate(ctx context.Context, user *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
 	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, user, []external.PermissionName{
 		external.ViewMyUnpublishedLearningOutcome,  // my draft & my rejected
 		external.ViewOrgUnpublishedLearningOutcome, // org draft & org waiting for approved & org rejected
@@ -960,7 +960,7 @@ func (ocm OutcomeModel) SearchPrivate(ctx context.Context, user *entity.Operator
 	return total, outcomes, err
 }
 
-func (ocm OutcomeModel) SearchPending(ctx context.Context, user *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
+func (ocm OutcomeModel) SearchPending(ctx context.Context, user *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
 	if condition.PublishStatus != entity.OutcomeStatusPending {
 		log.Warn(ctx, "SearchPending: SearchPending failed",
 			log.String("op", user.UserID),
@@ -1074,7 +1074,7 @@ func (ocm OutcomeModel) Approve(ctx context.Context, operator *entity.Operator, 
 	return err
 }
 
-func (ocm OutcomeModel) Reject(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string, reason string) error {
+func (ocm OutcomeModel) Reject(ctx context.Context, operator *entity.Operator, outcomeID string, reason string) error {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeReview)
 	if err != nil {
 		log.Error(ctx, "Reject: NewLock failed",
@@ -1263,114 +1263,108 @@ func (ocm OutcomeModel) GetByIDs(ctx context.Context, operator *entity.Operator,
 }
 
 func (ocm OutcomeModel) GetLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (outcomes []*entity.Outcome, err error) {
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		cond1 := da.OutcomeCondition{
-			IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
-		}
-		total, otcs1, err := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &cond1)
-		if err != nil {
-			log.Error(ctx, "GetLatestByIDs: SearchOutcome failed",
-				log.Err(err),
-				log.String("op", operator.UserID),
-				log.Strings("outcome_ids", outcomeIDs))
-			return err
-		}
-		if total == 0 {
-			log.Debug(ctx, "GetLatestByIDs: SearchOutcome return empty",
-				log.String("op", operator.UserID),
-				log.Strings("outcome_ids", outcomeIDs))
-			outcomes = []*entity.Outcome{}
-			return nil
-		}
-		cond2 := da.OutcomeCondition{}
-		for _, o := range otcs1 {
-			cond2.IDs.Strings = append(cond2.IDs.Strings, o.LatestID)
-		}
-		cond2.IDs.Valid = true
-		total, otcs2, err := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &cond2)
-		if err != nil {
-			log.Error(ctx, "GetLatestByIDs: SearchOutcome failed",
-				log.Err(err),
-				log.String("op", operator.UserID),
-				log.Strings("outcome_ids", cond2.IDs.Strings))
-			return err
-		}
-		if total == 0 {
-			log.Debug(ctx, "GetLatestByIDs: SearchOutcome return empty",
-				log.String("op", operator.UserID),
-				log.Strings("outcome_ids", cond2.IDs.Strings))
-			outcomes = []*entity.Outcome{}
-		} else {
-			outcomes = otcs2
-			err = ocm.fillRelation(ctx, operator, tx, outcomes)
-			if err != nil {
-				log.Error(ctx, "GetLatestByIDs: fillRelation failed",
-					log.Err(err),
-					log.String("op", operator.UserID))
-				return err
-			}
-		}
-		return nil
-	})
+	cond1 := da.OutcomeCondition{
+		IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
+	}
+	total, otcs1, err1 := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &cond1)
+	if err1 != nil {
+		log.Error(ctx, "GetLatestByIDs: SearchOutcome failed",
+			log.Err(err1),
+			log.String("op", operator.UserID),
+			log.Strings("outcome_ids", outcomeIDs))
+		return nil, err1
+	}
+	if total == 0 {
+		log.Debug(ctx, "GetLatestByIDs: SearchOutcome return empty",
+			log.String("op", operator.UserID),
+			log.Strings("outcome_ids", outcomeIDs))
+		outcomes = []*entity.Outcome{}
+		return
+	}
+	cond2 := da.OutcomeCondition{}
+	for _, o := range otcs1 {
+		cond2.IDs.Strings = append(cond2.IDs.Strings, o.LatestID)
+	}
+	cond2.IDs.Valid = true
+	total, otcs2, err1 := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &cond2)
+	if err1 != nil {
+		log.Error(ctx, "GetLatestByIDs: SearchOutcome failed",
+			log.Err(err1),
+			log.String("op", operator.UserID),
+			log.Strings("outcome_ids", cond2.IDs.Strings))
+		return nil, err1
+	}
+	if total == 0 {
+		log.Debug(ctx, "GetLatestByIDs: SearchOutcome return empty",
+			log.String("op", operator.UserID),
+			log.Strings("outcome_ids", cond2.IDs.Strings))
+		outcomes = []*entity.Outcome{}
+		return
+	}
+	outcomes = otcs2
+	err1 = ocm.fillRelation(ctx, operator, tx, outcomes)
+	if err1 != nil {
+		log.Error(ctx, "GetLatestByIDs: fillRelation failed",
+			log.Err(err1),
+			log.String("op", operator.UserID))
+		return nil, err1
+	}
 	return
 }
 
 func (ocm OutcomeModel) GetLatestByIDsMapResult(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (latests map[string]*entity.Outcome, err error) {
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		cond1 := da.OutcomeCondition{
-			IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
-		}
-		total, otcs1, err := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &cond1)
-		if err != nil {
-			log.Error(ctx, "GetLatestByIDs: SearchOutcome failed",
-				log.Err(err),
-				log.String("op", operator.UserID),
-				log.Strings("outcome_ids", outcomeIDs))
-			return err
-		}
-		if total == 0 {
-			log.Debug(ctx, "GetLatestByIDs: SearchOutcome return empty",
-				log.String("op", operator.UserID),
-				log.Strings("outcome_ids", outcomeIDs))
-			return constant.ErrRecordNotFound
-		}
-		cond2 := da.OutcomeCondition{}
-		for _, o := range otcs1 {
-			cond2.IDs.Strings = append(cond2.IDs.Strings, o.LatestID)
-		}
-		cond2.IDs.Valid = true
-		total, otcs2, err := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &cond2)
-		if err != nil {
-			log.Error(ctx, "GetLatestByIDs: SearchOutcome failed",
-				log.Err(err),
-				log.String("op", operator.UserID),
-				log.Strings("outcome_ids", cond2.IDs.Strings))
-			return err
-		}
-		if total == 0 {
-			log.Debug(ctx, "GetLatestByIDs: SearchOutcome return empty",
-				log.String("op", operator.UserID),
-				log.Strings("outcome_ids", cond2.IDs.Strings))
-			return constant.ErrRecordNotFound
-		}
-		err = ocm.fillRelation(ctx, operator, tx, otcs2)
-		if err != nil {
-			log.Error(ctx, "GetLatestByIDs: fillRelation failed",
-				log.Err(err),
-				log.String("op", operator.UserID))
-			return err
-		}
-		latests = make(map[string]*entity.Outcome, len(otcs1))
-		for _, o := range otcs1 {
-			for _, l := range otcs2 {
-				if o.LatestID == l.ID {
-					latests[l.ID] = l
-					break
-				}
+	cond1 := da.OutcomeCondition{
+		IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
+	}
+	total, otcs1, err1 := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &cond1)
+	if err1 != nil {
+		log.Error(ctx, "GetLatestByIDs: SearchOutcome failed",
+			log.Err(err1),
+			log.String("op", operator.UserID),
+			log.Strings("outcome_ids", outcomeIDs))
+		return nil, err1
+	}
+	if total == 0 {
+		log.Debug(ctx, "GetLatestByIDs: SearchOutcome return empty",
+			log.String("op", operator.UserID),
+			log.Strings("outcome_ids", outcomeIDs))
+		return nil, constant.ErrRecordNotFound
+	}
+	cond2 := da.OutcomeCondition{}
+	for _, o := range otcs1 {
+		cond2.IDs.Strings = append(cond2.IDs.Strings, o.LatestID)
+	}
+	cond2.IDs.Valid = true
+	total, otcs2, err1 := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &cond2)
+	if err1 != nil {
+		log.Error(ctx, "GetLatestByIDs: SearchOutcome failed",
+			log.Err(err1),
+			log.String("op", operator.UserID),
+			log.Strings("outcome_ids", cond2.IDs.Strings))
+		return nil, err1
+	}
+	if total == 0 {
+		log.Debug(ctx, "GetLatestByIDs: SearchOutcome return empty",
+			log.String("op", operator.UserID),
+			log.Strings("outcome_ids", cond2.IDs.Strings))
+		return nil, constant.ErrRecordNotFound
+	}
+	err1 = ocm.fillRelation(ctx, operator, tx, otcs2)
+	if err1 != nil {
+		log.Error(ctx, "GetLatestByIDs: fillRelation failed",
+			log.Err(err1),
+			log.String("op", operator.UserID))
+		return nil, err1
+	}
+	latests = make(map[string]*entity.Outcome, len(otcs1))
+	for _, o := range otcs1 {
+		for _, l := range otcs2 {
+			if o.LatestID == l.ID {
+				latests[l.ID] = l
+				break
 			}
 		}
-		return nil
-	})
+	}
 	return
 }
 
