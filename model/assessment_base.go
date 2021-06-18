@@ -1441,12 +1441,14 @@ func (m *assessmentBase) batchAdd(ctx context.Context, tx *dbo.DBContext, operat
 	now := time.Now().Unix()
 	for _, item := range args {
 		newAssessments = append(newAssessments, &entity.Assessment{
-			ID:         utils.NewID(),
-			ScheduleID: item.ScheduleID,
-			Title:      item.Title,
-			Status:     entity.AssessmentStatusInProgress,
-			CreateAt:   now,
-			UpdateAt:   now,
+			ID:           utils.NewID(),
+			ScheduleID:   item.ScheduleID,
+			Title:        item.Title,
+			Status:       entity.AssessmentStatusInProgress,
+			CreateAt:     now,
+			UpdateAt:     now,
+			ClassLength:  item.ClassLength,
+			ClassEndTime: item.ClassEndTime,
 		})
 	}
 	if err := da.GetAssessmentDA().BatchInsert(ctx, tx, newAssessments); err != nil {
@@ -1522,7 +1524,7 @@ func (m *assessmentBase) batchAdd(ctx context.Context, tx *dbo.DBContext, operat
 	}
 
 	// add assessment content outcomes
-	if err := m.batchAddContentOutcomes(ctx, tx, operator, newAssessments, lessonPlanMap); err != nil {
+	if err := m.batchAddContentOutcomes(ctx, tx, operator, newAssessments, lessonPlanMap, scheduleIDToArgsItemMap); err != nil {
 		return nil, err
 	}
 
@@ -1712,10 +1714,14 @@ func (m *assessmentBase) batchAddOutcomeAttendances(ctx context.Context, tx *dbo
 	return nil
 }
 
-func (m *assessmentBase) batchAddContentOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, newAssessments []*entity.Assessment, lessonPlanMap map[string]*entity.AssessmentExternalLessonPlan) error {
+func (m *assessmentBase) batchAddContentOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, newAssessments []*entity.Assessment, lessonPlanMap map[string]*entity.AssessmentExternalLessonPlan, scheduleIDToArgsItemMap map[string]*entity.AddAssessmentArgs) error {
 	var assessmentContentOutcomes []*entity.AssessmentContentOutcome
 	for _, a := range newAssessments {
-		lp := lessonPlanMap[a.ScheduleID]
+		argsItem := scheduleIDToArgsItemMap[a.ScheduleID]
+		if argsItem == nil {
+			continue
+		}
+		lp := lessonPlanMap[argsItem.LessonPlanID]
 		if lp == nil {
 			continue
 		}
