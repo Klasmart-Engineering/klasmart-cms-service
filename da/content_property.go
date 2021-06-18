@@ -53,6 +53,9 @@ func (c *ContentPropertyDA) CleanByContentID(ctx context.Context, tx *dbo.DBCont
 }
 
 func (c *ContentPropertyDA) BatchGetByContentIDList(ctx context.Context, tx *dbo.DBContext, contentID []string) ([]*entity.ContentProperty, error) {
+	if len(contentID) < 1 {
+		return nil, nil
+	}
 	condition := ContentPropertyCondition{ContentIDs: dbo.NullStrings{
 		Strings: contentID,
 		Valid:   true,
