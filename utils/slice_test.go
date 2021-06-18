@@ -74,3 +74,10 @@ func TestSliceDeduplicationExcludeEmpty(t *testing.T) {
 	result := SliceDeduplicationExcludeEmpty(testData)
 	t.Log(len(result))
 }
+
+func TestStableSliceDeduplication(t *testing.T) {
+	//testData := []string{"1", "2", "1", "3"}
+	testData := []string{}
+	result := StableSliceDeduplication(testData)
+	fmt.Println(result)
+}

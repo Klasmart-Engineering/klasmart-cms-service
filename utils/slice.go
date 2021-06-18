@@ -18,6 +18,18 @@ func SliceDeduplication(s []string) []string {
 	return result
 }
 
+func StableSliceDeduplication(s []string) []string {
+	temp := make(map[string]bool)
+	var result []string
+	for i := range s {
+		if !temp[s[i]] {
+			temp[s[i]] = true
+			result = append(result, s[i])
+		}
+	}
+	return result
+}
+
 // SliceDeduplicationMap deduplicate slice, then return slice and mapping
 // if input slice ["1", "2", "3", "4", "1", "2", "4", "3", "3", "3", "2", "1", "5", "3"]
 // you will got slice ["1", "2", "3", "4", "5"]
