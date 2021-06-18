@@ -1481,12 +1481,17 @@ func (m *assessmentBase) batchAdd(ctx context.Context, tx *dbo.DBContext, operat
 		scheduleIDToOutcomeIDsMap = make(map[string][]string, len(args))
 	)
 	for _, item := range args {
+		var itemOutcomeIDs []string
 		lp := lessonPlanMap[item.LessonPlanID]
 		if lp == nil {
 			continue
 		}
-		scheduleIDToOutcomeIDsMap[item.ScheduleID] = lp.OutcomeIDs
-		outcomeIDs = append(outcomeIDs, lp.OutcomeIDs...)
+		itemOutcomeIDs = append(itemOutcomeIDs, lp.OutcomeIDs...)
+		for _, lm := range lp.Materials {
+			itemOutcomeIDs = append(itemOutcomeIDs, lm.OutcomeIDs...)
+		}
+		scheduleIDToOutcomeIDsMap[item.ScheduleID] = itemOutcomeIDs
+		outcomeIDs = append(outcomeIDs, itemOutcomeIDs...)
 	}
 	outcomes := make([]*entity.Outcome, 0, len(outcomeIDs))
 	if len(outcomeIDs) > 0 {
