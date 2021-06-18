@@ -281,7 +281,7 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 			}
 		}
 
-		outcomeAncestors = utils.SliceDeduplication(outcomeAncestors)
+		outcomeAncestors = utils.StableSliceDeduplication(outcomeAncestors)
 
 		outcomes, err := GetOutcomeModel().GetLatestByAncestors(ctx, op, tx, outcomeAncestors)
 		if err != nil {
