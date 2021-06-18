@@ -10,7 +10,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
@@ -261,7 +260,7 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
-	total, outcomes, err := model.GetOutcomeModel().Search(ctx, op, dbo.MustGetDB(ctx), &condition)
+	total, outcomes, err := model.GetOutcomeModel().Search(ctx, op, &condition)
 	switch err {
 	//case model.ErrInvalidResourceID:
 	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -328,7 +327,7 @@ func (s *Server) lockOutcome(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
-	newID, err := model.GetOutcomeModel().Lock(ctx, op, dbo.MustGetDB(ctx), outcomeID)
+	newID, err := model.GetOutcomeModel().Lock(ctx, op, outcomeID)
 	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 	if ok {
 		c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
@@ -491,7 +490,7 @@ func (s *Server) rejectOutcome(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
-	err = model.GetOutcomeModel().Reject(ctx, op, dbo.MustGetDB(ctx), outcomeID, reason.RejectReason)
+	err = model.GetOutcomeModel().Reject(ctx, op, outcomeID, reason.RejectReason)
 	switch err {
 	case model.ErrNoAuth:
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
@@ -656,7 +655,7 @@ func (s *Server) bulkPublishOutcomes(c *gin.Context) {
 		return
 	}
 
-	err = model.GetOutcomeModel().BulkPublish(ctx, op, dbo.MustGetDB(ctx), data.OutcomeIDs, "")
+	err = model.GetOutcomeModel().BulkPublish(ctx, op, data.OutcomeIDs, "")
 	switch err {
 	case model.ErrNoAuth:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
@@ -706,7 +705,7 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	err = model.GetOutcomeModel().BulkDelete(ctx, op, dbo.MustGetDB(ctx), data.OutcomeIDs)
+	err = model.GetOutcomeModel().BulkDelete(ctx, op, data.OutcomeIDs)
 	_, ok := err.(*model.ErrContentAlreadyLocked)
 	if ok {
 		c.JSON(http.StatusNotAcceptable, L(AssessMsgLockedLo))
@@ -758,7 +757,7 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 		return
 	}
 
-	total, outcomes, err := model.GetOutcomeModel().SearchPrivate(ctx, op, dbo.MustGetDB(ctx), &condition)
+	total, outcomes, err := model.GetOutcomeModel().SearchPrivate(ctx, op, &condition)
 	switch err {
 	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -825,7 +824,7 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 		return
 	}
 
-	total, outcomes, err := model.GetOutcomeModel().SearchPending(ctx, op, dbo.MustGetDB(ctx), &condition)
+	total, outcomes, err := model.GetOutcomeModel().SearchPending(ctx, op, &condition)
 	switch err {
 	case model.ErrBadRequest:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
