@@ -34,7 +34,9 @@ func GetClassAndLiveAssessmentModel() IClassAndLiveAssessmentModel {
 type IClassAndLiveAssessmentModel interface {
 	GetDetail(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetail, error)
 	List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error)
-	Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) (string, error)
+	PrepareAddArgs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) (*entity.BatchAddAssessmentSuperArgs, error)
+	Add(ctx context.Context, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) (string, error)
+	AddTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.BatchAddAssessmentSuperArgs) (string, error)
 	Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.UpdateAssessmentArgs) error
 }
 
@@ -179,9 +181,31 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 	return &result, nil
 }
 
-func (m *classAndLiveAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) (string, error) {
-	log.Debug(ctx, "add class and live assessment: print args", log.Any("args", args), log.Any("operator", operator))
+func (m *classAndLiveAssessmentModel) Add(ctx context.Context, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) (string, error) {
+	superArgs, err := m.PrepareAddArgs(ctx, dbo.MustGetDB(ctx), operator, args)
+	if err != nil {
+		return "", err
+	}
+	var newID string
+	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		var err error
+		newID, err = m.AddTx(ctx, tx, operator, superArgs)
+		if err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		log.Error(ctx, "add class or live assessment: add failed",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return "", err
+	}
+	return newID, nil
+}
 
+func (m *classAndLiveAssessmentModel) PrepareAddArgs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) (*entity.BatchAddAssessmentSuperArgs, error) {
 	// clean data
 	args.AttendanceIDs = utils.SliceDeduplicationExcludeEmpty(args.AttendanceIDs)
 
@@ -196,9 +220,9 @@ func (m *classAndLiveAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext
 		)
 		switch err {
 		case constant.ErrRecordNotFound, dbo.ErrRecordNotFound:
-			return "", constant.ErrInvalidArgs
+			return nil, constant.ErrInvalidArgs
 		default:
-			return "", err
+			return nil, err
 		}
 	}
 
@@ -210,7 +234,7 @@ func (m *classAndLiveAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext
 			log.Any("args", args),
 			log.Any("operator", operator),
 		)
-		return "", nil
+		return nil, nil
 	}
 
 	// fix empty org id
@@ -224,7 +248,7 @@ func (m *classAndLiveAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext
 			log.Strings("class_ids", []string{schedule.ClassID}),
 			log.Any("args", args),
 		)
-		return "", err
+		return nil, err
 	}
 	assessmentTitle := m.generateTitle(args.ClassEndTime, classNameMap[schedule.ClassID], schedule.Title)
 
@@ -238,7 +262,7 @@ func (m *classAndLiveAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext
 				log.Err(err),
 				log.Any("args", args),
 			)
-			return "", err
+			return nil, err
 		}
 		for _, u := range users {
 			finalAttendanceIDs = append(finalAttendanceIDs, u.RelationID)
@@ -264,7 +288,7 @@ func (m *classAndLiveAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext
 			log.Any("operator", operator),
 			log.Any("condition", scheduleRelationCond),
 		)
-		return "", err
+		return nil, err
 	}
 	if len(scheduleRelations) == 0 {
 		log.Error(ctx, "add class and live assessments: not found schedule relations",
@@ -273,9 +297,9 @@ func (m *classAndLiveAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext
 			log.Any("operator", operator),
 			log.Any("condition", scheduleRelationCond),
 		)
-		return "", ErrNotFoundAttendance
+		return nil, ErrNotFoundAttendance
 	}
-	ids, err := m.assessmentBase.batchAdd(ctx, tx, operator, []*entity.AddAssessmentArgs{{
+	superArgs, err := m.assessmentBase.prepareBatchAddSuperArgs(ctx, tx, operator, []*entity.AddAssessmentArgs{{
 		Title:         assessmentTitle,
 		ScheduleID:    args.ScheduleID,
 		ScheduleTitle: schedule.Title,
@@ -285,6 +309,21 @@ func (m *classAndLiveAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext
 		ClassEndTime:  args.ClassEndTime,
 		Attendances:   scheduleRelations,
 	}})
+	if err != nil {
+		log.Error(ctx, "prepare add assessment args: prepare batch add super args failed",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	return superArgs, nil
+}
+
+func (m *classAndLiveAssessmentModel) AddTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.BatchAddAssessmentSuperArgs) (string, error) {
+	log.Debug(ctx, "add class and live assessment: print args", log.Any("args", args), log.Any("operator", operator))
+
+	ids, err := m.assessmentBase.batchAdd(ctx, tx, operator, args)
 	if err != nil {
 		return "", err
 	}
