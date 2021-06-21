@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"database/sql"
 	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -227,20 +226,21 @@ func (s *Server) addAssessment(c *gin.Context) {
 	}
 
 	log.Debug(ctx, "add assessment jwt: fill args", log.Any("args", args), log.String("token", body.Token))
-	var newID string
-	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		var err error
-		newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, s.getOperator(c), &args)
-		return err
-	})
+
+	operator := s.getOperator(c)
+	newID, err := model.GetClassAndLiveAssessmentModel().Add(ctx, operator, &args)
 	switch err {
 	case nil:
-		log.Debug(ctx, "add assessment jwt success",
+		log.Debug(ctx, "add assessment jwt: add success",
 			log.Any("args", args),
 			log.String("new_id", newID),
 		)
 		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
 	case constant.ErrInvalidArgs:
+		log.Error(ctx, "add assessment jwt: add failed",
+			log.Err(err),
+			log.Any("args", args),
+		)
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		log.Error(ctx, "add assessment jwt: add failed",
@@ -274,19 +274,23 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 		return
 	}
 
-	var newID string
-	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		var err error
-		newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, s.getOperator(c), &args)
-		return err
-	})
+	operator := s.getOperator(c)
+	newID, err := model.GetClassAndLiveAssessmentModel().Add(ctx, operator, &args)
 	switch err {
 	case nil:
+		log.Debug(ctx, "add assessment jwt: add success",
+			log.Any("args", args),
+			log.String("new_id", newID),
+		)
 		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
 	case constant.ErrInvalidArgs:
+		log.Error(ctx, "add assessment jwt: add failed",
+			log.Err(err),
+			log.Any("args", args),
+		)
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
-		log.Error(ctx, "add assessment: add failed",
+		log.Error(ctx, "add assessment jwt: add failed",
 			log.Err(err),
 			log.Any("args", args),
 		)

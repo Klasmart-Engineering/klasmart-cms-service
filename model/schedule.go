@@ -620,6 +620,143 @@ func (s *scheduleModel) prepareScheduleRelationUpdateData(ctx context.Context, o
 	return s.prepareScheduleRelationAddData(ctx, op, input)
 }
 
+func (s *scheduleModel) prepareScheduleAddData(ctx context.Context, op *entity.Operator, schedule *entity.Schedule, options *entity.RepeatOptions, location *time.Location, relations []*entity.ScheduleRelation) ([]*entity.Schedule, []*entity.ScheduleRelation, *entity.BatchAddAssessmentSuperArgs, error) {
+	scheduleList, err := s.StartScheduleRepeat(ctx, schedule, options, location)
+	if err != nil {
+		log.Error(ctx, "schedule repeat error",
+			log.Err(err),
+			log.Any("schedule", schedule),
+			log.Any("options", options),
+			log.Any("location", location))
+		return nil, nil, nil, err
+	}
+	if len(scheduleList) <= 0 {
+		log.Error(ctx, "schedules prepareScheduleAddData error,schedules is empty",
+			log.Any("schedule", schedule),
+			log.Any("options", options))
+		return nil, nil, nil, constant.ErrRecordNotFound
+	}
+
+	// add schedules relation
+	allRelations := make([]*entity.ScheduleRelation, 0, len(scheduleList)*len(relations))
+	userRelations := make(map[string][]*entity.ScheduleRelation, len(scheduleList))
+	for _, item := range scheduleList {
+		userRelations[item.ID] = make([]*entity.ScheduleRelation, 0, len(relations))
+
+		for _, relation := range relations {
+			if relation.RelationID == "" {
+				continue
+			}
+			allRelations = append(allRelations, &entity.ScheduleRelation{
+				ID:           utils.NewID(),
+				ScheduleID:   item.ID,
+				RelationID:   relation.RelationID,
+				RelationType: relation.RelationType,
+			})
+			switch relation.RelationType {
+			case entity.ScheduleRelationTypeClassRosterTeacher,
+				entity.ScheduleRelationTypeClassRosterStudent,
+				entity.ScheduleRelationTypeParticipantTeacher,
+				entity.ScheduleRelationTypeParticipantStudent:
+				userRelations[item.ID] = append(userRelations[item.ID], relation)
+			}
+		}
+	}
+
+	var batchAddAssessmentSuperArgs *entity.BatchAddAssessmentSuperArgs
+	// add assessment
+	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
+		studyInput := make([]*entity.AddAssessmentArgs, len(scheduleList))
+
+		for i, item := range scheduleList {
+			attendances := userRelations[item.ID]
+
+			studyInput[i] = &entity.AddAssessmentArgs{
+				ScheduleID:    item.ID,
+				ClassID:       item.ClassID,
+				LessonPlanID:  item.LessonPlanID,
+				Attendances:   attendances,
+				ScheduleTitle: item.Title,
+			}
+		}
+
+		batchAddAssessmentSuperArgs, err = GetStudyAssessmentModel().PrepareAddArgs(ctx, dbo.MustGetDB(ctx), op, studyInput)
+		if err != nil {
+			log.Error(ctx, "add schedule assessment error", log.Err(err), log.Any("studyInput", allRelations))
+			return nil, nil, nil, err
+		}
+	}
+
+	return scheduleList, allRelations, batchAddAssessmentSuperArgs, nil
+}
+
+func (s *scheduleModel) prepareScheduleUpdateData(ctx context.Context, op *entity.Operator, schedule *entity.Schedule, viewData *entity.ScheduleUpdateView) (*entity.Schedule, *entity.RepeatOptions, error) {
+	// add schedule,update old schedule fields that need to be updated
+	schedule.ID = utils.NewID()
+	schedule.LessonPlanID = viewData.LessonPlanID
+	schedule.ProgramID = viewData.ProgramID
+	schedule.ClassID = viewData.ClassID
+	schedule.StartAt = viewData.StartAt
+	schedule.EndAt = viewData.EndAt
+	schedule.Title = viewData.Title
+	schedule.IsAllDay = viewData.IsAllDay
+	schedule.Description = viewData.Description
+	schedule.DueAt = viewData.DueAt
+	schedule.ClassType = viewData.ClassType
+	schedule.CreatedID = op.UserID
+	schedule.CreatedAt = time.Now().Unix()
+	schedule.UpdatedID = op.UserID
+	schedule.UpdatedAt = time.Now().Unix()
+	schedule.DeletedID = ""
+	schedule.DeleteAt = 0
+	schedule.IsHomeFun = viewData.IsHomeFun
+	if viewData.ClassType != entity.ScheduleClassTypeHomework {
+		schedule.IsHomeFun = false
+	}
+	// attachment
+	b, err := json.Marshal(viewData.Attachment)
+	if err != nil {
+		log.Warn(ctx, "update schedule:marshal attachment error",
+			log.Any("attachment", viewData.Attachment))
+		return nil, nil, err
+	}
+	schedule.Attachment = string(b)
+
+	// update repeat rule
+	var repeatOptions *entity.RepeatOptions
+	// if repeat selected, use repeat rule
+	if viewData.IsRepeat {
+		b, err := json.Marshal(viewData.Repeat)
+		if err != nil {
+			return nil, nil, err
+		}
+		schedule.RepeatJson = string(b)
+		// if following selected, set repeat rule
+		if viewData.EditType == entity.ScheduleEditWithFollowing {
+			repeatOptions = &viewData.Repeat
+		}
+		if schedule.RepeatID == "" {
+			schedule.RepeatID = utils.NewID()
+		}
+	} else {
+		// if repeat not selected,but need to update follow schedule, use old schedule repeat rule
+		if viewData.EditType == entity.ScheduleEditWithFollowing {
+			var repeat = new(entity.RepeatOptions)
+			if err := json.Unmarshal([]byte(schedule.RepeatJson), repeat); err != nil {
+				log.Error(ctx, "update schedule:unmarshal schedule repeatJson error",
+					log.Err(err),
+					log.Any("viewData", viewData),
+					log.Any("schedule", schedule),
+				)
+				return nil, nil, err
+			}
+			repeatOptions = repeat
+		}
+	}
+
+	return schedule, repeatOptions, nil
+}
+
 func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
 	viewData.SubjectIDs = utils.SliceDeduplicationExcludeEmpty(viewData.SubjectIDs)
 	// verify data
@@ -658,14 +795,26 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 		log.Error(ctx, "prepareScheduleRelationAddData error", log.Err(err), log.Any("op", op), log.Any("relationInput", relationInput))
 		return "", err
 	}
+
+	scheduleList, allRelations, batchAddAssessmentSuperArgs, err := s.prepareScheduleAddData(ctx, op, schedule, &viewData.Repeat, viewData.Location, relations)
+	if err != nil {
+		log.Error(ctx, "prepareScheduleAddData: error",
+			log.Err(err),
+			log.Any("schedule", schedule),
+			log.Any("option", &viewData.Repeat),
+			log.Any("location", viewData.Location),
+			log.Any("relations", relations))
+		return "", err
+	}
+
 	id, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
-		scheduleID, err := s.addSchedule(ctx, tx, op, schedule, &viewData.Repeat, viewData.Location, relations)
+		scheduleID, err := s.addSchedule(ctx, tx, op, scheduleList, allRelations, batchAddAssessmentSuperArgs)
 		if err != nil {
 			log.Error(ctx, "add schedule: error",
 				log.Err(err),
-				log.Any("viewData", viewData),
-				log.Any("schedule", schedule),
-			)
+				log.Any("scheduleList", scheduleList),
+				log.Any("allRelations", allRelations),
+				log.Any("batchAddAssessmentSuperArgs", batchAddAssessmentSuperArgs))
 			return "", err
 		}
 		return scheduleID, nil
@@ -678,77 +827,38 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 	return id.(string), nil
 }
 
-func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, schedule *entity.Schedule, options *entity.RepeatOptions, location *time.Location, relations []*entity.ScheduleRelation) (string, error) {
-	scheduleList, err := s.StartScheduleRepeat(ctx, schedule, options, location)
-	if err != nil {
-		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule), log.Any("options", options))
-		return "", err
-	}
+func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, scheduleList []*entity.Schedule, allRelations []*entity.ScheduleRelation, batchAddAssessmentSuperArgs *entity.BatchAddAssessmentSuperArgs) (string, error) {
 	// add to schedules
-	_, err = da.GetScheduleDA().MultipleBatchInsert(ctx, tx, scheduleList)
+	_, err := da.GetScheduleDA().MultipleBatchInsert(ctx, tx, scheduleList)
 	if err != nil {
-		log.Error(ctx, "schedule batchInsert error", log.Err(err), log.Any("scheduleList", scheduleList))
+		log.Error(ctx, "schedule batchInsert error",
+			log.Err(err),
+			log.Any("scheduleList", scheduleList))
 		return "", err
 	}
-	if len(scheduleList) <= 0 {
-		log.Error(ctx, "schedules batchInsert error,schedules is empty", log.Any("schedule", schedule), log.Any("options", options))
-		return "", constant.ErrRecordNotFound
-	}
-	// add schedules relation
-	allRelations := make([]*entity.ScheduleRelation, 0, len(scheduleList)*len(relations))
-	userRelations := make(map[string][]*entity.ScheduleRelation, len(scheduleList))
-	for _, item := range scheduleList {
-		userRelations[item.ID] = make([]*entity.ScheduleRelation, 0, len(relations))
 
-		for _, relation := range relations {
-			if relation.RelationID == "" {
-				continue
-			}
-			allRelations = append(allRelations, &entity.ScheduleRelation{
-				ID:           utils.NewID(),
-				ScheduleID:   item.ID,
-				RelationID:   relation.RelationID,
-				RelationType: relation.RelationType,
-			})
-			switch relation.RelationType {
-			case entity.ScheduleRelationTypeClassRosterTeacher,
-				entity.ScheduleRelationTypeClassRosterStudent,
-				entity.ScheduleRelationTypeParticipantTeacher,
-				entity.ScheduleRelationTypeParticipantStudent:
-				userRelations[item.ID] = append(userRelations[item.ID], relation)
-			}
-		}
-	}
 	_, err = da.GetScheduleRelationDA().MultipleBatchInsert(ctx, tx, allRelations)
 	if err != nil {
-		log.Error(ctx, "schedules_relations batchInsert error", log.Err(err), log.Any("allRelations", allRelations))
+		log.Error(ctx, "schedules_relations batchInsert error",
+			log.Err(err),
+			log.Any("allRelations", allRelations))
 		return "", err
 	}
 
 	// add assessment
-	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
-		studyInput := make([]*entity.AddAssessmentArgs, len(scheduleList))
-
-		for i, item := range scheduleList {
-			attendances := userRelations[item.ID]
-
-			studyInput[i] = &entity.AddAssessmentArgs{
-				ScheduleID:    item.ID,
-				ClassID:       item.ClassID,
-				LessonPlanID:  item.LessonPlanID,
-				Attendances:   attendances,
-				ScheduleTitle: item.Title,
-			}
-		}
-		_, err := GetStudyAssessmentModel().Add(ctx, tx, op, studyInput)
+	if batchAddAssessmentSuperArgs != nil {
+		_, err = GetStudyAssessmentModel().Add(ctx, tx, op, batchAddAssessmentSuperArgs)
 		if err != nil {
-			log.Error(ctx, "add schedule assessment error", log.Err(err), log.Any("allRelations", allRelations))
+			log.Error(ctx, "add schedule assessment error",
+				log.Err(err),
+				log.Any("batchAddAssessmentSuperArgs", batchAddAssessmentSuperArgs))
 			return "", err
 		}
 	}
 
 	return scheduleList[0].ID, nil
 }
+
 func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Operator, id string) (*entity.Schedule, error) {
 	// get old schedule by id
 	var schedule = new(entity.Schedule)
@@ -881,8 +991,29 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		ParticipantsStudentIDs: viewData.ParticipantsStudentIDs,
 		SubjectIDs:             viewData.SubjectIDs,
 	}
+
 	relations, err := s.prepareScheduleRelationUpdateData(ctx, operator, relationInput)
 	if err != nil {
+		return "", err
+	}
+
+	schedule, repeatOptions, err := s.prepareScheduleUpdateData(ctx, operator, schedule, viewData)
+	if err != nil {
+		log.Error(ctx, "prepareScheduleUpdateData: error",
+			log.Err(err),
+			log.Any("schedule", schedule),
+			log.Any("viewData", viewData))
+		return "", err
+	}
+
+	scheduleList, allRelations, batchAddAssessmentSuperArgs, err := s.prepareScheduleAddData(ctx, operator, schedule, repeatOptions, viewData.Location, relations)
+	if err != nil {
+		log.Error(ctx, "prepareScheduleAddData: error",
+			log.Err(err),
+			log.Any("schedule", schedule),
+			log.Any("option", &viewData.Repeat),
+			log.Any("location", viewData.Location),
+			log.Any("relations", relations))
 		return "", err
 	}
 
@@ -908,68 +1039,8 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 			)
 			return err
 		}
-		// add schedule,update old schedule fields that need to be updated
-		schedule.ID = utils.NewID()
-		schedule.LessonPlanID = viewData.LessonPlanID
-		schedule.ProgramID = viewData.ProgramID
-		schedule.ClassID = viewData.ClassID
-		schedule.StartAt = viewData.StartAt
-		schedule.EndAt = viewData.EndAt
-		schedule.Title = viewData.Title
-		schedule.IsAllDay = viewData.IsAllDay
-		schedule.Description = viewData.Description
-		schedule.DueAt = viewData.DueAt
-		schedule.ClassType = viewData.ClassType
-		schedule.CreatedID = operator.UserID
-		schedule.CreatedAt = time.Now().Unix()
-		schedule.UpdatedID = operator.UserID
-		schedule.UpdatedAt = time.Now().Unix()
-		schedule.DeletedID = ""
-		schedule.DeleteAt = 0
-		schedule.IsHomeFun = viewData.IsHomeFun
-		if viewData.ClassType != entity.ScheduleClassTypeHomework {
-			schedule.IsHomeFun = false
-		}
-		// attachment
-		b, err := json.Marshal(viewData.Attachment)
-		if err != nil {
-			log.Warn(ctx, "update schedule:marshal attachment error", log.Any("attachment", viewData.Attachment))
-			return err
-		}
-		schedule.Attachment = string(b)
 
-		// update repeat rule
-		var repeatOptions *entity.RepeatOptions
-		// if repeat selected, use repeat rule
-		if viewData.IsRepeat {
-			b, err := json.Marshal(viewData.Repeat)
-			if err != nil {
-				return err
-			}
-			schedule.RepeatJson = string(b)
-			// if following selected, set repeat rule
-			if viewData.EditType == entity.ScheduleEditWithFollowing {
-				repeatOptions = &viewData.Repeat
-			}
-			if schedule.RepeatID == "" {
-				schedule.RepeatID = utils.NewID()
-			}
-		} else {
-			// if repeat not selected,but need to update follow schedule, use old schedule repeat rule
-			if viewData.EditType == entity.ScheduleEditWithFollowing {
-				var repeat = new(entity.RepeatOptions)
-				if err := json.Unmarshal([]byte(schedule.RepeatJson), repeat); err != nil {
-					log.Error(ctx, "update schedule:unmarshal schedule repeatJson error",
-						log.Err(err),
-						log.Any("viewData", viewData),
-						log.Any("schedule", schedule),
-					)
-					return err
-				}
-				repeatOptions = repeat
-			}
-		}
-		id, err = s.addSchedule(ctx, tx, operator, schedule, repeatOptions, viewData.Location, relations)
+		id, err = s.addSchedule(ctx, tx, operator, scheduleList, allRelations, batchAddAssessmentSuperArgs)
 		if err != nil {
 			log.Error(ctx, "update schedule: add failed",
 				log.Err(err),
