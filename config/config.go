@@ -350,14 +350,14 @@ func loadLiveTokenEnvConfig(ctx context.Context) {
 	config.LiveTokenConfig.PrivateKey = key
 
 	assetsUrlPrefix := os.Getenv("live_assets_url_prefix")
-	u, err := url.Parse(assetsUrlPrefix)
+	_, err = url.Parse(assetsUrlPrefix)
 	if err != nil {
-		log.Panic(ctx, "load LiveTokenEnvConfig:load assets_url_prefix config error",
+		log.Panic(ctx, "load LiveTokenEnvConfig:load live_assets_url_prefix config error",
 			log.Err(err),
 			log.String("assetsUrlPrefix", assetsUrlPrefix),
 		)
 	}
-	config.LiveTokenConfig.AssetsUrlPrefix = u.Path
+	config.LiveTokenConfig.AssetsUrlPrefix = assetsUrlPrefix
 }
 
 func loadAssessmentConfig(ctx context.Context) {
