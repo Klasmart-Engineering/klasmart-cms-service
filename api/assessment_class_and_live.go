@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"database/sql"
 	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -229,9 +228,9 @@ func (s *Server) addAssessment(c *gin.Context) {
 	log.Debug(ctx, "add assessment jwt: fill args", log.Any("args", args), log.String("token", body.Token))
 
 	operator := s.getOperator(c)
-	superArgs, err := model.GetClassAndLiveAssessmentModel().PrepareAddArgs(ctx, dbo.MustGetDB(ctx), operator, &args)
+	newID, err := model.GetClassAndLiveAssessmentModel().Add(ctx, operator, &args)
 	if err != nil {
-		log.Error(ctx, "add assessment jwt: prepare failed",
+		log.Error(ctx, "add assessment jwt: add failed",
 			log.Err(err),
 			log.Any("args", args),
 		)
@@ -243,20 +242,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 		}
 		return
 	}
-	var newID string
-	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		var err error
-		newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, operator, superArgs)
-		return err
-	}); err != nil {
-		log.Error(ctx, "add assessment jwt: add failed",
-			log.Err(err),
-			log.Any("args", args),
-		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
-	}
-	log.Debug(ctx, "add assessment jwt success",
+	log.Debug(ctx, "add assessment jwt: add success",
 		log.Any("args", args),
 		log.String("new_id", newID),
 	)
@@ -287,9 +273,9 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 	}
 
 	operator := s.getOperator(c)
-	superArgs, err := model.GetClassAndLiveAssessmentModel().PrepareAddArgs(ctx, dbo.MustGetDB(ctx), operator, &args)
+	newID, err := model.GetClassAndLiveAssessmentModel().Add(ctx, operator, &args)
 	if err != nil {
-		log.Error(ctx, "add assessment jwt: prepare failed",
+		log.Error(ctx, "add assessment jwt: add failed",
 			log.Err(err),
 			log.Any("args", args),
 		)
@@ -301,20 +287,7 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 		}
 		return
 	}
-	var newID string
-	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		var err error
-		newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, operator, superArgs)
-		return err
-	}); err != nil {
-		log.Error(ctx, "add assessment jwt: add failed",
-			log.Err(err),
-			log.Any("args", args),
-		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
-	}
-	log.Debug(ctx, "add assessment jwt success",
+	log.Debug(ctx, "add assessment jwt: add success",
 		log.Any("args", args),
 		log.String("new_id", newID),
 	)

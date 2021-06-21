@@ -35,7 +35,8 @@ type IClassAndLiveAssessmentModel interface {
 	GetDetail(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetail, error)
 	List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error)
 	PrepareAddArgs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) (*entity.BatchAddAssessmentSuperArgs, error)
-	Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.BatchAddAssessmentSuperArgs) (string, error)
+	Add(ctx context.Context, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) (string, error)
+	AddTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.BatchAddAssessmentSuperArgs) (string, error)
 	Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.UpdateAssessmentArgs) error
 }
 
@@ -180,6 +181,30 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 	return &result, nil
 }
 
+func (m *classAndLiveAssessmentModel) Add(ctx context.Context, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) (string, error) {
+	superArgs, err := m.PrepareAddArgs(ctx, dbo.MustGetDB(ctx), operator, args)
+	if err != nil {
+		return "", err
+	}
+	var newID string
+	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		var err error
+		newID, err = m.AddTx(ctx, tx, operator, superArgs)
+		if err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		log.Error(ctx, "add class or live assessment: add failed",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return "", err
+	}
+	return newID, nil
+}
+
 func (m *classAndLiveAssessmentModel) PrepareAddArgs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) (*entity.BatchAddAssessmentSuperArgs, error) {
 	// clean data
 	args.AttendanceIDs = utils.SliceDeduplicationExcludeEmpty(args.AttendanceIDs)
@@ -295,7 +320,7 @@ func (m *classAndLiveAssessmentModel) PrepareAddArgs(ctx context.Context, tx *db
 	return superArgs, nil
 }
 
-func (m *classAndLiveAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.BatchAddAssessmentSuperArgs) (string, error) {
+func (m *classAndLiveAssessmentModel) AddTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.BatchAddAssessmentSuperArgs) (string, error) {
 	log.Debug(ctx, "add class and live assessment: print args", log.Any("args", args), log.Any("operator", operator))
 
 	ids, err := m.assessmentBase.batchAdd(ctx, tx, operator, args)
