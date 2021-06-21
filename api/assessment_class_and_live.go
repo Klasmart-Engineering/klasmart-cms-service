@@ -229,32 +229,38 @@ func (s *Server) addAssessment(c *gin.Context) {
 	log.Debug(ctx, "add assessment jwt: fill args", log.Any("args", args), log.String("token", body.Token))
 
 	operator := s.getOperator(c)
-	var newID string
 	superArgs, err := model.GetClassAndLiveAssessmentModel().PrepareAddArgs(ctx, dbo.MustGetDB(ctx), operator, &args)
-	if err == nil {
-		err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-			var err error
-			newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, operator, superArgs)
-			return err
-		})
-	} else {
+	if err != nil {
+		log.Error(ctx, "add assessment jwt: prepare failed",
+			log.Err(err),
+			log.Any("args", args),
+		)
+		switch err {
+		case constant.ErrInvalidArgs:
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		default:
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		}
+		return
+	}
+	var newID string
+	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		var err error
+		newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, operator, superArgs)
+		return err
+	}); err != nil {
 		log.Error(ctx, "add assessment jwt: add failed",
 			log.Err(err),
 			log.Any("args", args),
 		)
-	}
-	switch err {
-	case nil:
-		log.Debug(ctx, "add assessment jwt success",
-			log.Any("args", args),
-			log.String("new_id", newID),
-		)
-		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
-	case constant.ErrInvalidArgs:
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
 	}
+	log.Debug(ctx, "add assessment jwt success",
+		log.Any("args", args),
+		log.String("new_id", newID),
+	)
+	c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
 }
 
 // @Summary add assessments for test
@@ -281,30 +287,36 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 	}
 
 	operator := s.getOperator(c)
-	var newID string
 	superArgs, err := model.GetClassAndLiveAssessmentModel().PrepareAddArgs(ctx, dbo.MustGetDB(ctx), operator, &args)
-	if err == nil {
-		err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-			var err error
-			newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, operator, superArgs)
-			return err
-		})
-	} else {
+	if err != nil {
+		log.Error(ctx, "add assessment jwt: prepare failed",
+			log.Err(err),
+			log.Any("args", args),
+		)
+		switch err {
+		case constant.ErrInvalidArgs:
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		default:
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		}
+		return
+	}
+	var newID string
+	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		var err error
+		newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, operator, superArgs)
+		return err
+	}); err != nil {
 		log.Error(ctx, "add assessment jwt: add failed",
 			log.Err(err),
 			log.Any("args", args),
 		)
-	}
-	switch err {
-	case nil:
-		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
-	case constant.ErrInvalidArgs:
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	default:
-		log.Error(ctx, "add assessment: add failed",
-			log.Err(err),
-			log.Any("args", args),
-		)
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
 	}
+	log.Debug(ctx, "add assessment jwt success",
+		log.Any("args", args),
+		log.String("new_id", newID),
+	)
+	c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
 }
