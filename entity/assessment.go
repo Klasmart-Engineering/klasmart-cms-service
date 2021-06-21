@@ -77,3 +77,12 @@ type AddAssessmentArgs struct {
 	ClassEndTime  int64               `json:"class_end_time"`
 	Attendances   []*ScheduleRelation `json:"attendances"`
 }
+
+type BatchAddAssessmentSuperArgs struct {
+	Raw                       []*AddAssessmentArgs
+	ScheduleIDs               []string
+	Outcomes                  []*Outcome
+	OutcomeMap                map[string]*Outcome
+	LessonPlanMap             map[string]*AssessmentExternalLessonPlan
+	ScheduleIDToOutcomeIDsMap map[string][]string
+}

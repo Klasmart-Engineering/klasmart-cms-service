@@ -227,12 +227,22 @@ func (s *Server) addAssessment(c *gin.Context) {
 	}
 
 	log.Debug(ctx, "add assessment jwt: fill args", log.Any("args", args), log.String("token", body.Token))
+
+	operator := s.getOperator(c)
 	var newID string
-	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		var err error
-		newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, s.getOperator(c), &args)
-		return err
-	})
+	superArgs, err := model.GetClassAndLiveAssessmentModel().PrepareAddArgs(ctx, dbo.MustGetDB(ctx), operator, &args)
+	if err == nil {
+		err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+			var err error
+			newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, operator, superArgs)
+			return err
+		})
+	} else {
+		log.Error(ctx, "add assessment jwt: add failed",
+			log.Err(err),
+			log.Any("args", args),
+		)
+	}
 	switch err {
 	case nil:
 		log.Debug(ctx, "add assessment jwt success",
@@ -243,10 +253,6 @@ func (s *Server) addAssessment(c *gin.Context) {
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
-		log.Error(ctx, "add assessment jwt: add failed",
-			log.Err(err),
-			log.Any("args", args),
-		)
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
@@ -274,12 +280,21 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 		return
 	}
 
+	operator := s.getOperator(c)
 	var newID string
-	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		var err error
-		newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, s.getOperator(c), &args)
-		return err
-	})
+	superArgs, err := model.GetClassAndLiveAssessmentModel().PrepareAddArgs(ctx, dbo.MustGetDB(ctx), operator, &args)
+	if err == nil {
+		err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+			var err error
+			newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, operator, superArgs)
+			return err
+		})
+	} else {
+		log.Error(ctx, "add assessment jwt: add failed",
+			log.Err(err),
+			log.Any("args", args),
+		)
+	}
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
