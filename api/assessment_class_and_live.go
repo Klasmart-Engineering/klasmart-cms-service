@@ -229,24 +229,26 @@ func (s *Server) addAssessment(c *gin.Context) {
 
 	operator := s.getOperator(c)
 	newID, err := model.GetClassAndLiveAssessmentModel().Add(ctx, operator, &args)
-	if err != nil {
+	switch err {
+	case nil:
+		log.Debug(ctx, "add assessment jwt: add success",
+			log.Any("args", args),
+			log.String("new_id", newID),
+		)
+		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
+	case constant.ErrInvalidArgs:
 		log.Error(ctx, "add assessment jwt: add failed",
 			log.Err(err),
 			log.Any("args", args),
 		)
-		switch err {
-		case constant.ErrInvalidArgs:
-			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		default:
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		}
-		return
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	default:
+		log.Error(ctx, "add assessment jwt: add failed",
+			log.Err(err),
+			log.Any("args", args),
+		)
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
-	log.Debug(ctx, "add assessment jwt: add success",
-		log.Any("args", args),
-		log.String("new_id", newID),
-	)
-	c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
 }
 
 // @Summary add assessments for test
@@ -274,22 +276,24 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 
 	operator := s.getOperator(c)
 	newID, err := model.GetClassAndLiveAssessmentModel().Add(ctx, operator, &args)
-	if err != nil {
+	switch err {
+	case nil:
+		log.Debug(ctx, "add assessment jwt: add success",
+			log.Any("args", args),
+			log.String("new_id", newID),
+		)
+		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
+	case constant.ErrInvalidArgs:
 		log.Error(ctx, "add assessment jwt: add failed",
 			log.Err(err),
 			log.Any("args", args),
 		)
-		switch err {
-		case constant.ErrInvalidArgs:
-			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		default:
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		}
-		return
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	default:
+		log.Error(ctx, "add assessment jwt: add failed",
+			log.Err(err),
+			log.Any("args", args),
+		)
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
-	log.Debug(ctx, "add assessment jwt: add success",
-		log.Any("args", args),
-		log.String("new_id", newID),
-	)
-	c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
 }
