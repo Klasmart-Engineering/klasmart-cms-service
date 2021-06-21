@@ -1069,7 +1069,14 @@ func (m *assessmentBase) prepareBatchAddSuperArgs(ctx context.Context, tx *dbo.D
 		outcomeMap[o.ID] = o
 	}
 
-	return &entity.BatchAddAssessmentSuperArgs{Raw: args}, nil
+	return &entity.BatchAddAssessmentSuperArgs{
+		Raw:                       args,
+		ScheduleIDs:               scheduleIDs,
+		Outcomes:                  outcomes,
+		OutcomeMap:                outcomeMap,
+		LessonPlanMap:             lessonPlanMap,
+		ScheduleIDToOutcomeIDsMap: scheduleIDToOutcomeIDsMap,
+	}, nil
 }
 
 func (m *assessmentBase) batchAdd(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.BatchAddAssessmentSuperArgs) ([]string, error) {
