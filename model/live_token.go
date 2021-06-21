@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path"
 	"strings"
 	"sync"
 	"time"
@@ -332,7 +331,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 				log.Error(ctx, "invalid resource id", log.String("resourceId", source))
 				return nil, constant.ErrInvalidArgs
 			}
-			materialItem.URL = path.Join(config.Get().LiveTokenConfig.AssetsUrlPrefix, fmt.Sprintf("/assets/%s", parts[1]))
+			materialItem.URL = config.Get().LiveTokenConfig.AssetsUrlPrefix + fmt.Sprintf("/assets/%s", parts[1])
 		}
 		materials = append(materials, materialItem)
 	}
