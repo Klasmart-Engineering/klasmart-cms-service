@@ -31,6 +31,7 @@ require (
 	github.com/tidwall/gjson v1.6.0
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/ugorji/go v1.2.2 // indirect
+	github.com/urfave/cli/v2 v2.3.0
 	gitlab.badanamu.com.cn/calmisland/chlorine v0.1.6
 	gitlab.badanamu.com.cn/calmisland/common-cn v0.16.0
 	gitlab.badanamu.com.cn/calmisland/common-log v0.1.4
