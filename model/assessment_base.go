@@ -53,21 +53,19 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 
 	// fill result
 	result := entity.AssessmentDetail{
-		ID:            view.ID,
-		Title:         view.Title,
-		Status:        view.Status,
-		ScheduleID:    view.ScheduleID,
-		ScheduleTitle: view.Schedule.Title,
-		RoomID:        view.RoomID,
-		Class:         view.Class,
-		Teachers:      view.Teachers,
-		Students:      view.Students,
-		Program:       view.Program,
-		Subjects:      view.Subjects,
-		ClassEndTime:  view.ClassEndTime,
-		ClassLength:   view.ClassLength,
-		DueAt:         view.Schedule.DueAt,
-		CompleteTime:  view.CompleteTime,
+		ID:           view.ID,
+		Title:        view.Title,
+		Status:       view.Status,
+		Schedule:     view.Schedule,
+		RoomID:       view.RoomID,
+		Class:        view.Class,
+		Teachers:     view.Teachers,
+		Students:     view.Students,
+		Program:      view.Program,
+		Subjects:     view.Subjects,
+		ClassEndTime: view.ClassEndTime,
+		ClassLength:  view.ClassLength,
+		CompleteTime: view.CompleteTime,
 	}
 
 	// fill lesson plan and lesson materials
@@ -179,14 +177,16 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 	result.RemainingTime = int64(m.calcRemainingTime(view.Schedule.DueAt, view.CreateAt).Seconds())
 
 	// fill student view items
-	result.StudentViewItems, err = m.getH5PStudentViewItems(ctx, operator, tx, view)
-	if err != nil {
-		log.Error(ctx, "get assessment detail: get student view items failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("view", view),
-		)
-		return nil, err
+	if view.Schedule.ClassType != entity.ScheduleClassTypeOfflineClass {
+		result.StudentViewItems, err = m.getH5PStudentViewItems(ctx, operator, tx, view)
+		if err != nil {
+			log.Error(ctx, "get assessment detail: get student view items failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Any("view", view),
+			)
+			return nil, err
+		}
 	}
 
 	return &result, nil
@@ -1535,14 +1535,16 @@ func (m *assessmentBase) update(ctx context.Context, tx *dbo.DBContext, operator
 		schedule := schedules[0]
 
 		// set scores and comments
-		if err := m.updateStudentViewItems(ctx, tx, operator, schedule.RoomID, args.StudentViewItems); err != nil {
-			log.Error(ctx, "update assessment: update student view items failed",
-				log.Err(err),
-				log.Any("args", args),
-				log.Any("schedule", schedule),
-				log.Any("operator", operator),
-			)
-			return err
+		if schedule.ClassType != entity.ScheduleClassTypeOfflineClass {
+			if err := m.updateStudentViewItems(ctx, tx, operator, schedule.RoomID, args.StudentViewItems); err != nil {
+				log.Error(ctx, "update assessment: update student view items failed",
+					log.Err(err),
+					log.Any("args", args),
+					log.Any("schedule", schedule),
+					log.Any("operator", operator),
+				)
+				return err
+			}
 		}
 
 		// update assessment status
