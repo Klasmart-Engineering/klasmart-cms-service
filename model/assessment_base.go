@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"errors"
+	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"sort"
@@ -1003,6 +1004,30 @@ func (m *assessmentBase) existsAssessmentsByScheduleIDs(ctx context.Context, tx 
 }
 
 func (m *assessmentBase) prepareBatchAddSuperArgs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args []*entity.AddAssessmentArgs) (*entity.BatchAddAssessmentSuperArgs, error) {
+	for _, item := range args {
+		existsMap := make(map[string]bool, len(item.Attendances))
+		var deletingAttendances []*entity.ScheduleRelation
+		for _, a := range item.Attendances {
+			key := fmt.Sprintf("%s-%s", a.RelationID, a.RelationType)
+			if existsMap[key] {
+				deletingAttendances = append(deletingAttendances, a)
+				continue
+			}
+			existsMap[key] = true
+		}
+		for _, d := range deletingAttendances {
+			deletingIndex := -1
+			for i, a := range item.Attendances {
+				if d.RelationID == a.RelationID && d.RelationType == a.RelationType {
+					deletingIndex = i
+				}
+			}
+			if deletingIndex >= 0 {
+				item.Attendances = append(item.Attendances[:deletingIndex], item.Attendances[deletingIndex+1:]...)
+			}
+		}
+	}
+
 	// get schedule ids
 	var scheduleIDs []string
 	for _, item := range args {

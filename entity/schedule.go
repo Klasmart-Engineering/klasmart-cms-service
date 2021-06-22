@@ -277,34 +277,34 @@ func (s ScheduleClassType) String() string {
 }
 
 type Schedule struct {
-	ID    string `gorm:"column:id;PRIMARY_KEY"`
-	Title string `gorm:"column:title;type:varchar(100)"`
+	ID    string `gorm:"column:id;PRIMARY_KEY" json:"id"`
+	Title string `gorm:"column:title;type:varchar(100)" json:"title"`
 	// disabled
-	ClassID      string         `gorm:"column:class_id;type:varchar(100)"`
-	LessonPlanID string         `gorm:"column:lesson_plan_id;type:varchar(100)"`
-	OrgID        string         `gorm:"column:org_id;type:varchar(100)"`
-	StartAt      int64          `gorm:"column:start_at;type:bigint"`
-	EndAt        int64          `gorm:"column:end_at;type:bigint"`
-	Status       ScheduleStatus `gorm:"column:status;type:varchar(100)"`
-	IsAllDay     bool           `gorm:"column:is_all_day;default:false"`
+	ClassID      string         `gorm:"column:class_id;type:varchar(100)" json:"class_id"`
+	LessonPlanID string         `gorm:"column:lesson_plan_id;type:varchar(100)" json:"lesson_plan_id"`
+	OrgID        string         `gorm:"column:org_id;type:varchar(100)" json:"org_id"`
+	StartAt      int64          `gorm:"column:start_at;type:bigint" json:"start_at"`
+	EndAt        int64          `gorm:"column:end_at;type:bigint" json:"end_at"`
+	Status       ScheduleStatus `gorm:"column:status;type:varchar(100)" json:"status"`
+	IsAllDay     bool           `gorm:"column:is_all_day;default:false" json:"is_all_day"`
 	// disabled
-	SubjectID       string            `gorm:"column:subject_id;type:varchar(100)"`
-	ProgramID       string            `gorm:"column:program_id;type:varchar(100)"`
-	ClassType       ScheduleClassType `gorm:"column:class_type;type:varchar(100)"`
-	DueAt           int64             `gorm:"column:due_at;type:bigint"`
-	Description     string            `gorm:"column:description;type:varchar(500)"`
-	Attachment      string            `gorm:"column:attachment;type:text;"`
-	ScheduleVersion int64             `gorm:"column:version;type:bigint"`
-	RepeatID        string            `gorm:"column:repeat_id;type:varchar(100)"`
-	RepeatJson      string            `gorm:"column:repeat;type:json;"`
-	IsHidden        bool              `gorm:"column:is_hidden;default:false"`
-	IsHomeFun       bool              `gorm:"column:is_home_fun;default:false"`
-	CreatedID       string            `gorm:"column:created_id;type:varchar(100)"`
-	UpdatedID       string            `gorm:"column:updated_id;type:varchar(100)"`
-	DeletedID       string            `gorm:"column:deleted_id;type:varchar(100)"`
-	CreatedAt       int64             `gorm:"column:created_at;type:bigint"`
-	UpdatedAt       int64             `gorm:"column:updated_at;type:bigint"`
-	DeleteAt        int64             `gorm:"column:delete_at;type:bigint"`
+	SubjectID       string            `gorm:"column:subject_id;type:varchar(100)" json:"subject_id"`
+	ProgramID       string            `gorm:"column:program_id;type:varchar(100)" json:"program_id"`
+	ClassType       ScheduleClassType `gorm:"column:class_type;type:varchar(100)" json:"class_type"`
+	DueAt           int64             `gorm:"column:due_at;type:bigint" json:"due_at"`
+	Description     string            `gorm:"column:description;type:varchar(500)" json:"description"`
+	Attachment      string            `gorm:"column:attachment;type:text;" json:"attachment"`
+	ScheduleVersion int64             `gorm:"column:version;type:bigint" json:"schedule_version"`
+	RepeatID        string            `gorm:"column:repeat_id;type:varchar(100)" json:"repeat_id"`
+	RepeatJson      string            `gorm:"column:repeat;type:json;" json:"repeat_json"`
+	IsHidden        bool              `gorm:"column:is_hidden;default:false" json:"is_hidden"`
+	IsHomeFun       bool              `gorm:"column:is_home_fun;default:false" json:"is_home_fun"`
+	CreatedID       string            `gorm:"column:created_id;type:varchar(100)" json:"created_id"`
+	UpdatedID       string            `gorm:"column:updated_id;type:varchar(100)" json:"updated_id"`
+	DeletedID       string            `gorm:"column:deleted_id;type:varchar(100)" json:"deleted_id"`
+	CreatedAt       int64             `gorm:"column:created_at;type:bigint" json:"created_at"`
+	UpdatedAt       int64             `gorm:"column:updated_at;type:bigint" json:"updated_at"`
+	DeleteAt        int64             `gorm:"column:delete_at;type:bigint" json:"delete_at"`
 }
 
 type ScheduleStatus string
