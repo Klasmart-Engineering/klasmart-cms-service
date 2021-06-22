@@ -943,7 +943,7 @@ func (m *assessmentBase) batchGetLatestLessonPlanMap(ctx context.Context, tx *db
 		for _, lm := range lp.Materials {
 			lm2 := lessonMaterialMap[lm.ID]
 			if lm2 != nil {
-				lm.OutcomeIDs = strings.Split(lm2.Outcomes, constant.StringArraySeparator)
+				lm.OutcomeIDs = utils.SliceDeduplicationExcludeEmpty(strings.Split(lm2.Outcomes, constant.StringArraySeparator))
 			}
 		}
 	}
