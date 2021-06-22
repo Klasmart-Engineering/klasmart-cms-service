@@ -246,6 +246,14 @@ func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditVa
 		return constant.ErrInvalidArgs
 	}
 
+	input.ClassRosterTeacherIDs = utils.SliceDeduplicationExcludeEmpty(input.ClassRosterTeacherIDs)
+	input.ClassRosterStudentIDs = utils.SliceDeduplicationExcludeEmpty(input.ClassRosterStudentIDs)
+	input.ParticipantsTeacherIDs = utils.SliceDeduplicationExcludeEmpty(input.ParticipantsTeacherIDs)
+	input.ParticipantsStudentIDs = utils.SliceDeduplicationExcludeEmpty(input.ParticipantsStudentIDs)
+
+	input.ClassRosterStudentIDs = utils.ExcludeStrings(input.ClassRosterStudentIDs, input.ClassRosterTeacherIDs)
+	input.ParticipantsStudentIDs = utils.ExcludeStrings(input.ParticipantsStudentIDs, input.ParticipantsTeacherIDs)
+
 	// Students and teachers must exist
 	if (len(input.ClassRosterTeacherIDs) == 0 &&
 		len(input.ParticipantsTeacherIDs) == 0) ||
