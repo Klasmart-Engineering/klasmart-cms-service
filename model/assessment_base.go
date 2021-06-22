@@ -1020,6 +1020,7 @@ func (m *assessmentBase) prepareBatchAddSuperArgs(ctx context.Context, tx *dbo.D
 			for i, a := range item.Attendances {
 				if d.RelationID == a.RelationID && d.RelationType == a.RelationType {
 					deletingIndex = i
+					break
 				}
 			}
 			if deletingIndex >= 0 {
