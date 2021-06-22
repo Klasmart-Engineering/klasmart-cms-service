@@ -53,22 +53,19 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 
 	// fill result
 	result := entity.AssessmentDetail{
-		ID:                view.ID,
-		Title:             view.Title,
-		Status:            view.Status,
-		ScheduleID:        view.ScheduleID,
-		ScheduleTitle:     view.Schedule.Title,
-		ScheduleClassType: view.Schedule.ClassType,
-		RoomID:            view.RoomID,
-		Class:             view.Class,
-		Teachers:          view.Teachers,
-		Students:          view.Students,
-		Program:           view.Program,
-		Subjects:          view.Subjects,
-		ClassEndTime:      view.ClassEndTime,
-		ClassLength:       view.ClassLength,
-		DueAt:             view.Schedule.DueAt,
-		CompleteTime:      view.CompleteTime,
+		ID:           view.ID,
+		Title:        view.Title,
+		Status:       view.Status,
+		Schedule:     view.Schedule,
+		RoomID:       view.RoomID,
+		Class:        view.Class,
+		Teachers:     view.Teachers,
+		Students:     view.Students,
+		Program:      view.Program,
+		Subjects:     view.Subjects,
+		ClassEndTime: view.ClassEndTime,
+		ClassLength:  view.ClassLength,
+		CompleteTime: view.CompleteTime,
 	}
 
 	// fill lesson plan and lesson materials
