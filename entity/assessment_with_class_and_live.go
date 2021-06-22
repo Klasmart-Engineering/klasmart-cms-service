@@ -180,8 +180,7 @@ type AssessmentDetail struct {
 	ID               string                          `json:"id"`
 	Title            string                          `json:"title"`
 	Status           AssessmentStatus                `json:"status"`
-	ScheduleID       string                          `json:"schedule_id"`
-	ScheduleTitle    string                          `json:"schedule_title"`
+	Schedule         *Schedule                       `json:"schedule"`
 	RoomID           string                          `json:"room_id"`
 	Class            AssessmentClass                 `json:"class"`
 	Teachers         []*AssessmentTeacher            `json:"teachers"`
@@ -190,7 +189,6 @@ type AssessmentDetail struct {
 	Subjects         []*AssessmentSubject            `json:"subjects"`
 	ClassEndTime     int64                           `json:"class_end_time"`
 	ClassLength      int                             `json:"class_length"`
-	DueAt            int64                           `json:"due_at"`
 	RemainingTime    int64                           `json:"remaining_time"`
 	CompleteTime     int64                           `json:"complete_time"`
 	LessonPlan       AssessmentDetailContent         `json:"lesson_plan"`
