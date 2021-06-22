@@ -295,7 +295,7 @@ func (c *ContentService) doPropertyMapping(ctx context.Context, mapper Mapper, o
 	newGrades := make([]string, 0)
 	for i := range propertySet.Grade {
 		tempGrade := mapper.Grade(ctx, org, propertySet.Program, propertySet.Grade[i])
-		newGrades = append(newAges, tempGrade)
+		newGrades = append(newGrades, tempGrade)
 	}
 	newPropertySet.Grade = newGrades
 
