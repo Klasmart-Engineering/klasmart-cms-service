@@ -252,10 +252,8 @@ func (m *classAndLiveAssessmentModel) PrepareAddArgs(ctx context.Context, tx *db
 	}
 	assessmentTitle := m.generateTitle(args.ClassEndTime, classNameMap[schedule.ClassID], schedule.Title)
 
-	// get attendances
-	var finalAttendanceIDs []string
-	switch schedule.ClassType {
-	case entity.ScheduleClassTypeOfflineClass:
+	// fill args attendance ids
+	if schedule.ClassType == entity.ScheduleClassTypeOfflineClass {
 		users, err := GetScheduleRelationModel().GetUsersByScheduleID(ctx, operator, args.ScheduleID)
 		if err != nil {
 			log.Error(ctx, "add class and live assessments: get users by schedule id failed",
@@ -265,11 +263,12 @@ func (m *classAndLiveAssessmentModel) PrepareAddArgs(ctx context.Context, tx *db
 			return nil, err
 		}
 		for _, u := range users {
-			finalAttendanceIDs = append(finalAttendanceIDs, u.RelationID)
+			args.AttendanceIDs = append(args.AttendanceIDs, u.RelationID)
 		}
-	default:
-		finalAttendanceIDs = args.AttendanceIDs
 	}
+	args.AttendanceIDs = utils.SliceDeduplicationExcludeEmpty(args.AttendanceIDs)
+
+	// get attendances
 	scheduleRelationCond := &da.ScheduleRelationCondition{
 		ScheduleID: sql.NullString{
 			String: schedule.ID,
@@ -284,7 +283,7 @@ func (m *classAndLiveAssessmentModel) PrepareAddArgs(ctx context.Context, tx *db
 	if err != nil {
 		log.Error(ctx, "add class and live assessments: query schedule relations failed",
 			log.Err(err),
-			log.Any("attendance_ids", finalAttendanceIDs),
+			log.Any("attendance_ids", args.AttendanceIDs),
 			log.Any("operator", operator),
 			log.Any("condition", scheduleRelationCond),
 		)
@@ -293,7 +292,7 @@ func (m *classAndLiveAssessmentModel) PrepareAddArgs(ctx context.Context, tx *db
 	if len(scheduleRelations) == 0 {
 		log.Error(ctx, "add class and live assessments: not found schedule relations",
 			log.Err(err),
-			log.Any("attendance_ids", finalAttendanceIDs),
+			log.Any("attendance_ids", args.AttendanceIDs),
 			log.Any("operator", operator),
 			log.Any("condition", scheduleRelationCond),
 		)
