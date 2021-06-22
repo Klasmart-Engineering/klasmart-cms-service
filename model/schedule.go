@@ -691,27 +691,28 @@ func (s *scheduleModel) prepareScheduleAddData(ctx context.Context, op *entity.O
 }
 
 func (s *scheduleModel) prepareScheduleUpdateData(ctx context.Context, op *entity.Operator, schedule *entity.Schedule, viewData *entity.ScheduleUpdateView) (*entity.Schedule, *entity.RepeatOptions, error) {
+	newSchedule := *schedule
 	// add schedule,update old schedule fields that need to be updated
-	schedule.ID = utils.NewID()
-	schedule.LessonPlanID = viewData.LessonPlanID
-	schedule.ProgramID = viewData.ProgramID
-	schedule.ClassID = viewData.ClassID
-	schedule.StartAt = viewData.StartAt
-	schedule.EndAt = viewData.EndAt
-	schedule.Title = viewData.Title
-	schedule.IsAllDay = viewData.IsAllDay
-	schedule.Description = viewData.Description
-	schedule.DueAt = viewData.DueAt
-	schedule.ClassType = viewData.ClassType
-	schedule.CreatedID = op.UserID
-	schedule.CreatedAt = time.Now().Unix()
-	schedule.UpdatedID = op.UserID
-	schedule.UpdatedAt = time.Now().Unix()
-	schedule.DeletedID = ""
-	schedule.DeleteAt = 0
-	schedule.IsHomeFun = viewData.IsHomeFun
+	newSchedule.ID = utils.NewID()
+	newSchedule.LessonPlanID = viewData.LessonPlanID
+	newSchedule.ProgramID = viewData.ProgramID
+	newSchedule.ClassID = viewData.ClassID
+	newSchedule.StartAt = viewData.StartAt
+	newSchedule.EndAt = viewData.EndAt
+	newSchedule.Title = viewData.Title
+	newSchedule.IsAllDay = viewData.IsAllDay
+	newSchedule.Description = viewData.Description
+	newSchedule.DueAt = viewData.DueAt
+	newSchedule.ClassType = viewData.ClassType
+	newSchedule.CreatedID = op.UserID
+	newSchedule.CreatedAt = time.Now().Unix()
+	newSchedule.UpdatedID = op.UserID
+	newSchedule.UpdatedAt = time.Now().Unix()
+	newSchedule.DeletedID = ""
+	newSchedule.DeleteAt = 0
+	newSchedule.IsHomeFun = viewData.IsHomeFun
 	if viewData.ClassType != entity.ScheduleClassTypeHomework {
-		schedule.IsHomeFun = false
+		newSchedule.IsHomeFun = false
 	}
 	// attachment
 	b, err := json.Marshal(viewData.Attachment)
@@ -720,7 +721,7 @@ func (s *scheduleModel) prepareScheduleUpdateData(ctx context.Context, op *entit
 			log.Any("attachment", viewData.Attachment))
 		return nil, nil, err
 	}
-	schedule.Attachment = string(b)
+	newSchedule.Attachment = string(b)
 
 	// update repeat rule
 	var repeatOptions *entity.RepeatOptions
@@ -730,23 +731,23 @@ func (s *scheduleModel) prepareScheduleUpdateData(ctx context.Context, op *entit
 		if err != nil {
 			return nil, nil, err
 		}
-		schedule.RepeatJson = string(b)
+		newSchedule.RepeatJson = string(b)
 		// if following selected, set repeat rule
 		if viewData.EditType == entity.ScheduleEditWithFollowing {
 			repeatOptions = &viewData.Repeat
 		}
-		if schedule.RepeatID == "" {
-			schedule.RepeatID = utils.NewID()
+		if newSchedule.RepeatID == "" {
+			newSchedule.RepeatID = utils.NewID()
 		}
 	} else {
 		// if repeat not selected,but need to update follow schedule, use old schedule repeat rule
 		if viewData.EditType == entity.ScheduleEditWithFollowing {
 			var repeat = new(entity.RepeatOptions)
-			if err := json.Unmarshal([]byte(schedule.RepeatJson), repeat); err != nil {
+			if err := json.Unmarshal([]byte(newSchedule.RepeatJson), repeat); err != nil {
 				log.Error(ctx, "update schedule:unmarshal schedule repeatJson error",
 					log.Err(err),
 					log.Any("viewData", viewData),
-					log.Any("schedule", schedule),
+					log.Any("schedule", newSchedule),
 				)
 				return nil, nil, err
 			}
@@ -754,7 +755,7 @@ func (s *scheduleModel) prepareScheduleUpdateData(ctx context.Context, op *entit
 		}
 	}
 
-	return schedule, repeatOptions, nil
+	return &newSchedule, repeatOptions, nil
 }
 
 func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
@@ -997,7 +998,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		return "", err
 	}
 
-	schedule, repeatOptions, err := s.prepareScheduleUpdateData(ctx, operator, schedule, viewData)
+	updateSchedule, repeatOptions, err := s.prepareScheduleUpdateData(ctx, operator, schedule, viewData)
 	if err != nil {
 		log.Error(ctx, "prepareScheduleUpdateData: error",
 			log.Err(err),
@@ -1006,7 +1007,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		return "", err
 	}
 
-	scheduleList, allRelations, batchAddAssessmentSuperArgs, err := s.prepareScheduleAddData(ctx, operator, schedule, repeatOptions, viewData.Location, relations)
+	scheduleList, allRelations, batchAddAssessmentSuperArgs, err := s.prepareScheduleAddData(ctx, operator, updateSchedule, repeatOptions, viewData.Location, relations)
 	if err != nil {
 		log.Error(ctx, "prepareScheduleAddData: error",
 			log.Err(err),
@@ -1044,7 +1045,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		if err != nil {
 			log.Error(ctx, "update schedule: add failed",
 				log.Err(err),
-				log.Any("schedule", schedule),
+				log.Any("schedule", updateSchedule),
 				log.Any("viewData", viewData),
 			)
 			return err
