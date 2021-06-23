@@ -398,25 +398,71 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 		return nil, err
 	}
 
+	// get lesson plans
+	var scheduleIDs []string
+	for _, item := range items {
+		scheduleIDs = append(scheduleIDs, item.ScheduleID)
+	}
+	schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, operator, scheduleIDs, nil)
+	if err != nil {
+		log.Error(ctx, "get home fun study list: get schedules failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	var lessonPlanIDs []string
+	lessonPlanIDToScheduleIDMap := make(map[string]string, len(schedules))
+	for _, s := range schedules {
+		lessonPlanIDs = append(lessonPlanIDs, s.LessonPlanID)
+		lessonPlanIDToScheduleIDMap[s.LessonPlanID] = s.ID
+	}
+	lessonPlans, err := GetContentModel().GetRawContentByIDList(ctx, dbo.MustGetDB(ctx), lessonPlanIDs)
+	if err != nil {
+		log.Error(ctx, "get home fun study list: get contents failed",
+			log.Err(err),
+			log.Strings("lesson_plan_ids", lessonPlanIDs),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	scheduleIDToLessonPlanMap := make(map[string]*entity.Content, len(lessonPlans))
+	for _, lp := range lessonPlans {
+		scheduleID := lessonPlanIDToScheduleIDMap[lp.ID]
+		if scheduleID == "" {
+			continue
+		}
+		scheduleIDToLessonPlanMap[scheduleID] = lp
+	}
+
 	result := entity.ListHomeFunStudiesResult{Total: total}
 	for _, item := range items {
 		var teacherNames []string
 		for _, id := range item.TeacherIDs {
 			teacherNames = append(teacherNames, teacherNamesMap[id])
 		}
-		studentName := studentNamesMap[item.StudentID]
-		result.Items = append(result.Items, &entity.ListHomeFunStudiesResultItem{
+		resultItem := entity.ListHomeFunStudiesResultItem{
 			ID:               item.ID,
 			Title:            item.Title,
 			TeacherNames:     teacherNames,
-			StudentName:      studentName,
+			StudentName:      studentNamesMap[item.StudentID],
 			Status:           item.Status,
 			DueAt:            item.DueAt,
 			LatestFeedbackAt: item.LatestFeedbackAt,
 			AssessScore:      item.AssessScore,
 			CompleteAt:       item.CompleteAt,
 			ScheduleID:       item.ScheduleID,
-		})
+		}
+		if lp := scheduleIDToLessonPlanMap[item.ScheduleID]; lp != nil {
+			resultItem.LessonPlan = &entity.AssessmentLessonPlan{
+				ID:   lp.ID,
+				Name: lp.Name,
+			}
+		}
+		result.Items = append(result.Items, &resultItem)
 	}
 
 	return &result, nil

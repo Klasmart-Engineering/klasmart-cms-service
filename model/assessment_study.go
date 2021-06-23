@@ -190,6 +190,7 @@ func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operat
 			CompleteAt:    v.CompleteTime,
 			ScheduleID:    v.ScheduleID,
 			CreateAt:      v.CreateAt,
+			LessonPlan:    v.LessonPlan,
 		}
 		result.Items = append(result.Items, &newItem)
 	}
