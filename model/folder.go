@@ -922,8 +922,18 @@ func (f *FolderModel) checkMoveItem(ctx context.Context, folder *entity.FolderIt
 		//distFolder.DirPath
 		return ErrMoveToChild
 	}
+	log.Info(ctx, "check dir",
+		log.Any("distFolder", distFolder),
+		log.Any("folder", folder),
+		log.String("children path", string(folder.ChildrenPath())))
+
 	if distFolder.DirPath == folder.ChildrenPath() {
 		//distFolder.DirPath
+		log.Error(ctx, "check dir",
+			log.Err(ErrMoveToSameFolder),
+			log.Any("distFolder", distFolder),
+			log.Any("folder", folder),
+			log.String("children path", string(folder.ChildrenPath())))
 		return ErrMoveToSameFolder
 	}
 
@@ -1127,14 +1137,18 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext,
 
 	newPath := folder.DirPath
 	if originPath == constant.FolderRootPath {
-		//if origin path is root("/")
-		//when old path is root path("/"), replace function in mysql will replace all "/" in path
-		//we prefix the new path as => new_path + origin_path
-		err = da.GetFolderDA().BatchUpdateFolderPathPrefix(ctx, tx, info.Ids, newPath)
-		if err != nil {
-			log.Error(ctx, "update folder path failed", log.Err(err), log.Strings("ids", info.Ids), log.String("path", string(path)))
-			return err
+		//to prevent target path build as //xxxx
+		if newPath != constant.FolderRootPath {
+			//if origin path is root("/")
+			//when old path is root path("/"), replace function in mysql will replace all "/" in path
+			//we prefix the new path as => new_path + origin_path
+			err = da.GetFolderDA().BatchUpdateFolderPathPrefix(ctx, tx, info.Ids, newPath)
+			if err != nil {
+				log.Error(ctx, "update folder path failed", log.Err(err), log.Strings("ids", info.Ids), log.String("path", string(path)))
+				return err
+			}
 		}
+
 	} else {
 		//origin: /xxx => /xxx/
 		//target: /
