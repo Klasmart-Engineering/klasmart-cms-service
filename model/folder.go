@@ -922,8 +922,18 @@ func (f *FolderModel) checkMoveItem(ctx context.Context, folder *entity.FolderIt
 		//distFolder.DirPath
 		return ErrMoveToChild
 	}
+	log.Info(ctx, "check dir",
+		log.Any("distFolder", distFolder),
+		log.Any("folder", folder),
+		log.String("children path", string(folder.ChildrenPath())))
+
 	if distFolder.DirPath == folder.ChildrenPath() {
 		//distFolder.DirPath
+		log.Error(ctx, "check dir",
+			log.Err(ErrMoveToSameFolder),
+			log.Any("distFolder", distFolder),
+			log.Any("folder", folder),
+			log.String("children path", string(folder.ChildrenPath())))
 		return ErrMoveToSameFolder
 	}
 
@@ -1066,7 +1076,12 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBCon
 	return nil
 }
 
-func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, fid string, partition entity.FolderPartition, distFolder *entity.FolderItem, operator *entity.Operator) error {
+func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext,
+	ownerType entity.OwnerType,
+	fid string,
+	partition entity.FolderPartition,
+	distFolder *entity.FolderItem,
+	operator *entity.Operator) error {
 	folder, err := f.getFolder(ctx, tx, fid)
 	if err != nil {
 		return err
@@ -1122,14 +1137,18 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 
 	newPath := folder.DirPath
 	if originPath == constant.FolderRootPath {
-		//if origin path is root("/")
-		//when old path is root path("/"), replace function in mysql will replace all "/" in path
-		//we prefix the new path as => new_path + origin_path
-		err = da.GetFolderDA().BatchUpdateFolderPathPrefix(ctx, tx, info.Ids, newPath)
-		if err != nil {
-			log.Error(ctx, "update folder path failed", log.Err(err), log.Strings("ids", info.Ids), log.String("path", string(path)))
-			return err
+		//to prevent target path build as //xxxx
+		if newPath != constant.FolderRootPath {
+			//if origin path is root("/")
+			//when old path is root path("/"), replace function in mysql will replace all "/" in path
+			//we prefix the new path as => new_path + origin_path
+			err = da.GetFolderDA().BatchUpdateFolderPathPrefix(ctx, tx, info.Ids, newPath)
+			if err != nil {
+				log.Error(ctx, "update folder path failed", log.Err(err), log.Strings("ids", info.Ids), log.String("path", string(path)))
+				return err
+			}
 		}
+
 	} else {
 		//origin: /xxx => /xxx/
 		//target: /
@@ -1704,6 +1723,7 @@ func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, ownerType en
 	}
 
 	for i := range folders {
+		//handle with Character cases
 		if folders[i].Name == name {
 			log.Warn(ctx, "check duplicate name failed",
 				log.Err(err),
@@ -1736,33 +1756,11 @@ func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, nam
 	}
 	//check duplicate folder name
 	for i := range folders {
+		//handle with Character cases
 		if folders[i].Name == name {
 			//if owner type is organization,folder can be the same
 			//in different partition
-			if folder.OwnerType == entity.OwnerTypeOrganization {
-				p := folder.DirPath.Parents()
-				if len(p) < 1 {
-					//root path can't be the same
-					log.Warn(ctx, "root path can't be the same",
-						log.Strings("p", p),
-						log.Any("folders[i]", folders[i]),
-						log.String("name", name),
-						log.Any("condition", condition))
-					return ErrDuplicateFolderName
-				}
-				parents := folders[i].DirPath.Parents()
-				if len(parents) > 1 && parents[0] == p[0] {
-					log.Warn(ctx, "same path same name",
-						log.Strings("parents", parents),
-						log.Strings("p", p),
-						log.Any("folders[i]", folders[i]),
-						log.String("name", name),
-						log.Any("condition", condition))
-					return ErrDuplicateFolderName
-				}
-			} else {
-				return ErrDuplicateFolderName
-			}
+			return ErrDuplicateFolderName
 		}
 	}
 
