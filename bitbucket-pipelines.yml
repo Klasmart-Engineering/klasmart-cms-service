@@ -40,7 +40,6 @@ pipelines:
 
             - export BRANCH_TAG=$(echo "$BITBUCKET_BRANCH" | sed -E 's/([^0-9a-zA-Z]+)/-/g' | awk '{print tolower($0)}')
             - export REPO=$DOCKER_REPO_URL/kidsloop-cms-backend # DOCKER_REPO_URL is workspace wide variable
-            - export COMMIT_TAG=$(git rev-parse --short HEAD)
 
             - aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin $DOCKER_REPO_URL
             - aws s3 cp s3://$S3_BUCKET/keys/ deploy/ --recursive --sse aws:kms --sse-kms-key-id $KMS_KEY
@@ -49,12 +48,12 @@ pipelines:
             - docker tag cms-backend:latest $REPO:$BRANCH_TAG
             - docker tag cms-backend:latest $REPO:$BRANCH_TAG-latest
             - docker tag cms-backend:latest $REPO:$BRANCH_TAG-$BITBUCKET_BUILD_NUMBER
-            - docker tag cms-backend:latest $REPO:$BRANCH_TAG-$COMMIT_TAG
+            - docker tag cms-backend:latest $REPO:$BRANCH_TAG-${BITBUCKET_COMMIT:0:7}
 
             - docker push $REPO:$BRANCH_TAG
             - docker push $REPO:$BRANCH_TAG-latest
             - docker push $REPO:$BRANCH_TAG-$BITBUCKET_BUILD_NUMBER
-            - docker push $REPO:$BRANCH_TAG-$COMMIT_TAG
+            - docker push $REPO:$BRANCH_TAG-${BITBUCKET_COMMIT:0:7}
 
             - export AWS_ACCESS_KEY_ID=$AWS_ALPHA_KEY_ID && export AWS_SECRET_ACCESS_KEY=$AWS_ALPHA_ACCESS_KEY && export AWS_DEFAULT_REGION=ap-northeast-2
             - aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin $DOCKER_ALPHA_REPO
