@@ -15,14 +15,13 @@ import (
 var (
 	_amsClient     *AmsClient
 	_amsClientOnce sync.Once
-
-	r, _ = regexp.Compile(".*;?access=\\S+;?.*")
 )
 
 func GetAmsClient() *AmsClient {
 	_amsClientOnce.Do(func() {
 		_amsClient = &AmsClient{
 			Client: chlorine.NewClient(config.Get().AMS.EndPoint),
+			reg:    regexp.MustCompile("access=\\S+"),
 		}
 
 	})
@@ -31,6 +30,7 @@ func GetAmsClient() *AmsClient {
 
 type AmsClient struct {
 	*chlorine.Client
+	reg *regexp.Regexp
 }
 
 func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorine.Response) (int, error) {
@@ -40,7 +40,7 @@ func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorin
 	}
 
 	cookie := req.Header.Get(constant.CookieKey)
-	if !r.MatchString(cookie) {
+	if !c.reg.MatchString(cookie) {
 		log.Warn(ctx,
 			"Found access graphql without cookie",
 			log.String(constant.CookieKey, cookie),

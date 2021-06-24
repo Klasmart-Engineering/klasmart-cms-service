@@ -124,6 +124,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestRegexp(t *testing.T) {
-	r, _ := regexp.Compile(".*;?access=\\S+;?.*")
-	t.Log(r.MatchString("access=123"))
+	r, _ := regexp.Compile("(\\S+=\\S+;)*access=\\S+(;\\S+=\\S+)*")
+	t.Log(r.MatchString("abc=;access=123"))
 }
