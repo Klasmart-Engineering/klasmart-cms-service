@@ -255,7 +255,7 @@ func (s AmsUserService) NewUser(ctx context.Context, operator *entity.Operator, 
 		newUser(email:$email){
 			user_id
 		}
-	}`)
+	}`, chlorine.ReqToken(operator.Token))
 	request.Var("$email", email)
 
 	data := &struct {

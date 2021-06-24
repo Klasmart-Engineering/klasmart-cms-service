@@ -146,3 +146,7 @@ const (
 const (
 	MilestoneNameLength = 200
 )
+
+const (
+	CookieKey = "Cookie"
+)
