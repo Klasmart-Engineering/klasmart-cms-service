@@ -324,11 +324,17 @@ func (m *assessmentH5p) getH5PStudentViewItems(ctx context.Context, operator *en
 			}
 			return true
 		})
-		for i, lm := range newItem.LessonMaterials {
+		lastLessonMaterialID := ""
+		number := 0
+		for _, lm := range newItem.LessonMaterials {
+			if lastLessonMaterialID != lm.LessonMaterialID {
+				number++
+				lastLessonMaterialID = lm.LessonMaterialID
+			}
 			if lm.SubContentNumber > 0 {
-				lm.Number = fmt.Sprintf("%d-%d", i+1, lm.SubContentNumber)
+				lm.Number = fmt.Sprintf("%d-%d", number, lm.SubContentNumber)
 			} else {
-				lm.Number = fmt.Sprintf("%d", i+1)
+				lm.Number = fmt.Sprintf("%d", number)
 			}
 		}
 		r = append(r, &newItem)
