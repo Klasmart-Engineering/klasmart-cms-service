@@ -18,9 +18,9 @@ import (
 )
 
 var (
-	ErrInvalidUploadPartition = errors.New("unknown storage partition")
-	ErrInvalidPrivateKeyFile  = errors.New("invalid private key file")
-	ErrInvalidExtensionInPartitionFile  = errors.New("invalid extension in partition")
+	ErrInvalidUploadPartition          = errors.New("unknown storage partition")
+	ErrInvalidPrivateKeyFile           = errors.New("invalid private key file")
+	ErrInvalidExtensionInPartitionFile = errors.New("invalid extension in partition")
 )
 
 const (
@@ -35,13 +35,17 @@ type StoragePartition string
 func (s StoragePartition) SizeLimit() int64 {
 	switch s {
 	case AssetStoragePartition:
-		return 1024 * 1000
+		// 1 GB
+		return 1024 * 1024 * 1024
 	case ThumbnailStoragePartition:
-		return 1024 * 1024 * 5
+		// 20 MB
+		return 1024 * 1024 * 20
 	case ScheduleAttachmentStoragePartition:
-		return 1024 * 100
+		// 1 GB
+		return 1024 * 1024 * 1024
 	}
-	return 0
+	// 500 MB
+	return 1024 * 1024 * 500
 }
 
 func NewStoragePartition(ctx context.Context, partition, extension string) (StoragePartition, error) {

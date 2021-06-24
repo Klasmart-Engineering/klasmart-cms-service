@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"regexp"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -14,6 +15,8 @@ import (
 var (
 	_amsClient     *AmsClient
 	_amsClientOnce sync.Once
+
+	r, _ = regexp.Compile(".*;?access=\\S+;?.*")
 )
 
 func GetAmsClient() *AmsClient {
@@ -37,7 +40,7 @@ func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorin
 	}
 
 	cookie := req.Header.Get(constant.CookieKey)
-	if len(cookie) < 7 {
+	if !r.MatchString(cookie) {
 		log.Warn(ctx,
 			"Found access graphql without cookie",
 			log.String(constant.CookieKey, cookie),
