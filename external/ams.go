@@ -2,6 +2,7 @@ package external
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -35,6 +36,13 @@ func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorin
 		externalStopwatch.Start()
 	}
 
+	cookie := req.Header.Get(constant.CookieKey)
+	if len(cookie) < 7 {
+		log.Warn(ctx,
+			"Found access graphql without cookie",
+			log.String(constant.CookieKey, cookie),
+			log.Any("req", req))
+	}
 	statusCode, err := c.Client.Run(ctx, req, resp)
 
 	if foundStopwatch {
