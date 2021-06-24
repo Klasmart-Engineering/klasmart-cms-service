@@ -6,14 +6,15 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 
@@ -273,9 +274,9 @@ func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition Storage
 
 	fmt.Println(s.bucket)
 	req, _ := svc.PutObjectRequest(&s3.PutObjectInput{
-		Bucket:        aws.String(s.bucket),
-		Key:           aws.String(path),
-		ContentLength: aws.Int64(partition.SizeLimit()),
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(path),
+		// ContentLength: aws.Int64(partition.SizeLimit()),
 	})
 
 	urlStr, err := req.Presign(constant.PresignUploadDurationMinutes)
