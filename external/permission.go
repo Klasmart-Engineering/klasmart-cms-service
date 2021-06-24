@@ -55,7 +55,7 @@ func (s AmsPermissionService) HasOrganizationPermission(ctx context.Context, ope
 				checkAllowed(permission_name: $permission_name)
 			}
 		}
-	}`)
+	}`, chlorine.ReqToken(operator.Token))
 	request.Var("user_id", operator.UserID)
 	request.Var("organization_id", operator.OrgID)
 	request.Var("permission_name", permissionName.String())
@@ -217,7 +217,7 @@ query($user_id: ID!, $permission: ID!) {
 		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
 		return false, err
 	}
-	req := chlorine.NewRequest(buf.String())
+	req := chlorine.NewRequest(buf.String(), chlorine.ReqToken(operator.Token))
 	req.Var("user_id", operator.UserID)
 	req.Var("permission", permissionName)
 
@@ -282,7 +282,7 @@ query($user_id: ID!, $permission: ID!) {
 		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
 		return false, err
 	}
-	req := chlorine.NewRequest(buf.String())
+	req := chlorine.NewRequest(buf.String(), chlorine.ReqToken(operator.Token))
 	req.Var("user_id", operator.UserID)
 	req.Var("permission", permissionName)
 
