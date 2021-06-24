@@ -13,14 +13,17 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
-type assessmentH5p struct{}
+type assessment_h5p struct{}
 
-func getAssessmentH5p() *assessmentH5p {
-	return &assessmentH5p{}
+func getAssessmentH5p() *assessment_h5p {
+	return &assessment_h5p{}
 }
 
-func (m *assessmentH5p) getRoomCompleteRate(room *entity.AssessmentH5PRoom, v *entity.AssessmentView) float64 {
+func (m *assessment_h5p) getRoomCompleteRate(ctx context.Context, room *entity.AssessmentH5PRoom, v *entity.AssessmentView) float64 {
 	if room == nil {
+		log.Debug(ctx, "get room complete rate: room is empty",
+			log.Any("view", v),
+		)
 		return 0
 	}
 
@@ -41,14 +44,17 @@ func (m *assessmentH5p) getRoomCompleteRate(room *entity.AssessmentH5PRoom, v *e
 
 	// calc attempted
 	attempted := 0
-	for _, uid := range utils.SliceDeduplicationExcludeEmpty(checkedUserIDs) {
+	checkedUserIDs = utils.SliceDeduplicationExcludeEmpty(checkedUserIDs)
+	checkedH5PIDs = utils.SliceDeduplicationExcludeEmpty(checkedH5PIDs)
+	for _, uid := range checkedH5PIDs {
 		u := room.UserMap[uid]
 		if u == nil {
 			continue
 		}
-		for _, h5pID := range utils.SliceDeduplicationExcludeEmpty(checkedH5PIDs) {
+		for _, h5pID := range checkedH5PIDs {
 			cc := u.ContentsMapByH5PID[h5pID]
 			if len(cc) == 0 {
+				log.Debug(ctx, "get room complete rate: contents length equal 0")
 				continue
 			}
 			for _, c := range cc {
@@ -66,9 +72,13 @@ func (m *assessmentH5p) getRoomCompleteRate(room *entity.AssessmentH5PRoom, v *e
 	return 0
 }
 
-func (m *assessmentH5p) batchGetRoomScoreMap(ctx context.Context, operator *entity.Operator, roomIDs []string, enableComment bool) (map[string]*entity.AssessmentH5PRoom, error) {
+func (m *assessment_h5p) batchGetRoomScoreMap(ctx context.Context, operator *entity.Operator, roomIDs []string, enableComment bool) (map[string]*entity.AssessmentH5PRoom, error) {
 	roomScoreMap, err := external.GetH5PRoomScoreServiceProvider().BatchGet(ctx, operator, roomIDs)
 	if err != nil {
+		log.Error(ctx, "batch get room score map: batch get failed",
+			log.Strings("room_ids", roomIDs),
+			log.Any("operator", operator),
+		)
 		return nil, err
 	}
 
@@ -104,7 +114,7 @@ func (m *assessmentH5p) batchGetRoomScoreMap(ctx context.Context, operator *enti
 					assessmentContent.ContentType = s.Content.Type
 					assessmentContent.SubH5PID = s.Content.SubContentID
 					if s.Content.ContentID != latestContentID {
-						subContentNumber = 1
+						subContentNumber = 1 // 0 for not set
 					} else {
 						subContentNumber++
 					}
@@ -174,9 +184,13 @@ func (m *assessmentH5p) batchGetRoomScoreMap(ctx context.Context, operator *enti
 	return result, nil
 }
 
-func (m *assessmentH5p) batchGetRoomCommentMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]map[string][]string, error) {
+func (m *assessment_h5p) batchGetRoomCommentMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]map[string][]string, error) {
 	commentMap, err := external.GetH5PRoomCommentServiceProvider().BatchGet(ctx, operator, roomIDs)
 	if err != nil {
+		log.Error(ctx, "batch get room comment map failed",
+			log.Strings("room_ids", roomIDs),
+			log.Any("operator", operator),
+		)
 		return nil, err
 	}
 	result := make(map[string]map[string][]string, len(commentMap))
@@ -205,7 +219,7 @@ func (m *assessmentH5p) batchGetRoomCommentMap(ctx context.Context, operator *en
 	return result, nil
 }
 
-func (m *assessmentH5p) getH5PStudentViewItems(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, view *entity.AssessmentView) ([]*entity.AssessmentStudentViewH5PItem, error) {
+func (m *assessment_h5p) getH5PStudentViewItems(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, view *entity.AssessmentView) ([]*entity.AssessmentStudentViewH5PItem, error) {
 	roomMap, err := m.batchGetRoomScoreMap(ctx, operator, []string{view.RoomID}, true)
 	if err != nil {
 		log.Error(ctx, "get assessment detail: get room map failed",
