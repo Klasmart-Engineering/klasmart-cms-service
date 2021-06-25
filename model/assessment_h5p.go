@@ -111,7 +111,6 @@ func (m *assessmentH5P) batchGetRoomScoreMap(ctx context.Context, operator *enti
 					if itemI.Content.SubContentID != "" && itemJ.Content.SubContentID == "" {
 						return false
 					}
-					return true
 				}
 				return scoresIndexMap[itemI.Content.ContentID] < scoresIndexMap[itemJ.Content.ContentID]
 			})
