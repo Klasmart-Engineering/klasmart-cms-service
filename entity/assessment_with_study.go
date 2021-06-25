@@ -55,12 +55,12 @@ type AssessmentH5PRoom struct {
 }
 
 type AssessmentH5PUser struct {
-	UserID                string
-	Comment               string
-	Contents              []*AssessmentH5PContentScore
-	ContentsMapByH5PID    map[string][]*AssessmentH5PContentScore
-	ContentMapBySubH5PID  map[string]*AssessmentH5PContentScore
-	ContentMapByContentID map[string]*AssessmentH5PContentScore
+	UserID                 string
+	Comment                string
+	Contents               []*AssessmentH5PContentScore
+	ContentsMapByH5PID     map[string][]*AssessmentH5PContentScore
+	ContentMapBySubH5PID   map[string]*AssessmentH5PContentScore
+	ContentsMapByContentID map[string][]*AssessmentH5PContentScore
 }
 
 type AssessmentH5PContentScore struct {
