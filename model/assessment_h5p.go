@@ -13,13 +13,13 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
-type assessment_h5p struct{}
+type assessmentH5P struct{}
 
-func getAssessmentH5p() *assessment_h5p {
-	return &assessment_h5p{}
+func getAssessmentH5p() *assessmentH5P {
+	return &assessmentH5P{}
 }
 
-func (m *assessment_h5p) getRoomCompleteRate(ctx context.Context, room *entity.AssessmentH5PRoom, v *entity.AssessmentView) float64 {
+func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.AssessmentH5PRoom, v *entity.AssessmentView) float64 {
 	if room == nil {
 		log.Debug(ctx, "get room complete rate: room is empty",
 			log.Any("view", v),
@@ -42,9 +42,9 @@ func (m *assessment_h5p) getRoomCompleteRate(ctx context.Context, room *entity.A
 			if !(lm.Checked && (lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend)) {
 				continue
 			}
-			cc := u.ContentsMapByH5PID[lm.Source]
+			cc := u.ContentsMapByContentID[lm.ID]
 			if len(cc) == 0 {
-				cc2 := u.ContentsMapByContentID[lm.ID]
+				cc2 := u.ContentsMapByH5PID[lm.Source]
 				if len(cc2) > 0 {
 					cc = append(cc, cc2...)
 				}
@@ -65,7 +65,7 @@ func (m *assessment_h5p) getRoomCompleteRate(ctx context.Context, room *entity.A
 	return 0
 }
 
-func (m *assessment_h5p) batchGetRoomScoreMap(ctx context.Context, operator *entity.Operator, roomIDs []string, enableComment bool) (map[string]*entity.AssessmentH5PRoom, error) {
+func (m *assessmentH5P) batchGetRoomScoreMap(ctx context.Context, operator *entity.Operator, roomIDs []string, enableComment bool) (map[string]*entity.AssessmentH5PRoom, error) {
 	roomScoreMap, err := external.GetH5PRoomScoreServiceProvider().BatchGet(ctx, operator, roomIDs)
 	if err != nil {
 		log.Error(ctx, "batch get room score map: batch get failed",
@@ -95,6 +95,27 @@ func (m *assessment_h5p) batchGetRoomScoreMap(ctx context.Context, operator *ent
 			assessmentContentsMapByContentID := make(map[string][]*entity.AssessmentH5PContentScore, len(u.Scores))
 			latestContentID := ""
 			subContentNumber := 0
+
+			// normalize external contents order
+			scoresIndexMap := make(map[string]int, len(u.Scores))
+			for i, s := range u.Scores {
+				scoresIndexMap[s.Content.ContentID] = i
+			}
+			sort.Slice(u.Scores, func(i, j int) bool {
+				itemI := u.Scores[i]
+				itemJ := u.Scores[j]
+				if itemI.Content.ContentID == itemJ.Content.ContentID {
+					if itemI.Content.SubContentID == "" && itemJ.Content.SubContentID != "" {
+						return true
+					}
+					if itemI.Content.SubContentID != "" && itemJ.Content.SubContentID == "" {
+						return false
+					}
+					return true
+				}
+				return scoresIndexMap[itemI.Content.ContentID] < scoresIndexMap[itemJ.Content.ContentID]
+			})
+
 			for _, s := range u.Scores {
 				total++
 				assessmentContent := entity.AssessmentH5PContentScore{
@@ -179,7 +200,7 @@ func (m *assessment_h5p) batchGetRoomScoreMap(ctx context.Context, operator *ent
 	return result, nil
 }
 
-func (m *assessment_h5p) batchGetRoomCommentMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]map[string][]string, error) {
+func (m *assessmentH5P) batchGetRoomCommentMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]map[string][]string, error) {
 	commentMap, err := external.GetH5PRoomCommentServiceProvider().BatchGet(ctx, operator, roomIDs)
 	if err != nil {
 		log.Error(ctx, "batch get room comment map failed",
@@ -214,7 +235,7 @@ func (m *assessment_h5p) batchGetRoomCommentMap(ctx context.Context, operator *e
 	return result, nil
 }
 
-func (m *assessment_h5p) getH5PStudentViewItems(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, view *entity.AssessmentView) ([]*entity.AssessmentStudentViewH5PItem, error) {
+func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, view *entity.AssessmentView) ([]*entity.AssessmentStudentViewH5PItem, error) {
 	roomMap, err := m.batchGetRoomScoreMap(ctx, operator, []string{view.RoomID}, true)
 	if err != nil {
 		log.Error(ctx, "get assessment detail: get room map failed",
@@ -275,6 +296,12 @@ func (m *assessment_h5p) getH5PStudentViewItems(ctx context.Context, operator *e
 		lpOutcomeNameMap[o.ContentID] = append(lpOutcomeNameMap[o.ContentID], outcomeNameMap[o.OutcomeID])
 	}
 
+	// get lesson materials order map
+	lmIndexMap := make(map[string]int, len(view.LessonMaterials))
+	for i, lm := range view.LessonMaterials {
+		lmIndexMap[lm.ID] = i
+	}
+
 	r := make([]*entity.AssessmentStudentViewH5PItem, 0, len(view.Students))
 	for _, s := range view.Students {
 		newItem := entity.AssessmentStudentViewH5PItem{
@@ -292,17 +319,17 @@ func (m *assessment_h5p) getH5PStudentViewItems(ctx context.Context, operator *e
 			)
 		}
 		for _, lm := range view.LessonMaterials {
-			var contents []*entity.AssessmentH5PContentScore
+			var cc []*entity.AssessmentH5PContentScore
 			if user != nil {
-				contents = user.ContentsMapByH5PID[lm.Source]
-				if len(contents) == 0 {
-					cc := user.ContentsMapByContentID[lm.ID]
-					if len(cc) > 0 {
-						contents = append(contents, cc...)
+				cc = user.ContentsMapByContentID[lm.ID]
+				if len(cc) == 0 {
+					cc2 := user.ContentsMapByH5PID[lm.Source]
+					if len(cc2) > 0 {
+						cc = append(cc, cc2...)
 					}
 				}
-				if len(contents) > 0 {
-					for _, content := range contents {
+				if len(cc) > 0 {
+					for _, content := range cc {
 						if content == nil {
 							log.Debug(ctx, "get h5p assessment detail: not found content from h5p room",
 								log.String("room_id", view.RoomID),
@@ -328,23 +355,24 @@ func (m *assessment_h5p) getH5PStudentViewItems(ctx context.Context, operator *e
 						}
 						newItem.LessonMaterials = append(newItem.LessonMaterials, &newLessMaterial)
 					}
-				} else {
-					newLessMaterial := entity.AssessmentStudentViewH5PLessonMaterial{
-						LessonMaterialID:   lm.ID,
-						LessonMaterialName: lm.Name,
-						IsH5P:              lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
-						OutcomeNames:       lpOutcomeNameMap[lm.ID],
-					}
-					newItem.LessonMaterials = append(newItem.LessonMaterials, &newLessMaterial)
+					continue
 				}
 			}
+			newLessMaterial := entity.AssessmentStudentViewH5PLessonMaterial{
+				LessonMaterialID:   lm.ID,
+				LessonMaterialName: lm.Name,
+				IsH5P:              lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
+				OutcomeNames:       lpOutcomeNameMap[lm.ID],
+			}
+			newItem.LessonMaterials = append(newItem.LessonMaterials, &newLessMaterial)
 		}
 		sort.Slice(newItem.LessonMaterials, func(i, j int) bool {
-			s := newItem.LessonMaterials
-			if s[i].LessonMaterialID == s[j].LessonMaterialID {
-				return s[i].SubContentNumber < s[j].SubContentNumber
+			itemI := newItem.LessonMaterials[i]
+			itemJ := newItem.LessonMaterials[j]
+			if itemI.LessonMaterialID == itemJ.LessonMaterialID {
+				return itemI.SubContentNumber < itemJ.SubContentNumber
 			}
-			return true
+			return lmIndexMap[itemI.LessonMaterialID] < lmIndexMap[itemJ.LessonMaterialID]
 		})
 		lastLessonMaterialID := ""
 		number := 0
