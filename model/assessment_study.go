@@ -185,7 +185,7 @@ func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operat
 			TeacherNames:  teacherNames,
 			ClassName:     v.Class.Name,
 			DueAt:         v.Schedule.DueAt,
-			CompleteRate:  getAssessmentH5p().getRoomCompleteRate(roomMap[v.RoomID], v),
+			CompleteRate:  getAssessmentH5p().getRoomCompleteRate(ctx, roomMap[v.RoomID], v),
 			RemainingTime: remainingTime,
 			CompleteAt:    v.CompleteTime,
 			ScheduleID:    v.ScheduleID,
