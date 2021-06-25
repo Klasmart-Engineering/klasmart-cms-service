@@ -386,6 +386,12 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 				lm.Number = fmt.Sprintf("%d", number)
 			}
 		}
+		if len(newItem.LessonMaterials) == 0 {
+			log.Debug(ctx, "get h5p student view items: empty lesson materials",
+				log.Any("temp_result", r),
+				log.Any("view", view),
+			)
+		}
 		r = append(r, &newItem)
 	}
 
