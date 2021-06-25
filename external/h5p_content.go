@@ -1,11 +1,12 @@
 package external
 
 type H5PContent struct {
-	ContentID string   `json:"content_id"`
-	Name      string   `json:"name"`
-	Type      string   `json:"type"`
-	FileType  FileType `json:"fileType"`
-	H5PID     string   `json:"h5p_id"`
+	ContentID    string   `json:"content_id"`
+	Name         string   `json:"name"`
+	Type         string   `json:"type"`
+	FileType     FileType `json:"fileType"`
+	H5PID        string   `json:"h5p_id"`
+	SubContentID string   `json:"subcontent_id"`
 }
 
 type FileType string
