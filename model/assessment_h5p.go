@@ -106,7 +106,7 @@ func (m *assessment_h5p) batchGetRoomScoreMap(ctx context.Context, operator *ent
 					assessmentContent.ContentName = s.Content.Name
 					assessmentContent.ContentType = s.Content.Type
 					assessmentContent.SubH5PID = s.Content.SubContentID
-					if s.Content.ContentID == "" {
+					if s.Content.SubContentID == "" {
 						subContentNumber = 0
 					} else if s.Content.ContentID != latestContentID {
 						subContentNumber = 1 // 0 for not set
