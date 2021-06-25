@@ -42,14 +42,14 @@ func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.As
 			if !(lm.Checked && (lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend)) {
 				continue
 			}
-			cc := u.ContentsMapByContentID[lm.ID]
-			if len(cc) == 0 {
-				cc2 := u.ContentsMapByH5PID[lm.Source]
-				if len(cc2) > 0 {
-					cc = append(cc, cc2...)
+			contents := u.ContentsMapByContentID[lm.ID]
+			if len(contents) == 0 {
+				contents2 := u.ContentsMapByH5PID[lm.Source]
+				if len(contents2) > 0 {
+					contents = append(contents, contents2...)
 				}
 			}
-			for _, c := range cc {
+			for _, c := range contents {
 				if len(c.Answers) > 0 || len(c.Scores) > 0 {
 					attempted++
 				}
@@ -176,8 +176,8 @@ func (m *assessmentH5P) batchGetRoomScoreMap(ctx context.Context, operator *enti
 				roomCommentMap[roomID] != nil &&
 				assessmentUser.UserID != "" &&
 				len(roomCommentMap[roomID][assessmentUser.UserID]) > 0 {
-				cc := roomCommentMap[roomID][assessmentUser.UserID]
-				assessmentUser.Comment = cc[len(cc)-1]
+				comments := roomCommentMap[roomID][assessmentUser.UserID]
+				assessmentUser.Comment = comments[len(comments)-1]
 			}
 			assessmentUsers = append(assessmentUsers, &assessmentUser)
 			assessmentUserMap[assessmentUser.UserID] = &assessmentUser
@@ -318,17 +318,17 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 			)
 		}
 		for _, lm := range view.LessonMaterials {
-			var cc []*entity.AssessmentH5PContentScore
+			var contents []*entity.AssessmentH5PContentScore
 			if user != nil {
-				cc = user.ContentsMapByContentID[lm.ID]
-				if len(cc) == 0 {
-					cc2 := user.ContentsMapByH5PID[lm.Source]
-					if len(cc2) > 0 {
-						cc = append(cc, cc2...)
+				contents = user.ContentsMapByContentID[lm.ID]
+				if len(contents) == 0 {
+					contents2 := user.ContentsMapByH5PID[lm.Source]
+					if len(contents2) > 0 {
+						contents = append(contents, contents2...)
 					}
 				}
-				if len(cc) > 0 {
-					for _, content := range cc {
+				if len(contents) > 0 {
+					for _, content := range contents {
 						if content == nil {
 							log.Debug(ctx, "get h5p assessment detail: not found content from h5p room",
 								log.String("room_id", view.RoomID),
