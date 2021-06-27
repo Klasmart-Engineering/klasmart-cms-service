@@ -445,7 +445,8 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 			if lastLessonMaterialID != lm.LessonMaterialID {
 				number++
 				lastLessonMaterialID = lm.LessonMaterialID
-			} else if lm.SubH5PID == "" {
+			}
+			if lm.SubH5PID == "" {
 				subNumber = 0
 			} else {
 				subNumber++
