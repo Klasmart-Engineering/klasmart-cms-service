@@ -190,6 +190,16 @@ func (m *assessmentH5P) batchGetRoomScoreMap(ctx context.Context, operator *enti
 		result[roomID] = &room
 	}
 
+	latestOrderedID := 1
+	for _, item := range result {
+		for _, u := range item.Users {
+			for _, c := range u.Contents {
+				c.OrderedID = latestOrderedID
+				latestOrderedID++
+			}
+		}
+	}
+
 	log.Debug(ctx, "get room score map",
 		log.Strings("room_ids", roomIDs),
 		log.Any("operator", operator),
@@ -301,6 +311,31 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 		lmIndexMap[lm.ID] = i
 	}
 
+	// calc agg template
+	aggContentsMap := map[string][]*entity.AssessmentH5PContentScore{}
+	aggUserContentOrderedIDsMap := map[string][]int{}
+	for _, u := range room.Users {
+		for id, contents := range u.ContentsMapByContentID {
+			for _, c := range contents {
+				aggUserContentOrderedIDsMap[id] = append(aggUserContentOrderedIDsMap[id], c.OrderedID)
+				exists := false
+				for _, c2 := range aggContentsMap[id] {
+					if c2 == c {
+						exists = true
+						break
+					}
+				}
+				if !exists {
+					aggContentsMap[id] = append(aggContentsMap[id], c)
+				}
+			}
+		}
+	}
+	log.Debug(ctx, "get h5p student view items: print agg maps",
+		log.Any("agg_contents_map", aggContentsMap),
+		log.Any("agg_user_content_ordered_ids_map", aggUserContentOrderedIDsMap),
+	)
+
 	r := make([]*entity.AssessmentStudentViewH5PItem, 0, len(view.Students))
 	for _, s := range view.Students {
 		newItem := entity.AssessmentStudentViewH5PItem{
@@ -318,13 +353,38 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 			)
 		}
 		for _, lm := range view.LessonMaterials {
-			var contents []*entity.AssessmentH5PContentScore
 			if user != nil {
-				contents = user.ContentsMapByContentID[lm.ID]
-				if len(contents) == 0 {
-					contents2 := user.ContentsMapByH5PID[lm.Source]
-					if len(contents2) > 0 {
-						contents = append(contents, contents2...)
+				contentMapGroupByKey := map[string][]*entity.AssessmentH5PContentScore{}
+				for _, c := range aggContentsMap[lm.ID] {
+					key := fmt.Sprintf("%s:%s", c.ContentID, c.SubH5PID)
+					contentMapGroupByKey[key] = append(contentMapGroupByKey[key], c)
+				}
+				var contents []*entity.AssessmentH5PContentScore
+				attendContentOrderIDs := aggUserContentOrderedIDsMap[user.UserID]
+				for _, contents2 := range contentMapGroupByKey {
+					if len(contents2) == 0 {
+						continue
+					}
+					hit := false
+					for _, c := range contents2 {
+						if utils.ContainsInt(attendContentOrderIDs, c.OrderedID) {
+							hit = true
+							contents = append(contents, c)
+							break
+						}
+					}
+					if !hit {
+						c := contents2[0]
+						newContent := entity.AssessmentH5PContentScore{
+							OrderedID:        c.OrderedID,
+							H5PID:            c.H5PID,
+							ContentID:        c.ContentID,
+							ContentName:      c.ContentName,
+							ContentType:      c.ContentType,
+							SubH5PID:         c.SubH5PID,
+							SubContentNumber: c.SubContentNumber,
+						}
+						contents = append(contents, &newContent)
 					}
 				}
 				if len(contents) > 0 {
@@ -337,7 +397,7 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 							)
 							continue
 						}
-						newLessMaterial := entity.AssessmentStudentViewH5PLessonMaterial{
+						newLessonMaterial := entity.AssessmentStudentViewH5PLessonMaterial{
 							LessonMaterialID:   lm.ID,
 							LessonMaterialName: lm.Name,
 							LessonMaterialType: content.ContentType,
@@ -352,7 +412,7 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 							H5PID:              content.H5PID,
 							SubH5PID:           content.SubH5PID,
 						}
-						newItem.LessonMaterials = append(newItem.LessonMaterials, &newLessMaterial)
+						newItem.LessonMaterials = append(newItem.LessonMaterials, &newLessonMaterial)
 					}
 					continue
 				}
@@ -375,13 +435,18 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 		})
 		lastLessonMaterialID := ""
 		number := 0
+		subNumber := 0
 		for _, lm := range newItem.LessonMaterials {
 			if lastLessonMaterialID != lm.LessonMaterialID {
 				number++
 				lastLessonMaterialID = lm.LessonMaterialID
+			} else if lm.SubH5PID == "" {
+				subNumber = 0
+			} else {
+				subNumber++
 			}
-			if lm.SubContentNumber > 0 {
-				lm.Number = fmt.Sprintf("%d-%d", number, lm.SubContentNumber)
+			if subNumber > 0 {
+				lm.Number = fmt.Sprintf("%d-%d", number, subNumber)
 			} else {
 				lm.Number = fmt.Sprintf("%d", number)
 			}
@@ -397,11 +462,11 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 
 	// filter parent h5p
 	for _, item := range r {
+		var deletingLMs []*entity.AssessmentStudentViewH5PLessonMaterial
 		lmCountMap := make(map[string]int, len(item.LessonMaterials))
 		for _, lm := range item.LessonMaterials {
 			lmCountMap[lm.LessonMaterialID] = lmCountMap[lm.LessonMaterialID] + 1
 		}
-		var deletingLMs []*entity.AssessmentStudentViewH5PLessonMaterial
 		for _, lm := range item.LessonMaterials {
 			if lmCountMap[lm.LessonMaterialID] > 1 && lm.SubH5PID == "" {
 				deletingLMs = append(deletingLMs, lm)
