@@ -43,12 +43,6 @@ func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.As
 				continue
 			}
 			contents := u.ContentsMapByContentID[lm.ID]
-			if len(contents) == 0 {
-				contents2 := u.ContentsMapByH5PID[lm.Source]
-				if len(contents2) > 0 {
-					contents = append(contents, contents2...)
-				}
-			}
 			for _, c := range contents {
 				if len(c.Answers) > 0 || len(c.Scores) > 0 {
 					attempted++
