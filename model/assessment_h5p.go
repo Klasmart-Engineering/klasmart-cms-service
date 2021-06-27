@@ -317,7 +317,9 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 	for _, u := range room.Users {
 		for id, contents := range u.ContentsMapByContentID {
 			for _, c := range contents {
-				aggUserContentOrderedIDsMap[u.UserID] = append(aggUserContentOrderedIDsMap[u.UserID], c.OrderedID)
+				if u.UserID != "" {
+					aggUserContentOrderedIDsMap[u.UserID] = append(aggUserContentOrderedIDsMap[u.UserID], c.OrderedID)
+				}
 				exists := false
 				for _, c2 := range aggContentsMap[id] {
 					if c2 == c {
