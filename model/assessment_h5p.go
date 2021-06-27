@@ -395,6 +395,28 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 		r = append(r, &newItem)
 	}
 
+	// filter parent h5p
+	for _, item := range r {
+		lmCountMap := make(map[string]int, len(item.LessonMaterials))
+		for _, lm := range item.LessonMaterials {
+			lmCountMap[lm.LessonMaterialID] = lmCountMap[lm.LessonMaterialID] + 1
+		}
+		var deletingLMs []*entity.AssessmentStudentViewH5PLessonMaterial
+		for _, lm := range item.LessonMaterials {
+			if lmCountMap[lm.LessonMaterialID] > 1 && lm.SubH5PID == "" {
+				deletingLMs = append(deletingLMs, lm)
+			}
+		}
+		for _, deletingLM := range deletingLMs {
+			for i, lm := range item.LessonMaterials {
+				if deletingLM == lm {
+					item.LessonMaterials = append(item.LessonMaterials[:i], item.LessonMaterials[i+1:]...)
+					break
+				}
+			}
+		}
+	}
+
 	sort.Sort(entity.AssessmentStudentViewH5PItemsOrder(r))
 
 	return r, nil
