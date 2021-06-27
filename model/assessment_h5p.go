@@ -59,6 +59,10 @@ func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.As
 	}
 
 	if total > 0 {
+		log.Debug(ctx, "get room complete rate: print attempted and total",
+			log.Int("attempted", attempted),
+			log.Int("total", total),
+		)
 		return float64(attempted) / float64(total)
 	}
 
