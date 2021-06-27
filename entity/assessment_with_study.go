@@ -64,6 +64,7 @@ type AssessmentH5PUser struct {
 }
 
 type AssessmentH5PContentScore struct {
+	OrderedID        int
 	H5PID            string
 	ContentID        string
 	ContentName      string
