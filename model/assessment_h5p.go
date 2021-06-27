@@ -383,6 +383,7 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 							ContentType:      c.ContentType,
 							SubH5PID:         c.SubH5PID,
 							SubContentNumber: c.SubContentNumber,
+							MaxPossibleScore: c.MaxPossibleScore,
 						}
 						contents = append(contents, &newContent)
 					}
