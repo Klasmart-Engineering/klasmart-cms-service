@@ -181,6 +181,12 @@ func (m *assessmentH5P) batchGetRoomScoreMap(ctx context.Context, operator *enti
 			sort.Slice(u.Scores, func(i, j int) bool {
 				itemI := u.Scores[i]
 				itemJ := u.Scores[j]
+				if itemI.Content == nil {
+					return true
+				}
+				if itemJ.Content == nil {
+					return false
+				}
 				if itemI.Content.ContentID == itemJ.Content.ContentID {
 					if itemI.Content.SubContentID == "" && itemJ.Content.SubContentID != "" {
 						return true
@@ -509,7 +515,7 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 			itemI := newItem.LessonMaterials[i]
 			itemJ := newItem.LessonMaterials[j]
 			if itemI.LessonMaterialID == itemJ.LessonMaterialID {
-				return itemI.SubContentNumber < itemJ.SubContentNumber
+				return itemI.SubH5PID < itemJ.SubH5PID
 			}
 			return lmIndexMap[itemI.LessonMaterialID] < lmIndexMap[itemJ.LessonMaterialID]
 		})
