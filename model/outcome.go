@@ -295,9 +295,10 @@ func (ocm OutcomeModel) Get(ctx context.Context, operator *entity.Operator, outc
 			if milestones[i].Status == entity.OutcomeStatusDraft && milestones[i].SourceID != milestones[i].ID {
 				continue
 			}
-			if milestones[i].Type == entity.GeneralMilestoneType && len(milestones) != 1 {
-				continue
-			}
+			// NML-1021
+			// if milestones[i].Type == entity.GeneralMilestoneType && len(milestones) != 1 {
+			// 	continue
+			// }
 			outcome.Milestones = append(outcome.Milestones, milestones[i])
 		}
 		return nil
@@ -1062,13 +1063,14 @@ func (ocm OutcomeModel) Approve(ctx context.Context, operator *entity.Operator, 
 				log.Any("outcome", outcome))
 			return err
 		}
-		err = GetMilestoneModel().BindToGeneral(ctx, operator, tx, outcome)
-		if err != nil {
-			log.Error(ctx, "Approve: BindToGeneral failed",
-				log.String("op", operator.UserID),
-				log.Any("outcome", outcome))
-			return err
-		}
+		// NKL-1021
+		// err = GetMilestoneModel().BindToGeneral(ctx, operator, tx, outcome)
+		// if err != nil {
+		// 	log.Error(ctx, "Approve: BindToGeneral failed",
+		// 		log.String("op", operator.UserID),
+		// 		log.Any("outcome", outcome))
+		// 	return err
+		// }
 		return nil
 	})
 	return err
@@ -1178,13 +1180,14 @@ func (ocm OutcomeModel) BulkApprove(ctx context.Context, operator *entity.Operat
 					log.Any("outcome", outcome))
 				return err
 			}
-			err = GetMilestoneModel().BindToGeneral(ctx, operator, tx, outcome)
-			if err != nil {
-				log.Error(ctx, "BulkApprove: BindToGeneral failed",
-					log.String("op", operator.UserID),
-					log.Any("outcome", outcome))
-				return err
-			}
+			// NKL-1021
+			// err = GetMilestoneModel().BindToGeneral(ctx, operator, tx, outcome)
+			// if err != nil {
+			// 	log.Error(ctx, "BulkApprove: BindToGeneral failed",
+			// 		log.String("op", operator.UserID),
+			// 		log.Any("outcome", outcome))
+			// 	return err
+			// }
 		}
 		return nil
 	})
