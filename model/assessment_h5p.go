@@ -515,7 +515,7 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 			itemI := newItem.LessonMaterials[i]
 			itemJ := newItem.LessonMaterials[j]
 			if itemI.LessonMaterialID == itemJ.LessonMaterialID {
-				return itemI.SubContentNumber < itemJ.SubContentNumber
+				return itemI.SubH5PID < itemJ.SubH5PID
 			}
 			return lmIndexMap[itemI.LessonMaterialID] < lmIndexMap[itemJ.LessonMaterialID]
 		})
