@@ -114,7 +114,7 @@ func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.As
 						)
 						continue
 					}
-					if len(aggContents) > 1 && content.SubH5PID == "" {
+					if len(contents) > 1 && content.SubH5PID == "" {
 						continue
 					}
 					if len(content.Answers) > 0 || len(content.Scores) > 0 {
