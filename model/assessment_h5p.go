@@ -19,36 +19,106 @@ func getAssessmentH5p() *assessmentH5P {
 	return &assessmentH5P{}
 }
 
-func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.AssessmentH5PRoom, v *entity.AssessmentView) float64 {
+func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.AssessmentH5PRoom, view *entity.AssessmentView) float64 {
 	if room == nil {
 		log.Debug(ctx, "get room complete rate: room is empty",
-			log.Any("view", v),
+			log.Any("view", view),
 		)
 		return 0
 	}
 
-	// calc attempted
+	// calc agg template
+	aggContentsMap := map[string][]*entity.AssessmentH5PContentScore{}
+	aggUserContentOrderedIDsMap := map[string][]int{}
+	for _, u := range room.Users {
+		for id, contents := range u.ContentsMapByContentID {
+			for _, c := range contents {
+				if u.UserID != "" {
+					aggUserContentOrderedIDsMap[u.UserID] = append(aggUserContentOrderedIDsMap[u.UserID], c.OrderedID)
+				}
+				exists := false
+				for _, c2 := range aggContentsMap[id] {
+					if c2 == c {
+						exists = true
+						break
+					}
+				}
+				if !exists {
+					aggContentsMap[id] = append(aggContentsMap[id], c)
+				}
+			}
+		}
+	}
+	log.Debug(ctx, "get room complete rate: print agg maps",
+		log.Any("agg_contents_map", aggContentsMap),
+		log.Any("agg_user_content_ordered_ids_map", aggUserContentOrderedIDsMap),
+	)
+
 	attempted := 0
 	total := 0
-	for _, s := range v.Students {
+	for _, s := range view.Students {
 		if !s.Checked {
 			continue
 		}
-		u := room.UserMap[s.ID]
-		if u == nil {
-			continue
+		user := room.UserMap[s.ID]
+		uid := ""
+		if user != nil {
+			uid = user.UserID
 		}
-		for _, lm := range v.LessonMaterials {
+		for _, lm := range view.LessonMaterials {
 			if !(lm.Checked && (lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend)) {
 				continue
 			}
-			contents := u.ContentsMapByContentID[lm.ID]
-			for _, c := range contents {
-				if len(c.Answers) > 0 || len(c.Scores) > 0 {
-					attempted++
-				}
-				total++
+			contentMapGroupByKey := map[string][]*entity.AssessmentH5PContentScore{}
+			for _, c := range aggContentsMap[lm.ID] {
+				key := fmt.Sprintf("%s:%s", c.ContentID, c.SubH5PID)
+				contentMapGroupByKey[key] = append(contentMapGroupByKey[key], c)
 			}
+			var contents []*entity.AssessmentH5PContentScore
+			attendContentOrderIDs := aggUserContentOrderedIDsMap[uid]
+			for _, contents2 := range contentMapGroupByKey {
+				if len(contents2) == 0 {
+					continue
+				}
+				hit := false
+				for _, c := range contents2 {
+					if utils.ContainsInt(attendContentOrderIDs, c.OrderedID) {
+						hit = true
+						contents = append(contents, c)
+						break
+					}
+				}
+				if !hit {
+					c := contents2[0]
+					newContent := entity.AssessmentH5PContentScore{
+						OrderedID:        c.OrderedID,
+						H5PID:            c.H5PID,
+						ContentID:        c.ContentID,
+						ContentName:      c.ContentName,
+						SubH5PID:         c.SubH5PID,
+						SubContentNumber: c.SubContentNumber,
+					}
+					contents = append(contents, &newContent)
+				}
+			}
+			if len(contents) > 0 {
+				for _, content := range contents {
+					if content == nil {
+						log.Debug(ctx, "get room complete rate: not found content from h5p room",
+							log.String("room_id", view.RoomID),
+							log.Any("not_found_content_id", lm.Source),
+							log.Any("room", room),
+						)
+						continue
+					}
+					if len(content.Answers) > 0 || len(content.Scores) > 0 {
+						attempted++
+					}
+					total++
+				}
+				continue
+			}
+			total++
 		}
 	}
 
