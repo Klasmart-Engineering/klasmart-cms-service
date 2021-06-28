@@ -71,8 +71,9 @@ func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.As
 			if !(lm.Checked && (lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend)) {
 				continue
 			}
+			aggContents := aggContentsMap[lm.ID]
 			contentMapGroupByKey := map[string][]*entity.AssessmentH5PContentScore{}
-			for _, c := range aggContentsMap[lm.ID] {
+			for _, c := range aggContents {
 				key := fmt.Sprintf("%s:%s", c.ContentID, c.SubH5PID)
 				contentMapGroupByKey[key] = append(contentMapGroupByKey[key], c)
 			}
@@ -113,6 +114,9 @@ func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.As
 						)
 						continue
 					}
+					if len(aggContents) > 1 && content.SubH5PID == "" {
+						continue
+					}
 					if len(content.Answers) > 0 || len(content.Scores) > 0 {
 						attempted++
 					}
@@ -128,6 +132,7 @@ func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.As
 		log.Debug(ctx, "get room complete rate: print attempted and total",
 			log.Int("attempted", attempted),
 			log.Int("total", total),
+			log.String("room_id", view.RoomID),
 		)
 		return float64(attempted) / float64(total)
 	}
