@@ -2768,6 +2768,7 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 		RoomID:         schedule.ID,
 		IsRepeat:       schedule.RepeatID != "",
 		LessonPlanID:   schedule.LessonPlanID,
+		Description:    schedule.Description,
 	}
 
 	for _, v := range assessments {
