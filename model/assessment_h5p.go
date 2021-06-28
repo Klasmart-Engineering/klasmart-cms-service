@@ -379,14 +379,12 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 				if !hit {
 					c := contents2[0]
 					newContent := entity.AssessmentH5PContentScore{
-						OrderedID:   c.OrderedID,
-						H5PID:       c.H5PID,
-						ContentID:   c.ContentID,
-						ContentName: c.ContentName,
-						//ContentType:      c.ContentType,
+						OrderedID:        c.OrderedID,
+						H5PID:            c.H5PID,
+						ContentID:        c.ContentID,
+						ContentName:      c.ContentName,
 						SubH5PID:         c.SubH5PID,
 						SubContentNumber: c.SubContentNumber,
-						//MaxPossibleScore: c.MaxPossibleScore,
 					}
 					contents = append(contents, &newContent)
 				}
