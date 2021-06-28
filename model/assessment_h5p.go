@@ -43,12 +43,6 @@ func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.As
 				continue
 			}
 			contents := u.ContentsMapByContentID[lm.ID]
-			if len(contents) == 0 {
-				contents2 := u.ContentsMapByH5PID[lm.Source]
-				if len(contents2) > 0 {
-					contents = append(contents, contents2...)
-				}
-			}
 			for _, c := range contents {
 				if len(c.Answers) > 0 || len(c.Scores) > 0 {
 					attempted++
@@ -59,6 +53,10 @@ func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.As
 	}
 
 	if total > 0 {
+		log.Debug(ctx, "get room complete rate: print attempted and total",
+			log.Int("attempted", attempted),
+			log.Int("total", total),
+		)
 		return float64(attempted) / float64(total)
 	}
 
@@ -385,10 +383,8 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 						H5PID:            c.H5PID,
 						ContentID:        c.ContentID,
 						ContentName:      c.ContentName,
-						ContentType:      c.ContentType,
 						SubH5PID:         c.SubH5PID,
 						SubContentNumber: c.SubContentNumber,
-						MaxPossibleScore: c.MaxPossibleScore,
 					}
 					contents = append(contents, &newContent)
 				}
@@ -445,7 +441,8 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 			if lastLessonMaterialID != lm.LessonMaterialID {
 				number++
 				lastLessonMaterialID = lm.LessonMaterialID
-			} else if lm.SubH5PID == "" {
+			}
+			if lm.SubH5PID == "" {
 				subNumber = 0
 			} else {
 				subNumber++
