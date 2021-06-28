@@ -78,12 +78,12 @@ func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.As
 			}
 			var contents []*entity.AssessmentH5PContentScore
 			attendContentOrderIDs := aggUserContentOrderedIDsMap[uid]
-			for _, contents2 := range contentMapGroupByKey {
-				if len(contents2) == 0 {
+			for _, keyedContents := range contentMapGroupByKey {
+				if len(keyedContents) == 0 {
 					continue
 				}
 				hit := false
-				for _, c := range contents2 {
+				for _, c := range keyedContents {
 					if utils.ContainsInt(attendContentOrderIDs, c.OrderedID) {
 						hit = true
 						contents = append(contents, c)
@@ -91,7 +91,7 @@ func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.As
 					}
 				}
 				if !hit {
-					c := contents2[0]
+					c := keyedContents[0]
 					newContent := entity.AssessmentH5PContentScore{
 						OrderedID:        c.OrderedID,
 						H5PID:            c.H5PID,
