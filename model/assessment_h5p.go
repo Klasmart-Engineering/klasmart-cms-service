@@ -33,6 +33,7 @@ func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.As
 	for _, u := range room.Users {
 		for id, contents := range u.ContentsMapByContentID {
 			for _, c := range contents {
+				// aggregate user attended contents
 				if u.UserID != "" {
 					aggUserContentOrderedIDsMap[u.UserID] = append(aggUserContentOrderedIDsMap[u.UserID], c.OrderedID)
 				}
@@ -43,6 +44,7 @@ func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.As
 						break
 					}
 				}
+				// deduplication, only append not exists item
 				if !exists {
 					aggContentsMap[id] = append(aggContentsMap[id], c)
 				}
@@ -167,7 +169,9 @@ func (m *assessmentH5P) batchGetRoomScoreMap(ctx context.Context, operator *enti
 			// normalize external contents order
 			scoresIndexMap := make(map[string]int, len(u.Scores))
 			for i, s := range u.Scores {
-				scoresIndexMap[s.Content.ContentID] = i
+				if s.Content != nil {
+					scoresIndexMap[s.Content.ContentID] = i
+				}
 			}
 			sort.Slice(u.Scores, func(i, j int) bool {
 				itemI := u.Scores[i]
