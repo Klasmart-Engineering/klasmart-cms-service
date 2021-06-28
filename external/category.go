@@ -42,13 +42,17 @@ func (s AmsCategoryService) BatchGet(ctx context.Context, operator *entity.Opera
 	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
 
 	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range _ids {
-		fmt.Fprintf(sb, "q%d: category(id: \"%s\") {id name status system}\n", index, id)
+
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$category_id_", ": ID!", len(_ids)))
+	for index := range _ids {
+		fmt.Fprintf(sb, "q%d: category(id: $category_id_%d) {id name status system}\n", index, index)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+	for index, id := range _ids {
+		request.Var(fmt.Sprintf("category_id_%d", index), id)
+	}
 
 	data := map[string]*Category{}
 	response := &chlorine.Response{
@@ -277,13 +281,18 @@ func (s AmsCategoryService) GetBySubjects(ctx context.Context, operator *entity.
 	_ids, indexMapping := utils.SliceDeduplicationMap(subjectIDs)
 
 	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range _ids {
-		fmt.Fprintf(sb, "q%d: subject(id: \"%s\") {categories {id name status system}}\n", index, id)
+
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$subject_id_", ": ID!", len(_ids)))
+	for index := range _ids {
+		fmt.Fprintf(sb, "q%d: subject(id: $subject_id_%d) {categories {id name status system}}\n", index, index)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+	for index, id := range _ids {
+		request.Var(fmt.Sprintf("subject_id_%d", index), id)
+	}
+
 	data := map[string]struct {
 		Categories []*Category `json:"categories"`
 	}{}

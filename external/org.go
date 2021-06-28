@@ -126,6 +126,7 @@ func (s AmsOrganizationService) BatchGetNameMap(ctx context.Context, operator *e
 	return dict, nil
 }
 
+//TODO: No Test Program
 func (s AmsOrganizationService) GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string, options ...APOption) (map[string]*Organization, error) {
 	if len(classIDs) == 0 {
 		return map[string]*Organization{}, nil
@@ -136,13 +137,17 @@ func (s AmsOrganizationService) GetByClasses(ctx context.Context, operator *enti
 	_classIDs, indexMapping := utils.SliceDeduplicationMap(classIDs)
 
 	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range _classIDs {
-		fmt.Fprintf(sb, `q%d: class(class_id: "%s") {organization{id:organization_id name:organization_name status}}`, index, id)
+
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$class_id_", ": ID!", len(_classIDs)))
+	for index := range _classIDs {
+		fmt.Fprintf(sb, `q%d: class(class_id: $class_id_%d) {organization{id:organization_id name:organization_name status}}`, index, index)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+	for index, id := range _classIDs {
+		request.Var(fmt.Sprintf("class_id_%d", index), id)
+	}
 
 	data := map[string]*struct {
 		Organization Organization `json:"organization"`
