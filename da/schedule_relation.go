@@ -231,11 +231,9 @@ func (c ScheduleRelationCondition) GetConditions() ([]string, []interface{}) {
 		sql.WriteString("(")
 		var timeWheres []string
 		for _, item := range c.ConflictCondition.ConflictTime {
-			timeWheres = append(timeWheres, fmt.Sprintf("((%s.start_at < ? and %s.end_at > ?) or (%s.start_at < ? and %s.end_at > ?) or (%s.start_at > ? and %s.end_at < ?))",
-				constant.TableNameSchedule, constant.TableNameSchedule,
-				constant.TableNameSchedule, constant.TableNameSchedule,
+			timeWheres = append(timeWheres, fmt.Sprintf("((%s.start_at <= ? and %s.end_at >=  ?)",
 				constant.TableNameSchedule, constant.TableNameSchedule))
-			params = append(params, item.StartAt, item.StartAt, item.EndAt, item.EndAt, item.StartAt, item.EndAt)
+			params = append(params, item.EndAt, item.StartAt)
 		}
 		sql.WriteString(strings.Join(timeWheres, " or "))
 		sql.WriteString(")")
