@@ -399,7 +399,7 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 	}
 
 	// get lesson plans
-	var scheduleIDs []string
+	scheduleIDs := make([]string, 0, len(items))
 	for _, item := range items {
 		scheduleIDs = append(scheduleIDs, item.ScheduleID)
 	}
@@ -413,7 +413,7 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 		)
 		return nil, err
 	}
-	var lessonPlanIDs []string
+	lessonPlanIDs := make([]string, 0, len(schedules))
 	lessonPlanIDToScheduleIDMap := make(map[string]string, len(schedules))
 	for _, s := range schedules {
 		lessonPlanIDs = append(lessonPlanIDs, s.LessonPlanID)
