@@ -6,14 +6,15 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 
@@ -25,26 +26,26 @@ import (
 )
 
 type S3StorageConfig struct {
-	Endpoint  string
-	Bucket    string
-	Region    string
-	ArnBucket string
+	Endpoint   string
+	Bucket     string
+	Region     string
+	ArnBucket  string
 	Accelerate bool
 }
 
 type S3Storage struct {
-	session   *session.Session
-	bucket    string
-	region    string
-	endpoint string
-	arnBucket string
+	session    *session.Session
+	bucket     string
+	region     string
+	endpoint   string
+	arnBucket  string
 	accelerate bool
 }
 
 type CDNServiceRequest struct {
-	URL       string   `json:"domain"`
-	Duration time.Duration `json:"duration"`
-	FilePaths []string `json:"filePaths"`
+	URL       string        `json:"domain"`
+	Duration  time.Duration `json:"duration"`
+	FilePaths []string      `json:"filePaths"`
 }
 
 type CDNServiceResponse struct {
@@ -57,11 +58,11 @@ type CDNServiceResult struct {
 
 type EndPointWithScheme struct {
 	endpoint *string
-	scheme string
-	isHttps bool
+	scheme   string
+	isHttps  bool
 }
 
-func (s S3Storage) getEndpoint(ctx context.Context) (*EndPointWithScheme, error){
+func (s S3Storage) getEndpoint(ctx context.Context) (*EndPointWithScheme, error) {
 	if s.endpoint == "" {
 		return &EndPointWithScheme{
 			endpoint: nil,
@@ -70,7 +71,7 @@ func (s S3Storage) getEndpoint(ctx context.Context) (*EndPointWithScheme, error)
 		}, nil
 	}
 	p, err := url.Parse(s.endpoint)
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "endpoint invalid", log.Err(err), log.String("endpoint", s.endpoint))
 		return nil, err
 	}
@@ -86,15 +87,15 @@ func (s S3Storage) getEndpoint(ctx context.Context) (*EndPointWithScheme, error)
 func (s *S3Storage) OpenStorage(ctx context.Context) error {
 	//在~/.aws/credentials文件中保存secretId和secretKey
 	endPointInfo, err := s.getEndpoint(ctx)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	flag := !endPointInfo.isHttps
 
 	sess, err := session.NewSession(&aws.Config{
-		Endpoint: 		endPointInfo.endpoint,
-		Region:          aws.String(s.region),
-		S3UseAccelerate: aws.Bool(s.accelerate),
+		Endpoint:         endPointInfo.endpoint,
+		Region:           aws.String(s.region),
+		S3UseAccelerate:  aws.Bool(s.accelerate),
 		DisableSSL:       aws.Bool(flag),
 		S3ForcePathStyle: aws.Bool(flag),
 	})
@@ -169,17 +170,17 @@ func (s *S3Storage) UploadFile(ctx context.Context, partition StoragePartition, 
 func (s *S3Storage) UploadFileLAN(ctx context.Context, partition StoragePartition, filePath string, contentType string, r io.Reader) error {
 	//建立session
 	endPointInfo, err := s.getEndpoint(ctx)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	flag := !endPointInfo.isHttps
 
 	sess, err := session.NewSession(&aws.Config{
-		Endpoint: 		endPointInfo.endpoint,
-		Region:          aws.String(s.region),
+		Endpoint:         endPointInfo.endpoint,
+		Region:           aws.String(s.region),
 		DisableSSL:       aws.Bool(flag),
 		S3ForcePathStyle: aws.Bool(flag),
-		S3UseAccelerate: aws.Bool(false),
+		S3UseAccelerate:  aws.Bool(false),
 	})
 	if err != nil {
 		log.Error(ctx, "Session create failed", log.Err(err))
@@ -275,6 +276,7 @@ func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition Storage
 	req, _ := svc.PutObjectRequest(&s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(path),
+		// ContentLength: aws.Int64(partition.SizeLimit()),
 	})
 
 	urlStr, err := req.Presign(constant.PresignUploadDurationMinutes)
@@ -311,7 +313,7 @@ func (s *S3Storage) GetFileTempPath(ctx context.Context, partition StoragePartit
 	//CDN
 	if config.Get().StorageConfig.StorageSigMode {
 		return s.GetFileTempPathForCDN(ctx, partition, filePath)
-	}else{
+	} else {
 		return s.GetFileCDNPath(ctx, partition, filePath), nil
 	}
 }
@@ -332,7 +334,7 @@ func (s *S3Storage) GetFileTempPathForCDN(ctx context.Context, partition Storage
 			log.String("partition", string(partition)),
 			log.String("file_path", filePath),
 			log.Err(err),
-			)
+		)
 		return "", err
 	}
 	block, _ := pem.Decode(privateKeyPEM)
@@ -372,6 +374,7 @@ func (s *S3Storage) GetFileTempPathForCDN(ctx context.Context, partition Storage
 
 	return signedURL, nil
 }
+
 //
 //func (s *S3Storage) GetFileTempPathForCDNByService(ctx context.Context, partition StoragePartition, filePath string) (string, error) {
 //	cdnConf := config.Get().CDNConfig
@@ -449,10 +452,10 @@ func (s *S3Storage) GetFileTempPathForCDN(ctx context.Context, partition Storage
 
 func newS3Storage(c S3StorageConfig) IStorage {
 	return &S3Storage{
-		bucket:    c.Bucket,
-		region:    c.Region,
-		endpoint:	c.Endpoint,
-		arnBucket: c.ArnBucket,
+		bucket:     c.Bucket,
+		region:     c.Region,
+		endpoint:   c.Endpoint,
+		arnBucket:  c.ArnBucket,
 		accelerate: c.Accelerate,
 	}
 }

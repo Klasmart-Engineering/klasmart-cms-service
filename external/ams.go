@@ -2,6 +2,8 @@ package external
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"regexp"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -19,6 +21,7 @@ func GetAmsClient() *AmsClient {
 	_amsClientOnce.Do(func() {
 		_amsClient = &AmsClient{
 			Client: chlorine.NewClient(config.Get().AMS.EndPoint),
+			reg:    regexp.MustCompile("access=\\S+"),
 		}
 
 	})
@@ -27,6 +30,7 @@ func GetAmsClient() *AmsClient {
 
 type AmsClient struct {
 	*chlorine.Client
+	reg *regexp.Regexp
 }
 
 func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorine.Response) (int, error) {
@@ -35,6 +39,13 @@ func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorin
 		externalStopwatch.Start()
 	}
 
+	cookie := req.Header.Get(constant.CookieKey)
+	if !c.reg.MatchString(cookie) {
+		log.Warn(ctx,
+			"Found access graphql without cookie",
+			log.String(constant.CookieKey, cookie),
+			log.Any("req", req))
+	}
 	statusCode, err := c.Client.Run(ctx, req, resp)
 
 	if foundStopwatch {

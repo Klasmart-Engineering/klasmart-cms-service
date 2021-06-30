@@ -95,10 +95,11 @@ type H5PUserScores struct {
 }
 
 type H5PSetScoreRequest struct {
-	RoomID    string
-	ContentID string
-	StudentID string
-	Score     float64
+	RoomID       string
+	StudentID    string
+	ContentID    string
+	SubContentID string
+	Score        float64
 }
 
 type H5PRoomScoreServiceProvider interface {
@@ -153,6 +154,7 @@ query {
 					type
 					fileType
 					h5p_id
+					subcontent_id
 				}
 				score {
 					min
@@ -188,6 +190,7 @@ query {
 						type
 						fileType
 						h5p_id
+						subcontent_id
 					}
 					score
 					date
@@ -295,10 +298,11 @@ func (s H5PRoomScoreService) BatchSet(ctx context.Context, operator *entity.Oper
 mutation {
 	{{range $i, $e := .}}
 	q{{$i}}: setScore(
-		score: {{$e.Score}}
-		content_id: "{{$e.ContentID}}"
-		student_id: "{{$e.StudentID}}"
 		room_id: "{{$e.RoomID}}"
+		student_id: "{{$e.StudentID}}"
+		content_id: "{{$e.ContentID}}"
+		subcontent_id: "{{$e.SubContentID}}"
+		score: {{$e.Score}}
 	) {
 		teacher {
 			user_id

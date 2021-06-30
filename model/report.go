@@ -296,18 +296,6 @@ func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 	}
 
 	outcomeIDs := m.getOutcomeIDs(assessmentOutcomes)
-
-	outcomesMap, err := m.getOutcomesMap(ctx, tx, operator, outcomeIDs)
-	if err != nil {
-		log.Error(ctx, "get student detail report: get outcomes map failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("req", req),
-			log.Strings("outcome_ids", outcomeIDs),
-		)
-		return nil, err
-	}
-
 	tr, err := m.makeLatestOutcomeIDsTranslator(ctx, tx, operator, outcomeIDs)
 	if err != nil {
 		log.Error(ctx, "get student detail report: make latest outcome ids translator failed",
@@ -319,9 +307,22 @@ func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 		return nil, err
 	}
 
-	developmentals, err := external.GetCategoryServiceProvider().GetByOrganization(ctx, operator)
+	latestOutcomeIDs := tr(outcomeIDs)
+	outcomesMap, err := m.getOutcomesMap(ctx, tx, operator, latestOutcomeIDs)
 	if err != nil {
-		log.Error(ctx, "get student detail report: query all developmental failed",
+		log.Error(ctx, "get student detail report: get outcomes map failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("req", req),
+			log.Strings("outcome_ids", outcomeIDs),
+			log.Strings("latest_outcome_ids", latestOutcomeIDs),
+		)
+		return nil, err
+	}
+
+	categories, err := external.GetCategoryServiceProvider().GetByOrganization(ctx, operator)
+	if err != nil {
+		log.Error(ctx, "get student detail report: query all category failed",
 			log.Err(err),
 			log.Any("req", req),
 			log.Any("operator", operator),
@@ -348,15 +349,18 @@ func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 		return &result, nil
 	}
 	result.Attend = true
-	for _, developmental := range developmentals {
-		c := entity.StudentAchievementReportCategoryItem{Name: developmental.Name}
+	for _, category := range categories {
+		c := entity.StudentAchievementReportCategoryItem{Name: category.Name}
 		achievedOIDs := tr(achievedAttendanceID2OutcomeIDsMap[req.StudentID])
 		for _, oid := range achievedOIDs {
 			o := outcomesMap[oid]
 			if o == nil {
+				log.Debug(ctx, "get student report: not found achieved outcome",
+					log.String("outcome_id", oid),
+				)
 				continue
 			}
-			if o.Developmental == developmental.ID {
+			if utils.ContainsStr(o.Categories, category.ID) {
 				c.AchievedItems = append(c.AchievedItems, o.Name)
 			}
 		}
@@ -364,9 +368,12 @@ func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 		for _, oid := range notAchievedOIDs {
 			o := outcomesMap[oid]
 			if o == nil {
+				log.Debug(ctx, "get student report: not found not achieved outcome",
+					log.String("outcome_id", oid),
+				)
 				continue
 			}
-			if o.Developmental == developmental.ID {
+			if o.Developmental == category.ID {
 				c.NotAchievedItems = append(c.NotAchievedItems, o.Name)
 			}
 		}
@@ -374,9 +381,12 @@ func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 		for _, oid := range skipOIDs {
 			o := outcomesMap[oid]
 			if o == nil {
+				log.Debug(ctx, "get student report: not found skip outcome",
+					log.String("outcome_id", oid),
+				)
 				continue
 			}
-			if o.Developmental == developmental.ID {
+			if o.Developmental == category.ID {
 				c.NotAttemptedItems = append(c.NotAttemptedItems, o.Name)
 			}
 		}
@@ -1184,6 +1194,10 @@ func (rm *reportModel) makeLatestOutcomeIDsTranslator(ctx context.Context, tx *d
 			m = map[string]*entity.Outcome{}
 		}
 	}
+	log.Debug(ctx, "get latest outcome ids",
+		log.Strings("outcome_ids", outcomeIDs),
+		log.Any("latest_outcome_map", m),
+	)
 	return func(ids []string) []string {
 		if len(ids) == 0 {
 			return nil
