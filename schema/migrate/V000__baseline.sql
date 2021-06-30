@@ -103,13 +103,13 @@ CREATE TABLE IF NOT EXISTS `class_types` (
 
 CREATE TABLE IF NOT EXISTS `cms_authed_contents` (
   `id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'record_id',
-  `org_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'org_id',
-  `from_folder_id` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'from_folder_id',
-  `content_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'content_id',
-  `creator` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'creator',
+  `org_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'org_id',
+  `from_folder_id` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT 'from_folder_id',
+  `content_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'content_id',
+  `creator` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'creator',
   `duration` int(11) NOT NULL DEFAULT '0' COMMENT 'duration',
-  `create_at` bigint(20) NOT NULL COMMENT 'created_at',
-  `delete_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'deleted_at',
+  `create_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'created_at',
+  `delete_at` bigint(20) DEFAULT '0' COMMENT 'deleted_at',
   PRIMARY KEY (`id`),
   KEY `org_id` (`org_id`),
   KEY `content_id` (`content_id`),
@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS `cms_content_properties` (
   PRIMARY KEY (`id`),
   KEY `cms_content_properties_content_id_idx` (`content_id`),
   KEY `cms_content_properties_property_type_idx` (`property_type`)
-) ENGINE=InnoDB AUTO_INCREMENT=4536 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content properties';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content properties';
 
 
 CREATE TABLE IF NOT EXISTS `cms_content_visibility_settings` (
@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS `cms_content_visibility_settings` (
   PRIMARY KEY (`id`),
   KEY `cms_content_visibility_settings_content_id_idx` (`content_id`),
   KEY `cms_content_visibility_settings_visibility_settings_idx` (`visibility_setting`)
-) ENGINE=InnoDB AUTO_INCREMENT=922 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content visibility settings';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content visibility settings';
 
 
 CREATE TABLE IF NOT EXISTS `cms_contents` (
@@ -170,7 +170,7 @@ CREATE TABLE IF NOT EXISTS `cms_contents` (
   `version` int(11) NOT NULL DEFAULT '0' COMMENT '版本',
   `locked_by` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '封锁人',
   `source_id` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'source_id',
-  `copy_source_id` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'copy_source_id',
+  `copy_source_id` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT 'copy_source_id',
   `latest_id` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'latest_id',
   `lesson_type` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'lesson_type',
   `create_at` bigint(20) NOT NULL COMMENT 'created_at',
@@ -204,8 +204,8 @@ CREATE TABLE IF NOT EXISTS `cms_folder_items` (
   `create_at` bigint(20) NOT NULL COMMENT 'create time (unix seconds)',
   `update_at` bigint(20) NOT NULL COMMENT 'update time (unix seconds)',
   `delete_at` bigint(20) DEFAULT NULL COMMENT 'delete time (unix seconds)',
-  `keywords` text COLLATE utf8mb4_unicode_ci COMMENT '???',
-  `description` text COLLATE utf8mb4_unicode_ci COMMENT '??',
+  `keywords` text COLLATE utf8mb4_unicode_ci COMMENT '关键字',
+  `description` text COLLATE utf8mb4_unicode_ci COMMENT '描述',
   PRIMARY KEY (`id`),
   FULLTEXT KEY `folder_name_description_keywords_author_index` (`name`,`keywords`,`description`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms folder';
@@ -213,12 +213,12 @@ CREATE TABLE IF NOT EXISTS `cms_folder_items` (
 
 CREATE TABLE IF NOT EXISTS `cms_shared_folders` (
   `id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'record_id',
-  `folder_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'folder_id',
-  `org_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'org_id',
-  `creator` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'creator',
-  `create_at` bigint(20) NOT NULL COMMENT 'created_at',
-  `update_at` bigint(20) NOT NULL COMMENT 'updated_at',
-  `delete_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'deleted_at',
+  `folder_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'folder_id',
+  `org_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'org_id',
+  `creator` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'creator',
+  `create_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint(20) DEFAULT '0' COMMENT 'deleted_at',
   PRIMARY KEY (`id`),
   KEY `org_id` (`org_id`),
   KEY `folder_id` (`folder_id`),
@@ -369,7 +369,7 @@ CREATE TABLE IF NOT EXISTS `lesson_types` (
 
 CREATE TABLE IF NOT EXISTS `milestones` (
   `id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
-  `name` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT '',
+  `name` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT 'name',
   `shortcode` char(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'shortcode',
   `organization_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'org id',
   `author_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'author id',
@@ -400,7 +400,7 @@ CREATE TABLE IF NOT EXISTS `milestones_outcomes` (
   `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
   PRIMARY KEY (`id`),
   UNIQUE KEY `milestone_ancestor_id_delete` (`milestone_id`,`outcome_ancestor`,`delete_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=156 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='milestones_outcomes';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='milestones_outcomes';
 
 
 CREATE TABLE IF NOT EXISTS `milestones_relations` (
@@ -414,7 +414,7 @@ CREATE TABLE IF NOT EXISTS `milestones_relations` (
   `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
   PRIMARY KEY (`id`),
   UNIQUE KEY `master_relation_delete` (`master_id`,`relation_id`,`relation_type`,`master_type`,`delete_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=463 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='milestones_relations';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='milestones_relations';
 
 
 CREATE TABLE IF NOT EXISTS `organizations_properties` (
@@ -466,7 +466,7 @@ CREATE TABLE IF NOT EXISTS `outcomes_relations` (
   `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
   PRIMARY KEY (`id`),
   UNIQUE KEY `master_relation_delete` (`master_id`,`relation_id`,`relation_type`,`master_type`,`delete_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=147041 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='outcomes_relations';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='outcomes_relations';
 
 
 CREATE TABLE IF NOT EXISTS `outcomes_sets` (
@@ -478,7 +478,7 @@ CREATE TABLE IF NOT EXISTS `outcomes_sets` (
   `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
   PRIMARY KEY (`id`),
   UNIQUE KEY `outcome_set_id_delete` (`outcome_id`,`set_id`,`delete_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=1511 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='outcomes_sets';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='outcomes_sets';
 
 
 CREATE TABLE IF NOT EXISTS `programs` (
@@ -598,9 +598,9 @@ CREATE TABLE IF NOT EXISTS `schedules_feedbacks` (
 
 CREATE TABLE IF NOT EXISTS `schedules_relations` (
   `id` varchar(256) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
-  `schedule_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'schedule_id',
-  `relation_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'relation_id',
-  `relation_type` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'record_type',
+  `schedule_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'schedule_id',
+  `relation_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'relation_id',
+  `relation_type` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'relation_type',
   PRIMARY KEY (`id`),
   KEY `idx_schedule_id` (`schedule_id`),
   KEY `idx_relation_id` (`relation_id`),
