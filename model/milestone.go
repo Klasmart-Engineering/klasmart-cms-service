@@ -417,8 +417,8 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 				log.Any("milestone", ms))
 			return err
 		}
-		// NKL-1021
-		// var needDeleteOutcomeMilestoneID []string
+
+		var needDeleteOutcomeMilestoneID []string
 		if toPublish && ms.SourceID != ms.ID {
 			err = da.GetMilestoneDA().BatchHide(ctx, tx, []string{ms.SourceID})
 			if err != nil {
@@ -438,8 +438,8 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 					log.Any("milestone", ancestorLatest))
 				return err
 			}
-			// NKL-1021
-			// needDeleteOutcomeMilestoneID = append(needDeleteOutcomeMilestoneID, ms.SourceID)
+
+			needDeleteOutcomeMilestoneID = append(needDeleteOutcomeMilestoneID, ms.SourceID)
 
 			err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, []string{ms.SourceID})
 			if err != nil {
@@ -459,17 +459,17 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			}
 			milestoneOutcomes[length-1-i] = &milestoneOutcome
 		}
-		// NKL-1021
-		// needDeleteOutcomeMilestoneID = append(needDeleteOutcomeMilestoneID, ms.ID)
-		// err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, needDeleteOutcomeMilestoneID)
-		// if err != nil {
-		// 	log.Error(ctx, "Update: DeleteTx failed",
-		// 		log.Err(err),
-		// 		log.Bool("to_publish", toPublish),
-		// 		log.Any("op", op),
-		// 		log.Any("milestone", ms))
-		// 	return err
-		// }
+
+		needDeleteOutcomeMilestoneID = append(needDeleteOutcomeMilestoneID, ms.ID)
+		err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, needDeleteOutcomeMilestoneID)
+		if err != nil {
+			log.Error(ctx, "Update: DeleteTx failed",
+				log.Err(err),
+				log.Bool("to_publish", toPublish),
+				log.Any("op", op),
+				log.Any("milestone", ms))
+			return err
+		}
 		err = da.GetMilestoneOutcomeDA().InsertTx(ctx, tx, milestoneOutcomes)
 		if err != nil {
 			log.Error(ctx, "Update: InsertTx failed",
