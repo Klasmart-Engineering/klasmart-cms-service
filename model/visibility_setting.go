@@ -150,8 +150,9 @@ func (m *visibilitySettingModel) GetByID(ctx context.Context, id string, operato
 	for i := range ret {
 		if id == ret[i].ID {
 			return &entity.VisibilitySetting{
-				ID:   ret[i].ID,
-				Name: ret[i].Name,
+				ID:    ret[i].ID,
+				Name:  ret[i].Name,
+				Group: ret[i].Group,
 			}, nil
 		}
 	}
