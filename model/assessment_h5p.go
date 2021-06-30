@@ -19,46 +19,121 @@ func getAssessmentH5p() *assessmentH5P {
 	return &assessmentH5P{}
 }
 
-func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.AssessmentH5PRoom, v *entity.AssessmentView) float64 {
+func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.AssessmentH5PRoom, view *entity.AssessmentView) float64 {
 	if room == nil {
 		log.Debug(ctx, "get room complete rate: room is empty",
-			log.Any("view", v),
+			log.Any("view", view),
 		)
 		return 0
 	}
 
-	// calc attempted
+	// calc agg template
+	aggContentsMap := map[string][]*entity.AssessmentH5PContentScore{}
+	aggUserContentOrderedIDsMap := map[string][]int{}
+	for _, u := range room.Users {
+		for id, contents := range u.ContentsMapByContentID {
+			for _, c := range contents {
+				// aggregate user attended contents
+				if u.UserID != "" {
+					aggUserContentOrderedIDsMap[u.UserID] = append(aggUserContentOrderedIDsMap[u.UserID], c.OrderedID)
+				}
+				exists := false
+				for _, c2 := range aggContentsMap[id] {
+					if c2 == c {
+						exists = true
+						break
+					}
+				}
+				// deduplication, only append not exists item
+				if !exists {
+					aggContentsMap[id] = append(aggContentsMap[id], c)
+				}
+			}
+		}
+	}
+	log.Debug(ctx, "get room complete rate: print agg maps",
+		log.Any("agg_contents_map", aggContentsMap),
+		log.Any("agg_user_content_ordered_ids_map", aggUserContentOrderedIDsMap),
+	)
+
 	attempted := 0
 	total := 0
-	for _, s := range v.Students {
+	for _, s := range view.Students {
 		if !s.Checked {
 			continue
 		}
-		u := room.UserMap[s.ID]
-		if u == nil {
-			continue
+		user := room.UserMap[s.ID]
+		uid := ""
+		if user != nil {
+			uid = user.UserID
 		}
-		for _, lm := range v.LessonMaterials {
+		for _, lm := range view.LessonMaterials {
 			if !(lm.Checked && (lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend)) {
 				continue
 			}
-			contents := u.ContentsMapByContentID[lm.ID]
-			if len(contents) == 0 {
-				contents2 := u.ContentsMapByH5PID[lm.Source]
-				if len(contents2) > 0 {
-					contents = append(contents, contents2...)
+			aggContents := aggContentsMap[lm.ID]
+			contentMapGroupByKey := map[string][]*entity.AssessmentH5PContentScore{}
+			for _, c := range aggContents {
+				key := fmt.Sprintf("%s:%s", c.ContentID, c.SubH5PID)
+				contentMapGroupByKey[key] = append(contentMapGroupByKey[key], c)
+			}
+			var contents []*entity.AssessmentH5PContentScore
+			attendContentOrderIDs := aggUserContentOrderedIDsMap[uid]
+			for _, keyedContents := range contentMapGroupByKey {
+				if len(keyedContents) == 0 {
+					continue
+				}
+				hit := false
+				for _, c := range keyedContents {
+					if utils.ContainsInt(attendContentOrderIDs, c.OrderedID) {
+						hit = true
+						contents = append(contents, c)
+						break
+					}
+				}
+				if !hit {
+					c := keyedContents[0]
+					newContent := entity.AssessmentH5PContentScore{
+						OrderedID:        c.OrderedID,
+						H5PID:            c.H5PID,
+						ContentID:        c.ContentID,
+						ContentName:      c.ContentName,
+						SubH5PID:         c.SubH5PID,
+						SubContentNumber: c.SubContentNumber,
+					}
+					contents = append(contents, &newContent)
 				}
 			}
-			for _, c := range contents {
-				if len(c.Answers) > 0 || len(c.Scores) > 0 {
-					attempted++
+			if len(contents) > 0 {
+				for _, content := range contents {
+					if content == nil {
+						log.Debug(ctx, "get room complete rate: not found content from h5p room",
+							log.String("room_id", view.RoomID),
+							log.Any("not_found_content_id", lm.Source),
+							log.Any("room", room),
+						)
+						continue
+					}
+					if len(contents) > 1 && content.SubH5PID == "" {
+						continue
+					}
+					if len(content.Answers) > 0 || len(content.Scores) > 0 {
+						attempted++
+					}
+					total++
 				}
-				total++
+				continue
 			}
+			total++
 		}
 	}
 
 	if total > 0 {
+		log.Debug(ctx, "get room complete rate: print attempted and total",
+			log.Int("attempted", attempted),
+			log.Int("total", total),
+			log.String("room_id", view.RoomID),
+		)
 		return float64(attempted) / float64(total)
 	}
 
@@ -99,11 +174,19 @@ func (m *assessmentH5P) batchGetRoomScoreMap(ctx context.Context, operator *enti
 			// normalize external contents order
 			scoresIndexMap := make(map[string]int, len(u.Scores))
 			for i, s := range u.Scores {
-				scoresIndexMap[s.Content.ContentID] = i
+				if s.Content != nil {
+					scoresIndexMap[s.Content.ContentID] = i
+				}
 			}
 			sort.Slice(u.Scores, func(i, j int) bool {
 				itemI := u.Scores[i]
 				itemJ := u.Scores[j]
+				if itemI.Content == nil {
+					return true
+				}
+				if itemJ.Content == nil {
+					return false
+				}
 				if itemI.Content.ContentID == itemJ.Content.ContentID {
 					if itemI.Content.SubContentID == "" && itemJ.Content.SubContentID != "" {
 						return true
@@ -385,10 +468,8 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 						H5PID:            c.H5PID,
 						ContentID:        c.ContentID,
 						ContentName:      c.ContentName,
-						ContentType:      c.ContentType,
 						SubH5PID:         c.SubH5PID,
 						SubContentNumber: c.SubContentNumber,
-						MaxPossibleScore: c.MaxPossibleScore,
 					}
 					contents = append(contents, &newContent)
 				}
@@ -434,7 +515,7 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 			itemI := newItem.LessonMaterials[i]
 			itemJ := newItem.LessonMaterials[j]
 			if itemI.LessonMaterialID == itemJ.LessonMaterialID {
-				return itemI.SubContentNumber < itemJ.SubContentNumber
+				return itemI.SubH5PID < itemJ.SubH5PID
 			}
 			return lmIndexMap[itemI.LessonMaterialID] < lmIndexMap[itemJ.LessonMaterialID]
 		})
@@ -445,7 +526,8 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 			if lastLessonMaterialID != lm.LessonMaterialID {
 				number++
 				lastLessonMaterialID = lm.LessonMaterialID
-			} else if lm.SubH5PID == "" {
+			}
+			if lm.SubH5PID == "" {
 				subNumber = 0
 			} else {
 				subNumber++
