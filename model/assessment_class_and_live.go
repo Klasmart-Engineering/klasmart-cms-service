@@ -148,10 +148,11 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 	// convert to assessment view
 	var views []*entity.AssessmentView
 	if views, err = m.toViews(ctx, tx, operator, assessments, entity.ConvertToViewsOptions{
-		CheckedStudents: sql.NullBool{Bool: true, Valid: true},
-		EnableProgram:   true,
-		EnableSubjects:  true,
-		EnableTeachers:  true,
+		CheckedStudents:  sql.NullBool{Bool: true, Valid: true},
+		EnableProgram:    true,
+		EnableSubjects:   true,
+		EnableTeachers:   true,
+		EnableLessonPlan: true,
 	}); err != nil {
 		log.Error(ctx, "List: GetAssessmentUtils().toViews: get failed",
 			log.Err(err),
@@ -174,6 +175,7 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 			ClassEndTime: v.ClassEndTime,
 			CompleteTime: v.CompleteTime,
 			Status:       v.Status,
+			LessonPlan:   v.LessonPlan,
 		}
 		result.Items = append(result.Items, &newItem)
 	}
