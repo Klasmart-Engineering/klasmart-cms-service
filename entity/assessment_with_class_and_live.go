@@ -145,15 +145,14 @@ type AssessmentExternalLessonMaterial struct {
 }
 
 type AssessmentItem struct {
-	ID           string                `json:"id"`
-	Title        string                `json:"title"`
-	Program      AssessmentProgram     `json:"program"`
-	Subjects     []*AssessmentSubject  `json:"subjects"`
-	Teachers     []*AssessmentTeacher  `json:"teachers"`
-	ClassEndTime int64                 `json:"class_end_time"`
-	CompleteTime int64                 `json:"complete_time"`
-	Status       AssessmentStatus      `json:"status"`
-	LessonPlan   *AssessmentLessonPlan `json:"lesson_plan"`
+	ID           string               `json:"id"`
+	Title        string               `json:"title"`
+	Program      AssessmentProgram    `json:"program"`
+	Subjects     []*AssessmentSubject `json:"subjects"`
+	Teachers     []*AssessmentTeacher `json:"teachers"`
+	ClassEndTime int64                `json:"class_end_time"`
+	CompleteTime int64                `json:"complete_time"`
+	Status       AssessmentStatus     `json:"status"`
 }
 
 type AssessmentStatus string
