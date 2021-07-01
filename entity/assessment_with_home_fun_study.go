@@ -108,7 +108,6 @@ type ListHomeFunStudiesResultItem struct {
 	LatestFeedbackAt int64                   `json:"latest_feedback_at"`
 	AssessScore      HomeFunStudyAssessScore `json:"assess_score"`
 	CompleteAt       int64                   `json:"complete_at"`
-	LessonPlan       *AssessmentLessonPlan   `json:"lesson_plan"`
 	// debug
 	ScheduleID string `json:"schedule_id"`
 }
