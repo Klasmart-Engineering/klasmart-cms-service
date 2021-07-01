@@ -2467,7 +2467,7 @@ func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.D
 		log.Info(ctx, "no valid private scope", log.Strings("scopes", scope), log.Any("user", user))
 		scope = []string{constant.NoSearchItem}
 	}
-	condition2.VisibilitySettings = scope
+	condition1.VisibilitySettings = scope
 
 	//condition2 others
 	condition2.PublishStatus = cm.filterPublishedPublishStatus(ctx, condition2.PublishStatus)
