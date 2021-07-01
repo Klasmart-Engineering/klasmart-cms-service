@@ -1327,67 +1327,69 @@ func (m *assessmentBase) updateStudentViewItems(ctx context.Context, tx *dbo.DBC
 			lmIDs = append(lmIDs, lm.LessonMaterialID)
 		}
 	}
-	lms, err := GetContentModel().GetRawContentByIDList(ctx, tx, lmIDs)
-	if err != nil {
-		log.Error(ctx, "update assessment: batch get contents failed",
-			log.Err(err),
-			log.Any("items", items),
-			log.Strings("lm_ids", lmIDs),
-		)
-		return err
-	}
-	lmDataMap := make(map[string]*MaterialData, len(lms))
-	for _, lm := range lms {
-		data, err := GetContentModel().CreateContentData(ctx, lm.ContentType, lm.Data)
+	if len(lmIDs) > 0 {
+		lms, err := GetContentModel().GetRawContentByIDList(ctx, tx, lmIDs)
 		if err != nil {
+			log.Error(ctx, "update assessment: batch get contents failed",
+				log.Err(err),
+				log.Any("items", items),
+				log.Strings("lm_ids", lmIDs),
+			)
 			return err
 		}
-		lmData, ok := data.(*MaterialData)
-		if ok {
-			lmDataMap[lm.ID] = lmData
-		}
-	}
-	var newScores []*external.H5PSetScoreRequest
-	for _, item := range items {
-		for _, lm := range item.LessonMaterials {
-			lmData := lmDataMap[lm.LessonMaterialID]
-			if lmData == nil {
-				log.Debug(ctx, "not found lesson material id in data map",
-					log.String("lesson_material_id", lm.LessonMaterialID),
-				)
-				continue
+		lmDataMap := make(map[string]*MaterialData, len(lms))
+		for _, lm := range lms {
+			data, err := GetContentModel().CreateContentData(ctx, lm.ContentType, lm.Data)
+			if err != nil {
+				return err
 			}
-			switch lmData.FileType {
-			case entity.FileTypeH5p, entity.FileTypeH5pExtend:
-				if lmData.Source.IsNil() {
-					log.Debug(ctx, "lesson material source is nil",
+			lmData, ok := data.(*MaterialData)
+			if ok {
+				lmDataMap[lm.ID] = lmData
+			}
+		}
+		var newScores []*external.H5PSetScoreRequest
+		for _, item := range items {
+			for _, lm := range item.LessonMaterials {
+				lmData := lmDataMap[lm.LessonMaterialID]
+				if lmData == nil {
+					log.Debug(ctx, "not found lesson material id in data map",
 						log.String("lesson_material_id", lm.LessonMaterialID),
-						log.Any("data", lmData),
 					)
 					continue
 				}
-				newScore := external.H5PSetScoreRequest{
-					RoomID:       roomID,
-					StudentID:    item.StudentID,
-					ContentID:    string(lmData.Source),
-					SubContentID: lm.SubH5PID,
-					Score:        lm.AchievedScore,
+				switch lmData.FileType {
+				case entity.FileTypeH5p, entity.FileTypeH5pExtend:
+					if lmData.Source.IsNil() {
+						log.Debug(ctx, "lesson material source is nil",
+							log.String("lesson_material_id", lm.LessonMaterialID),
+							log.Any("data", lmData),
+						)
+						continue
+					}
+					newScore := external.H5PSetScoreRequest{
+						RoomID:       roomID,
+						StudentID:    item.StudentID,
+						ContentID:    string(lmData.Source),
+						SubContentID: lm.SubH5PID,
+						Score:        lm.AchievedScore,
+					}
+					newScores = append(newScores, &newScore)
+				default:
+					newScore := external.H5PSetScoreRequest{
+						RoomID:       roomID,
+						StudentID:    item.StudentID,
+						ContentID:    lm.LessonMaterialID,
+						SubContentID: lm.SubH5PID,
+						Score:        lm.AchievedScore,
+					}
+					newScores = append(newScores, &newScore)
 				}
-				newScores = append(newScores, &newScore)
-			default:
-				newScore := external.H5PSetScoreRequest{
-					RoomID:       roomID,
-					StudentID:    item.StudentID,
-					ContentID:    lm.LessonMaterialID,
-					SubContentID: lm.SubH5PID,
-					Score:        lm.AchievedScore,
-				}
-				newScores = append(newScores, &newScore)
 			}
 		}
-	}
-	if _, err := external.GetH5PRoomScoreServiceProvider().BatchSet(ctx, operator, newScores); err != nil {
-		return err
+		if _, err := external.GetH5PRoomScoreServiceProvider().BatchSet(ctx, operator, newScores); err != nil {
+			return err
+		}
 	}
 
 	// set comments
