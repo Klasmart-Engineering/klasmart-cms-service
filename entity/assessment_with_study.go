@@ -31,15 +31,14 @@ type ListStudyAssessmentsResult struct {
 }
 
 type ListStudyAssessmentsResultItem struct {
-	ID            string                `json:"id"`
-	Title         string                `json:"title"`
-	TeacherNames  []string              `json:"teacher_names"`
-	ClassName     string                `json:"class_name"`
-	DueAt         int64                 `json:"due_at"`
-	CompleteRate  float64               `json:"complete_rate"`
-	RemainingTime int64                 `json:"remaining_time"`
-	CompleteAt    int64                 `json:"complete_at"`
-	LessonPlan    *AssessmentLessonPlan `json:"lesson_plan"`
+	ID            string   `json:"id"`
+	Title         string   `json:"title"`
+	TeacherNames  []string `json:"teacher_names"`
+	ClassName     string   `json:"class_name"`
+	DueAt         int64    `json:"due_at"`
+	CompleteRate  float64  `json:"complete_rate"`
+	RemainingTime int64    `json:"remaining_time"`
+	CompleteAt    int64    `json:"complete_at"`
 	// debug
 	ScheduleID string `json:"schedule_id"`
 	CreateAt   int64  `json:"create_at"`

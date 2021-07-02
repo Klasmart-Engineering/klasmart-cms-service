@@ -373,7 +373,7 @@ func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 				)
 				continue
 			}
-			if utils.ContainsStr(o.Categories, category.ID) {
+			if o.Developmental == category.ID {
 				c.NotAchievedItems = append(c.NotAchievedItems, o.Name)
 			}
 		}
@@ -386,7 +386,7 @@ func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 				)
 				continue
 			}
-			if utils.ContainsStr(o.Categories, category.ID) {
+			if o.Developmental == category.ID {
 				c.NotAttemptedItems = append(c.NotAttemptedItems, o.Name)
 			}
 		}
@@ -462,7 +462,7 @@ func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, o
 			return nil, err
 		}
 	}
-	categoryID2NameMap := map[string]string{}
+	developmentalID2NameMap := map[string]string{}
 	{
 		developmentalList, err := external.GetCategoryServiceProvider().GetByOrganization(ctx, operator)
 		if err != nil {
@@ -474,20 +474,18 @@ func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, o
 			return nil, err
 		}
 		for _, item := range developmentalList {
-			categoryID2NameMap[item.ID] = item.Name
+			developmentalID2NameMap[item.ID] = item.Name
 		}
 	}
 	result := &entity.TeacherReport{}
 	{
-		categoryID2OutcomeMap := map[string][]*entity.Outcome{}
+		developmentalID2OutcomeCountMap := map[string][]*entity.Outcome{}
 		for _, outcome := range outcomes {
-			for _, c := range outcome.Categories {
-				categoryID2OutcomeMap[c] = append(categoryID2OutcomeMap[c], outcome)
-			}
+			developmentalID2OutcomeCountMap[outcome.Developmental] = append(developmentalID2OutcomeCountMap[outcome.Developmental], outcome)
 		}
-		for categoryID, outcomes := range categoryID2OutcomeMap {
+		for developmentalID, outcomes := range developmentalID2OutcomeCountMap {
 			newItem := &entity.TeacherReportCategory{
-				Name: categoryID2NameMap[categoryID],
+				Name: developmentalID2NameMap[developmentalID],
 			}
 			for _, outcome := range outcomes {
 				newItem.Items = append(newItem.Items, outcome.Name)
