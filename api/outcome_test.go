@@ -183,7 +183,6 @@ func TestGetLearningOutcomesByIDs(t *testing.T) {
 	op := &entity.Operator{
 		UserID: "1",
 		OrgID:  "1",
-		Role:   "admin",
 	}
 	ctx := context.Background()
 	ids := []string{"5f5726af0944d7c38e20696f"}
@@ -200,7 +199,6 @@ func TestGetLatestOutcomesByIDs(t *testing.T) {
 	op := &entity.Operator{
 		UserID: "1",
 		OrgID:  "1",
-		Role:   "admin",
 	}
 	ctx := context.Background()
 	//ids := []string{"5f5726af0944d7c38e20696f"}
