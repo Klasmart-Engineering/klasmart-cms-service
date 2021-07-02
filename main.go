@@ -9,14 +9,14 @@ import (
 
 	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/ro"
-
 	"gitlab.badanamu.com.cn/calmisland/common-cn/common"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/api"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
+	"gitlab.badanamu.com.cn/calmisland/ro"
 
 	logger "gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 )
@@ -62,6 +62,11 @@ func main() {
 
 	// temp solution, will remove in next version
 	logger.SetLevel(logrus.DebugLevel)
+
+	log.Debug(context.TODO(), "build information",
+		log.String("gitHash", constant.GitHash),
+		log.String("buildTimestamp", constant.BuildTimestamp),
+		log.String("latestMigrate", constant.LatestMigrate))
 
 	// read config
 	config.LoadEnvConfig()
