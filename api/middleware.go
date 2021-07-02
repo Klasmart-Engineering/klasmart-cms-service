@@ -81,7 +81,6 @@ func (Server) mustLogin(c *gin.Context) {
 	op := &entity.Operator{
 		UserID: claims.ID,
 		OrgID:  c.Query(constant.URLOrganizationIDParameter),
-		Role:   constant.DefaultRole,
 		Token:  token,
 	}
 	c.Set(operatorKey, op)
@@ -110,7 +109,6 @@ func (Server) mustLoginWithoutOrgID(c *gin.Context) {
 	op := &entity.Operator{
 		UserID: claims.ID,
 		OrgID:  c.Query(constant.URLOrganizationIDParameter),
-		Role:   constant.DefaultRole,
 		Token:  token,
 	}
 	c.Set(operatorKey, op)
