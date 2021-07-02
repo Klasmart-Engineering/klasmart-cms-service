@@ -212,7 +212,7 @@ func (m *reportTeachingLoadModel) cleanAndValidListArgs(ctx context.Context, tx 
 					}
 				}
 				classes, err := external.GetClassServiceProvider().GetOnlyUnderOrgClasses(ctx, operator, operator.OrgID)
-				if err != nil {
+				if err != nil && err != constant.ErrRecordNotFound {
 					return nil, err
 				}
 				for _, c := range classes {
@@ -243,7 +243,7 @@ func (m *reportTeachingLoadModel) cleanAndValidListArgs(ctx context.Context, tx 
 		if args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
 			args.ClassIDs = nil
 			classes, err := external.GetClassServiceProvider().GetOnlyUnderOrgClasses(ctx, operator, operator.OrgID)
-			if err != nil {
+			if err != nil && err != constant.ErrRecordNotFound {
 				return nil, err
 			}
 			for _, c := range classes {
