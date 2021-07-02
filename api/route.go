@@ -20,6 +20,7 @@ func (s Server) registeRoute() {
 	})
 
 	s.engine.GET("/v1/ping", s.ping)
+	s.engine.GET("/v1/version", s.version)
 
 	if config.Get().KidsLoopRegion == constant.KidsloopCN {
 		users := s.engine.Group("/v1/users")
@@ -324,4 +325,12 @@ func (s Server) registeRoute() {
 // @Router /ping [get]
 func (s Server) ping(c *gin.Context) {
 	c.String(http.StatusOK, "pong")
+}
+
+func (s Server) version(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"git_hash":        constant.GitHash,
+		"build_timestamp": constant.BuildTimestamp,
+		"latest_migrate":  constant.LatestMigrate,
+	})
 }
