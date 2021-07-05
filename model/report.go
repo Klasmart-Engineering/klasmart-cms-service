@@ -373,7 +373,7 @@ func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 				)
 				continue
 			}
-			if o.Developmental == category.ID {
+			if utils.ContainsStr(o.Categories, category.ID) {
 				c.NotAchievedItems = append(c.NotAchievedItems, o.Name)
 			}
 		}
@@ -386,7 +386,7 @@ func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 				)
 				continue
 			}
-			if o.Developmental == category.ID {
+			if utils.ContainsStr(o.Categories, category.ID) {
 				c.NotAttemptedItems = append(c.NotAttemptedItems, o.Name)
 			}
 		}
@@ -462,7 +462,7 @@ func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, o
 			return nil, err
 		}
 	}
-	developmentalID2NameMap := map[string]string{}
+	categoryIDToNameMap := map[string]string{}
 	{
 		developmentalList, err := external.GetCategoryServiceProvider().GetByOrganization(ctx, operator)
 		if err != nil {
@@ -474,7 +474,7 @@ func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, o
 			return nil, err
 		}
 		for _, item := range developmentalList {
-			developmentalID2NameMap[item.ID] = item.Name
+			categoryIDToNameMap[item.ID] = item.Name
 		}
 	}
 	result := &entity.TeacherReport{}
@@ -485,7 +485,7 @@ func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, o
 		}
 		for developmentalID, outcomes := range developmentalID2OutcomeCountMap {
 			newItem := &entity.TeacherReportCategory{
-				Name: developmentalID2NameMap[developmentalID],
+				Name: categoryIDToNameMap[developmentalID],
 			}
 			for _, outcome := range outcomes {
 				newItem.Items = append(newItem.Items, outcome.Name)

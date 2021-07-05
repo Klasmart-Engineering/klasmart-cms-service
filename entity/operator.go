@@ -1,20 +1,7 @@
 package entity
 
-import "fmt"
-
-const (
-	RoleTeacher = "teacher"
-	RoleAdmin   = "admin"
-	RoleStudent = "student"
-)
-
 type Operator struct {
 	UserID string `json:"user_id"`
-	Role   string `json:"role"`
 	OrgID  string `json:"org_id"`
-	Token  string `json:"token"`
-}
-
-func (op *Operator) ToLivePayload() string {
-	return fmt.Sprintf("%s,%s,%s", op.UserID, op.Role, op.OrgID)
+	Token  string `json:"-"` // hide token in log
 }

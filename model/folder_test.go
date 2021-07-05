@@ -49,7 +49,6 @@ func initDB() {
 func fakeOperator() *entity.Operator {
 	return &entity.Operator{
 		UserID: "1",
-		Role:   "teacher",
 		OrgID:  "1",
 	}
 }
