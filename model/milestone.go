@@ -3,6 +3,9 @@ package model
 import (
 	"context"
 	"database/sql"
+	"sync"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -11,8 +14,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
-	"time"
 )
 
 type IMilestoneModel interface {
@@ -256,30 +257,31 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 			outcomeAncestors = append(outcomeAncestors, milestoneOutcomes[i].OutcomeAncestor)
 		}
 
-		if milestone.Type == entity.GeneralMilestoneType {
-			intersect, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
-				OutcomeAncestors: dbo.NullStrings{Strings: outcomeAncestors, Valid: true},
-				NotMilestoneID:   sql.NullString{String: milestone.ID, Valid: true},
-			})
-			if err != nil {
-				log.Debug(ctx, "Obtain: exclude normal bind from general",
-					log.Any("milestone", milestone),
-					log.Strings("ancestors", outcomeAncestors))
-				return err
-			}
-			if len(intersect) > 0 {
-				intersectMap := make(map[string]bool)
-				for i := range intersect {
-					intersectMap[intersect[i].OutcomeAncestor] = true
-				}
-				outcomeAncestors = make([]string, 0, bindLength-len(intersectMap))
-				for i := range milestoneOutcomes {
-					if !intersectMap[milestoneOutcomes[i].OutcomeAncestor] {
-						outcomeAncestors = append(outcomeAncestors, milestoneOutcomes[i].OutcomeAncestor)
-					}
-				}
-			}
-		}
+		// NKL-1021
+		// if milestone.Type == entity.GeneralMilestoneType {
+		// 	intersect, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
+		// 		OutcomeAncestors: dbo.NullStrings{Strings: outcomeAncestors, Valid: true},
+		// 		NotMilestoneID:   sql.NullString{String: milestone.ID, Valid: true},
+		// 	})
+		// 	if err != nil {
+		// 		log.Debug(ctx, "Obtain: exclude normal bind from general",
+		// 			log.Any("milestone", milestone),
+		// 			log.Strings("ancestors", outcomeAncestors))
+		// 		return err
+		// 	}
+		// 	if len(intersect) > 0 {
+		// 		intersectMap := make(map[string]bool)
+		// 		for i := range intersect {
+		// 			intersectMap[intersect[i].OutcomeAncestor] = true
+		// 		}
+		// 		outcomeAncestors = make([]string, 0, bindLength-len(intersectMap))
+		// 		for i := range milestoneOutcomes {
+		// 			if !intersectMap[milestoneOutcomes[i].OutcomeAncestor] {
+		// 				outcomeAncestors = append(outcomeAncestors, milestoneOutcomes[i].OutcomeAncestor)
+		// 			}
+		// 		}
+		// 	}
+		// }
 
 		outcomeAncestors = utils.StableSliceDeduplication(outcomeAncestors)
 
@@ -367,14 +369,15 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 				return constant.ErrOperateNotAllowed
 			}
 		case entity.OutcomeStatusPublished:
-			if ms.Type == entity.GeneralMilestoneType {
-				log.Warn(ctx, "Update: can not operate general milestone",
-					log.Any("perms", perms),
-					log.Bool("to_publish", toPublish),
-					log.Any("op", op),
-					log.Any("milestone", ms))
-				return constant.ErrOperateNotAllowed
-			}
+			// NKL-1021
+			// if ms.Type == entity.GeneralMilestoneType {
+			// 	log.Warn(ctx, "Update: can not operate general milestone",
+			// 		log.Any("perms", perms),
+			// 		log.Bool("to_publish", toPublish),
+			// 		log.Any("op", op),
+			// 		log.Any("milestone", ms))
+			// 	return constant.ErrOperateNotAllowed
+			// }
 			if !perms[external.EditPublishedMilestone] {
 				log.Warn(ctx, "Update: perm failed",
 					log.Any("perms", perms),
@@ -435,16 +438,17 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 					log.Any("milestone", ancestorLatest))
 				return err
 			}
+
 			needDeleteOutcomeMilestoneID = append(needDeleteOutcomeMilestoneID, ms.SourceID)
 
-			//err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, []string{ms.SourceID})
-			//if err != nil {
-			//	log.Error(ctx, "Update: delete hide milestone's outcomes failed",
-			//		log.Bool("to_publish", toPublish),
-			//		log.Any("op", op),
-			//		log.Any("milestone", ms))
-			//	return err
-			//}
+			err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, []string{ms.SourceID})
+			if err != nil {
+				log.Error(ctx, "Update: delete hide milestone's outcomes failed",
+					log.Bool("to_publish", toPublish),
+					log.Any("op", op),
+					log.Any("milestone", ms))
+				return err
+			}
 		}
 		length := len(outcomeAncestors)
 		milestoneOutcomes := make([]*entity.MilestoneOutcome, length)
@@ -455,6 +459,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			}
 			milestoneOutcomes[length-1-i] = &milestoneOutcome
 		}
+
 		needDeleteOutcomeMilestoneID = append(needDeleteOutcomeMilestoneID, ms.ID)
 		err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, needDeleteOutcomeMilestoneID)
 		if err != nil {
@@ -522,11 +527,12 @@ func (m MilestoneModel) canBeDeleted(ctx context.Context, milestones []*entity.M
 					log.Any("milestone", milestones[i]))
 				return nil, constant.ErrOperateNotAllowed
 			}
-			if milestones[i].Type == entity.GeneralMilestoneType {
-				log.Warn(ctx, "canBeDeleted: can not operate general milestone",
-					log.Any("milestone", milestones[i]))
-				return nil, constant.ErrOperateNotAllowed
-			}
+			// NKL-1021
+			// if milestones[i].Type == entity.GeneralMilestoneType {
+			// 	log.Warn(ctx, "canBeDeleted: can not operate general milestone",
+			// 		log.Any("milestone", milestones[i]))
+			// 	return nil, constant.ErrOperateNotAllowed
+			// }
 		default:
 			log.Warn(ctx, "canBeDeleted: status not allowed",
 				log.Any("milestone", milestones[i]))
@@ -638,18 +644,19 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 			log.Info(ctx, "Search: not found",
 				log.Any("op", op),
 				log.Any("cond", condition))
-			if condition.Status != entity.OutcomeStatusPublished {
-				return nil
-			}
+			// NKL-1021
+			// if condition.Status != entity.OutcomeStatusPublished {
+			// 	return nil
+			// }
 
-			general, err := m.CreateGeneral(ctx, op, tx, "")
-			if err != nil {
-				log.Error(ctx, "Search: CreateGeneral failed",
-					log.Any("op", op))
-				return err
-			}
-			count = 1
-			milestones = append(milestones, general)
+			// general, err := m.CreateGeneral(ctx, op, tx, "")
+			// if err != nil {
+			// 	log.Error(ctx, "Search: CreateGeneral failed",
+			// 		log.Any("op", op))
+			// 	return err
+			// }
+			// count = 1
+			// milestones = append(milestones, general)
 			return nil
 		}
 
@@ -745,10 +752,11 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 			return err
 		}
 
-		if ms.Type == entity.GeneralMilestoneType {
-			log.Warn(ctx, "Occupy: can not operate general milestone", log.Any("milestone", ms))
-			return constant.ErrOperateNotAllowed
-		}
+		// NKL-1021
+		// if ms.Type == entity.GeneralMilestoneType {
+		// 	log.Warn(ctx, "Occupy: can not operate general milestone", log.Any("milestone", ms))
+		// 	return constant.ErrOperateNotAllowed
+		// }
 
 		if ms.LockedBy == op.UserID {
 			milestone, err = m.getBySourceID(ctx, tx, ms.ID)
@@ -967,6 +975,7 @@ func (m MilestoneModel) buildGeneral(ctx context.Context, op *entity.Operator) *
 	}
 	return general
 }
+
 func (m MilestoneModel) CreateGeneral(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, orgID string) (*entity.Milestone, error) {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixGeneralMilestoneMute, entity.KindMileStone, op.OrgID)
 	if err != nil {
