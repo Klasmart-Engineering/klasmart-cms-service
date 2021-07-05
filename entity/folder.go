@@ -254,6 +254,8 @@ type FolderItem struct {
 
 	ItemsCount int    `gorm:"type:int" json:"items_count"`
 	Editor     string `gorm:"type:varchar(50);NOT NULL" json:"editor"`
+
+	Extra string `gorm:"type:text;NULL" json:"extra"`
 	//VisibilitySetting string	`gorm:"type:varchar(50)" json:"visibility_setting"`
 
 	CreateAt int64 `gorm:"type:bigint;NOT NULL;column:create_at" json:"create_at"`
