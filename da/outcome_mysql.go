@@ -303,6 +303,7 @@ func (o OutcomeSQLDA) SearchOutcome(ctx context.Context, op *entity.Operator, tx
 		log.Error(ctx, "SearchOutcome failed",
 			log.Err(err),
 			log.Any("condition", condition))
+		return
 	}
 	outcomeIDs := make([]string, len(outcomes))
 	for i := range outcomes {
