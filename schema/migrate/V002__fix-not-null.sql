@@ -36,3 +36,7 @@ ALTER TABLE learning_outcomes MODIFY
  
  ALTER TABLE learning_outcomes MODIFY 
  `grade` varchar(1024) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'grade';
+
+
+ ALTER TABLE assessments_contents MODIFY
+ `content_comment` text COLLATE utf8mb4_unicode_ci NULL COMMENT 'content comment';
