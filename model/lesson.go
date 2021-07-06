@@ -258,7 +258,8 @@ func (l *LessonData) PrepareResult(ctx context.Context, tx *dbo.DBContext, conte
 		//if is head quarter, remove unpublished materials
 		newContentList := make([]*entity.Content, 0)
 		for i := range contentList {
-			if contentList[i].PublishStatus == entity.ContentStatusPublished {
+			if contentList[i].PublishStatus == entity.ContentStatusPublished ||
+				contentList[i].PublishStatus == entity.ContentStatusArchive {
 				newContentList = append(newContentList, contentList[i])
 			}
 		}
