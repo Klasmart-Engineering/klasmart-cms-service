@@ -6,7 +6,7 @@ type VisibilitySetting struct {
 	ID       string `json:"id" gorm:"column:id;PRIMARY_KEY"`
 	Name     string `json:"name" gorm:"column:name;type:varchar(255)"`
 	Number   int    `json:"number" gorm:"column:number;type:int"`
-	Group    string `json:"group"`
+	Group    string `json:"group" gorm:"-"`
 	CreateID string `gorm:"column:create_id;type:varchar(100)"`
 	UpdateID string `gorm:"column:update_id;type:varchar(100)"`
 	DeleteID string `gorm:"column:delete_id;type:varchar(100)"`
