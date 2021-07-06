@@ -128,7 +128,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 	}
 
 	expiresAt := time.Now().Add(constant.LiveTokenExpiresAt).Unix()
-	if liveTokenInfo.ClassType == entity.LiveClassTypeLive {
+	if tokenType == entity.LiveTokenTypeLive && liveTokenInfo.ClassType == entity.LiveClassTypeLive {
 		expiresAt = schedule.EndAt + int64(constant.LiveClassTypeLiveTokenExpiresAt.Seconds())
 	}
 
