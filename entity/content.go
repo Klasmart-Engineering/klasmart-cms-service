@@ -394,8 +394,9 @@ type ContentConditionRequest struct {
 	PublishedQueryMode PublishedQueryMode `json:"published_query_mode"`
 }
 type OrganizationOrSchool struct {
-	ID   string
-	Name string
+	ID    string
+	Name  string
+	Group string
 }
 
 type ContentPermission struct {

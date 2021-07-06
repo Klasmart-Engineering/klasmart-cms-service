@@ -660,8 +660,9 @@ func (s *ContentPermissionMySchoolModel) GetPermissionOrgs(ctx context.Context, 
 	entities := make([]entity.OrganizationOrSchool, 0)
 	for i := range schools {
 		entities = append(entities, entity.OrganizationOrSchool{
-			ID:   schools[i].ID,
-			Name: schools[i].Name,
+			ID:    schools[i].ID,
+			Name:  schools[i].Name,
+			Group: constant.VisibilitySettingsGroupSchool,
 		})
 	}
 	orgs, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, permission)
@@ -672,8 +673,9 @@ func (s *ContentPermissionMySchoolModel) GetPermissionOrgs(ctx context.Context, 
 	for i := range orgs {
 		if orgs[i].ID == op.OrgID {
 			entities = append(entities, entity.OrganizationOrSchool{
-				ID:   op.OrgID,
-				Name: orgs[0].Name,
+				ID:    op.OrgID,
+				Name:  orgs[0].Name,
+				Group: constant.VisibilitySettingsGroupOrg,
 			})
 		}
 	}

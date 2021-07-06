@@ -150,3 +150,8 @@ const (
 const (
 	CookieKey = "Cookie"
 )
+
+const (
+	VisibilitySettingsGroupOrg    = "org"
+	VisibilitySettingsGroupSchool = "school"
+)
