@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
@@ -37,8 +38,9 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 		}
 		return []*entity.VisibilitySetting{
 			{
-				ID:   orgInfo.ID,
-				Name: orgInfo.Name,
+				ID:    orgInfo.ID,
+				Name:  orgInfo.Name,
+				Group: constant.VisibilitySettingsGroupOrg,
 			},
 		}, nil
 	}
@@ -64,8 +66,9 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 		for i := range schools {
 			if schools[i].Valid {
 				ret = append(ret, &entity.VisibilitySetting{
-					ID:   schools[i].ID,
-					Name: schools[i].Name,
+					ID:    schools[i].ID,
+					Name:  schools[i].Name,
+					Group: constant.VisibilitySettingsGroupSchool,
 				})
 			}
 
@@ -85,8 +88,9 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 			for i := range schools {
 				if schools[i].Valid {
 					ret = append(ret, &entity.VisibilitySetting{
-						ID:   schools[i].ID,
-						Name: schools[i].Name,
+						ID:    schools[i].ID,
+						Name:  schools[i].Name,
+						Group: constant.VisibilitySettingsGroupSchool,
 					})
 				}
 			}
@@ -101,8 +105,9 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 		}
 		if hasPermission {
 			ret = append(ret, &entity.VisibilitySetting{
-				ID:   orgInfo.ID,
-				Name: orgInfo.Name,
+				ID:    orgInfo.ID,
+				Name:  orgInfo.Name,
+				Group: constant.VisibilitySettingsGroupOrg,
 			})
 		}
 	} else if contentType == entity.ContentTypeMaterial {
@@ -113,8 +118,9 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 		}
 		if hasPermission {
 			ret = append(ret, &entity.VisibilitySetting{
-				ID:   orgInfo.ID,
-				Name: orgInfo.Name,
+				ID:    orgInfo.ID,
+				Name:  orgInfo.Name,
+				Group: constant.VisibilitySettingsGroupOrg,
 			})
 		}
 	}
@@ -144,8 +150,9 @@ func (m *visibilitySettingModel) GetByID(ctx context.Context, id string, operato
 	for i := range ret {
 		if id == ret[i].ID {
 			return &entity.VisibilitySetting{
-				ID:   ret[i].ID,
-				Name: ret[i].Name,
+				ID:    ret[i].ID,
+				Name:  ret[i].Name,
+				Group: ret[i].Group,
 			}, nil
 		}
 	}

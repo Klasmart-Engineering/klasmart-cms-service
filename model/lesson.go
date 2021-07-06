@@ -16,14 +16,14 @@ import (
 
 type LessonData struct {
 	SegmentId         string              `json:"segmentId"`
-	Condition         string              `json:"condition"`
+	Condition         string              `json:"condition,omitempty"`
 	MaterialId        string              `json:"materialId"`
-	Material          *entity.ContentInfo `json:"material"`
-	NextNode          []*LessonData       `json:"next"`
-	TeacherManual     string              `json:"teacher_manual"`
-	TeacherManualName string              `json:"teacher_manual_name"`
+	Material          *entity.ContentInfo `json:"material,omitempty"`
+	NextNode          []*LessonData       `json:"next,omitempty"`
+	TeacherManual     string              `json:"teacher_manual,omitempty"`
+	TeacherManualName string              `json:"teacher_manual_name,omitempty"`
 
-	TeacherManualBatch []*entity.TeacherManualFile `json:"teacher_manual_batch"`
+	TeacherManualBatch []*entity.TeacherManualFile `json:"teacher_manual_batch,omitempty"`
 }
 
 func (l *LessonData) Unmarshal(ctx context.Context, data string) error {
