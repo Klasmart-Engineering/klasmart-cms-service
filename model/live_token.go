@@ -127,13 +127,19 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		}
 	}
 
-	token, err := s.createJWT(ctx, liveTokenInfo)
+	expiresAt := time.Now().Add(constant.LiveTokenExpiresAt).Unix()
+	if liveTokenInfo.ClassType == entity.LiveClassTypeLive {
+		expiresAt = schedule.EndAt + int64(constant.LiveClassTypeLiveTokenExpiresAt.Seconds())
+	}
+
+	token, err := s.createJWT(ctx, liveTokenInfo, expiresAt)
 	if err != nil {
 		log.Error(ctx, "MakeScheduleLiveToken:create jwt error",
 			log.Err(err),
 			log.Any("op", op),
 			log.Any("liveTokenInfo", liveTokenInfo),
-			log.Any("schedule", schedule))
+			log.Any("schedule", schedule),
+			log.Any("expiresAt", expiresAt))
 		return "", err
 	}
 	return token, nil
@@ -186,13 +192,15 @@ func (s *liveTokenModel) MakeContentLiveToken(ctx context.Context, op *entity.Op
 		return "", err
 	}
 
-	token, err := s.createJWT(ctx, liveTokenInfo)
+	expiresAt := time.Now().Add(constant.LiveTokenExpiresAt).Unix()
+	token, err := s.createJWT(ctx, liveTokenInfo, expiresAt)
 	if err != nil {
 		log.Error(ctx, "MakeLivePreviewToken:create jwt error",
 			log.Err(err),
 			log.Any("op", op),
 			log.Any("liveTokenInfo", liveTokenInfo),
-			log.String("contentID", contentID))
+			log.String("contentID", contentID),
+			log.Any("expiresAt", expiresAt))
 		return "", err
 	}
 	return token, nil
@@ -210,20 +218,16 @@ func (s *liveTokenModel) getUserName(ctx context.Context, op *entity.Operator) (
 	return userInfo.Name, nil
 }
 
-func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.LiveTokenInfo) (string, error) {
+func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.LiveTokenInfo, expiresAt int64) (string, error) {
 	now := time.Now()
 
 	stdClaims := &jwt.StandardClaims{
 		Audience:  "kidsloop-live",
-		ExpiresAt: now.Add(constant.LiveTokenExpiresAt).Unix(),
+		ExpiresAt: expiresAt,
 		IssuedAt:  now.Add(-constant.LiveTokenIssuedAt).Unix(),
 		Issuer:    "KidsLoopUser-live",
 		NotBefore: 0,
 		Subject:   "authorization",
-	}
-
-	if liveTokenInfo.ClassType == entity.LiveClassTypeLive {
-		stdClaims.ExpiresAt = now.Add(constant.LiveClassTypeLiveTokenExpiresAt).Unix()
 	}
 
 	claims := &entity.LiveTokenClaims{
