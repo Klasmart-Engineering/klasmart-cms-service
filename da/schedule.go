@@ -218,7 +218,7 @@ func (s *scheduleDA) DeleteWithFollowing(ctx context.Context, tx *dbo.DBContext,
 }
 
 func (s *scheduleDA) SoftDelete(ctx context.Context, tx *dbo.DBContext, id string, operator *entity.Operator) error {
-	if err := tx.Debug().Model(&entity.Schedule{}).
+	if err := tx.Model(&entity.Schedule{}).
 		Where("id = ?", id).
 		Where("status = ?", entity.ScheduleStatusNotStart).
 		UpdateColumns(entity.Schedule{
