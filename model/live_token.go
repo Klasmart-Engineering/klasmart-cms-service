@@ -212,6 +212,7 @@ func (s *liveTokenModel) getUserName(ctx context.Context, op *entity.Operator) (
 
 func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.LiveTokenInfo) (string, error) {
 	now := time.Now()
+
 	stdClaims := &jwt.StandardClaims{
 		Audience:  "kidsloop-live",
 		ExpiresAt: now.Add(constant.LiveTokenExpiresAt).Unix(),
@@ -219,6 +220,10 @@ func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.Liv
 		Issuer:    "KidsLoopUser-live",
 		NotBefore: 0,
 		Subject:   "authorization",
+	}
+
+	if liveTokenInfo.ClassType == entity.LiveClassTypeLive {
+		stdClaims.ExpiresAt = now.Add(constant.LiveClassTypeLiveTokenExpiresAt).Unix()
 	}
 
 	claims := &entity.LiveTokenClaims{
