@@ -127,9 +127,12 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		}
 	}
 
-	expiresAt := time.Now().Add(constant.LiveTokenExpiresAt).Unix()
-	if liveTokenInfo.ClassType == entity.LiveClassTypeLive {
+	now := time.Now()
+	expiresAt := now.Add(constant.LiveTokenExpiresAt).Unix()
+	if liveTokenInfo.ClassType == entity.LiveClassTypeLive && tokenType == entity.LiveTokenTypeLive {
 		expiresAt = schedule.EndAt + int64(constant.LiveClassTypeLiveTokenExpiresAt.Seconds())
+	} else if liveTokenInfo.ClassType == entity.LiveClassTypeLive && tokenType == entity.LiveTokenTypePreview {
+		expiresAt = now.Add(constant.LiveClassTypeLiveTokenExpiresAt).Unix()
 	}
 
 	token, err := s.createJWT(ctx, liveTokenInfo, expiresAt)
@@ -192,7 +195,12 @@ func (s *liveTokenModel) MakeContentLiveToken(ctx context.Context, op *entity.Op
 		return "", err
 	}
 
-	expiresAt := time.Now().Add(constant.LiveTokenExpiresAt).Unix()
+	now := time.Now()
+	expiresAt := now.Add(constant.LiveTokenExpiresAt).Unix()
+	if liveTokenInfo.ClassType == entity.LiveClassTypeLive {
+		expiresAt = now.Add(constant.LiveClassTypeLiveTokenExpiresAt).Unix()
+	}
+
 	token, err := s.createJWT(ctx, liveTokenInfo, expiresAt)
 	if err != nil {
 		log.Error(ctx, "MakeLivePreviewToken:create jwt error",
