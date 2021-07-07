@@ -199,6 +199,13 @@ type CreateFolderItemRequest struct {
 	OwnerType OwnerType       `json:"owner_type"`
 }
 
+type FolderItemsCount struct {
+	ID       string
+	Classify string
+	DirPath  string
+	Count    int64
+}
+
 type Path string
 
 func (p Path) ParentPath() string {
@@ -252,8 +259,8 @@ type FolderItem struct {
 	Thumbnail string `gorm:"type:text" json:"thumbnail"`
 	Creator   string `gorm:"type:varchar(50)" json:"creator"`
 
-	ItemsCount int    `gorm:"type:int" json:"items_count"`
-	Editor     string `gorm:"type:varchar(50);NOT NULL" json:"editor"`
+	ItemsCountUnused int    `gorm:"type:int" json:"items_count"`
+	Editor           string `gorm:"type:varchar(50);NOT NULL" json:"editor"`
 
 	Extra string `gorm:"type:text;NULL" json:"extra"`
 	//VisibilitySetting string	`gorm:"type:varchar(50)" json:"visibility_setting"`

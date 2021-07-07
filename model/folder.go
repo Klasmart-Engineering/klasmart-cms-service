@@ -768,7 +768,7 @@ func (f *FolderModel) ListItems(ctx context.Context, folderID string, itemType e
 		log.Error(ctx, "list items failed", log.Err(err), log.String("folderID", folderID))
 		return nil, err
 	}
-	return f.folderItemToFolderItemInfoBatch(ctx, folderItems), nil
+	return f.folderItemToFolderItemInfoBatch(ctx, folderItems)
 }
 
 func (f *FolderModel) SearchFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItemInfo, error) {
@@ -789,8 +789,12 @@ func (f *FolderModel) SearchFolder(ctx context.Context, condition entity.SearchF
 		log.Error(ctx, "list items failed", log.Err(err), log.Any("condition", condition))
 		return 0, nil, err
 	}
-
-	return total, f.folderItemToFolderItemInfoBatch(ctx, folderItems), nil
+	res, err := f.folderItemToFolderItemInfoBatch(ctx, folderItems)
+	if err != nil {
+		log.Error(ctx, "folderItemToFolderItemInfoBatch failed", log.Err(err), log.Any("folderItems", folderItems))
+		return 0, nil, err
+	}
+	return total, res, nil
 }
 
 func (f *FolderModel) SearchPrivateFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItemInfo, error) {
@@ -868,7 +872,11 @@ func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operat
 		return nil, ErrNoFolder
 	}
 
-	result := f.folderItemToFolderItemInfo(ctx, folderItem)
+	result, err := f.folderItemToFolderItemInfo(ctx, folderItem)
+	if err != nil {
+		log.Error(ctx, "folderItemToFolderItemInfo failed", log.Err(err), log.String("folderItem.ID", folderItem.ID))
+		return nil, err
+	}
 
 	userIDs := []string{result.Creator, result.Editor}
 	users, err := external.GetUserServiceProvider().BatchGet(ctx, operator, userIDs)
@@ -944,7 +952,44 @@ func (f *FolderModel) checkMoveItem(ctx context.Context, folder *entity.FolderIt
 
 	return nil
 }
-func (f *FolderModel) folderItemToFolderItemInfo(ctx context.Context, item *entity.FolderItem) *entity.FolderItemInfo {
+
+func (f *FolderModel) batchGetFolderItemsCountMap(ctx context.Context, tx *dbo.DBContext, items []*entity.FolderItem) (map[string]int, error) {
+	ids := make([]string, len(items))
+	for i := range items {
+		ids[i] = items[i].ID
+	}
+
+	itemCountRes, err := da.GetFolderDA().BatchGetFolderItemsCount(ctx, dbo.MustGetDB(ctx), ids)
+	if err != nil {
+		log.Error(ctx, "BatchGetFolderItemsCount failed",
+			log.Err(err),
+			log.Any("items", items),
+			log.Strings("ids", ids))
+		return nil, err
+	}
+	res := make(map[string]int)
+	for i := range itemCountRes {
+		_, exists := res[itemCountRes[i].ID]
+		count := 0
+		if exists {
+			count = res[itemCountRes[i].ID]
+		}
+		res[itemCountRes[i].ID] = count + int(itemCountRes[i].Count)
+	}
+	return res, nil
+}
+func (f *FolderModel) folderItemToFolderItemInfo(ctx context.Context, item *entity.FolderItem) (*entity.FolderItemInfo, error) {
+	res, err := f.batchGetFolderItemsCountMap(ctx, dbo.MustGetDB(ctx), []*entity.FolderItem{item})
+	if err != nil {
+		log.Error(ctx, "batchGetFolderItemsCountMap failed",
+			log.Err(err),
+			log.Any("item", item))
+		return nil, err
+	}
+	itemCount := 0
+	if count, ok := res[item.ID]; ok {
+		itemCount = count
+	}
 	return &entity.FolderItemInfo{
 		ID:          item.ID,
 		OwnerType:   item.OwnerType,
@@ -959,17 +1004,29 @@ func (f *FolderModel) folderItemToFolderItemInfo(ctx context.Context, item *enti
 		Keywords:    strings.Split(item.Keywords, constant.StringArraySeparator),
 		Thumbnail:   item.Thumbnail,
 		Creator:     item.Creator,
-		ItemsCount:  item.ItemsCount,
+		ItemsCount:  itemCount,
 		Editor:      item.Editor,
 		CreateAt:    item.CreateAt,
 		UpdateAt:    item.UpdateAt,
 		Items:       nil,
-	}
+	}, nil
 }
 
-func (f *FolderModel) folderItemToFolderItemInfoBatch(ctx context.Context, items []*entity.FolderItem) []*entity.FolderItemInfo {
+func (f *FolderModel) folderItemToFolderItemInfoBatch(ctx context.Context, items []*entity.FolderItem) ([]*entity.FolderItemInfo, error) {
 	ret := make([]*entity.FolderItemInfo, len(items))
+	itemCountMap, err := f.batchGetFolderItemsCountMap(ctx, dbo.MustGetDB(ctx), items)
+	if err != nil {
+		log.Error(ctx, "batchGetFolderItemsCountMap failed",
+			log.Err(err),
+			log.Any("items", items))
+		return nil, err
+	}
 	for i := range items {
+		itemCount := 0
+		if count, ok := itemCountMap[items[i].ID]; ok {
+			itemCount = count
+		}
+
 		ret[i] = &entity.FolderItemInfo{
 			ID:          items[i].ID,
 			OwnerType:   items[i].OwnerType,
@@ -984,14 +1041,14 @@ func (f *FolderModel) folderItemToFolderItemInfoBatch(ctx context.Context, items
 			Keywords:    strings.Split(items[i].Keywords, constant.StringArraySeparator),
 			Thumbnail:   items[i].Thumbnail,
 			Creator:     items[i].Creator,
-			ItemsCount:  items[i].ItemsCount,
+			ItemsCount:  itemCount,
 			Editor:      items[i].Editor,
 			CreateAt:    items[i].CreateAt,
 			UpdateAt:    items[i].UpdateAt,
 			Items:       nil,
 		}
 	}
-	return ret
+	return ret, nil
 }
 
 func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, id string, partition entity.FolderPartition, distFolder *entity.FolderItem, operator *entity.Operator) error {
@@ -1701,10 +1758,15 @@ func (f *FolderModel) checkFolderEmpty(ctx context.Context, folderItem *entity.F
 		log.Info(ctx, "item is not folder", log.Any("folderItem", folderItem), log.String("path", string(folderItem.DirPath)))
 		return nil
 	}
-	if folderItem.ItemsCount > 0 {
+	res, err := f.batchGetFolderItemsCountMap(ctx, dbo.MustGetDB(ctx), []*entity.FolderItem{folderItem})
+	if err != nil {
+		log.Error(ctx, "item is not folder", log.Err(err), log.Any("folderItem", folderItem), log.String("path", string(folderItem.DirPath)))
+		return err
+	}
+	count, exists := res[folderItem.ID]
+	if exists && count > 0 {
 		return ErrFolderIsNotEmpty
 	}
-
 	return nil
 }
 

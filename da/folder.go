@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"sync"
 	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -36,6 +37,8 @@ type IFolderDA interface {
 	SearchFolderPage(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) (int, []*entity.FolderItem, error)
 	SearchFolderCount(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) (int, error)
 	SearchFolder(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) ([]*entity.FolderItem, error)
+
+	BatchGetFolderItemsCount(ctx context.Context, tx *dbo.DBContext, fids []string) ([]*entity.FolderItemsCount, error)
 }
 
 type FolderDA struct {
@@ -78,6 +81,48 @@ func (fda *FolderDA) AddFolderItemsCount(ctx context.Context, tx *dbo.DBContext,
 	}
 
 	return nil
+}
+
+func (fda *FolderDA) BatchGetFolderItemsCount(ctx context.Context, tx *dbo.DBContext, fids []string) ([]*entity.FolderItemsCount, error) {
+	if len(fids) < 1 {
+		//若fids为空，则不更新
+		//if fids is nil, no need to update
+		return nil, nil
+	}
+	folders, err := fda.GetFolderByIDList(ctx, tx, fids)
+	if err != nil {
+		log.Error(ctx, "GetFolderByIDList failed", log.Err(err),
+			log.Strings("fids", fids))
+		return nil, err
+	}
+	pathList := make([]string, len(folders))
+
+	for i := range folders {
+		pathList[i] = string(folders[i].ChildrenPath())
+	}
+	if len(pathList) < 1 {
+		return nil, nil
+	}
+	sql := `
+	SELECT "content" as classify,dir_path, count(*) as count FROM cms_contents WHERE publish_status = "published" AND dir_path IN (?) GROUP BY dir_path
+		UNION ALL
+	SELECT "folder" as classify, dir_path, count(*) as count FROM cms_folder_items WHERE item_type=1 AND dir_path IN (?)  GROUP BY dir_path;
+	`
+	res := make([]*entity.FolderItemsCount, 0)
+	err = tx.Raw(sql, pathList, pathList).Scan(&res).Error
+	if err != nil {
+		log.Error(ctx, "Query group dir_path sql failed", log.Err(err),
+			log.Strings("fids", fids),
+			log.Strings("pathList", pathList),
+			log.String("sql", sql))
+		return nil, err
+	}
+	for i := range res {
+		pairs := strings.Split(res[i].DirPath, "/")
+		res[i].ID = pairs[len(pairs)-1]
+	}
+	log.Info(ctx, "query sql", log.String("sql", sql), log.Strings("pathList", pathList))
+	return res, nil
 }
 
 //Unused because when old path is root path("/"), replace function in mysql will replace all "/" in path

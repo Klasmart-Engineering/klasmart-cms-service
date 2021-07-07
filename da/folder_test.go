@@ -2,6 +2,7 @@ package da
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -20,7 +21,7 @@ func initDB() {
 		c.ShowSQL = true
 		c.MaxIdleConns = 2
 		c.MaxOpenConns = 4
-		c.ConnectionString = "root:Badanamu123456@tcp(192.168.1.234:3310)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local"
+		c.ConnectionString = "root:Badanamu123456@tcp(127.0.0.1:3306)/kidsloop2_temp?charset=utf8mb4&parseTime=True&loc=Local"
 	})
 	if err != nil {
 		log.Error(context.TODO(), "create dbo failed", log.Err(err))
@@ -37,15 +38,15 @@ func initDB() {
 	dbo.ReplaceGlobal(dboHandler)
 }
 
-//func TestMain(m *testing.M) {
-//	fmt.Println("begin test")
-//	initDB()
-//	m.Run()
-//	fmt.Println("end test")
-//}
+func TestMain(m *testing.M) {
+	fmt.Println("begin test")
+	initDB()
+	m.Run()
+	fmt.Println("end test")
+}
 
 func TestCreateTable(t *testing.T) {
-	dsn := "root:Badanamu123456@tcp(192.168.1.234:3310)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "root:Badanamu123456@tcp(127.0.0.1:3306)/kidsloop2_temp?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err := gorm.Open("mysql", dsn)
 	if !assert.NoError(t, err) {
 		return
@@ -53,6 +54,19 @@ func TestCreateTable(t *testing.T) {
 	db.LogMode(true)
 	db.AutoMigrate(entity.FolderItem{})
 	db.AutoMigrate(entity.Content{})
+}
+
+func TestGroupQuery(t *testing.T) {
+	fids := []string{"6071665ed41edf4799723253"}
+	res, err := GetFolderDA().BatchGetFolderItemsCount(context.Background(), dbo.MustGetDB(context.Background()),
+		fids)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	for i := range res {
+		t.Logf("%#v", res[i])
+	}
 }
 
 //func TestSearchFolderContent(t *testing.T) {
