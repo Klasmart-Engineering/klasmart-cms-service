@@ -1370,7 +1370,7 @@ func (m *assessmentBase) updateStudentViewItems(ctx context.Context, tx *dbo.DBC
 					newScore := external.H5PSetScoreRequest{
 						RoomID:       roomID,
 						StudentID:    item.StudentID,
-						ContentID:    string(lmData.Source),
+						ContentID:    lm.LessonMaterialID,
 						SubContentID: lm.SubH5PID,
 						Score:        lm.AchievedScore,
 					}
