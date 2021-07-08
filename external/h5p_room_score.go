@@ -141,13 +141,54 @@ func (s H5PRoomScoreService) BatchGet(ctx context.Context, operator *entity.Oper
 query {
 	{{range $i, $e := .}}
 	q{{$i}}: Room(room_id: "{{$e}}") {
-		scoresByUser {
-			user {
-				user_id
-				given_name
-				family_name
+		...f
+  	}
+	{{end}}
+}
+fragment f on Room {
+	scoresByUser {
+		user {
+			user_id
+			given_name
+			family_name
+		}
+		scores {
+			content {
+				content_id
+				name
+				type
+				fileType
+				h5p_id
+				subcontent_id
 			}
-			scores {
+			score {
+				min
+				max
+				sum
+				scoreFrequency
+				mean
+				scores
+				answers {
+					answer
+					score
+					date
+					minimumPossibleScore
+					maximumPossibleScore
+				}
+				median
+				medians
+			}
+			teacherScores {
+				teacher {
+					user_id
+					given_name
+					family_name
+				}
+				student {
+					user_id
+					given_name
+					family_name
+				}
 				content {
 					content_id
 					name
@@ -156,50 +197,13 @@ query {
 					h5p_id
 					subcontent_id
 				}
-				score {
-					min
-					max
-					sum
-					scoreFrequency
-					mean
-					scores
-					answers {
-						answer
-						score
-						date
-						minimumPossibleScore
-						maximumPossibleScore
-					}
-					median
-					medians
-				}
-				teacherScores {
-					teacher {
-						user_id
-						given_name
-						family_name
-					}
-					student {
-						user_id
-						given_name
-						family_name
-					}
-					content {
-						content_id
-						name
-						type
-						fileType
-						h5p_id
-						subcontent_id
-					}
-					score
-					date
-				}
+				score
+				date
 			}
 		}
-  	}
-	{{end}}
-}`
+	}
+}
+`
 
 	temp, err := template.New("").Parse(query)
 	if err != nil {
