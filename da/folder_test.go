@@ -69,6 +69,22 @@ func TestGroupQuery(t *testing.T) {
 	}
 }
 
+func TestUpdateItemCountQuery(t *testing.T) {
+	fids := []*entity.UpdateFolderItemsCountRequest{
+		{
+			ID:    "6071665ed41edf4799723253",
+			Count: 6,
+		},
+	}
+	err := GetFolderDA().BatchUpdateFolderItemsCount(context.Background(), dbo.MustGetDB(context.Background()),
+		fids)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+}
+
 //func TestSearchFolderContent(t *testing.T) {
 //	total, folderContent, err := GetContentDA().SearchFolderContentUnsafe(context.Background(), dbo.MustGetDB(context.Background()), CombineConditions{
 //		SourceCondition: &ContentCondition{Name: "test",

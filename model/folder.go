@@ -675,19 +675,35 @@ func (f *FolderModel) RemoveItemByLink(ctx context.Context, tx *dbo.DBContext, o
 		log.Warn(ctx, "search folder failed", log.Any("condition", condition), log.Int("ownerType", int(ownerType)), log.String("owner", owner), log.String("link", link))
 		return err
 	}
+	parentIDs := make([]string, len(folderItems))
 	for i := range folderItems {
-		err = f.removeItemInternal(ctx, tx, folderItems[i].ID)
+		err = f.removeItemInternal(ctx, tx, folderItems[i])
 		if err != nil {
 			log.Error(ctx, "delete folder item failed", log.Err(err), log.Any("folderItem", folderItems[i]))
 			return err
 		}
+		parentIDs[i] = folderItems[i].ParentID
+	}
+	//Update item count
+	err = f.batchRepairFolderItemsCountByIDs(ctx, tx, parentIDs)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func (f *FolderModel) RemoveItem(ctx context.Context, fid string, operator *entity.Operator) error {
+	folderItem, err := f.getFolder(ctx, dbo.MustGetDB(ctx), fid)
+	if err != nil {
+		return err
+	}
+
 	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		err := f.removeItemInternal(ctx, tx, fid)
+		err := f.removeItemInternal(ctx, tx, folderItem)
+		if err != nil {
+			return err
+		}
+		err = f.batchRepairFolderItemsCountByIDs(ctx, tx, []string{folderItem.ParentID})
 		if err != nil {
 			return err
 		}
@@ -696,12 +712,24 @@ func (f *FolderModel) RemoveItem(ctx context.Context, fid string, operator *enti
 }
 
 func (f *FolderModel) RemoveItemBulk(ctx context.Context, fids []string, operator *entity.Operator) error {
+	folders, err := da.GetFolderDA().GetFolderByIDList(ctx, dbo.MustGetDB(ctx), fids)
+	if err != nil {
+		log.Error(ctx, "GetFolderByIDList failed", log.Err(err), log.Strings("fids", fids))
+		return err
+	}
+	parentIDs := make([]string, len(folders))
 	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		for i := range fids {
-			err := f.removeItemInternal(ctx, tx, fids[i])
+		for i := range folders {
+			err := f.removeItemInternal(ctx, tx, folders[i])
 			if err != nil {
 				return err
 			}
+			parentIDs[i] = folders[i].ParentID
+		}
+
+		err = f.batchRepairFolderItemsCountByIDs(ctx, tx, parentIDs)
+		if err != nil {
+			return err
 		}
 		return nil
 	})
@@ -768,7 +796,7 @@ func (f *FolderModel) ListItems(ctx context.Context, folderID string, itemType e
 		log.Error(ctx, "list items failed", log.Err(err), log.String("folderID", folderID))
 		return nil, err
 	}
-	return f.folderItemToFolderItemInfoBatch(ctx, folderItems)
+	return f.folderItemToFolderItemInfoBatch(ctx, folderItems), nil
 }
 
 func (f *FolderModel) SearchFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItemInfo, error) {
@@ -789,12 +817,7 @@ func (f *FolderModel) SearchFolder(ctx context.Context, condition entity.SearchF
 		log.Error(ctx, "list items failed", log.Err(err), log.Any("condition", condition))
 		return 0, nil, err
 	}
-	res, err := f.folderItemToFolderItemInfoBatch(ctx, folderItems)
-	if err != nil {
-		log.Error(ctx, "folderItemToFolderItemInfoBatch failed", log.Err(err), log.Any("folderItems", folderItems))
-		return 0, nil, err
-	}
-	return total, res, nil
+	return total, f.folderItemToFolderItemInfoBatch(ctx, folderItems), nil
 }
 
 func (f *FolderModel) SearchPrivateFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItemInfo, error) {
@@ -872,11 +895,7 @@ func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operat
 		return nil, ErrNoFolder
 	}
 
-	result, err := f.folderItemToFolderItemInfo(ctx, folderItem)
-	if err != nil {
-		log.Error(ctx, "folderItemToFolderItemInfo failed", log.Err(err), log.String("folderItem.ID", folderItem.ID))
-		return nil, err
-	}
+	result := f.folderItemToFolderItemInfo(ctx, folderItem)
 
 	userIDs := []string{result.Creator, result.Editor}
 	users, err := external.GetUserServiceProvider().BatchGet(ctx, operator, userIDs)
@@ -953,13 +972,58 @@ func (f *FolderModel) checkMoveItem(ctx context.Context, folder *entity.FolderIt
 	return nil
 }
 
+func (f *FolderModel) batchRepairFolderItemsCount(ctx context.Context, tx *dbo.DBContext, items []*entity.FolderItem) error {
+	itemsCountMap, err := f.batchGetFolderItemsCountMap(ctx, tx, items)
+	if err != nil {
+		return err
+	}
+	req := make([]*entity.UpdateFolderItemsCountRequest, 0)
+	for i := range items {
+		itemsCount := 0
+		if count, exists := itemsCountMap[items[i].ID]; exists {
+			itemsCount = count
+		}
+
+		if items[i].ItemsCount != itemsCount {
+			req = append(req, &entity.UpdateFolderItemsCountRequest{
+				ID:    items[i].ID,
+				Count: itemsCount,
+			})
+		}
+	}
+	//No need to update items count
+	if len(req) < 1 {
+		return nil
+	}
+	err = da.GetFolderDA().BatchUpdateFolderItemsCount(ctx, tx, req)
+	if err != nil {
+		log.Error(ctx, "BatchUpdateFolderItemsCount failed",
+			log.Err(err),
+			log.Any("req", req),
+			log.Any("items", items))
+		return err
+	}
+	return nil
+}
+
+func (f *FolderModel) batchRepairFolderItemsCountByIDs(ctx context.Context, tx *dbo.DBContext, fids []string) error {
+	items, err := da.GetFolderDA().GetFolderByIDList(ctx, tx, fids)
+	if err != nil {
+		log.Error(ctx, "GetFolderByIDList failed",
+			log.Err(err),
+			log.Strings("fids", fids))
+		return err
+	}
+	return f.batchRepairFolderItemsCount(ctx, tx, items)
+}
+
 func (f *FolderModel) batchGetFolderItemsCountMap(ctx context.Context, tx *dbo.DBContext, items []*entity.FolderItem) (map[string]int, error) {
 	ids := make([]string, len(items))
 	for i := range items {
 		ids[i] = items[i].ID
 	}
 
-	itemCountRes, err := da.GetFolderDA().BatchGetFolderItemsCount(ctx, dbo.MustGetDB(ctx), ids)
+	itemCountRes, err := da.GetFolderDA().BatchGetFolderItemsCount(ctx, tx, ids)
 	if err != nil {
 		log.Error(ctx, "BatchGetFolderItemsCount failed",
 			log.Err(err),
@@ -978,18 +1042,8 @@ func (f *FolderModel) batchGetFolderItemsCountMap(ctx context.Context, tx *dbo.D
 	}
 	return res, nil
 }
-func (f *FolderModel) folderItemToFolderItemInfo(ctx context.Context, item *entity.FolderItem) (*entity.FolderItemInfo, error) {
-	res, err := f.batchGetFolderItemsCountMap(ctx, dbo.MustGetDB(ctx), []*entity.FolderItem{item})
-	if err != nil {
-		log.Error(ctx, "batchGetFolderItemsCountMap failed",
-			log.Err(err),
-			log.Any("item", item))
-		return nil, err
-	}
-	itemCount := 0
-	if count, ok := res[item.ID]; ok {
-		itemCount = count
-	}
+func (f *FolderModel) folderItemToFolderItemInfo(ctx context.Context, item *entity.FolderItem) *entity.FolderItemInfo {
+
 	return &entity.FolderItemInfo{
 		ID:          item.ID,
 		OwnerType:   item.OwnerType,
@@ -1004,29 +1058,18 @@ func (f *FolderModel) folderItemToFolderItemInfo(ctx context.Context, item *enti
 		Keywords:    strings.Split(item.Keywords, constant.StringArraySeparator),
 		Thumbnail:   item.Thumbnail,
 		Creator:     item.Creator,
-		ItemsCount:  itemCount,
+		ItemsCount:  item.ItemsCount,
 		Editor:      item.Editor,
 		CreateAt:    item.CreateAt,
 		UpdateAt:    item.UpdateAt,
 		Items:       nil,
-	}, nil
+	}
 }
 
-func (f *FolderModel) folderItemToFolderItemInfoBatch(ctx context.Context, items []*entity.FolderItem) ([]*entity.FolderItemInfo, error) {
+func (f *FolderModel) folderItemToFolderItemInfoBatch(ctx context.Context, items []*entity.FolderItem) []*entity.FolderItemInfo {
 	ret := make([]*entity.FolderItemInfo, len(items))
-	itemCountMap, err := f.batchGetFolderItemsCountMap(ctx, dbo.MustGetDB(ctx), items)
-	if err != nil {
-		log.Error(ctx, "batchGetFolderItemsCountMap failed",
-			log.Err(err),
-			log.Any("items", items))
-		return nil, err
-	}
-	for i := range items {
-		itemCount := 0
-		if count, ok := itemCountMap[items[i].ID]; ok {
-			itemCount = count
-		}
 
+	for i := range items {
 		ret[i] = &entity.FolderItemInfo{
 			ID:          items[i].ID,
 			OwnerType:   items[i].OwnerType,
@@ -1041,14 +1084,14 @@ func (f *FolderModel) folderItemToFolderItemInfoBatch(ctx context.Context, items
 			Keywords:    strings.Split(items[i].Keywords, constant.StringArraySeparator),
 			Thumbnail:   items[i].Thumbnail,
 			Creator:     items[i].Creator,
-			ItemsCount:  itemCount,
+			ItemsCount:  items[i].ItemsCount,
 			Editor:      items[i].Editor,
 			CreateAt:    items[i].CreateAt,
 			UpdateAt:    items[i].UpdateAt,
 			Items:       nil,
 		}
 	}
-	return ret, nil
+	return ret
 }
 
 func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, id string, partition entity.FolderPartition, distFolder *entity.FolderItem, operator *entity.Operator) error {
@@ -1464,7 +1507,7 @@ func (f *FolderModel) createFolder(ctx context.Context, tx *dbo.DBContext, req e
 	//parentFolder.ItemsCount = parentFolder.ItemsCount + 1
 	//err = da.GetFolderDA().UpdateFolder(ctx, tx, parentFolder.ID, parentFolder)
 	if req.ParentID != "" && req.ParentID != constant.FolderRootPath {
-		err = da.GetFolderDA().AddFolderItemsCount(ctx, tx, req.ParentID, 1)
+		err = f.batchRepairFolderItemsCountByIDs(ctx, tx, []string{req.ParentID})
 		if err != nil {
 			log.Error(ctx, "update parent folder items count failed", log.Err(err), log.Any("req", req))
 			return "", err
@@ -1473,33 +1516,20 @@ func (f *FolderModel) createFolder(ctx context.Context, tx *dbo.DBContext, req e
 	return folder.ID, nil
 }
 
-func (f *FolderModel) removeItemInternal(ctx context.Context, tx *dbo.DBContext, fid string) error {
-	folderItem, err := f.getFolder(ctx, dbo.MustGetDB(ctx), fid)
-	if err != nil {
-		return err
-	}
+func (f *FolderModel) removeItemInternal(ctx context.Context, tx *dbo.DBContext, folderItem *entity.FolderItem) error {
 
 	//检查文件夹是否为空
 	//check folder empty
-	err = f.checkFolderEmpty(ctx, folderItem)
+	err := f.checkFolderEmpty(ctx, folderItem)
 	if err != nil {
 		return err
 	}
 
 	//若为空Folder，删除
 	//if the folder is empty, delete it
-	err = da.GetFolderDA().DeleteFolder(ctx, dbo.MustGetDB(ctx), fid)
+	err = da.GetFolderDA().DeleteFolder(ctx, dbo.MustGetDB(ctx), folderItem.ID)
 	if err != nil {
-		log.Error(ctx, "delete folder item failed", log.Err(err), log.Any("fid", fid))
-		return err
-	}
-	//获取parent folder
-	//更新parent folder文件数量
-	//get parent folder
-	//update parent folder items count
-	err = da.GetFolderDA().AddFolderItemsCount(ctx, tx, folderItem.ParentID, -1)
-	if err != nil {
-		log.Error(ctx, "update parent folder items count failed", log.Err(err), log.String("folderItem.ParentID", folderItem.ParentID))
+		log.Error(ctx, "delete folder item failed", log.Err(err), log.Any("fid", folderItem.ID))
 		return err
 	}
 
@@ -1565,7 +1595,7 @@ func (f *FolderModel) addItemInternal(ctx context.Context, tx *dbo.DBContext, re
 	//parentFolder.ItemsCount = parentFolder.ItemsCount + 1
 	//err = da.GetFolderDA().UpdateFolder(ctx, tx, parentFolder.ID, parentFolder)
 	if req.ParentFolderID != "" {
-		err = da.GetFolderDA().AddFolderItemsCount(ctx, tx, req.ParentFolderID, 1)
+		err = f.batchRepairFolderItemsCount(ctx, tx, []*entity.FolderItem{folderItem})
 		if err != nil {
 			log.Error(ctx, "update parent folder items count failed", log.Err(err), log.Any("parentFolder", req.ParentFolderID))
 			return "", err
@@ -1758,13 +1788,7 @@ func (f *FolderModel) checkFolderEmpty(ctx context.Context, folderItem *entity.F
 		log.Info(ctx, "item is not folder", log.Any("folderItem", folderItem), log.String("path", string(folderItem.DirPath)))
 		return nil
 	}
-	res, err := f.batchGetFolderItemsCountMap(ctx, dbo.MustGetDB(ctx), []*entity.FolderItem{folderItem})
-	if err != nil {
-		log.Error(ctx, "item is not folder", log.Err(err), log.Any("folderItem", folderItem), log.String("path", string(folderItem.DirPath)))
-		return err
-	}
-	count, exists := res[folderItem.ID]
-	if exists && count > 0 {
+	if folderItem.ItemsCount > 0 {
 		return ErrFolderIsNotEmpty
 	}
 	return nil
@@ -1835,28 +1859,13 @@ func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, nam
 }
 
 func (f *FolderModel) updateMoveFolderItemCount(ctx context.Context, tx *dbo.DBContext, fromID, toID string, total int) error {
-	//根目录无需修改ItemCount
-	//root direction, no need to update items count
-	if fromID != constant.FolderRootPath && fromID != "" {
-		err := da.GetFolderDA().AddFolderItemsCount(ctx, tx, fromID, -total)
-		if err != nil {
-			log.Error(ctx, "update originParentFolder items count failed", log.Err(err),
-				log.String("folder.ParentID", fromID),
-				log.Int("count", -total))
-			return err
-		}
-	}
-
-	//根目录无需修改ItemCount
-	//root direction, no need to update items count
-	if toID != constant.FolderRootPath && toID != "" {
-		err := da.GetFolderDA().AddFolderItemsCount(ctx, tx, toID, total)
-		if err != nil {
-			log.Error(ctx, "update distFolder items count failed", log.Err(err),
-				log.String("parentFolder", toID),
-				log.Int("count", total))
-			return err
-		}
+	//update folder items count
+	err := f.batchRepairFolderItemsCountByIDs(ctx, tx, []string{fromID, toID})
+	if err != nil {
+		log.Error(ctx, "batchRepairFolderItemsCountByIDs failed", log.Err(err),
+			log.String("parentFolder", toID),
+			log.Int("count", total))
+		return err
 	}
 
 	return nil

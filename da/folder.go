@@ -24,7 +24,7 @@ var (
 type IFolderDA interface {
 	CreateFolder(ctx context.Context, tx *dbo.DBContext, f *entity.FolderItem) (string, error)
 	UpdateFolder(ctx context.Context, tx *dbo.DBContext, fid string, f *entity.FolderItem) error
-	AddFolderItemsCount(ctx context.Context, tx *dbo.DBContext, fid string, addon int) error
+	// AddFolderItemsCount(ctx context.Context, tx *dbo.DBContext, fid string, addon int) error
 
 	BatchReplaceFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, oldPath, path entity.Path) error
 	BatchUpdateFolderPathPrefix(ctx context.Context, tx *dbo.DBContext, fids []string, prefix entity.Path) error
@@ -39,6 +39,7 @@ type IFolderDA interface {
 	SearchFolder(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) ([]*entity.FolderItem, error)
 
 	BatchGetFolderItemsCount(ctx context.Context, tx *dbo.DBContext, fids []string) ([]*entity.FolderItemsCount, error)
+	BatchUpdateFolderItemsCount(ctx context.Context, tx *dbo.DBContext, req []*entity.UpdateFolderItemsCountRequest) error
 }
 
 type FolderDA struct {
@@ -123,6 +124,42 @@ func (fda *FolderDA) BatchGetFolderItemsCount(ctx context.Context, tx *dbo.DBCon
 	}
 	log.Info(ctx, "query sql", log.String("sql", sql), log.Strings("pathList", pathList))
 	return res, nil
+}
+
+func (fda *FolderDA) BatchUpdateFolderItemsCount(ctx context.Context, tx *dbo.DBContext, req []*entity.UpdateFolderItemsCountRequest) error {
+	if len(req) < 1 {
+		//if req is nil, no need to update
+		return nil
+	}
+	sql := `UPDATE cms_folder_items SET items_count = (case id `
+	doubleSize := len(req) * 2
+	params := make([]interface{}, doubleSize+1)
+	ids := make([]string, len(req))
+	for i := range req {
+		sql = sql + "WHEN ? THEN ?"
+		params[i*2] = req[i].ID
+		params[i*2+1] = req[i].Count
+		ids[i] = req[i].ID
+	}
+
+	sql = sql + " end) WHERE id IN (?)"
+	params[doubleSize] = ids
+
+	err := tx.Exec(sql, params...).Error
+	if err != nil {
+		log.Error(ctx,
+			"BatchGetFolderItemsCount failed",
+			log.Err(err),
+			log.String("sql", sql),
+			log.Any("params", params))
+		return err
+	}
+	log.Info(ctx,
+		"BatchGetFolderItemsCount success",
+		log.String("sql", sql),
+		log.Any("params", params))
+
+	return nil
 }
 
 //Unused because when old path is root path("/"), replace function in mysql will replace all "/" in path

@@ -206,6 +206,11 @@ type FolderItemsCount struct {
 	Count    int64
 }
 
+type UpdateFolderItemsCountRequest struct {
+	ID    string
+	Count int
+}
+
 type Path string
 
 func (p Path) ParentPath() string {
@@ -259,8 +264,8 @@ type FolderItem struct {
 	Thumbnail string `gorm:"type:text" json:"thumbnail"`
 	Creator   string `gorm:"type:varchar(50)" json:"creator"`
 
-	ItemsCountUnused int    `gorm:"type:int" json:"items_count"`
-	Editor           string `gorm:"type:varchar(50);NOT NULL" json:"editor"`
+	ItemsCount int    `gorm:"type:int" json:"items_count"`
+	Editor     string `gorm:"type:varchar(50);NOT NULL" json:"editor"`
 
 	Extra string `gorm:"type:text;NULL" json:"extra"`
 	//VisibilitySetting string	`gorm:"type:varchar(50)" json:"visibility_setting"`
