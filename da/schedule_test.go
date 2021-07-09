@@ -3,12 +3,14 @@ package da
 import (
 	"context"
 	"database/sql"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"log"
 	"strings"
 	"testing"
+
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 func Test_GetLessonPlanIDsByCondition_Sql(t *testing.T) {
@@ -28,10 +30,10 @@ func Test_GetLessonPlanIDsByCondition_Sql(t *testing.T) {
 	t.Log(parameters)
 }
 
-func TestGetTeachLoadByCondition(t *testing.T) {
+func initDBForTestSchedule() {
 	cfg := &config.Config{
 		DBConfig: config.DBConfig{
-			ConnectionString: "root:Badanamu123456@tcp(192.168.1.234:3306)/kidsloop2?parseTime=true&charset=utf8mb4",
+			ConnectionString: "root:Passw0rd@tcp(127.0.0.1:3306)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local",
 		},
 	}
 	config.Set(cfg)
@@ -42,6 +44,10 @@ func TestGetTeachLoadByCondition(t *testing.T) {
 		return
 	}
 	dbo.ReplaceGlobal(newDBO)
+}
+
+func TestGetTeachLoadByCondition(t *testing.T) {
+	initDBForTestSchedule()
 	ctx := context.Background()
 	input := &entity.ScheduleTeachingLoadInput{
 		OrgID:      "72e47ef0-92bf-4429-a06f-2014e3d3df4b",
@@ -65,4 +71,12 @@ func TestGetTeachLoadByCondition(t *testing.T) {
 	condition := NewScheduleTeachLoadCondition(input)
 
 	GetScheduleDA().GetTeachLoadByCondition(ctx, dbo.MustGetDB(ctx), condition)
+}
+
+func TestScheduleDA_SoftDelete(t *testing.T) {
+	initDBForTestSchedule()
+	ctx := context.Background()
+	GetScheduleDA().SoftDelete(ctx, dbo.MustGetDB(ctx), "5fab9ab3aa60e5b2e0e3c023", &entity.Operator{
+		UserID: "64a36ec1-7aa2-53ab-bb96-4c4ff752096b",
+	})
 }
