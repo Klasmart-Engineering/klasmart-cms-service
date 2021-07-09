@@ -221,9 +221,10 @@ func (s *scheduleDA) SoftDelete(ctx context.Context, tx *dbo.DBContext, id strin
 	if err := tx.Model(&entity.Schedule{}).
 		Where("id = ?", id).
 		Where("status = ?", entity.ScheduleStatusNotStart).
-		Updates(map[string]interface{}{
-			"deleted_id": operator.UserID,
-			"delete_at":  time.Now().Unix(),
+		UpdateColumns(entity.Schedule{
+			DeletedID: operator.UserID,
+			DeleteAt:  time.Now().Unix(),
+			UpdatedAt: time.Now().Unix(),
 		}).Error; err != nil {
 		log.Error(ctx, "soft delete schedule: update failed",
 			log.Err(err),
@@ -232,6 +233,7 @@ func (s *scheduleDA) SoftDelete(ctx context.Context, tx *dbo.DBContext, id strin
 		)
 		return err
 	}
+
 	return nil
 }
 
