@@ -43,11 +43,11 @@ func (o OutcomeService) generateRelations(ctx context.Context, mapper Mapper, ou
 	grades := strings.Split(outcome.Grade, ",")
 	if len(programs) != 1 {
 		log.Error(ctx, "dirty data", log.Any("outcome", outcome))
-		return false, nil, errors.New("dirty data")
+		return false, nil, ErrDirtyData
 	}
 	if len(subCategories) > 0 && len(categories) != 1 {
 		log.Error(ctx, "dirty data", log.Any("outcome", outcome))
-		return false, nil, errors.New("dirty data")
+		return false, nil, ErrDirtyData
 	}
 
 	relations := make([]*entity.Relation, 0, len(programs)+len(subjects)+len(categories)+len(subCategories)+len(ages)+len(grades))
