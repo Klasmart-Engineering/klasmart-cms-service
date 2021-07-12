@@ -199,6 +199,18 @@ type CreateFolderItemRequest struct {
 	OwnerType OwnerType       `json:"owner_type"`
 }
 
+type FolderItemsCount struct {
+	ID       string
+	Classify string
+	DirPath  string
+	Count    int64
+}
+
+type UpdateFolderItemsCountRequest struct {
+	ID    string
+	Count int
+}
+
 type Path string
 
 func (p Path) ParentPath() string {

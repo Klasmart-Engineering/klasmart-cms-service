@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"sync"
 	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -23,7 +24,7 @@ var (
 type IFolderDA interface {
 	CreateFolder(ctx context.Context, tx *dbo.DBContext, f *entity.FolderItem) (string, error)
 	UpdateFolder(ctx context.Context, tx *dbo.DBContext, fid string, f *entity.FolderItem) error
-	AddFolderItemsCount(ctx context.Context, tx *dbo.DBContext, fid string, addon int) error
+	// AddFolderItemsCount(ctx context.Context, tx *dbo.DBContext, fid string, addon int) error
 
 	BatchReplaceFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, oldPath, path entity.Path) error
 	BatchUpdateFolderPathPrefix(ctx context.Context, tx *dbo.DBContext, fids []string, prefix entity.Path) error
@@ -36,6 +37,9 @@ type IFolderDA interface {
 	SearchFolderPage(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) (int, []*entity.FolderItem, error)
 	SearchFolderCount(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) (int, error)
 	SearchFolder(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) ([]*entity.FolderItem, error)
+
+	BatchGetFolderItemsCount(ctx context.Context, tx *dbo.DBContext, fids []string) ([]*entity.FolderItemsCount, error)
+	BatchUpdateFolderItemsCount(ctx context.Context, tx *dbo.DBContext, req []*entity.UpdateFolderItemsCountRequest) error
 }
 
 type FolderDA struct {
@@ -76,6 +80,89 @@ func (fda *FolderDA) AddFolderItemsCount(ctx context.Context, tx *dbo.DBContext,
 		log.Error(ctx, "update folder items count failed", log.Err(err), log.Int("addon", addon), log.String("fid", fid))
 		return err
 	}
+
+	return nil
+}
+
+func (fda *FolderDA) BatchGetFolderItemsCount(ctx context.Context, tx *dbo.DBContext, fids []string) ([]*entity.FolderItemsCount, error) {
+	if len(fids) < 1 {
+		//若fids为空，则不更新
+		//if fids is nil, no need to update
+		return nil, nil
+	}
+	folders, err := fda.GetFolderByIDList(ctx, tx, fids)
+	if err != nil {
+		log.Error(ctx, "GetFolderByIDList failed", log.Err(err),
+			log.Strings("fids", fids))
+		return nil, err
+	}
+	pathList := make([]string, len(folders))
+
+	for i := range folders {
+		pathList[i] = string(folders[i].ChildrenPath())
+	}
+	if len(pathList) < 1 {
+		return nil, nil
+	}
+	sql := `
+	SELECT "content" as classify,dir_path, count(*) as count FROM cms_contents WHERE publish_status = "published" AND dir_path IN (?) GROUP BY dir_path
+		UNION ALL
+	SELECT "folder" as classify, dir_path, count(*) as count FROM cms_folder_items WHERE item_type=1 AND dir_path IN (?)  GROUP BY dir_path;
+	`
+	res := make([]*entity.FolderItemsCount, 0)
+	err = tx.Raw(sql, pathList, pathList).Scan(&res).Error
+	if err != nil {
+		log.Error(ctx, "Query group dir_path sql failed", log.Err(err),
+			log.Strings("fids", fids),
+			log.Strings("pathList", pathList),
+			log.String("sql", sql))
+		return nil, err
+	}
+	for i := range res {
+		//Handle root path
+		if res[i].DirPath == constant.FolderRootPath {
+			res[i].ID = constant.FolderRootPath
+		} else {
+			pairs := strings.Split(res[i].DirPath, "/")
+			res[i].ID = pairs[len(pairs)-1]
+		}
+	}
+	log.Info(ctx, "query sql", log.String("sql", sql), log.Strings("pathList", pathList))
+	return res, nil
+}
+
+func (fda *FolderDA) BatchUpdateFolderItemsCount(ctx context.Context, tx *dbo.DBContext, req []*entity.UpdateFolderItemsCountRequest) error {
+	if len(req) < 1 {
+		//if req is nil, no need to update
+		return nil
+	}
+	sql := `UPDATE cms_folder_items SET items_count = (case id `
+	doubleSize := len(req) * 2
+	params := make([]interface{}, doubleSize+1)
+	ids := make([]string, len(req))
+	for i := range req {
+		sql = sql + "WHEN ? THEN ?"
+		params[i*2] = req[i].ID
+		params[i*2+1] = req[i].Count
+		ids[i] = req[i].ID
+	}
+
+	sql = sql + " end) WHERE id IN (?)"
+	params[doubleSize] = ids
+
+	err := tx.Exec(sql, params...).Error
+	if err != nil {
+		log.Error(ctx,
+			"BatchGetFolderItemsCount failed",
+			log.Err(err),
+			log.String("sql", sql),
+			log.Any("params", params))
+		return err
+	}
+	log.Info(ctx,
+		"BatchGetFolderItemsCount success",
+		log.String("sql", sql),
+		log.Any("params", params))
 
 	return nil
 }
