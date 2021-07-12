@@ -104,7 +104,7 @@ type IFolderModel interface {
 	//查看路径是否存在
 	//check path existing
 	UpdateContentPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error)
-	AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, path, link string, operator *entity.Operator) error
+	AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, path entity.Path, link string, operator *entity.Operator) error
 	RemoveItemByLink(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, owner string, link string) error
 }
 
@@ -621,7 +621,7 @@ func (f *FolderModel) UpdateFolder(ctx context.Context, folderID string, d entit
 // 	return nil
 // }
 
-func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, path, link string, operator *entity.Operator) error {
+func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, path entity.Path, link string, operator *entity.Operator) error {
 	//Update folder item visibility settings
 	hasLink, err := f.hasFolderFileItem(ctx, tx, entity.OwnerTypeOrganization, partition, operator.OrgID, link)
 	if err != nil {
@@ -632,12 +632,22 @@ func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBCo
 	//When link is exists, no need to update
 	if hasLink {
 		log.Info(ctx, "already has item", log.Err(err), log.String("link", link))
+
+		//repair parent item counts
+		if path != constant.FolderRootPath {
+			err = f.batchRepairFolderItemsCountByIDs(ctx, tx, []string{path.Parent()})
+			if err != nil {
+				log.Error(ctx, "update parent folder items count failed", log.Err(err), log.Any("parentFolder", path))
+				return err
+			}
+		}
+
 		return nil
 	}
 
 	parentFolder := constant.FolderRootPath
 	if path != "" && path != constant.FolderRootPath {
-		parentID := f.getParentFromPath(ctx, path)
+		parentID := f.getParentFromPath(ctx, path.String())
 		parentFolder = parentID
 	}
 	//若不存在，则创建
@@ -885,7 +895,7 @@ func (f *FolderModel) UpdateContentPath(ctx context.Context, tx *dbo.DBContext, 
 			log.Any("condition", condition))
 		return constant.FolderRootPath, nil
 	}
-	return folders[0].ChildrenPath().ParentPath(), nil
+	return folders[0].ChildrenPath().AsParentPath(), nil
 }
 
 func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error) {
