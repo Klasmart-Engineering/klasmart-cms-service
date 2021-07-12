@@ -304,16 +304,6 @@ func (cm *ContentModel) preparePublishContent(ctx context.Context, tx *dbo.DBCon
 	if content.PublishStatus == entity.ContentStatusArchive {
 		content.PublishStatus = entity.ContentStatusPublished
 		content.UpdateAt = time.Now().Unix()
-		//更新content的path
-		err := cm.checkAndUpdateContentPath(ctx, tx, content, user)
-		if err != nil {
-			return err
-		}
-		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, content.DirPath, entity.ContentLink(content.ID), user)
-		if err != nil {
-			return err
-		}
-
 		return nil
 	}
 

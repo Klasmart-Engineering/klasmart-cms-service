@@ -228,6 +228,18 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 		return ErrUpdateContentFailed
 	}
 
+	if content.PublishStatus == entity.ContentStatusPublished {
+		//更新content的path
+		err := cm.checkAndUpdateContentPath(ctx, tx, content, user)
+		if err != nil {
+			return err
+		}
+		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, entity.NewPath(content.DirPath), entity.ContentLink(content.ID), user)
+		if err != nil {
+			return err
+		}
+	}
+
 	//If scope changed, refresh visibility settings
 	if scope != nil && len(scope) > 0 {
 		err = cm.refreshContentVisibilitySettings(ctx, tx, content.ID, scope)
@@ -609,7 +621,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	if status == entity.ContentStatusPublished {
 		//更新Folder信息
 		//update folder info
-		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, content.DirPath, entity.ContentLink(content.ID), operator)
+		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, entity.NewPath(content.DirPath), entity.ContentLink(content.ID), operator)
 		if err != nil {
 			return err
 		}
