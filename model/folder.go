@@ -1022,6 +1022,7 @@ func (f *FolderModel) batchGetFolderItemsCountMap(ctx context.Context, tx *dbo.D
 	for i := range items {
 		ids[i] = items[i].ID
 	}
+	ids = utils.SliceDeduplication(ids)
 
 	itemCountRes, err := da.GetFolderDA().BatchGetFolderItemsCount(ctx, tx, ids)
 	if err != nil {

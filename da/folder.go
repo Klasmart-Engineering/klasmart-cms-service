@@ -119,8 +119,13 @@ func (fda *FolderDA) BatchGetFolderItemsCount(ctx context.Context, tx *dbo.DBCon
 		return nil, err
 	}
 	for i := range res {
-		pairs := strings.Split(res[i].DirPath, "/")
-		res[i].ID = pairs[len(pairs)-1]
+		//Handle root path
+		if res[i].DirPath == constant.FolderRootPath {
+			res[i].ID = constant.FolderRootPath
+		} else {
+			pairs := strings.Split(res[i].DirPath, "/")
+			res[i].ID = pairs[len(pairs)-1]
+		}
 	}
 	log.Info(ctx, "query sql", log.String("sql", sql), log.Strings("pathList", pathList))
 	return res, nil
