@@ -141,7 +141,7 @@ func (fda *FolderDA) BatchUpdateFolderItemsCount(ctx context.Context, tx *dbo.DB
 	params := make([]interface{}, doubleSize+1)
 	ids := make([]string, len(req))
 	for i := range req {
-		sql = sql + "WHEN ? THEN ?"
+		sql = sql + "WHEN ? THEN ? \n"
 		params[i*2] = req[i].ID
 		params[i*2+1] = req[i].Count
 		ids[i] = req[i].ID
