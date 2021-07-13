@@ -145,7 +145,7 @@ query {
   	}
 	{{end}}
 }
-fragment f on Room {
+fragment scoresByUser on Room {
 	scoresByUser {
 		user {
 			user_id
