@@ -271,7 +271,7 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator, externalOpti
 	_organizationIDs := utils.SliceDeduplicationExcludeEmpty(externalOptions.OrgIDs)
 	_userIDs := utils.SliceDeduplicationExcludeEmpty(externalOptions.UsrIDs)
 	_programIDs := utils.SliceDeduplicationExcludeEmpty(externalOptions.ProgIDs)
-	_subjectIDs := utils.SliceDeduplicationExcludeEmpty(externalOptions.SubcatIDs)
+	_subjectIDs := utils.SliceDeduplicationExcludeEmpty(externalOptions.SubjectIDs)
 	_categoryIDs := utils.SliceDeduplicationExcludeEmpty(externalOptions.CatIDs)
 	_subcategoryIDs := utils.SliceDeduplicationExcludeEmpty(externalOptions.SubcatIDs)
 	_gradeIDs := utils.SliceDeduplicationExcludeEmpty(externalOptions.GradeIDs)
