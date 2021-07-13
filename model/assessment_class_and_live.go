@@ -11,6 +11,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 	"time"
@@ -184,6 +185,17 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 }
 
 func (m *classAndLiveAssessmentModel) Add(ctx context.Context, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) (string, error) {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixScheduleID, args.ScheduleID)
+	if err != nil {
+		log.Error(ctx, "add class and live assessment: lock fail",
+			log.Err(err),
+			log.Any("args", args),
+		)
+		return "", err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+
 	superArgs, err := m.PrepareAddArgs(ctx, dbo.MustGetDB(ctx), operator, args)
 	if err != nil {
 		return "", err
