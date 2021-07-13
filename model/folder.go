@@ -103,7 +103,7 @@ type IFolderModel interface {
 	//internal API, for updating folder's visibility settings
 	//查看路径是否存在
 	//check path existing
-	UpdateContentPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error)
+	CheckContentPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error)
 	AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, path entity.Path, link string, operator *entity.Operator) error
 	RemoveItemByLink(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, owner string, link string) error
 }
@@ -857,7 +857,7 @@ func (f *FolderModel) getParentFromPath(ctx context.Context, path string) string
 	return parentID
 }
 
-func (f *FolderModel) UpdateContentPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error) {
+func (f *FolderModel) CheckContentPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error) {
 	if path == "" || path == constant.FolderRootPath {
 		log.Info(ctx, "check folder exists with nil",
 			log.String("path", path))
@@ -2239,7 +2239,7 @@ func (f *FolderModel) replaceLinkedItemPath(ctx context.Context, tx *dbo.DBConte
 		}
 		switch fileType {
 		case entity.FolderFileTypeContent:
-			// err = GetContentModel().UpdateContentPath(ctx, tx, id, path)
+			// err = GetContentModel().CheckContentPath(ctx, tx, id, path)
 			// if err != nil {
 			// 	log.Warn(ctx, "can't update content path by id", log.Err(err),
 			// 		log.String("itemType", string(fileType)), log.String("id", id), log.String("path", path))
