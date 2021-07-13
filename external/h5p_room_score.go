@@ -141,7 +141,7 @@ func (s H5PRoomScoreService) BatchGet(ctx context.Context, operator *entity.Oper
 query {
 	{{range $i, $e := .}}
 	q{{$i}}: Room(room_id: "{{$e}}") {
-		...f
+		...scoresByUser
   	}
 	{{end}}
 }
