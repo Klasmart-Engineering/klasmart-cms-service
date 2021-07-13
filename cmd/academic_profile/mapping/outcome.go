@@ -14,6 +14,8 @@ import (
 
 type OutcomeService struct{}
 
+var ErrDirtyData = errors.New("dirt data")
+
 func (o OutcomeService) fetch(ctx context.Context) ([]*entity.Outcome, map[string][]*entity.Relation, error) {
 	tx := dbo.MustGetDB(ctx)
 	_, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, nil, tx, &da.OutcomeCondition{})
@@ -41,11 +43,11 @@ func (o OutcomeService) generateRelations(ctx context.Context, mapper Mapper, ou
 	grades := strings.Split(outcome.Grade, ",")
 	if len(programs) != 1 {
 		log.Error(ctx, "dirty data", log.Any("outcome", outcome))
-		return false, nil, errors.New("dirty data")
+		return false, nil, ErrDirtyData
 	}
 	if len(subCategories) > 0 && len(categories) != 1 {
 		log.Error(ctx, "dirty data", log.Any("outcome", outcome))
-		return false, nil, errors.New("dirty data")
+		return false, nil, ErrDirtyData
 	}
 
 	relations := make([]*entity.Relation, 0, len(programs)+len(subjects)+len(categories)+len(subCategories)+len(ages)+len(grades))
@@ -193,11 +195,11 @@ func (o OutcomeService) mappingRelations(ctx context.Context, mapper Mapper, out
 	}
 	if len(programs) != 1 {
 		log.Error(ctx, "dirty data", log.Any("outcome", outcome))
-		return nil, errors.New("dirty data")
+		return nil, ErrDirtyData
 	}
 	if len(subCategories) > 0 && len(categories) != 1 {
 		log.Error(ctx, "dirty data", log.Any("outcome", outcome))
-		return nil, errors.New("dirty data")
+		return nil, ErrDirtyData
 	}
 
 	updateRelations := make([]*entity.Relation, 0)
@@ -294,6 +296,9 @@ func (o OutcomeService) Do(ctx context.Context, cliContext *cli.Context, mapper 
 
 	for i := range outcomes {
 		err := o.handle(ctx, mapper, outcomes[i], relations[outcomes[i].ID])
+		if err == ErrDirtyData {
+			continue
+		}
 		if err != nil {
 			log.Info(ctx, "handle failed",
 				log.Err(err),

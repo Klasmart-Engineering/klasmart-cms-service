@@ -199,13 +199,32 @@ type CreateFolderItemRequest struct {
 	OwnerType OwnerType       `json:"owner_type"`
 }
 
+type FolderItemsCount struct {
+	ID       string
+	Classify string
+	DirPath  string
+	Count    int64
+}
+
+type UpdateFolderItemsCountRequest struct {
+	ID    string
+	Count int
+}
+
 type Path string
 
-func (p Path) ParentPath() string {
+func (p Path) AsParentPath() string {
 	if p == constant.FolderRootPath {
 		return ""
 	}
 	return string(p)
+}
+func (p Path) Parent() string {
+	if p == constant.FolderRootPath {
+		return constant.FolderRootPath
+	}
+	pairs := strings.Split(string(p), constant.FolderPathSeparator)
+	return pairs[len(pairs)-1]
 }
 
 func (p Path) Parents() []string {
@@ -218,6 +237,9 @@ func (p Path) Parents() []string {
 		ret[i] = pairs[i+1]
 	}
 	return ret
+}
+func (p Path) String() string {
+	return string(p)
 }
 
 func (p Path) IsChild(f string) bool {
@@ -273,7 +295,7 @@ func (f FolderItem) ChildrenPath() Path {
 	if f.ID == constant.FolderRootPath {
 		return NewPath(constant.FolderRootPath)
 	}
-	return NewPath(f.DirPath.ParentPath() + constant.FolderPathSeparator + f.ID)
+	return NewPath(f.DirPath.AsParentPath() + constant.FolderPathSeparator + f.ID)
 }
 
 type FolderItemInfo struct {
