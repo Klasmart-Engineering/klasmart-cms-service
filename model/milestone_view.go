@@ -2,12 +2,13 @@ package model
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
 )
 
 type Category struct {
@@ -169,8 +170,8 @@ type MilestoneList struct {
 	IDs []string `json:"ids"`
 }
 type MilestoneSearchResponse struct {
-	Total      int              `json:"total"`
 	Milestones []*MilestoneView `json:"milestones"`
+	Total      int              `json:"total"`
 }
 
 func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*entity.Milestone) ([]*MilestoneView, error) {
@@ -238,7 +239,7 @@ func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*enti
 		milestoneView.FillAllKindsOfName(prds, sbjs, cats, sbcs, grds, ages, milestone)
 		milestoneView.Outcomes = make([]*OutcomeView, len(milestone.Outcomes))
 		for i, outcome := range milestone.Outcomes {
-			milestoneView.Outcomes[i] = buildOutcomeView(orgs, authors, prds, sbjs, cats, sbcs, grds, ages, outcome)
+			milestoneView.Outcomes[i] = buildOutcomeView(ctx, orgs, authors, prds, sbjs, cats, sbcs, grds, ages, outcome)
 		}
 		milestoneViews[i] = &milestoneView
 	}
@@ -246,11 +247,11 @@ func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*enti
 }
 
 func prepareAllNeededName(ctx context.Context, op *entity.Operator,
-	organizationIDs, authorIDs, programIDs, subjectIDs, categoryIDs, subCategoryIDs, gradeIDs, ageIDs []string) (
-	organizations, authors, programs, subjects, categories, subcategories, grades, ages map[string]string, err error) {
+	organizationIDs, userIDs, programIDs, subjectIDs, categoryIDs, subCategoryIDs, gradeIDs, ageIDs []string) (
+	organizations, users, programs, subjects, categories, subcategories, grades, ages map[string]string, err error) {
 
 	_organizationIDs := utils.SliceDeduplicationExcludeEmpty(organizationIDs)
-	_authorIDs := utils.SliceDeduplicationExcludeEmpty(authorIDs)
+	_userIDs := utils.SliceDeduplicationExcludeEmpty(userIDs)
 	_programIDs := utils.SliceDeduplicationExcludeEmpty(programIDs)
 	_subjectIDs := utils.SliceDeduplicationExcludeEmpty(subjectIDs)
 	_categoryIDs := utils.SliceDeduplicationExcludeEmpty(categoryIDs)
@@ -279,20 +280,20 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator,
 		organizations = map[string]string{}
 	}
 
-	if len(_authorIDs) > 0 {
+	if len(_userIDs) > 0 {
 		wg.Add(1)
 		go func(ctx context.Context, cancel context.CancelFunc) {
 			defer wg.Done()
 			var ero error
-			authors, ero = external.GetUserServiceProvider().BatchGetNameMap(ctx, op, _authorIDs)
+			users, ero = external.GetUserServiceProvider().BatchGetNameMap(ctx, op, _userIDs)
 			if ero != nil {
-				log.Error(ctx, "prepareAllNeededName: GetUserServiceProvider failed", log.Err(ero), log.Strings("author", _authorIDs))
+				log.Error(ctx, "prepareAllNeededName: GetUserServiceProvider failed", log.Err(ero), log.Strings("user", _userIDs))
 				err = ero
 				cancel()
 			}
 		}(ctxNew, cancel)
 	} else {
-		authors = map[string]string{}
+		users = map[string]string{}
 	}
 
 	if len(_programIDs) > 0 {
@@ -394,4 +395,13 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator,
 
 	wg.Wait()
 	return
+}
+
+type MilestoneRejectReq struct {
+	RejectReason string `json:"reject_reason"`
+}
+
+type MilestoneBulkRejectRequest struct {
+	RejectReason string   `json:"reject_reason"`
+	MilestoneIDs []string `json:"milestone_ids"`
 }
