@@ -1606,7 +1606,7 @@ func (f *FolderModel) addItemInternal(ctx context.Context, tx *dbo.DBContext, re
 	//parentFolder.ItemsCount = parentFolder.ItemsCount + 1
 	//err = da.GetFolderDA().UpdateFolder(ctx, tx, parentFolder.ID, parentFolder)
 	if req.ParentFolderID != "" {
-		err = f.batchRepairFolderItemsCount(ctx, tx, []*entity.FolderItem{folderItem})
+		err = f.batchRepairFolderItemsCountByIDs(ctx, tx, []string{req.ParentFolderID})
 		if err != nil {
 			log.Error(ctx, "update parent folder items count failed", log.Err(err), log.Any("parentFolder", req.ParentFolderID))
 			return "", err
