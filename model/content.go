@@ -1422,9 +1422,6 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 
 	obj := cm.prepareCloneContentParams(ctx, content, user)
 
-	now := time.Now()
-	obj.UpdateAt = now.Unix()
-	obj.CreateAt = now.Unix()
 	id, err := da.GetContentDA().CreateContent(ctx, tx, *obj)
 	if err != nil {
 		log.Error(ctx, "clone contentdata failed", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
