@@ -122,8 +122,8 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if c.SourceIDs.Valid {
-		wheres = append(wheres, fmt.Sprintf("(source_id in (%s))", c.SourceIDs.SQLPlaceHolder()))
-		params = append(params, c.SourceIDs.ToInterfaceSlice()...)
+		wheres = append(wheres, "source_id in (?)")
+		params = append(params, c.SourceIDs.Strings)
 	}
 
 	if c.AncestorIDs.Valid {
