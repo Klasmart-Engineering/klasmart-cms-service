@@ -30,6 +30,7 @@ type OutcomeCondition struct {
 	Assumed        sql.NullBool
 	OrganizationID sql.NullString
 	SourceID       sql.NullString
+	SourceIDs      dbo.NullStrings
 	FuzzyKey       sql.NullString
 	AuthorIDs      dbo.NullStrings
 	AncestorIDs    dbo.NullStrings
@@ -118,6 +119,11 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 	if c.SourceID.Valid {
 		wheres = append(wheres, "source_id=?")
 		params = append(params, c.SourceID.String)
+	}
+
+	if c.SourceIDs.Valid {
+		wheres = append(wheres, "source_id in (?)")
+		params = append(params, c.SourceIDs.Strings)
 	}
 
 	if c.AncestorIDs.Valid {
