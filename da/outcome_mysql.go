@@ -340,25 +340,5 @@ func (o OutcomeSQLDA) UpdateLatestHead(ctx context.Context, op *entity.Operator,
 		return err
 	}
 
-	// clean cache
-	var outcomes []*entity.Outcome
-	err = tx.Where("latest_id=? and delete_at=0", newHeader).Find(&outcomes).Error
-	if err != nil {
-		log.Error(ctx, "UpdateLatestHead: Find failed",
-			log.Err(err),
-			log.String("old", oldHeader),
-			log.String("new", newHeader))
-		return err
-	}
-	if len(outcomes) < 1 {
-		log.Info(ctx, "UpdateLatestHead: Find outcomes return empty",
-			log.String("old", oldHeader),
-			log.String("new", newHeader))
-		return nil
-	}
-	ids := make([]string, len(outcomes))
-	for i := range outcomes {
-		ids[i] = outcomes[i].ID
-	}
 	return nil
 }

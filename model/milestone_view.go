@@ -48,6 +48,7 @@ type MilestoneView struct {
 	Grade        []*Grade               `json:"grade"`
 	Description  string                 `json:"description"`
 	Status       string                 `json:"status"`
+	RejectReason string                 `json:"reject_reason"`
 	LockedBy     string                 `json:"locked_by"`
 	AncestorID   string                 `json:"ancestor_id"`
 	SourceID     string                 `json:"source_id"`
@@ -62,6 +63,9 @@ type MilestoneView struct {
 	GradeIDs           []string `json:"grade_ids,omitempty"`
 	AgeIDs             []string `json:"age_ids,omitempty"`
 	OutcomeAncestorIDs []string `json:"outcome_ancestor_ids,omitempty"`
+	LastEditedBy       string   `json:"last_edited_by"`
+	LastEditedAt       int64    `json:"last_edited_at"`
+	LockedLocation     []string `json:"locked_location"`
 }
 
 func (ms *MilestoneView) ToMilestone(ctx context.Context, op *entity.Operator) (*entity.Milestone, error) {
@@ -80,7 +84,7 @@ func (ms *MilestoneView) ToMilestone(ctx context.Context, op *entity.Operator) (
 		Description:    ms.Description,
 		Type:           ms.Type,
 
-		Status: entity.OutcomeStatus(ms.Status),
+		Status: entity.MilestoneStatus(ms.Status),
 
 		LockedBy:   ms.LockedBy,
 		AncestorID: ms.AncestorID,
@@ -183,10 +187,13 @@ type MilestoneSearchResponse struct {
 }
 
 func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*entity.Milestone) ([]*MilestoneView, error) {
-	var orgIDs, authIDs, prgIDs, sbjIDs, catIDs, sbcIDs, grdIDs, ageIDs []string
+	var orgIDs, usrIDs, prgIDs, sbjIDs, catIDs, sbcIDs, grdIDs, ageIDs []string
 	for i := range milestones {
 		orgIDs = append(orgIDs, milestones[i].OrganizationID)
-		authIDs = append(authIDs, milestones[i].AuthorID)
+		usrIDs = append(usrIDs, milestones[i].AuthorID)
+		if milestones[i].HasLocked() {
+			usrIDs = append(usrIDs, milestones[i].LockedBy)
+		}
 		prgIDs = append(prgIDs, milestones[i].Programs...)
 		sbjIDs = append(sbjIDs, milestones[i].Subjects...)
 		catIDs = append(catIDs, milestones[i].Categories...)
@@ -196,7 +203,7 @@ func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*enti
 
 		for _, outcome := range milestones[i].Outcomes {
 			orgIDs = append(orgIDs, outcome.OrganizationID)
-			authIDs = append(authIDs, outcome.AuthorID)
+			usrIDs = append(usrIDs, outcome.AuthorID)
 			prgIDs = append(prgIDs, outcome.Programs...)
 			sbjIDs = append(sbjIDs, outcome.Subjects...)
 			catIDs = append(catIDs, outcome.Categories...)
@@ -207,7 +214,7 @@ func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*enti
 	}
 	externalNameMap, err := prepareAllNeededName(ctx, op, entity.ExternalOptions{
 		OrgIDs:     orgIDs,
-		UsrIDs:     authIDs,
+		UsrIDs:     usrIDs,
 		ProgIDs:    prgIDs,
 		SubjectIDs: sbjIDs,
 		CatIDs:     catIDs,
@@ -220,7 +227,7 @@ func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*enti
 			log.Err(err),
 			log.Any("op", op),
 			log.Strings("org", orgIDs),
-			log.Strings("author", authIDs),
+			log.Strings("user", usrIDs),
 			log.Strings("program", prgIDs),
 			log.Strings("subject", sbjIDs),
 			log.Strings("category", catIDs),
@@ -249,6 +256,7 @@ func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*enti
 			CreateAt:     milestone.CreateAt,
 			Description:  milestone.Description,
 			Status:       string(milestone.Status),
+			RejectReason: milestone.RejectReason,
 			LockedBy:     milestone.LockedBy,
 			AncestorID:   milestone.AncestorID,
 			SourceID:     milestone.SourceID,
@@ -260,6 +268,17 @@ func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*enti
 		for i, outcome := range milestone.Outcomes {
 			milestoneView.Outcomes[i] = buildOutcomeView(ctx, externalNameMap, outcome)
 		}
+
+		if milestone.HasLocked() {
+			milestoneView.LastEditedBy = externalNameMap.UsrIDMap[milestone.LockedBy]
+			if milestone.EditingMilestone != nil {
+				milestoneView.LastEditedAt = milestone.EditingMilestone.CreateAt
+				milestoneView.LockedLocation = []string{string(milestone.EditingMilestone.Status)}
+			} else {
+				log.Debug(ctx, "FromMilestones: invalid lock state", log.Any("milestone", milestone))
+			}
+		}
+
 		milestoneViews[i] = &milestoneView
 	}
 	return milestoneViews, nil
