@@ -161,6 +161,7 @@ func (o OutcomeService) Do(ctx context.Context, cliContext *cli.Context, mapper 
 		log.Error(ctx, "select outcome failed", log.Err(err))
 		return err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var outcome entity.Outcome
