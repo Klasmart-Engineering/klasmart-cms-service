@@ -70,8 +70,17 @@ func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator)
 		log.Warn(ctx, "ToOutcome: program and subject is required", log.Any("op", op), log.Any("req", req))
 		return nil, &ErrValidFailed{Msg: "shortcode mismatch"}
 	}
-	_, _, _, _, _, _, _, _, err := prepareAllNeededName(ctx, op, []string{op.OrgID}, []string{op.UserID},
-		req.Program, req.Subject, req.Developmental, req.Skills, req.Grade, req.Age)
+
+	_, err := prepareAllNeededName(ctx, op, entity.ExternalOptions{
+		OrgIDs:     []string{op.OrgID},
+		UsrIDs:     []string{op.UserID},
+		ProgIDs:    req.Program,
+		SubjectIDs: req.Subject,
+		CatIDs:     req.Developmental,
+		SubcatIDs:  req.Skills,
+		GradeIDs:   req.Grade,
+		AgeIDs:     req.Age,
+	})
 	if err != nil {
 		log.Error(ctx, "ToOutcome: prepareAllNeededName failed", log.Err(err), log.Any("op", op), log.Any("req", req))
 		return nil, &ErrValidFailed{Msg: "program and subject is required"}
@@ -202,6 +211,9 @@ type OutcomeView struct {
 	UpdatedAt        int64                   `json:"update_at"`
 	Sets             []*OutcomeSetCreateView `json:"sets"`
 	Milestones       []*Milestone            `json:"milestones"`
+	LastEditedBy     string                  `json:"last_edited_by"`
+	LastEditedAt     int64                   `json:"last_edited_at"`
+	LockedLocation   []string                `json:"locked_location"`
 }
 
 type OutcomeSearchResponse struct {
@@ -225,10 +237,13 @@ func NewSearchResponse(ctx context.Context, op *entity.Operator, total int, outc
 
 func FillOutcomeViews(ctx context.Context, operator *entity.Operator, outcomes []*entity.Outcome) ([]*OutcomeView, error) {
 	outcomeViews := make([]*OutcomeView, len(outcomes))
-	var orgIDs, authIDs, prgIDs, sbjIDs, catIDs, sbcIDs, grdIDs, ageIDs []string
+	var orgIDs, userIDs, prgIDs, sbjIDs, catIDs, sbcIDs, grdIDs, ageIDs []string
 	for i := range outcomes {
 		orgIDs = append(orgIDs, outcomes[i].OrganizationID)
-		authIDs = append(authIDs, outcomes[i].AuthorID)
+		userIDs = append(userIDs, outcomes[i].AuthorID)
+		if outcomes[i].HasLocked() {
+			userIDs = append(userIDs, outcomes[i].LockedBy)
+		}
 		prgIDs = append(prgIDs, outcomes[i].Programs...)
 		sbjIDs = append(sbjIDs, outcomes[i].Subjects...)
 		catIDs = append(catIDs, outcomes[i].Categories...)
@@ -236,7 +251,17 @@ func FillOutcomeViews(ctx context.Context, operator *entity.Operator, outcomes [
 		grdIDs = append(grdIDs, outcomes[i].Grades...)
 		ageIDs = append(ageIDs, outcomes[i].Ages...)
 	}
-	orgs, authors, prds, sbjs, cats, sbcs, grds, ages, err := prepareAllNeededName(ctx, operator, orgIDs, authIDs, prgIDs, sbjIDs, catIDs, sbcIDs, grdIDs, ageIDs)
+
+	externalNameMap, err := prepareAllNeededName(ctx, operator, entity.ExternalOptions{
+		OrgIDs:     orgIDs,
+		UsrIDs:     userIDs,
+		ProgIDs:    prgIDs,
+		SubjectIDs: sbjIDs,
+		CatIDs:     catIDs,
+		SubcatIDs:  sbcIDs,
+		GradeIDs:   grdIDs,
+		AgeIDs:     ageIDs,
+	})
 	if err != nil {
 		log.Error(ctx, "fillOutcomeViews: prepareAllNeededName failed",
 			log.Err(err),
@@ -244,7 +269,7 @@ func FillOutcomeViews(ctx context.Context, operator *entity.Operator, outcomes [
 		return nil, err
 	}
 	for i := range outcomes {
-		outcomeViews[i] = buildOutcomeView(orgs, authors, prds, sbjs, cats, sbcs, grds, ages, outcomes[i])
+		outcomeViews[i] = buildOutcomeView(ctx, externalNameMap, outcomes[i])
 	}
 	return outcomeViews, nil
 }
@@ -311,7 +336,7 @@ func getOrganizationName(ctx context.Context, operator *entity.Operator, id stri
 	return names[0]
 }
 
-func buildOutcomeView(org, ath, prd, sbj, cat, sbc, grd, age map[string]string, outcome *entity.Outcome) *OutcomeView {
+func buildOutcomeView(ctx context.Context, externalNameMap entity.ExternalNameMap, outcome *entity.Outcome) *OutcomeView {
 	view := &OutcomeView{
 		OutcomeID:        outcome.ID,
 		OutcomeName:      outcome.Name,
@@ -323,8 +348,8 @@ func buildOutcomeView(org, ath, prd, sbj, cat, sbc, grd, age map[string]string, 
 		LockedBy:         outcome.LockedBy,
 		AuthorID:         outcome.AuthorID,
 		OrganizationID:   outcome.OrganizationID,
-		AuthorName:       ath[outcome.AuthorID],
-		OrganizationName: org[outcome.OrganizationID],
+		AuthorName:       externalNameMap.UsrIDMap[outcome.AuthorID],
+		OrganizationName: externalNameMap.OrgIDMap[outcome.OrganizationID],
 		PublishScope:     outcome.PublishScope,
 		PublishStatus:    string(outcome.PublishStatus),
 		Keywords:         strings.Split(outcome.Keywords, ","),
@@ -337,37 +362,37 @@ func buildOutcomeView(org, ath, prd, sbj, cat, sbc, grd, age map[string]string, 
 	view.Program = make([]Program, len(outcome.Programs))
 	for k, id := range outcome.Programs {
 		view.Program[k].ProgramID = id
-		view.Program[k].ProgramName = prd[id]
+		view.Program[k].ProgramName = externalNameMap.ProgIDMap[id]
 	}
 
 	view.Subject = make([]Subject, len(outcome.Subjects))
 	for k, id := range outcome.Subjects {
 		view.Subject[k].SubjectID = id
-		view.Subject[k].SubjectName = sbj[id]
+		view.Subject[k].SubjectName = externalNameMap.SubjectIDMap[id]
 	}
 
 	view.Developmental = make([]Developmental, len(outcome.Categories))
 	for k, id := range outcome.Categories {
 		view.Developmental[k].DevelopmentalID = id
-		view.Developmental[k].DevelopmentalName = cat[id]
+		view.Developmental[k].DevelopmentalName = externalNameMap.CatIDMap[id]
 	}
 
 	view.Skills = make([]Skill, len(outcome.Subcategories))
 	for k, id := range outcome.Subcategories {
 		view.Skills[k].SkillID = id
-		view.Skills[k].SkillName = sbc[id]
+		view.Skills[k].SkillName = externalNameMap.SubcatIDMap[id]
 	}
 
 	view.Age = make([]Age, len(outcome.Ages))
 	for k, id := range outcome.Ages {
 		view.Age[k].AgeID = id
-		view.Age[k].AgeName = age[id]
+		view.Age[k].AgeName = externalNameMap.AgeIDMap[id]
 	}
 
 	view.Grade = make([]Grade, len(outcome.Grades))
 	for k, id := range outcome.Grades {
 		view.Grade[k].GradeID = id
-		view.Grade[k].GradeName = grd[id]
+		view.Grade[k].GradeName = externalNameMap.GradeIDMap[id]
 	}
 	view.Sets = make([]*OutcomeSetCreateView, len(outcome.Sets))
 	for i := range outcome.Sets {
@@ -384,5 +409,16 @@ func buildOutcomeView(org, ath, prd, sbj, cat, sbc, grd, age map[string]string, 
 			MilestoneName: outcome.Milestones[i].Name,
 		}
 	}
+
+	if outcome.HasLocked() {
+		view.LastEditedBy = externalNameMap.UsrIDMap[outcome.LockedBy]
+		if outcome.EditingOutcome != nil {
+			view.LastEditedAt = outcome.EditingOutcome.CreateAt
+			view.LockedLocation = []string{string(outcome.EditingOutcome.PublishStatus)}
+		} else {
+			log.Debug(ctx, "buildOutcomeView: invalid lock state", log.Any("outcome", outcome))
+		}
+	}
+
 	return view
 }

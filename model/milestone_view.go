@@ -2,12 +2,13 @@ package model
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
 )
 
 type Category struct {
@@ -47,6 +48,7 @@ type MilestoneView struct {
 	Grade        []*Grade               `json:"grade"`
 	Description  string                 `json:"description"`
 	Status       string                 `json:"status"`
+	RejectReason string                 `json:"reject_reason"`
 	LockedBy     string                 `json:"locked_by"`
 	AncestorID   string                 `json:"ancestor_id"`
 	SourceID     string                 `json:"source_id"`
@@ -61,6 +63,9 @@ type MilestoneView struct {
 	GradeIDs           []string `json:"grade_ids,omitempty"`
 	AgeIDs             []string `json:"age_ids,omitempty"`
 	OutcomeAncestorIDs []string `json:"outcome_ancestor_ids,omitempty"`
+	LastEditedBy       string   `json:"last_edited_by"`
+	LastEditedAt       int64    `json:"last_edited_at"`
+	LockedLocation     []string `json:"locked_location"`
 }
 
 func (ms *MilestoneView) ToMilestone(ctx context.Context, op *entity.Operator) (*entity.Milestone, error) {
@@ -79,7 +84,7 @@ func (ms *MilestoneView) ToMilestone(ctx context.Context, op *entity.Operator) (
 		Description:    ms.Description,
 		Type:           ms.Type,
 
-		Status: entity.OutcomeStatus(ms.Status),
+		Status: entity.MilestoneStatus(ms.Status),
 
 		LockedBy:   ms.LockedBy,
 		AncestorID: ms.AncestorID,
@@ -97,8 +102,16 @@ func (ms *MilestoneView) ToMilestone(ctx context.Context, op *entity.Operator) (
 		log.Warn(ctx, "ToMilestone: program and subject is required", log.Any("op", op), log.Any("milestone", ms))
 		return nil, &ErrValidFailed{Msg: "program and subject is required"}
 	}
-	_, _, _, _, _, _, _, _, err := prepareAllNeededName(ctx, op, []string{op.OrgID}, []string{op.UserID},
-		ms.ProgramIDs, ms.SubjectIDs, ms.CategoryIDs, ms.SubcategoryIDs, ms.GradeIDs, ms.AgeIDs)
+	_, err := prepareAllNeededName(ctx, op, entity.ExternalOptions{
+		OrgIDs:     []string{op.OrgID},
+		UsrIDs:     []string{op.UserID},
+		ProgIDs:    ms.ProgramIDs,
+		SubjectIDs: ms.SubjectIDs,
+		CatIDs:     ms.CategoryIDs,
+		SubcatIDs:  ms.SubcategoryIDs,
+		GradeIDs:   ms.GradeIDs,
+		AgeIDs:     ms.AgeIDs,
+	})
 	if err != nil {
 		log.Error(ctx, "ToMilestone: prepareAllNeededName failed",
 			log.Err(err),
@@ -169,15 +182,18 @@ type MilestoneList struct {
 	IDs []string `json:"ids"`
 }
 type MilestoneSearchResponse struct {
-	Total      int              `json:"total"`
 	Milestones []*MilestoneView `json:"milestones"`
+	Total      int              `json:"total"`
 }
 
 func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*entity.Milestone) ([]*MilestoneView, error) {
-	var orgIDs, authIDs, prgIDs, sbjIDs, catIDs, sbcIDs, grdIDs, ageIDs []string
+	var orgIDs, usrIDs, prgIDs, sbjIDs, catIDs, sbcIDs, grdIDs, ageIDs []string
 	for i := range milestones {
 		orgIDs = append(orgIDs, milestones[i].OrganizationID)
-		authIDs = append(authIDs, milestones[i].AuthorID)
+		usrIDs = append(usrIDs, milestones[i].AuthorID)
+		if milestones[i].HasLocked() {
+			usrIDs = append(usrIDs, milestones[i].LockedBy)
+		}
 		prgIDs = append(prgIDs, milestones[i].Programs...)
 		sbjIDs = append(sbjIDs, milestones[i].Subjects...)
 		catIDs = append(catIDs, milestones[i].Categories...)
@@ -187,7 +203,7 @@ func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*enti
 
 		for _, outcome := range milestones[i].Outcomes {
 			orgIDs = append(orgIDs, outcome.OrganizationID)
-			authIDs = append(authIDs, outcome.AuthorID)
+			usrIDs = append(usrIDs, outcome.AuthorID)
 			prgIDs = append(prgIDs, outcome.Programs...)
 			sbjIDs = append(sbjIDs, outcome.Subjects...)
 			catIDs = append(catIDs, outcome.Categories...)
@@ -196,13 +212,22 @@ func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*enti
 			ageIDs = append(ageIDs, outcome.Ages...)
 		}
 	}
-	orgs, authors, prds, sbjs, cats, sbcs, grds, ages, err := prepareAllNeededName(ctx, op, orgIDs, authIDs, prgIDs, sbjIDs, catIDs, sbcIDs, grdIDs, ageIDs)
+	externalNameMap, err := prepareAllNeededName(ctx, op, entity.ExternalOptions{
+		OrgIDs:     orgIDs,
+		UsrIDs:     usrIDs,
+		ProgIDs:    prgIDs,
+		SubjectIDs: sbjIDs,
+		CatIDs:     catIDs,
+		SubcatIDs:  sbcIDs,
+		GradeIDs:   grdIDs,
+		AgeIDs:     ageIDs,
+	})
 	if err != nil {
-		log.Error(ctx, "fromMilestones: OrgAthPrgSjtCtgSubCtgGrdAge failed",
+		log.Error(ctx, "fromMilestones: prepareAllNeededName failed",
 			log.Err(err),
 			log.Any("op", op),
 			log.Strings("org", orgIDs),
-			log.Strings("author", authIDs),
+			log.Strings("user", usrIDs),
 			log.Strings("program", prgIDs),
 			log.Strings("subject", sbjIDs),
 			log.Strings("category", catIDs),
@@ -211,6 +236,7 @@ func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*enti
 			log.Strings("age", ageIDs))
 		return nil, err
 	}
+
 	milestoneViews := make([]*MilestoneView, len(milestones))
 	for i, milestone := range milestones {
 		milestoneView := MilestoneView{
@@ -220,43 +246,55 @@ func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*enti
 			Type:        milestone.Type,
 			Organization: &OrganizationView{
 				OrganizationID:   milestone.OrganizationID,
-				OrganizationName: orgs[milestone.OrganizationID],
+				OrganizationName: externalNameMap.OrgIDMap[milestone.OrganizationID],
 			},
 			Author: &AuthorView{
 				AuthorID:   milestone.AuthorID,
-				AuthorName: authors[milestone.AuthorID],
+				AuthorName: externalNameMap.UsrIDMap[milestone.AuthorID],
 			},
 			OutcomeCount: milestone.LoCounts,
 			CreateAt:     milestone.CreateAt,
 			Description:  milestone.Description,
 			Status:       string(milestone.Status),
+			RejectReason: milestone.RejectReason,
 			LockedBy:     milestone.LockedBy,
 			AncestorID:   milestone.AncestorID,
 			SourceID:     milestone.SourceID,
 			LatestID:     milestone.LatestID,
 		}
-		milestoneView.FillAllKindsOfName(prds, sbjs, cats, sbcs, grds, ages, milestone)
+		milestoneView.FillAllKindsOfName(externalNameMap.ProgIDMap, externalNameMap.SubjectIDMap,
+			externalNameMap.CatIDMap, externalNameMap.SubcatIDMap, externalNameMap.GradeIDMap, externalNameMap.AgeIDMap, milestone)
 		milestoneView.Outcomes = make([]*OutcomeView, len(milestone.Outcomes))
 		for i, outcome := range milestone.Outcomes {
-			milestoneView.Outcomes[i] = buildOutcomeView(orgs, authors, prds, sbjs, cats, sbcs, grds, ages, outcome)
+			milestoneView.Outcomes[i] = buildOutcomeView(ctx, externalNameMap, outcome)
 		}
+
+		if milestone.HasLocked() {
+			milestoneView.LastEditedBy = externalNameMap.UsrIDMap[milestone.LockedBy]
+			if milestone.EditingMilestone != nil {
+				milestoneView.LastEditedAt = milestone.EditingMilestone.CreateAt
+				milestoneView.LockedLocation = []string{string(milestone.EditingMilestone.Status)}
+			} else {
+				log.Debug(ctx, "FromMilestones: invalid lock state", log.Any("milestone", milestone))
+			}
+		}
+
 		milestoneViews[i] = &milestoneView
 	}
 	return milestoneViews, nil
 }
 
-func prepareAllNeededName(ctx context.Context, op *entity.Operator,
-	organizationIDs, authorIDs, programIDs, subjectIDs, categoryIDs, subCategoryIDs, gradeIDs, ageIDs []string) (
-	organizations, authors, programs, subjects, categories, subcategories, grades, ages map[string]string, err error) {
+func prepareAllNeededName(ctx context.Context, op *entity.Operator, externalOptions entity.ExternalOptions) (
+	externalNameMap entity.ExternalNameMap, err error) {
 
-	_organizationIDs := utils.SliceDeduplicationExcludeEmpty(organizationIDs)
-	_authorIDs := utils.SliceDeduplicationExcludeEmpty(authorIDs)
-	_programIDs := utils.SliceDeduplicationExcludeEmpty(programIDs)
-	_subjectIDs := utils.SliceDeduplicationExcludeEmpty(subjectIDs)
-	_categoryIDs := utils.SliceDeduplicationExcludeEmpty(categoryIDs)
-	_subcategoryIDs := utils.SliceDeduplicationExcludeEmpty(subCategoryIDs)
-	_gradeIDs := utils.SliceDeduplicationExcludeEmpty(gradeIDs)
-	_ageIDs := utils.SliceDeduplicationExcludeEmpty(ageIDs)
+	_organizationIDs := utils.SliceDeduplicationExcludeEmpty(externalOptions.OrgIDs)
+	_userIDs := utils.SliceDeduplicationExcludeEmpty(externalOptions.UsrIDs)
+	_programIDs := utils.SliceDeduplicationExcludeEmpty(externalOptions.ProgIDs)
+	_subjectIDs := utils.SliceDeduplicationExcludeEmpty(externalOptions.SubjectIDs)
+	_categoryIDs := utils.SliceDeduplicationExcludeEmpty(externalOptions.CatIDs)
+	_subcategoryIDs := utils.SliceDeduplicationExcludeEmpty(externalOptions.SubcatIDs)
+	_gradeIDs := utils.SliceDeduplicationExcludeEmpty(externalOptions.GradeIDs)
+	_ageIDs := utils.SliceDeduplicationExcludeEmpty(externalOptions.AgeIDs)
 
 	ctxNew, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -268,31 +306,33 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator,
 		go func(ctx context.Context, cancel context.CancelFunc) {
 			defer wg.Done()
 			var ero error
-			organizations, ero = external.GetOrganizationServiceProvider().BatchGetNameMap(ctx, op, _organizationIDs)
+			organizations, ero := external.GetOrganizationServiceProvider().BatchGetNameMap(ctx, op, _organizationIDs)
 			if ero != nil {
 				log.Error(ctx, "prepareAllNeededName: GetOrganizationServiceProvider failed", log.Err(ero), log.Strings("org", _organizationIDs))
 				err = ero
 				cancel()
 			}
+			externalNameMap.OrgIDMap = organizations
 		}(ctxNew, cancel)
 	} else {
-		organizations = map[string]string{}
+		externalNameMap.OrgIDMap = map[string]string{}
 	}
 
-	if len(_authorIDs) > 0 {
+	if len(_userIDs) > 0 {
 		wg.Add(1)
 		go func(ctx context.Context, cancel context.CancelFunc) {
 			defer wg.Done()
 			var ero error
-			authors, ero = external.GetUserServiceProvider().BatchGetNameMap(ctx, op, _authorIDs)
+			users, ero := external.GetUserServiceProvider().BatchGetNameMap(ctx, op, _userIDs)
 			if ero != nil {
-				log.Error(ctx, "prepareAllNeededName: GetUserServiceProvider failed", log.Err(ero), log.Strings("author", _authorIDs))
+				log.Error(ctx, "prepareAllNeededName: GetUserServiceProvider failed", log.Err(ero), log.Strings("user", _userIDs))
 				err = ero
 				cancel()
 			}
+			externalNameMap.UsrIDMap = users
 		}(ctxNew, cancel)
 	} else {
-		authors = map[string]string{}
+		externalNameMap.UsrIDMap = map[string]string{}
 	}
 
 	if len(_programIDs) > 0 {
@@ -300,15 +340,16 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator,
 		go func(ctx context.Context, cancel context.CancelFunc) {
 			defer wg.Done()
 			var ero error
-			programs, ero = external.GetProgramServiceProvider().BatchGetNameMap(ctx, op, _programIDs)
+			programs, ero := external.GetProgramServiceProvider().BatchGetNameMap(ctx, op, _programIDs)
 			if ero != nil {
 				log.Error(ctx, "prepareAllNeededName: GetProgramServiceProvider failed", log.Err(ero), log.Strings("program", _programIDs))
 				err = ero
 				cancel()
 			}
+			externalNameMap.ProgIDMap = programs
 		}(ctxNew, cancel)
 	} else {
-		programs = map[string]string{}
+		externalNameMap.ProgIDMap = map[string]string{}
 	}
 
 	if len(_subjectIDs) > 0 {
@@ -316,15 +357,16 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator,
 		go func(ctx context.Context, cancel context.CancelFunc) {
 			defer wg.Done()
 			var ero error
-			subjects, ero = external.GetSubjectServiceProvider().BatchGetNameMap(ctx, op, _subjectIDs)
+			subjects, ero := external.GetSubjectServiceProvider().BatchGetNameMap(ctx, op, _subjectIDs)
 			if ero != nil {
 				log.Error(ctx, "prepareAllNeededName: GetSubjectServiceProvider failed", log.Err(ero), log.Strings("subject", _subjectIDs))
 				err = ero
 				cancel()
 			}
+			externalNameMap.SubjectIDMap = subjects
 		}(ctxNew, cancel)
 	} else {
-		subjects = map[string]string{}
+		externalNameMap.SubjectIDMap = map[string]string{}
 	}
 
 	if len(_categoryIDs) > 0 {
@@ -332,15 +374,16 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator,
 		go func(ctx context.Context, cancel context.CancelFunc) {
 			defer wg.Done()
 			var ero error
-			categories, ero = external.GetCategoryServiceProvider().BatchGetNameMap(ctx, op, _categoryIDs)
+			categories, ero := external.GetCategoryServiceProvider().BatchGetNameMap(ctx, op, _categoryIDs)
 			if ero != nil {
 				log.Error(ctx, "prepareAllNeededName: GetCategoryServiceProvider failed", log.Err(ero), log.Strings("category", _categoryIDs))
 				err = ero
 				cancel()
 			}
+			externalNameMap.CatIDMap = categories
 		}(ctxNew, cancel)
 	} else {
-		categories = map[string]string{}
+		externalNameMap.CatIDMap = map[string]string{}
 	}
 
 	if len(_subcategoryIDs) > 0 {
@@ -348,15 +391,16 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator,
 		go func(ctx context.Context, cancel context.CancelFunc) {
 			defer wg.Done()
 			var ero error
-			subcategories, ero = external.GetSubCategoryServiceProvider().BatchGetNameMap(ctx, op, _subcategoryIDs)
+			subcategories, ero := external.GetSubCategoryServiceProvider().BatchGetNameMap(ctx, op, _subcategoryIDs)
 			if ero != nil {
 				log.Error(ctx, "prepareAllNeededName: GetSubCategoryServiceProvider failed", log.Err(ero), log.Strings("subcategory", _subcategoryIDs))
 				err = ero
 				cancel()
 			}
+			externalNameMap.SubcatIDMap = subcategories
 		}(ctxNew, cancel)
 	} else {
-		subcategories = map[string]string{}
+		externalNameMap.SubcatIDMap = map[string]string{}
 	}
 
 	if len(_gradeIDs) > 0 {
@@ -364,16 +408,17 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator,
 		go func(ctx context.Context, cancel context.CancelFunc) {
 			defer wg.Done()
 			var ero error
-			grades, ero = external.GetGradeServiceProvider().BatchGetNameMap(ctx, op, _gradeIDs)
+			grades, ero := external.GetGradeServiceProvider().BatchGetNameMap(ctx, op, _gradeIDs)
 			if ero != nil {
 				log.Error(ctx, "prepareAllNeededName: GetGradeServiceProvider failed", log.Err(ero), log.Strings("grade", _gradeIDs))
 				err = ero
 				cancel()
 			}
+			externalNameMap.GradeIDMap = grades
 		}(ctxNew, cancel)
 
 	} else {
-		grades = map[string]string{}
+		externalNameMap.GradeIDMap = map[string]string{}
 	}
 
 	if len(_ageIDs) > 0 {
@@ -381,17 +426,27 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator,
 		go func(ctx context.Context, cancel context.CancelFunc) {
 			defer wg.Done()
 			var ero error
-			ages, ero = external.GetAgeServiceProvider().BatchGetNameMap(ctx, op, _ageIDs)
+			ages, ero := external.GetAgeServiceProvider().BatchGetNameMap(ctx, op, _ageIDs)
 			if ero != nil {
 				log.Error(ctx, "prepareAllNeededName: GetAgeServiceProvider failed", log.Err(ero), log.Strings("age", _ageIDs))
 				err = ero
 				cancel()
 			}
+			externalNameMap.AgeIDMap = ages
 		}(ctxNew, cancel)
 	} else {
-		ages = map[string]string{}
+		externalNameMap.AgeIDMap = map[string]string{}
 	}
 
 	wg.Wait()
 	return
+}
+
+type MilestoneRejectReq struct {
+	RejectReason string `json:"reject_reason"`
+}
+
+type MilestoneBulkRejectRequest struct {
+	RejectReason string   `json:"reject_reason"`
+	MilestoneIDs []string `json:"milestone_ids"`
 }

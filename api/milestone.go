@@ -1,13 +1,15 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 // @ID createMilestone
@@ -51,7 +53,7 @@ func (s *Server) createMilestone(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	err = model.GetMilestoneModel().Create(ctx, op, milestone, data.OutcomeAncestorIDs, data.WithPublish)
+	err = model.GetMilestoneModel().Create(ctx, op, milestone, utils.SliceDeduplication(data.OutcomeAncestorIDs))
 	data.MilestoneID = milestone.ID
 	switch err {
 	case nil:
@@ -163,7 +165,7 @@ func (s *Server) updateMilestone(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
-	err = model.GetMilestoneModel().Update(ctx, op, perms, milestone, data.OutcomeAncestorIDs, data.WithPublish)
+	err = model.GetMilestoneModel().Update(ctx, op, perms, milestone, utils.SliceDeduplication(data.OutcomeAncestorIDs))
 	switch err {
 	case constant.ErrOperateNotAllowed:
 		log.Warn(ctx, "updateMilestone: Update failed", log.Any("op", op), log.Any("req", data))
@@ -228,7 +230,11 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 		return
 	}
 	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
-		external.DeleteUnpublishedMilestone, external.DeletePublishedMilestone,
+		external.DeleteUnpublishedMilestone,
+		external.DeletePublishedMilestone,
+		external.DeleteMyUnpublishedMilestone,
+		external.DeleteOrgPendingMilestone,
+		external.DeleteMyPendingMilestone,
 	})
 	if err != nil {
 		log.Error(ctx, "deleteMilestone: HasOrganizationPermission failed", log.Any("op", op), log.Any("data", data), log.Err(err))
@@ -282,7 +288,7 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 // @Param name query string false "search by name"
 // @Param description query string false "search by description"
 // @Param shortcode query string false "search by shortcode"
-// @Param status query string false "search by publish_status" Enums(draft, published)
+// @Param status query string false "search by publish_status" Enums(draft, pending, published, rejected)
 // @Param author_id query string false "search by author"
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
@@ -305,10 +311,6 @@ func (s *Server) searchMilestone(c *gin.Context) {
 
 	if condition.OrganizationID == "" {
 		condition.OrganizationID = op.OrgID
-	}
-
-	if condition.Status != entity.OutcomeStatusPublished && condition.AuthorID == "" {
-		condition.AuthorID = op.UserID
 	}
 
 	var hasPerm bool
@@ -343,6 +345,223 @@ func (s *Server) searchMilestone(c *gin.Context) {
 		})
 	default:
 		log.Error(ctx, "searchMilestone: Search failed", log.Any("op", op), log.Any("req", condition))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @ID searchPrivateMilestone
+// @Summary search private milestone
+// @Tags milestone
+// @Description search private milestone
+// @Accept json
+// @Produce json
+// @Param search_key query string false "search by search_key"
+// @Param name query string false "search by name"
+// @Param description query string false "search by description"
+// @Param shortcode query string false "search by shortcode"
+// @Param status query string false "search by publish_status" Enums(draft, pending, published, rejected)
+// @Param author_id query string false "search by author"
+// @Param page query integer false "page"
+// @Param page_size query integer false "page size"
+// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
+// @Success 200 {object} model.MilestoneSearchResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /private_milestones [get]
+// search private milestone as an author user
+func (s *Server) searchPrivateMilestone(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var condition entity.MilestoneCondition
+	err := c.ShouldBindQuery(&condition)
+	if err != nil {
+		log.Warn(ctx, "searchPrivateMilestone: ShouldBind failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	if condition.OrganizationID == "" {
+		condition.OrganizationID = op.OrgID
+	}
+
+	if condition.Status == "" {
+		condition.Status = string(entity.MilestoneStatusPublished)
+	}
+	// only query private milestone
+	condition.AuthorID = op.UserID
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
+		external.ViewMyUnpublishedMilestone,
+		external.ViewMyPendingMilestone,
+	})
+	if err != nil {
+		log.Error(ctx, "searchPrivateMilestone: HasOrganizationPermissions failed",
+			log.Any("op", op),
+			log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+
+	// check search private permissions
+	allowSearchPrivate := false
+	if (condition.Status == string(entity.MilestoneStatusDraft) ||
+		condition.Status == string(entity.MilestoneStatusRejected) ||
+		condition.Status == string(entity.MilestoneStatusPending)) &&
+		hasPerm[external.ViewMyUnpublishedMilestone] {
+		allowSearchPrivate = true
+	}
+
+	if condition.Status == string(entity.MilestoneStatusPending) && hasPerm[external.ViewMyPendingMilestone] {
+		allowSearchPrivate = true
+	}
+
+	if !allowSearchPrivate {
+		log.Warn(ctx, "searchPrivateMilestone: no permission",
+			log.Any("op", op),
+			log.Any("condition", condition),
+			log.Any("hasPerm", hasPerm))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
+
+	total, milestones, err := model.GetMilestoneModel().Search(ctx, op, &condition)
+	switch err {
+	case model.ErrInvalidResourceID:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrResourceNotFound:
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrRequireContentName:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrRequirePublishScope:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case constant.ErrOperateNotAllowed:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case entity.ErrInvalidContentType:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case nil:
+		views, err := model.FromMilestones(ctx, op, milestones)
+		if err != nil {
+			log.Error(ctx, "searchPrivateMilestone: search failed",
+				log.Any("op", op),
+				log.Any("req", condition))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+		c.JSON(http.StatusOK, model.MilestoneSearchResponse{
+			Total:      total,
+			Milestones: views,
+		})
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @ID searchPendingMilestone
+// @Summary search pending milestone
+// @Tags milestone
+// @Description search pending milestone
+// @Accept json
+// @Produce json
+// @Param search_key query string false "search by search_key"
+// @Param name query string false "search by name"
+// @Param description query string false "search by description"
+// @Param shortcode query string false "search by shortcode"
+// @Param status query string false "search by publish_status" Enums(draft, pending, published, rejected)
+// @Param author_id query string false "search by author"
+// @Param page query integer false "page"
+// @Param page_size query integer false "page size"
+// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
+// @Success 200 {object} model.MilestoneSearchResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /pending_milestones [get]
+// search pending milestone as an admin user
+func (s *Server) searchPendingMilestone(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var condition entity.MilestoneCondition
+	err := c.ShouldBindQuery(&condition)
+	if err != nil {
+		log.Warn(ctx, "searchPendingMilestone: ShouldBind failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	if condition.OrganizationID == "" {
+		condition.OrganizationID = op.OrgID
+	}
+
+	// only query pending milestone
+	condition.Status = string(entity.MilestoneStatusPending)
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
+		external.ViewPendingMilestone,
+		external.ViewMyPendingMilestone})
+	if err != nil {
+		log.Error(ctx, "searchPendingMilestone: HasOrganizationPermissions failed",
+			log.Any("op", op),
+			log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+
+	// check search pending permissions
+	allowSearchPending := false
+	if condition.AuthorID == op.UserID && hasPerm[external.ViewMyPendingMilestone] {
+		allowSearchPending = true
+	}
+
+	if hasPerm[external.ViewPendingMilestone] {
+		allowSearchPending = true
+	}
+
+	if !allowSearchPending {
+		log.Warn(ctx, "searchPendingMilestone: no permission",
+			log.Any("op", op),
+			log.Any("condition", condition),
+			log.Any("hasPerm", hasPerm))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
+
+	total, milestones, err := model.GetMilestoneModel().Search(ctx, op, &condition)
+	switch err {
+	case model.ErrBadRequest:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidResourceID:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrResourceNotFound:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrRequireContentName:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrRequirePublishScope:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrInvalidContentType:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case constant.ErrOperateNotAllowed:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case nil:
+		views, err := model.FromMilestones(ctx, op, milestones)
+		if err != nil {
+			log.Error(ctx, "searchPendingMilestone: search failed",
+				log.Any("op", op),
+				log.Any("req", condition))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+		c.JSON(http.StatusOK, model.MilestoneSearchResponse{
+			Total:      total,
+			Milestones: views,
+		})
+	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
@@ -415,60 +634,192 @@ func (s *Server) occupyMilestone(c *gin.Context) {
 	}
 }
 
-// @ID publishMilestone
-// @Summary publish milestone
+// @ID publishMilestonesBulk
+// @Summary publish bulk milestone
 // @Tags milestone
-// @Description publish milestone
+// @Description submit publish milestones
 // @Accept json
 // @Produce json
-// @Param milestones body model.MilestoneList true "publish milestone"
+// @Param id_list body model.MilestoneList true "milestone id list"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
-// @Failure 409 {object} ConflictResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /milestones/publish [post]
-func (s *Server) publishMilestone(c *gin.Context) {
+// @Router /bulk_publish/milestones [put]
+func (s *Server) bulkPublishMilestone(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-
 	var data model.MilestoneList
 	err := c.ShouldBindJSON(&data)
-	if err != nil {
-		log.Warn(ctx, "publishMilestone: ShouldBindJSON failed", log.Any("op", op))
+	if err != nil || len(data.IDs) == 0 {
+		log.Warn(ctx, "bulkPublishMilestone: ShouldBind failed", log.Any("req", data), log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.CreateMilestone)
 	if err != nil {
-		log.Error(ctx, "publishMilestone: HasOrganizationPermission failed", log.Strings("milestone", data.IDs), log.Err(err), log.Any("op", op))
+		log.Warn(ctx, "bulkPublishMilestone: HasOrganizationPermission failed",
+			log.Any("op", op),
+			log.Any("permissionName", external.CreateMilestone),
+			log.Err(err))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 	if !hasPerm {
-		log.Warn(ctx, "publishMilestone: HasOrganizationPermission failed", log.Any("op", op), log.String("perm", string(external.CreateMilestone)))
+		log.Warn(ctx, "bulkPublishMilestone: no permission",
+			log.Any("op", op),
+			log.Any("permissionName", external.CreateMilestone))
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
 
-	err = model.GetMilestoneModel().Publish(ctx, op, data.IDs)
-
+	err = model.GetMilestoneModel().BulkPublish(ctx, op, utils.SliceDeduplication(data.IDs))
 	switch err {
 	case model.ErrNoAuth:
-		log.Warn(ctx, "publishMilestone: Publish failed", log.Any("op", op), log.Strings("req", data.IDs))
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case model.ErrInvalidResourceID:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrRequireContentName:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrRequirePublishScope:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrInvalidContentType:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
-		log.Warn(ctx, "publishMilestone: Publish failed", log.Any("op", op), log.Strings("req", data.IDs))
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
-	case model.ErrInvalidContentStatusToPublish:
-		log.Warn(ctx, "publishMilestone: Publish failed", log.Any("op", op), log.Strings("req", data.IDs))
-		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		log.Error(ctx, "publishMilestone: Publish failed", log.Any("op", op), log.Strings("req", data.IDs))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @ID bulkApproveMilestone
+// @Summary bulk approve milestone
+// @Tags milestone
+// @Description bulk approve milestone
+// @Accept json
+// @Produce json
+// @Param id_list body model.MilestoneList true "milestone id list"
+// @Success 200 {string} string "ok"
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /bulk_approve/milestones [put]
+func (s *Server) bulkApproveMilestone(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var data model.MilestoneList
+	err := c.ShouldBindJSON(&data)
+	if err != nil || len(data.IDs) == 0 {
+		log.Warn(ctx, "bulkApproveMilestone: ShouldBind failed", log.Any("req", data), log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ApprovePendingMilestone)
+	if err != nil {
+		log.Error(ctx, "bulkApproveMilestone: HasOrganizationPermission failed", log.Strings("ids", data.IDs), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "bulkApproveMilestone: no permission",
+			log.Any("op", op), log.Strings("ids", data.IDs),
+			log.String("perm", string(external.ApprovePendingMilestone)))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
+	err = model.GetMilestoneModel().BulkApprove(ctx, op, utils.SliceDeduplication(data.IDs))
+	switch err {
+	case model.ErrNoAuth:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrRequireContentName:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrInvalidContentType:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrResourceNotFound:
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @ID bulkRejectMilestone
+// @Summary bulk reject milestone
+// @Tags milestone
+// @Description bulk reject milestone
+// @Accept json
+// @Produce json
+// @Param bulk_reject_list body model.MilestoneBulkRejectRequest true "milestone id list"
+// @Success 200 {string} string "ok"
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /bulk_reject/milestones [put]
+func (s *Server) bulkRejectMilestone(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var data model.MilestoneBulkRejectRequest
+	err := c.ShouldBindJSON(&data)
+	if err != nil || len(data.MilestoneIDs) == 0 {
+		log.Warn(ctx, "bulkRejectMilestone: ShouldBind failed", log.Any("req", data), log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.RejectPendingMilestone)
+	if err != nil {
+		log.Error(ctx, "bulkRejectMilestone: HasOrganizationPermission failed",
+			log.Strings("ids", data.MilestoneIDs),
+			log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "bulkRejectMilestone: no permission",
+			log.Any("op", op), log.Strings("ids", data.MilestoneIDs),
+			log.String("perm", string(external.RejectPendingMilestone)))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
+	err = model.GetMilestoneModel().BulkReject(ctx, op, utils.SliceDeduplication(data.MilestoneIDs), data.RejectReason)
+	switch err {
+	case model.ErrNoAuth:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrRequireContentName:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrRequirePublishScope:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrInvalidContentType:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrResourceNotFound:
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }

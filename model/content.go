@@ -280,8 +280,16 @@ func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateCont
 		return ErrInvalidSelectForm
 	}
 
-	_, _, _, _, _, _, _, _, err = prepareAllNeededName(ctx, op, []string{op.OrgID}, []string{op.UserID},
-		[]string{c.Program}, c.Subject, c.Category, c.SubCategory, c.Grade, c.Age)
+	_, err = prepareAllNeededName(ctx, op, entity.ExternalOptions{
+		OrgIDs:     []string{op.OrgID},
+		UsrIDs:     []string{op.UserID},
+		ProgIDs:    []string{c.Program},
+		SubjectIDs: c.Subject,
+		CatIDs:     c.Category,
+		SubcatIDs:  c.SubCategory,
+		GradeIDs:   c.Grade,
+		AgeIDs:     c.Age,
+	})
 	if err != nil {
 		log.Error(ctx, "checkContentInfo: prepareAllNeededName failed", log.Err(err), log.Any("op", op), log.Any("req", c))
 		return err
