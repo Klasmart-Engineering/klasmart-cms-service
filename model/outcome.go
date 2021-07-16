@@ -358,17 +358,6 @@ func (ocm OutcomeModel) Update(ctx context.Context, operator *entity.Operator, o
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	exists, err := ocm.IsShortcodeCached(ctx, operator, outcome.Shortcode)
-	if err != nil {
-		log.Error(ctx, "Update: IsCached failed",
-			log.Err(err),
-			log.Any("op", operator),
-			log.Any("outcome", outcome))
-		return err
-	}
-	if exists {
-		return constant.ErrConflict
-	}
 	err = dbo.GetTrans(ctx, func(cxt context.Context, tx *dbo.DBContext) error {
 		data, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcome.ID)
 		if err == dbo.ErrRecordNotFound {
