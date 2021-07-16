@@ -512,7 +512,6 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 }
 
 func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error) {
-	var milestone *entity.Milestone
 	var newVersion *entity.Milestone
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		milestone, err := da.GetMilestoneDA().GetByID(ctx, tx, milestoneID)
@@ -631,7 +630,7 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 		}
 		return nil
 	})
-	return milestone, err
+	return newVersion, err
 }
 
 // Deprecated: not implement approve process

@@ -1,11 +1,11 @@
 package entity
 
 const (
-	MilestoneStatusDraft     = "draft"
-	MilestoneStatusPending   = "pending"
-	MilestoneStatusPublished = "published"
-	MilestoneStatusRejected  = "rejected"
-	MilestoneStatusHidden    = "hidden"
+	MilestoneStatusDraft     MilestoneStatus = "draft"
+	MilestoneStatusPending   MilestoneStatus = "pending"
+	MilestoneStatusPublished MilestoneStatus = "published"
+	MilestoneStatusRejected  MilestoneStatus = "rejected"
+	MilestoneStatusHidden    MilestoneStatus = "hidden"
 )
 
 type MilestoneStatus string
