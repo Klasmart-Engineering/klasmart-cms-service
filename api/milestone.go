@@ -382,7 +382,7 @@ func (s *Server) searchPrivateMilestone(c *gin.Context) {
 	}
 
 	if condition.Status == "" {
-		condition.Status = entity.MilestoneStatusPublished
+		condition.Status = string(entity.MilestoneStatusPublished)
 	}
 	// only query private milestone
 	condition.AuthorID = op.UserID
@@ -399,15 +399,15 @@ func (s *Server) searchPrivateMilestone(c *gin.Context) {
 	}
 
 	// check search private permissions
-	var allowSearchPrivate = true
-	if (condition.Status == entity.MilestoneStatusDraft ||
-		condition.Status == entity.MilestoneStatusRejected ||
-		condition.Status == entity.MilestoneStatusPending) &&
+	allowSearchPrivate := false
+	if (condition.Status == string(entity.MilestoneStatusDraft) ||
+		condition.Status == string(entity.MilestoneStatusRejected) ||
+		condition.Status == string(entity.MilestoneStatusPending)) &&
 		hasPerm[external.ViewMyUnpublishedMilestone] {
 		allowSearchPrivate = true
 	}
 
-	if condition.Status == entity.MilestoneStatusPending && hasPerm[external.ViewMyPendingMilestone] {
+	if condition.Status == string(entity.MilestoneStatusPending) && hasPerm[external.ViewMyPendingMilestone] {
 		allowSearchPrivate = true
 	}
 
@@ -493,7 +493,7 @@ func (s *Server) searchPendingMilestone(c *gin.Context) {
 	}
 
 	// only query pending milestone
-	condition.Status = entity.MilestoneStatusPending
+	condition.Status = string(entity.MilestoneStatusPending)
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
 		external.ViewPendingMilestone,
 		external.ViewMyPendingMilestone})
@@ -506,7 +506,7 @@ func (s *Server) searchPendingMilestone(c *gin.Context) {
 	}
 
 	// check search pending permissions
-	var allowSearchPending bool
+	allowSearchPending := false
 	if condition.AuthorID == op.UserID && hasPerm[external.ViewMyPendingMilestone] {
 		allowSearchPending = true
 	}
