@@ -51,8 +51,8 @@ func (m MilestoneSQLDA) Update(ctx context.Context, tx *dbo.DBContext, milestone
 }
 
 func (m MilestoneSQLDA) UpdateLatest(ctx context.Context, tx *dbo.DBContext, ancestorID, latestID string) error {
-	sql := "UPDATE ? SET latest_id = ? WHERE ancestor_id = ? AND delete_at = 0"
-	err := tx.Exec(sql, entity.Milestone{}.TableName(), latestID, ancestorID).Error
+	sql := fmt.Sprintf("UPDATE %s SET latest_id = ? WHERE ancestor_id = ? AND delete_at = 0", entity.Milestone{}.TableName())
+	err := tx.Exec(sql, latestID, ancestorID).Error
 	if err != nil {
 		log.Error(ctx, "UpdateLatest failed",
 			log.Err(err),

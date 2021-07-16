@@ -610,6 +610,8 @@ func (s *Server) occupyMilestone(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgUnLockedMilestone))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case constant.ErrInternalServer:
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, model.MilestoneView{MilestoneID: milestone.ID})
 	default:
@@ -629,7 +631,10 @@ func (s *Server) occupyMilestone(c *gin.Context) {
 			c.JSON(http.StatusConflict, LD(AssessErrorMsgLocked, user))
 			return
 		}
-		log.Error(ctx, "occupyMilestone: Occupy failed", log.Any("op", op), log.String("req", milestoneID))
+		log.Error(ctx, "occupyMilestone: Occupy failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.String("req", milestoneID))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
