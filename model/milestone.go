@@ -337,6 +337,13 @@ func (m MilestoneModel) Delete(ctx context.Context, op *entity.Operator, perms m
 		}
 
 		for _, ms := range milestones {
+			if ms.HasLocked() {
+				log.Error(ctx, "Delete: invalid lock status",
+					log.Err(err),
+					log.Any("milestone", ms))
+				return NewErrContentAlreadyLocked(ctx, ms.LockedBy, op)
+			}
+
 			if !m.allowDeleteMilestone(ctx, op, perms, ms) {
 				log.Warn(ctx, "Delete: no permission",
 					log.Any("op", op),
@@ -1339,6 +1346,7 @@ func (m *MilestoneModel) copy(op *entity.Operator, ms *entity.Milestone) (*entit
 func (m *MilestoneModel) updateMilestone(old *entity.Milestone, new *entity.Milestone) *entity.Milestone {
 	milestone := *old
 	milestone.Name = new.Name
+	milestone.Shortcode = new.Shortcode
 	milestone.Description = new.Description
 	milestone.Programs = new.Programs
 	milestone.Subjects = new.Subjects
