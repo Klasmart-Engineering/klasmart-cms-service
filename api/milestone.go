@@ -230,7 +230,11 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 		return
 	}
 	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
-		external.DeleteUnpublishedMilestone, external.DeletePublishedMilestone,
+		external.DeleteUnpublishedMilestone,
+		external.DeletePublishedMilestone,
+		external.DeleteMyUnpublishedMilestone,
+		external.DeleteOrgPendingMilestone,
+		external.DeleteMyPendingMilestone,
 	})
 	if err != nil {
 		log.Error(ctx, "deleteMilestone: HasOrganizationPermission failed", log.Any("op", op), log.Any("data", data), log.Err(err))
