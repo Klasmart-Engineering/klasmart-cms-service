@@ -211,9 +211,9 @@ type OutcomeView struct {
 	UpdatedAt        int64                   `json:"update_at"`
 	Sets             []*OutcomeSetCreateView `json:"sets"`
 	Milestones       []*Milestone            `json:"milestones"`
-	LastEditedBy     string                  `gorm:"-" json:"last_edited_by"`
-	LastEditedAt     int64                   `gorm:"-" json:"last_edited_at"`
-	LockedLocation   []entity.OutcomeStatus  `gorm:"-" json:"locked_location"`
+	LastEditedBy     string                  `json:"last_edited_by"`
+	LastEditedAt     int64                   `json:"last_edited_at"`
+	LockedLocation   []string                `json:"locked_location"`
 }
 
 type OutcomeSearchResponse struct {
@@ -414,9 +414,9 @@ func buildOutcomeView(ctx context.Context, externalNameMap entity.ExternalNameMa
 		view.LastEditedBy = externalNameMap.UsrIDMap[outcome.LockedBy]
 		if outcome.EditingOutcome != nil {
 			view.LastEditedAt = outcome.EditingOutcome.CreateAt
-			view.LockedLocation = []entity.OutcomeStatus{outcome.EditingOutcome.PublishStatus}
+			view.LockedLocation = []string{string(outcome.EditingOutcome.PublishStatus)}
 		} else {
-			log.Debug(ctx, "getOrganizationName: invalid lock state", log.Any("outcome", outcome))
+			log.Debug(ctx, "buildOutcomeView: invalid lock state", log.Any("outcome", outcome))
 		}
 	}
 

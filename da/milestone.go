@@ -2,9 +2,10 @@ package da
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"sync"
 )
 
 type IMilestoneDA interface {
@@ -12,6 +13,7 @@ type IMilestoneDA interface {
 	Update(ctx context.Context, tx *dbo.DBContext, milestone *entity.Milestone) error
 	Search(ctx context.Context, tx *dbo.DBContext, condition *MilestoneCondition) (int, []*entity.Milestone, error)
 	GetByID(ctx context.Context, tx *dbo.DBContext, ID string) (*entity.Milestone, error)
+	UpdateLatest(ctx context.Context, tx *dbo.DBContext, ancestorID, latestID string) error
 
 	BatchPublish(ctx context.Context, tx *dbo.DBContext, publishIDs []string) error
 	BatchHide(ctx context.Context, tx *dbo.DBContext, hideIDs []string) error

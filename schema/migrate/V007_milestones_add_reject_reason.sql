@@ -1,0 +1,1 @@
+ALTER TABLE milestones ADD `reject_reason` VARCHAR ( 255 ) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'reject reason';
