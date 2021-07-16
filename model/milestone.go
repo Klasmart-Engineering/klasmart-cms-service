@@ -467,7 +467,10 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 			}
 
 			for _, v := range lockedChildren {
-				lockedChildrenMap[v.SourceID] = v
+				// ancestor's source_id is itself
+				if !v.IsAncestor() {
+					lockedChildrenMap[v.SourceID] = v
+				}
 			}
 		}
 
@@ -1325,11 +1328,11 @@ func (m *MilestoneModel) copy(op *entity.Operator, ms *entity.Milestone) (*entit
 
 		AncestorID: ms.AncestorID,
 		SourceID:   ms.ID,
+		LatestID:   ms.LatestID,
 		CreateAt:   now,
 		UpdateAt:   now,
 	}
 
-	milestone.LatestID = milestone.ID
 	return milestone, nil
 }
 
