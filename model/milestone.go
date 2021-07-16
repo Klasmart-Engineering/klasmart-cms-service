@@ -1171,20 +1171,24 @@ func (m MilestoneModel) getParentIDs(ctx context.Context, milestones []*entity.M
 func (m MilestoneModel) getBySourceID(ctx context.Context, tx *dbo.DBContext, sourceID string) (*entity.Milestone, error) {
 	_, res, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
 		SourceID: sql.NullString{String: sourceID, Valid: true},
-		Status:   sql.NullString{String: entity.OutcomeStatusDraft, Valid: true},
 	})
 	if err != nil {
 		log.Error(ctx, "getBySourceID: failed",
 			log.String("source_id", sourceID))
 		return nil, err
 	}
-	if len(res) != 1 {
-		log.Debug(ctx, "getBySourceID: error",
-			log.String("source_id", sourceID),
-			log.Any("milestones", res))
-		return nil, constant.ErrInternalServer
+
+	// TODO: optimisation logic
+	for _, v := range res {
+		if v.SourceID != v.ID {
+			return v, nil
+		}
 	}
-	return res[0], nil
+
+	log.Debug(ctx, "getBySourceID: error",
+		log.String("source_id", sourceID),
+		log.Any("milestones", res))
+	return nil, constant.ErrInternalServer
 }
 
 func (m MilestoneModel) canPublish(ctx context.Context, milestones []*entity.Milestone) (publishIDs, hideIDs []string, ancestorLatest map[string]string, err error) {
