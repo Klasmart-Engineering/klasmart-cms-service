@@ -3,6 +3,7 @@ package mapping
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"strings"
 
 	"github.com/urfave/cli/v2"
@@ -173,16 +174,32 @@ type ContentService struct {
 }
 
 func (c *ContentService) Do(ctx context.Context, cliContext *cli.Context, mapper Mapper) error {
-	contentList, propertiesMap, err := c.fetchContentData(ctx)
+
+	tx := dbo.MustGetDB(ctx)
+	querySql := fmt.Sprintf("select id, program, subject, developmental, skills, age, grade from %s", entity.Content{}.TableName())
+	rows, err := tx.Raw(querySql).Rows()
 	if err != nil {
+		log.Error(ctx, "select contents failed", log.Err(err))
 		return err
 	}
+	defer rows.Close()
 
-	for i := range contentList {
-		err := c.handleContent(ctx, mapper, contentList[i], propertiesMap[contentList[i].ID])
+	for rows.Next() {
+		var content ContentObject
+		err = rows.Scan(&content.ID, &content.Program, &content.Subject, &content.Category, &content.SubCategory, &content.Age, &content.Grade)
 		if err != nil {
-			fmt.Printf("Handle content %v failed\n", contentList[i].ID)
-			continue
+			log.Error(ctx, "scan content failed", log.Err(err))
+			return err
+		}
+		properties, err := da.GetContentPropertyDA().BatchGetByContentIDList(ctx, dbo.MustGetDB(ctx), []string{content.ID})
+		if err != nil {
+			log.Error(ctx, "get properties failed", log.Any("content", content), log.Err(err))
+			return err
+		}
+		err = c.handleContent(ctx, mapper, &content, properties)
+		if err != nil {
+			log.Error(ctx, "handle failed", log.Any("content", content), log.Any("properties", properties), log.Err(err))
+			return err
 		}
 	}
 
@@ -300,26 +317,4 @@ func (c *ContentService) doPropertyMapping(ctx context.Context, mapper Mapper, o
 	newPropertySet.Grade = newGrades
 
 	return newPropertySet, nil
-}
-
-func (c *ContentService) fetchContentData(ctx context.Context) ([]*ContentObject, map[string][]*entity.ContentProperty, error) {
-	contentDA := new(ContentObjectDA)
-	contentList, err := contentDA.SearchContentInternal(ctx, dbo.MustGetDB(ctx), &da.ContentConditionInternal{})
-	if err != nil {
-		return nil, nil, err
-	}
-	ids := make([]string, len(contentList))
-	for i := range contentList {
-		ids[i] = contentList[i].ID
-	}
-
-	properties, err := da.GetContentPropertyDA().BatchGetByContentIDList(ctx, dbo.MustGetDB(ctx), ids)
-	if err != nil {
-		return nil, nil, err
-	}
-	propertiesMap := make(map[string][]*entity.ContentProperty)
-	for i := range properties {
-		propertiesMap[properties[i].ContentID] = append(propertiesMap[properties[i].ContentID], properties[i])
-	}
-	return contentList, propertiesMap, nil
 }
