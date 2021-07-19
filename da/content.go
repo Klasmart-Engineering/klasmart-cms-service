@@ -84,19 +84,19 @@ func (s *CombineConditions) GetOrderBy() string {
 }
 
 type ContentCondition struct {
-	IDS                []string `json:"ids"`
-	Name               string   `json:"name"`
-	ContentType        []int    `json:"content_type"`
-	VisibilitySettings []string `json:"visibility_settings"`
-	PublishStatus      []string `json:"publish_status"`
-	Author             string   `json:"author"`
-	Org                string   `json:"org"`
-	Program            []string `json:"program"`
-	SourceID           string   `json:"source_id"`
-	LatestID           string   `json:"latest_id"`
-	SourceType         string   `json:"source_type"`
-	DirPath            string   `json:"dir_path"`
-	ContentName        string   `json:"content_name"`
+	IDS                entity.NullStrings `json:"ids"`
+	Name               string             `json:"name"`
+	ContentType        []int              `json:"content_type"`
+	VisibilitySettings []string           `json:"visibility_settings"`
+	PublishStatus      []string           `json:"publish_status"`
+	Author             string             `json:"author"`
+	Org                string             `json:"org"`
+	Program            []string           `json:"program"`
+	SourceID           string             `json:"source_id"`
+	LatestID           string             `json:"latest_id"`
+	SourceType         string             `json:"source_type"`
+	DirPath            string             `json:"dir_path"`
+	ContentName        string             `json:"content_name"`
 
 	//AuthedContentFlag bool           `json:"authed_content"`
 	AuthedOrgID entity.NullStrings `json:"authed_org_ids"`
@@ -145,9 +145,9 @@ func GetContentConditionByInternalCondition(s ContentCondition) *ContentConditio
 }
 
 type ContentConditionInternal struct {
-	IDS         []string `json:"ids"`
-	Name        string   `json:"name"`
-	ContentType []int    `json:"content_type"`
+	IDS         entity.NullStrings `json:"ids"`
+	Name        string             `json:"name"`
+	ContentType []int              `json:"content_type"`
 	//Scope         []string `json:"scope"`
 	VisibilitySettings []string `json:"visibility_settings"`
 	PublishStatus      []string `json:"publish_status"`
@@ -172,10 +172,10 @@ func (s *ContentConditionInternal) GetConditions() ([]string, []interface{}) {
 	conditions := make([]string, 0)
 	params := make([]interface{}, 0)
 
-	if len(s.IDS) > 0 {
+	if s.IDS.Valid {
 		condition := " id in (?) "
 		conditions = append(conditions, condition)
-		params = append(params, s.IDS)
+		params = append(params, s.IDS.Strings)
 	}
 	if s.Name != "" {
 		condition := "match(content_name, description, keywords) against(? in boolean mode)"
@@ -420,9 +420,13 @@ func (cd *DBContentDA) GetContentByID(ctx context.Context, tx *dbo.DBContext, ci
 	return obj, nil
 }
 func (cd *DBContentDA) GetContentByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.Content, error) {
+	if len(cids) < 1 {
+		return nil, nil
+	}
 	objs := make([]*entity.Content, 0)
+
 	err := cd.s.QueryTx(ctx, tx, &ContentCondition{
-		IDS: cids,
+		IDS: entity.NullStrings{Strings: cids, Valid: true},
 	}, &objs)
 	if err != nil {
 		return nil, err
