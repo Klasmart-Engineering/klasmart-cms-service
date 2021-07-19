@@ -155,10 +155,12 @@ func (s *Server) updateMilestone(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	permName := []external.PermissionName{external.EditUnpublishedMilestone, external.EditPublishedMilestone}
-	if data.WithPublish {
-		permName = append(permName, external.CreateMilestone)
+	permName := []external.PermissionName{
+		external.EditUnpublishedMilestone,
+		external.EditPublishedMilestone,
+		external.EditMyUnpublishedMilestone,
 	}
+
 	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, permName)
 	if err != nil {
 		log.Error(ctx, "updateMilestone: HasOrganizationPermission failed", log.Any("op", op), log.Any("perm", permName), log.Any("data", data), log.Err(err))
@@ -313,29 +315,49 @@ func (s *Server) searchMilestone(c *gin.Context) {
 		condition.OrganizationID = op.OrgID
 	}
 
-	var hasPerm bool
-	perm := external.ViewUnPublishedMilestone
-	if condition.Status == entity.OutcomeStatusPublished {
-		perm = external.ViewUnPublishedMilestone
-	}
-
-	hasPerm, err = external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, perm)
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
+		external.ViewPublishedMilestone,
+		external.ViewUnPublishedMilestone,
+	})
 	if err != nil {
-		log.Error(ctx, "searchMilestone: HasOrganizationPermission failed", log.Err(err), log.String("perm", string(perm)), log.Any("op", op))
+		log.Error(ctx, "searchPrivateMilestone: HasOrganizationPermissions failed",
+			log.Any("op", op),
+			log.Err(err))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
-	if !hasPerm {
-		log.Warn(ctx, "searchMilestone: HasOrganizationPermission failed", log.Any("op", op))
+
+	// check search permissions
+	allowSearch := false
+	if (condition.Status == string(entity.MilestoneStatusDraft) ||
+		condition.Status == string(entity.MilestoneStatusRejected)) &&
+		hasPerm[external.ViewUnPublishedMilestone] {
+		allowSearch = true
+	}
+
+	if condition.Status == string(entity.MilestoneStatusPublished) &&
+		hasPerm[external.ViewPublishedMilestone] {
+		allowSearch = true
+	}
+
+	if !allowSearch {
+		log.Warn(ctx, "searchMilestone: no permission",
+			log.Any("op", op),
+			log.Any("condition", condition),
+			log.Any("hasPerm", hasPerm))
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
+
 	total, milestones, err := model.GetMilestoneModel().Search(ctx, op, &condition)
 	switch err {
 	case nil:
 		views, err := model.FromMilestones(ctx, op, milestones)
 		if err != nil {
-			log.Error(ctx, "searchMilestone: Search failed", log.Any("op", op), log.Any("req", condition))
+			log.Error(ctx, "searchMilestone: Search failed",
+				log.Err(err),
+				log.Any("op", op),
+				log.Any("req", condition))
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 			return
 		}
