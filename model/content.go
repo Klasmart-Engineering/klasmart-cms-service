@@ -339,7 +339,10 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 	}
 
 	_, contentList, err := da.GetContentDA().SearchContent(ctx, tx, &da.ContentCondition{
-		IDS: subContentIDs,
+		IDS: entity.NullStrings{
+			Strings: subContentIDs,
+			Valid:   true,
+		},
 	})
 	if err != nil {
 		log.Error(ctx, "search content data failed", log.Any("IDS", subContentIDs), log.Err(err))
@@ -761,8 +764,14 @@ func (cm *ContentModel) PublishContentBulkTx(ctx context.Context, ids []string, 
 }
 func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error {
 	updateIDs := make([]string, 0)
+	if len(ids) < 1 {
+		return nil
+	}
 	_, contents, err := da.GetContentDA().SearchContent(ctx, tx, &da.ContentCondition{
-		IDS: ids,
+		IDS: entity.NullStrings{
+			Strings: ids,
+			Valid:   true,
+		},
 	})
 	if err != nil {
 		log.Error(ctx, "can't read content on delete contentdata", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
@@ -1171,10 +1180,16 @@ func (cm *ContentModel) DeleteContentBulkTx(ctx context.Context, ids []string, u
 	})
 }
 func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error {
+	if len(ids) < 1 {
+		return nil
+	}
 	deletedIDs := make([]string, 0)
 	deletedIDs = append(deletedIDs, ids...)
 	_, contents, err := da.GetContentDA().SearchContent(ctx, tx, &da.ContentCondition{
-		IDS: ids,
+		IDS: entity.NullStrings{
+			Strings: ids,
+			Valid:   true,
+		},
 	})
 	if err != nil {
 		log.Error(ctx, "can't read content on delete contentdata", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
@@ -2323,8 +2338,12 @@ func (cm *ContentModel) ContentDataCount(ctx context.Context, tx *dbo.DBContext,
 		return nil, err
 	}
 	subContentIDs := cd.SubContentIDs(ctx)
+
 	_, subContents, err := da.GetContentDA().SearchContent(ctx, tx, &da.ContentCondition{
-		IDS: subContentIDs,
+		IDS: entity.NullStrings{
+			Strings: subContentIDs,
+			Valid:   true,
+		},
 	})
 	if err != nil {
 		log.Error(ctx, "search data failed", log.Err(err), log.String("cid", cid),

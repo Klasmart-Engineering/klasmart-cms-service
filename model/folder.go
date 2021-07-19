@@ -872,7 +872,7 @@ func (f *FolderModel) CheckContentPath(ctx context.Context, tx *dbo.DBContext, o
 
 	parentID := pathDirs[len(pathDirs)-1]
 	condition := da.FolderCondition{
-		IDs:       []string{parentID},
+		IDs:       entity.NullStrings{Strings: []string{parentID}, Valid: true},
 		OwnerType: int(ownerType),
 		Owner:     ownerType.Owner(operator),
 		Partition: partition,
@@ -1108,7 +1108,7 @@ func (f *FolderModel) folderItemToFolderItemInfoBatch(ctx context.Context, items
 func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, id string, partition entity.FolderPartition, distFolder *entity.FolderItem, operator *entity.Operator) error {
 	link := entity.ContentLink(id)
 	condition := da.FolderCondition{
-		IDs:       nil,
+		IDs:       entity.NullStrings{Valid: false},
 		OwnerType: int(ownerType),
 		ItemType:  int(entity.FolderItemTypeFile),
 		Owner:     ownerType.Owner(operator),
@@ -1810,7 +1810,7 @@ func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, ownerType en
 	//folder下folder名唯一
 	//folder name duplicate checking
 	condition := da.FolderCondition{
-		IDs:       nil,
+		IDs:       entity.NullStrings{Valid: false},
 		ItemType:  int(entity.FolderItemTypeFolder),
 		OwnerType: int(ownerType),
 		Owner:     ownerType.Owner(operator),
@@ -1843,7 +1843,7 @@ func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, nam
 	//folder下folder名唯一
 	//folder name duplicate checking
 	condition := da.FolderCondition{
-		IDs:       nil,
+		IDs:       entity.NullStrings{Valid: false},
 		ItemType:  int(entity.FolderItemTypeFolder),
 		OwnerType: int(folder.OwnerType),
 		Partition: folder.Partition,

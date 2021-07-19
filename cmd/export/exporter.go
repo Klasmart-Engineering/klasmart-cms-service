@@ -204,8 +204,8 @@ func (c *ContentExporter) GetExportImmediateContents(ctx context.Context, condit
 
 //GetExportRelatedMaterials get related materials list to export by exported plans
 func (c *ContentExporter) GetExportRelatedMaterials(ctx context.Context, requiredExtIDs []string) ([]*entity.Content, error) {
-	_, contentList, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), da.ContentCondition{
-		IDS: requiredExtIDs,
+	_, contentList, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), &da.ContentCondition{
+		IDS: entity.NullStrings{Strings: requiredExtIDs, Valid: true},
 	})
 	if err != nil {
 		fmt.Printf("Can't get contents, err: %v\n", err)

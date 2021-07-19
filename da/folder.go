@@ -276,9 +276,15 @@ func (fda *FolderDA) GetFolderByID(ctx context.Context, tx *dbo.DBContext, fid s
 }
 
 func (fda *FolderDA) GetFolderByIDList(ctx context.Context, tx *dbo.DBContext, fids []string) ([]*entity.FolderItem, error) {
+	if len(fids) < 1 {
+		return nil, nil
+	}
 	objs := make([]*entity.FolderItem, 0)
 	err := fda.s.QueryTx(ctx, tx, &FolderCondition{
-		IDs: fids,
+		IDs: entity.NullStrings{
+			Strings: fids,
+			Valid:   true,
+		},
 	}, &objs)
 	if err != nil {
 		return nil, err
@@ -366,7 +372,7 @@ func (s FolderOrderBy) ToSQL() string {
 }
 
 type FolderCondition struct {
-	IDs       []string
+	IDs       entity.NullStrings
 	OwnerType int
 	ItemType  int
 	Owner     string
@@ -392,10 +398,10 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 	conditions := make([]string, 0)
 	params := make([]interface{}, 0)
 
-	if len(s.IDs) > 0 {
+	if s.IDs.Valid {
 		condition := " id in (?) "
 		conditions = append(conditions, condition)
-		params = append(params, s.IDs)
+		params = append(params, s.IDs.Strings)
 	}
 	if s.OwnerType > 0 {
 		conditions = append(conditions, "owner_type = ?")
