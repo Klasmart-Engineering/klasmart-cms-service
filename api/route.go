@@ -301,8 +301,12 @@ func (s Server) registeRoute() {
 		milestone.DELETE("/milestones", s.mustLogin, s.deleteMilestone)
 
 		milestone.GET("/milestones", s.mustLogin, s.searchMilestone)
+		milestone.GET("/private_milestones", s.mustLogin, s.searchPrivateMilestone)
+		milestone.GET("/pending_milestones", s.mustLogin, s.searchPendingMilestone)
 
-		milestone.POST("/milestones/publish", s.mustLogin, s.publishMilestone)
+		milestone.PUT("/bulk_publish/milestones", s.mustLogin, s.bulkPublishMilestone)
+		milestone.PUT("/bulk_approve/milestones", s.mustLogin, s.bulkApproveMilestone)
+		milestone.PUT("/bulk_reject/milestones", s.mustLogin, s.bulkRejectMilestone)
 	}
 
 	organizationPermissions := s.engine.Group("/v1/organization_permissions")

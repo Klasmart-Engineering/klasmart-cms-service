@@ -358,17 +358,6 @@ func (ocm OutcomeModel) Update(ctx context.Context, operator *entity.Operator, o
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	exists, err := ocm.IsShortcodeCached(ctx, operator, outcome.Shortcode)
-	if err != nil {
-		log.Error(ctx, "Update: IsCached failed",
-			log.Err(err),
-			log.Any("op", operator),
-			log.Any("outcome", outcome))
-		return err
-	}
-	if exists {
-		return constant.ErrConflict
-	}
 	err = dbo.GetTrans(ctx, func(cxt context.Context, tx *dbo.DBContext) error {
 		data, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcome.ID)
 		if err == dbo.ErrRecordNotFound {
@@ -570,8 +559,12 @@ func (ocm OutcomeModel) search(ctx context.Context, op *entity.Operator, tx *dbo
 		return total, outcomes, nil
 	}
 	outcomeIDs := make([]string, len(outcomes))
+	lockedOutcomeIDs := make([]string, 0)
 	for i := range outcomes {
 		outcomeIDs[i] = outcomes[i].ID
+		if outcomes[i].HasLocked() {
+			lockedOutcomeIDs = append(lockedOutcomeIDs, outcomes[i].ID)
+		}
 	}
 
 	relations, err := da.GetOutcomeRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
@@ -585,13 +578,36 @@ func (ocm OutcomeModel) search(ctx context.Context, op *entity.Operator, tx *dbo
 			log.Strings("outcome", outcomeIDs))
 		return 0, nil, err
 	}
+
+	lockedChildrenMap := make(map[string]*entity.Outcome, len(lockedOutcomeIDs))
+	if len(lockedOutcomeIDs) > 0 {
+		lockedChildrenCondition := &da.OutcomeCondition{
+			IncludeDeleted: false,
+			SourceIDs:      dbo.NullStrings{Strings: lockedOutcomeIDs, Valid: true},
+		}
+
+		_, lockedChildren, err := da.GetOutcomeDA().SearchOutcome(ctx, op, tx, lockedChildrenCondition)
+		if err != nil {
+			log.Error(ctx, "Search: SearchOutcome failed",
+				log.String("op", op.UserID),
+				log.Any("condition", lockedChildrenCondition))
+			return 0, nil, err
+		}
+
+		for _, v := range lockedChildren {
+			lockedChildrenMap[v.SourceID] = v
+		}
+	}
+
 	outcomeRelations := make(map[string][]*entity.Relation)
 	for i := range relations {
 		outcomeRelations[relations[i].MasterID] = append(outcomeRelations[relations[i].MasterID], relations[i])
 	}
 	for _, outcome := range outcomes {
 		ocm.FillRelation(outcome, outcomeRelations[outcome.ID])
+		outcome.EditingOutcome = lockedChildrenMap[outcome.ID]
 	}
+
 	return total, outcomes, nil
 }
 
@@ -610,6 +626,7 @@ func (ocm OutcomeModel) Search(ctx context.Context, user *entity.Operator, condi
 	err := ocm.fillAuthorIDs(ctx, user, condition)
 	if err != nil {
 		log.Error(ctx, "Search: fillAuthorIDs failed",
+			log.Any("err", err),
 			log.String("op", user.UserID),
 			log.Any("condition", condition))
 		return 0, nil, err

@@ -4,11 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"strings"
-	"time"
 )
 
 type MilestoneSQLDA struct {
@@ -39,12 +40,28 @@ func (m MilestoneSQLDA) GetByID(ctx context.Context, tx *dbo.DBContext, ID strin
 }
 
 func (m MilestoneSQLDA) Update(ctx context.Context, tx *dbo.DBContext, milestone *entity.Milestone) error {
+	milestone.UpdateAt = time.Now().Unix()
 	_, err := m.BaseDA.UpdateTx(ctx, tx, milestone)
 	if err != nil {
 		log.Error(ctx, "Update: UpdateTx failed",
 			log.Any("milestone", milestone))
 		return err
 	}
+	return nil
+}
+
+func (m MilestoneSQLDA) UpdateLatest(ctx context.Context, tx *dbo.DBContext, ancestorID, latestID string) error {
+	sql := fmt.Sprintf("UPDATE %s SET latest_id = ? WHERE ancestor_id = ? AND delete_at = 0", entity.Milestone{}.TableName())
+	err := tx.Exec(sql, latestID, ancestorID).Error
+	if err != nil {
+		log.Error(ctx, "UpdateLatest failed",
+			log.Err(err),
+			log.String("ancestorID", ancestorID),
+			log.String("latestID", latestID),
+			log.String("sql", sql))
+		return err
+	}
+
 	return nil
 }
 
@@ -165,6 +182,7 @@ type MilestoneCondition struct {
 	AncestorID  sql.NullString
 	AncestorIDs dbo.NullStrings
 	SourceID    sql.NullString
+	SourceIDs   dbo.NullStrings
 	Description sql.NullString
 	Name        sql.NullString
 	Shortcode   sql.NullString
@@ -237,6 +255,11 @@ func (c *MilestoneCondition) GetConditions() ([]string, []interface{}) {
 	if c.SourceID.Valid {
 		wheres = append(wheres, "source_id = ?")
 		params = append(params, c.SourceID.String)
+	}
+
+	if c.SourceIDs.Valid {
+		wheres = append(wheres, "source_id in (?)")
+		params = append(params, c.SourceIDs.Strings)
 	}
 
 	if c.AuthorID.Valid {

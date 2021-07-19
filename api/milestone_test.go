@@ -3,12 +3,14 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/tidwall/gjson"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
 func setupMilestone() {
@@ -120,13 +122,52 @@ func TestSearchMilestone(t *testing.T) {
 		//"description=math",
 		//"shortcode=00001",
 		"status=published",
-		"page=0",
-		"page_size=0",
+		"page=1",
+		"page_size=10",
 		"order_by=created_at",
 	}
 	condition := "&" + strings.Join(queryCondition, "&")
 	res := DoHttpWithOperator(http.MethodGet, op, prefix+"/milestones"+"?org_id="+op.OrgID+condition, "")
-	fmt.Println(res)
+	obj := gjson.Parse(res)
+	for _, v := range obj.Get("milestones").Array() {
+		str := fmt.Sprintf("milestone_id: %v, locked_by: %v, last_edited_at: %v, last_edited_by: %v, locked_location: %v",
+			v.Get("milestone_id"),
+			v.Get("locked_by"),
+			v.Get("last_edited_at"),
+			v.Get("last_edited_by"),
+			v.Get("locked_location"))
+		t.Log(str)
+	}
+	t.Log(obj.Get("total"))
+}
+
+func TestSearchPrivateMilestone(t *testing.T) {
+	setupMilestone()
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	queryCondition := []string{
+		//"search_key=name01",
+		//"name=name01",
+		//"description=math",
+		//"shortcode=00001",
+		"status=published",
+		"page=1",
+		"page_size=10",
+		"order_by=created_at",
+	}
+	op.UserID = "46790f5c-708f-59c2-9c2f-f24db63b86ad"
+	condition := "&" + strings.Join(queryCondition, "&")
+	res := DoHttpWithOperator(http.MethodGet, op, prefix+"/private_milestones"+"?org_id="+op.OrgID+condition, "")
+	obj := gjson.Parse(res)
+	for _, v := range obj.Get("milestones").Array() {
+		str := fmt.Sprintf("milestone_id: %v, locked_by: %v, last_edited_at: %v, last_edited_by: %v, locked_location: %v",
+			v.Get("milestone_id"),
+			v.Get("locked_by"),
+			v.Get("last_edited_at"),
+			v.Get("last_edited_by"),
+			v.Get("locked_location"))
+		t.Log(str)
+	}
+	t.Log(obj.Get("total"))
 }
 
 func TestPublishMilestone(t *testing.T) {
@@ -154,5 +195,33 @@ func TestCreateGeneral(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
 	res := DoHttpWithOperator(http.MethodPost, op, prefix+"/milestones/general"+"?org_id="+op.OrgID, "")
+	fmt.Println(res)
+}
+
+func TestBulkPublishMilestone(t *testing.T) {
+	setupMilestone()
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	req := model.MilestoneList{
+		IDs: []string{"60ac9512480ebf7e27dd84db"},
+	}
+	data, err := json.Marshal(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res := DoHttpWithOperator(http.MethodPut, op, prefix+"/bulk_publish/milestones"+"?org_id="+op.OrgID, string(data))
+	fmt.Println(res)
+}
+
+func TestBulkApproveMilestone(t *testing.T) {
+	setupMilestone()
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	req := model.MilestoneList{
+		IDs: []string{"60ac9512480ebf7e27dd84db"},
+	}
+	data, err := json.Marshal(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res := DoHttpWithOperator(http.MethodPut, op, prefix+"/bulk_approve/milestones"+"?org_id="+op.OrgID, string(data))
 	fmt.Println(res)
 }
