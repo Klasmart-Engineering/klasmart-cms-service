@@ -1375,6 +1375,12 @@ func (m *MilestoneModel) allowUpdateMilestone(ctx context.Context, operator *ent
 		return true
 	}
 
+	if perms[external.EditMyUnpublishedMilestone] &&
+		milestone.Status != entity.MilestoneStatusPublished &&
+		milestone.AuthorID == operator.UserID {
+		return true
+	}
+
 	return false
 }
 
