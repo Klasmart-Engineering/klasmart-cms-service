@@ -241,6 +241,13 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			}}
 		}
 
+		if oldMilestone.Status != entity.MilestoneStatusDraft && oldMilestone.Status != entity.MilestoneStatusRejected {
+			log.Error(ctx, "Update: status not allowed edit",
+				log.Any("op", op),
+				log.Any("milestone", oldMilestone))
+			return ErrInvalidPublishStatus
+		}
+
 		if !m.allowUpdateMilestone(ctx, op, perms, oldMilestone) {
 			log.Warn(ctx, "Update: no permission",
 				log.Any("op", op),
@@ -1358,6 +1365,7 @@ func (m *MilestoneModel) updateMilestone(old *entity.Milestone, new *entity.Mile
 	milestone.Subcategories = new.Subcategories
 	milestone.Grades = new.Grades
 	milestone.Ages = new.Ages
+	milestone.Status = entity.MilestoneStatusDraft
 	return &milestone
 }
 
