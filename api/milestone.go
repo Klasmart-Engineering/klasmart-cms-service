@@ -355,6 +355,7 @@ func (s *Server) searchMilestone(c *gin.Context) {
 		views, err := model.FromMilestones(ctx, op, milestones)
 		if err != nil {
 			log.Error(ctx, "searchMilestone: Search failed",
+				log.Err(err),
 				log.Any("op", op),
 				log.Any("req", condition))
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
