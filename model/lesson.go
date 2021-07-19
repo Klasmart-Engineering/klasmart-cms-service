@@ -183,8 +183,14 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 func (l *LessonData) PrepareVersion(ctx context.Context) error {
 	//list all related content ids
 	ids := l.SubContentIDs(ctx)
+	if len(ids) < 1 {
+		return nil
+	}
 	_, contentList, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), &da.ContentCondition{
-		IDS: ids,
+		IDS: entity.NullStrings{
+			Strings: ids,
+			Valid:   true,
+		},
 	})
 	if err != nil {
 		return err
@@ -237,8 +243,15 @@ func (l *LessonData) PrepareResult(ctx context.Context, tx *dbo.DBContext, conte
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		materialList = append(materialList, l.MaterialId)
 	})
+	if len(materialList) < 1 {
+		return nil
+	}
+
 	_, contentList, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), &da.ContentCondition{
-		IDS: materialList,
+		IDS: entity.NullStrings{
+			Strings: materialList,
+			Valid:   true,
+		},
 	})
 	if err != nil {
 		return err
