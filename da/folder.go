@@ -105,9 +105,9 @@ func (fda *FolderDA) BatchGetFolderItemsCount(ctx context.Context, tx *dbo.DBCon
 		return nil, nil
 	}
 	sql := `
-	SELECT "content" as classify,dir_path, count(*) as count FROM cms_contents WHERE publish_status = "published" AND dir_path IN (?) GROUP BY dir_path
+	SELECT "content" as classify,dir_path, count(*) as count FROM cms_contents WHERE publish_status = "published" AND dir_path IN (?) AND delete_at=0 GROUP BY dir_path
 		UNION ALL
-	SELECT "folder" as classify, dir_path, count(*) as count FROM cms_folder_items WHERE item_type=1 AND dir_path IN (?)  GROUP BY dir_path;
+	SELECT "folder" as classify, dir_path, count(*) as count FROM cms_folder_items WHERE item_type=1 AND dir_path IN (?) AND delete_at=0 GROUP BY dir_path;
 	`
 	res := make([]*entity.FolderItemsCount, 0)
 	err = tx.Raw(sql, pathList, pathList).Scan(&res).Error
