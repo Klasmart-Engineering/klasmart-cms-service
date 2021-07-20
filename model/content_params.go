@@ -117,7 +117,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Data:          c.Data,
 		Extra:         c.Extra,
 		LessonType:    c.LessonType,
-		DirPath:       path,
+		DirPath:       entity.NewPath(path),
 		SelfStudy:     c.SelfStudy.Int(),
 		DrawActivity:  c.DrawActivity.Int(),
 		Outcomes:      strings.Join(c.Outcomes, constant.StringArraySeparator),
@@ -276,7 +276,7 @@ func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *
 	return content
 }
 
-func (cm *ContentModel) checkAndUpdateContentPath(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
+func (cm *ContentModel) getContentPath(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	dirPath := content.DirPath
 
 	//if content.SourceID != "" {
@@ -290,7 +290,7 @@ func (cm *ContentModel) checkAndUpdateContentPath(ctx context.Context, tx *dbo.D
 	//	return nil
 	//}
 
-	contentPath, err := GetFolderModel().CheckContentPath(ctx, tx, entity.OwnerTypeOrganization, entity.FolderItemTypeFolder, dirPath, entity.FolderPartitionMaterialAndPlans, user)
+	contentPath, err := GetFolderModel().MustGetPath(ctx, tx, entity.OwnerTypeOrganization, entity.FolderItemTypeFolder, dirPath.String(), entity.FolderPartitionMaterialAndPlans, user)
 	if err != nil {
 		log.Error(ctx, "search content folder failed",
 			log.Err(err), log.Any("content", content))
@@ -298,7 +298,7 @@ func (cm *ContentModel) checkAndUpdateContentPath(ctx context.Context, tx *dbo.D
 	}
 	//若路径不存在，则放到根目录
 	//if dir path is not exists, put it into root path
-	content.DirPath = contentPath
+	content.DirPath = entity.NewPath(contentPath)
 	return nil
 }
 

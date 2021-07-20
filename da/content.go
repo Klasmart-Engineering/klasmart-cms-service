@@ -42,6 +42,7 @@ type IContentDA interface {
 	GetContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	BatchCreateContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, scope []string) error
 	BatchDeleteContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, visibilitySettings []string) error
+	BatchUpdateContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, dirPath entity.Path) error
 
 	GetContentByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.Content, error)
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition *ContentCondition) (int, []*entity.Content, error)
@@ -95,7 +96,7 @@ type ContentCondition struct {
 	SourceID           string             `json:"source_id"`
 	LatestID           string             `json:"latest_id"`
 	SourceType         string             `json:"source_type"`
-	DirPath            string             `json:"dir_path"`
+	DirPath            entity.NullStrings `json:"dir_path"`
 	ContentName        string             `json:"content_name"`
 
 	//AuthedContentFlag bool           `json:"authed_content"`
@@ -149,16 +150,19 @@ type ContentConditionInternal struct {
 	Name        string             `json:"name"`
 	ContentType []int              `json:"content_type"`
 	//Scope         []string `json:"scope"`
-	VisibilitySettings []string `json:"visibility_settings"`
-	PublishStatus      []string `json:"publish_status"`
-	Author             string   `json:"author"`
-	Org                string   `json:"org"`
-	Program            []string `json:"program"`
-	SourceID           string   `json:"source_id"`
-	LatestID           string   `json:"latest_id"`
-	SourceType         string   `json:"source_type"`
-	DirPath            string   `json:"dir_path"`
-	ContentName        string   `json:"content_name"`
+	VisibilitySettings []string           `json:"visibility_settings"`
+	PublishStatus      []string           `json:"publish_status"`
+	Author             string             `json:"author"`
+	Org                string             `json:"org"`
+	Program            []string           `json:"program"`
+	SourceID           string             `json:"source_id"`
+	LatestID           string             `json:"latest_id"`
+	SourceType         string             `json:"source_type"`
+	DirPath            entity.NullStrings `json:"dir_path"`
+
+	DirPathRecursion     string   `json:"dir_path_recursion"`
+	DirPathRecursionList []string `json:"dir_path_recursion_list"`
+	ContentName          string   `json:"content_name"`
 
 	//AuthedContentFlag bool           `json:"authed_content"`
 	AuthedOrgID entity.NullStrings `json:"authed_org_ids"`
@@ -237,10 +241,24 @@ func (s *ContentConditionInternal) GetConditions() ([]string, []interface{}) {
 		conditions = append(conditions, condition)
 		params = append(params, s.SourceType)
 	}
-	if s.DirPath != "" {
-		condition := "dir_path = ?"
+	if s.DirPath.Valid {
+		condition := "dir_path IN (?)"
 		conditions = append(conditions, condition)
-		params = append(params, s.DirPath)
+		params = append(params, s.DirPath.Strings)
+	}
+	if s.DirPathRecursion != "" {
+		condition := "dir_path LIKE ?"
+		conditions = append(conditions, condition)
+		params = append(params, s.DirPathRecursion+"%")
+	}
+	if len(s.DirPathRecursionList) > 0 {
+		subCondition := make([]string, len(s.DirPathRecursionList))
+		for i := range s.DirPathRecursionList {
+			subCondition[i] = "dir_path like ?"
+			params = append(params, s.DirPathRecursionList[i]+"%")
+		}
+		condition := "(" + strings.Join(subCondition, " or ") + ")"
+		conditions = append(conditions, condition)
 	}
 
 	if len(s.PublishStatus) > 0 {
@@ -393,6 +411,16 @@ func (cd *DBContentDA) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid
 		return err
 	}
 
+	return nil
+}
+func (cd *DBContentDA) BatchUpdateContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, dirPath entity.Path) error {
+	if len(cids) < 1 {
+		return nil
+	}
+	err := tx.Where("id IN (?)", cids).Updates(entity.Content{DirPath: dirPath}).Error
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

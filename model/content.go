@@ -132,7 +132,7 @@ type IContentModel interface {
 
 	IsContentsOperatorByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (bool, error)
 
-	UpdateContentPath(ctx context.Context, tx *dbo.DBContext, cid string, path string) error
+	BatchUpdateContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, path entity.Path) error
 	BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error
 
 	//For authed content
@@ -170,12 +170,6 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 	if err != nil {
 		log.Error(ctx, "update source content failed", log.Err(err))
 		return ErrUpdateContentFailed
-	}
-
-	err = folderModel.RemoveItemByLink(ctx, tx, entity.OwnerTypeOrganization, sourceContent.Org, entity.ContentLink(sourceContent.ID))
-	if err != nil {
-		log.Error(ctx, "remove old content folder item failed", log.Err(err), log.Any("content", sourceContent))
-		return err
 	}
 
 	//更新所有latestID为sourceContent的Content
@@ -230,11 +224,7 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 
 	if content.PublishStatus == entity.ContentStatusPublished {
 		//更新content的path
-		err := cm.checkAndUpdateContentPath(ctx, tx, content, user)
-		if err != nil {
-			return err
-		}
-		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, entity.NewPath(content.DirPath), entity.ContentLink(content.ID), user)
+		err := cm.getContentPath(ctx, tx, content, user)
 		if err != nil {
 			return err
 		}
@@ -475,19 +465,6 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 		return "", err
 	}
 
-	//Asset添加Folder
-	//assets add to folder
-	if c.ContentType.IsAsset() {
-		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionAssets, constant.FolderRootPath, entity.ContentLink(pid), operator)
-		if err != nil {
-			log.Error(ctx, "can't create folder item", log.Err(err),
-				log.String("link", entity.ContentLink(pid)),
-				log.Any("data", c),
-				log.Any("operator", operator))
-			return "", err
-		}
-	}
-
 	return pid, nil
 }
 
@@ -569,14 +546,9 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	return nil
 }
 
-func (cm *ContentModel) UpdateContentPath(ctx context.Context, tx *dbo.DBContext, cid string, path string) error {
-	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
-	if err != nil {
-		log.Error(ctx, "can't read content on update path", log.Err(err))
-		return err
-	}
-	content.DirPath = path
-	err = da.GetContentDA().UpdateContent(ctx, tx, cid, *content)
+func (cm *ContentModel) BatchUpdateContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, path entity.Path) error {
+
+	err := da.GetContentDA().BatchUpdateContentPath(ctx, tx, cids, path)
 	if err != nil {
 		log.Error(ctx, "update content path failed", log.Err(err))
 		return ErrUpdateContentFailed
@@ -615,7 +587,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	//更新content的path
-	err = cm.checkAndUpdateContentPath(ctx, tx, content, operator)
+	err = cm.getContentPath(ctx, tx, content, operator)
 	if err != nil {
 		return err
 	}
@@ -630,12 +602,6 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	if status == entity.ContentStatusPublished {
-		//更新Folder信息
-		//update folder info
-		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, entity.NewPath(content.DirPath), entity.ContentLink(content.ID), operator)
-		if err != nil {
-			return err
-		}
 		if content.SourceID != "" {
 			//处理source content
 			//handle with source content
@@ -1366,14 +1332,6 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 	err = da.GetContentDA().UpdateContent(ctx, tx, content.ID, *obj)
 	if err != nil {
 		log.Error(ctx, "delete contentdata failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
-		return err
-	}
-
-	//folder中删除
-	//temp remove folder
-	err = GetFolderModel().RemoveItemByLink(ctx, tx, entity.OwnerTypeOrganization, content.Org, entity.ContentLink(content.ID))
-	if err != nil {
-		log.Error(ctx, "remove content folder item failed", log.Err(err), log.Any("content", content))
 		return err
 	}
 
@@ -3292,12 +3250,15 @@ func (cm *ContentModel) conditionRequestToCondition(c entity.ContentConditionReq
 		Org:                c.Org,
 		Program:            c.Program,
 		SourceType:         c.SourceType,
-		DirPath:            c.DirPath,
-		ContentName:        c.ContentName,
-		AuthedOrgID:        c.AuthedOrgID,
-		OrderBy:            da.NewContentOrderBy(c.OrderBy),
-		Pager:              c.Pager,
-		JoinUserIDList:     c.JoinUserIDList,
+		DirPath: entity.NullStrings{
+			Strings: []string{c.DirPath},
+			Valid:   c.DirPath != "",
+		},
+		ContentName:    c.ContentName,
+		AuthedOrgID:    c.AuthedOrgID,
+		OrderBy:        da.NewContentOrderBy(c.OrderBy),
+		Pager:          c.Pager,
+		JoinUserIDList: c.JoinUserIDList,
 	}
 }
 

@@ -58,51 +58,6 @@ func (s *Server) createFolder(c *gin.Context) {
 	}
 }
 
-// @Summary addFolderItem
-// @ID addFolderItem
-// @Description create folder item
-// @Accept json
-// @Produce json
-// @Param content body entity.CreateFolderItemRequest true "create request"
-// @Tags folder
-// @Success 200 {object} CreateFolderResponse
-// @Failure 500 {object} InternalServerErrorResponse
-// @Failure 400 {object} BadRequestResponse
-// @Router /folders/items [post]
-func (s *Server) addFolderItem(c *gin.Context) {
-	ctx := c.Request.Context()
-	op := s.getOperator(c)
-	var data entity.CreateFolderItemRequest
-	err := c.ShouldBind(&data)
-	if err != nil {
-		log.Warn(ctx, "add folder item failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
-	//check permission
-	hasPermission, err := model.GetFolderPermissionModel().CheckFolderOperatorPermission(ctx, op)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
-	}
-	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
-		return
-	}
-
-	cid, err := model.GetFolderModel().AddItem(ctx, data, op)
-	switch err {
-	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"id": cid,
-		})
-	case model.ErrDuplicateFolderName:
-		c.JSON(http.StatusConflict, L(LibraryErrDuplicateFolderName))
-	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-	}
-}
-
 // @Summary removeFolderItem
 // @ID removeFolderItem
 // @Description remove folder item
