@@ -12,10 +12,9 @@ const (
 	TableNameScheduleRelation   = "schedules_relations"
 	TableNameFeedbackAssignment = "feedbacks_assignments"
 
-	TableNameClassType         = "class_types"
-	TableNameLessonType        = "lesson_types"
-	TableNameVisibilitySetting = "visibility_settings"
-	TableNameUserSetting       = "user_settings"
+	TableNameClassType   = "class_types"
+	TableNameLessonType  = "lesson_types"
+	TableNameUserSetting = "user_settings"
 
 	TableNameProgramGroup = "programs_groups"
 
