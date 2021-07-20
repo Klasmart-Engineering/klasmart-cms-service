@@ -12,23 +12,12 @@ const (
 	TableNameScheduleRelation   = "schedules_relations"
 	TableNameFeedbackAssignment = "feedbacks_assignments"
 
-	TableNameAge               = "ages"
 	TableNameClassType         = "class_types"
-	TableNameDevelopmental     = "developmentals"
-	TableNameGrade             = "grades"
 	TableNameLessonType        = "lesson_types"
-	TableNameProgram           = "programs"
-	TableNameSkill             = "skills"
-	TableNameSubject           = "subjects"
 	TableNameVisibilitySetting = "visibility_settings"
 	TableNameUserSetting       = "user_settings"
 
-	TableNameProgramGroup       = "programs_groups"
-	TableNameProgramAge         = "programs_ages"
-	TableNameProgramDevelopment = "programs_developments"
-	TableNameProgramGrade       = "programs_grades"
-	TableNameProgramSubject     = "programs_subjects"
-	TableNameDevelopmentalSkill = "developments_skills"
+	TableNameProgramGroup = "programs_groups"
 
 	TableNameOrganizationProperty = "organizations_properties"
 )
@@ -36,12 +25,6 @@ const (
 const (
 	ScheduleDefaultCacheExpiration = 3 * time.Minute
 )
-
-type GSIName string
-
-func (g GSIName) String() string {
-	return string(g)
-}
 
 var (
 	ErrRecordNotFound  = errors.New("record not found")
