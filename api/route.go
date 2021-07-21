@@ -76,10 +76,6 @@ func (s Server) registeRoute() {
 		content.GET("/contents_resources/:resource_id/download", s.mustLoginWithoutOrgID, s.getDownloadPath)
 		content.GET("/contents/:content_id/live/token", s.mustLogin, s.getContentLiveToken)
 	}
-	h5pEvents := s.engine.Group("/v1")
-	{
-		h5pEvents.POST("/h5p/events", s.mustLogin, s.createH5PEvent)
-	}
 
 	authedContents := s.engine.Group("/v1")
 	{
@@ -149,9 +145,6 @@ func (s Server) registeRoute() {
 
 		reports.GET("/reports/performance/students", s.mustLogin, s.listStudentsPerformanceReport)
 		reports.GET("/reports/performance/students/:id", s.mustLogin, s.getStudentPerformanceReport)
-
-		reports.GET("/reports/performance/h5p/students", s.mustLogin, s.listStudentsPerformanceH5PReport)
-		reports.GET("/reports/performance/h5p/students/:id", s.mustLogin, s.getStudentPerformanceH5PReport)
 
 		reports.GET("/reports/teaching_loading", s.mustLogin, s.listTeachingLoadReport)
 	}
