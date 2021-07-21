@@ -10,6 +10,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type StudentServiceProvider interface {
@@ -144,19 +145,24 @@ func (s AmsStudentService) GetByClassID(ctx context.Context, operator *entity.Op
 	return payload, nil
 }
 
+//TODO:No Test Program
 func (s AmsStudentService) GetByClassIDs(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*Student, error) {
 	if len(classIDs) == 0 {
 		return map[string][]*Student{}, nil
 	}
 
 	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range classIDs {
-		fmt.Fprintf(sb, "q%d: class(class_id: \"%s\") {students{id:user_id name:user_name}}\n", index, id)
+
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$class_id_", ": ID!", len(classIDs)))
+	for index := range classIDs {
+		fmt.Fprintf(sb, "q%d: class(class_id: $class_id_%d) {students{id:user_id name:user_name}}\n", index, index)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+	for index, id := range classIDs {
+		request.Var(fmt.Sprintf("class_id_%d", index), id)
+	}
 
 	data := map[string]*struct {
 		Students []*Student `json:"students"`

@@ -17,7 +17,7 @@ func TestAmsClassService_GetByUserIDs(t *testing.T) {
 		userIDs[i] = item.ID
 	}
 	fmt.Println(len(userIDs))
-	userIDs = append(userIDs,userIDs...)
+	userIDs = append(userIDs, userIDs...)
 	classes, err := GetClassServiceProvider().GetByUserIDs(context.TODO(), testOperator, userIDs, WithStatus(Active))
 	if err != nil {
 		t.Errorf("GetClassServiceProvider().GetByUserIDs() error = %v", err)

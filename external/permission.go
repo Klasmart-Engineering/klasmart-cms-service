@@ -137,6 +137,7 @@ func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, operator 
 	return data.User.SchoolMembership.CheckAllowed, nil
 }
 
+//TODO:No Test Program
 func (s AmsPermissionService) HasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissionNames []PermissionName) (map[PermissionName]bool, error) {
 	if len(permissionNames) == 0 {
 		return map[PermissionName]bool{}, nil
@@ -150,15 +151,20 @@ func (s AmsPermissionService) HasOrganizationPermissions(ctx context.Context, op
 	_permissionNames, indexMapping := utils.SliceDeduplicationMap(pns)
 
 	sb := new(strings.Builder)
-	sb.WriteString("query($user_id: ID! $organization_id: ID!) {user(user_id: $user_id) {membership(organization_id: $organization_id) {")
-	for index, permissionName := range _permissionNames {
-		fmt.Fprintf(sb, "q%d: checkAllowed(permission_name: \"%s\")\n", index, permissionName)
+	fmt.Fprintf(sb, "query($user_id: ID! $organization_id: ID! %s) {user(user_id: $user_id) {membership(organization_id: $organization_id) {",
+		utils.StringCountRange(ctx, "$permission_name_", ": ID!", len(_permissionNames)))
+
+	for index := range _permissionNames {
+		fmt.Fprintf(sb, "q%d: checkAllowed(permission_name: $permission_name_%d)\n", index, index)
 	}
 	sb.WriteString("}}}")
 
 	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
 	request.Var("user_id", operator.UserID)
 	request.Var("organization_id", operator.OrgID)
+	for index, id := range _permissionNames {
+		request.Var(fmt.Sprintf("permission_name_%d", index), id)
+	}
 
 	data := make(map[PermissionName]bool, len(permissionNames))
 	response := &chlorine.Response{

@@ -66,6 +66,7 @@ func (s AmsUserService) Get(ctx context.Context, operator *entity.Operator, id s
 	return users[0].User, nil
 }
 
+//TODO:No Test Program
 func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableUser, error) {
 	if len(ids) == 0 {
 		return []*NullableUser{}, nil
@@ -74,13 +75,16 @@ func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator,
 	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
 
 	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range _ids {
-		fmt.Fprintf(sb, "q%d: user(user_id: \"%s\") {id:user_id name:user_name given_name family_name email avatar}\n", index, id)
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$user_id_", ": ID!", len(_ids)))
+	for index := range _ids {
+		fmt.Fprintf(sb, "q%d: user(user_id: $user_id_%d) {id:user_id name:user_name given_name family_name email avatar}\n", index, index)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+	for index, id := range _ids {
+		request.Var(fmt.Sprintf("user_id_%d", index), id)
+	}
 
 	data := map[string]*User{}
 	response := &chlorine.Response{
@@ -279,6 +283,7 @@ func (s AmsUserService) NewUser(ctx context.Context, operator *entity.Operator, 
 	return data.NewUser.UserID, nil
 }
 
+//TODO:Test Failed
 func (s AmsUserService) FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error) {
 	if len(userIDs) == 0 {
 		return []string{}, nil
@@ -287,15 +292,18 @@ func (s AmsUserService) FilterByPermission(ctx context.Context, operator *entity
 	_ids, indexMapping := utils.SliceDeduplicationMap(userIDs)
 
 	sb := new(strings.Builder)
-	sb.WriteString("query($organization_id: ID!, $permission_name: ID!) {")
-	for index, id := range _ids {
-		fmt.Fprintf(sb, "q%d: user(user_id: \"%s\") {membership(organization_id: $organization_id) {checkAllowed(permission_name: $permission_name)}}\n", index, id)
+	fmt.Fprintf(sb, "query ($organization_id: ID! $permission_name: ID! %s) {", utils.StringCountRange(ctx, "$user_id_", ": ID!", len(_ids)))
+	for index := range _ids {
+		fmt.Fprintf(sb, "q%d: user(user_id: $user_id_%d) {membership(organization_id: $organization_id) {checkAllowed(permission_name: $permission_name)}}\n", index, index)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
 	request.Var("organization_id", operator.OrgID)
 	request.Var("permission_name", permissionName.String())
+	for index, id := range _ids {
+		request.Var(fmt.Sprintf("user_id_%d", index), id)
+	}
 
 	data := map[string]*struct {
 		Membership struct {
