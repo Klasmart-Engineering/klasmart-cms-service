@@ -866,7 +866,7 @@ func (m *assessmentBase) batchAdd(ctx context.Context, tx *dbo.DBContext, operat
 	}
 
 	// add contents
-	if err := m.batchAddContents(ctx, tx, operator, newAssessments, scheduleIDToArgsItemMap, args.LessonPlanMap, args.ScheduleIDs); err != nil {
+	if err := m.batchAddContents(ctx, tx, operator, newAssessments, scheduleIDToArgsItemMap, args.LessonPlanMap); err != nil {
 		return nil, err
 	}
 
@@ -938,7 +938,7 @@ func (m *assessmentBase) batchAddAttendances(ctx context.Context, tx *dbo.DBCont
 	return nil
 }
 
-func (m *assessmentBase) batchAddContents(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, newAssessments []*entity.Assessment, scheduleIDToArgsItemMap map[string]*entity.AddAssessmentArgs, lessonPlanMap map[string]*entity.AssessmentExternalLessonPlan, scheduleIDs []string) error {
+func (m *assessmentBase) batchAddContents(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, newAssessments []*entity.Assessment, scheduleIDToArgsItemMap map[string]*entity.AddAssessmentArgs, lessonPlanMap map[string]*entity.AssessmentExternalLessonPlan) error {
 	var assessmentContents []*entity.AssessmentContent
 	assessmentContentKeys := map[[2]string]bool{}
 	for _, a := range newAssessments {
@@ -977,7 +977,6 @@ func (m *assessmentBase) batchAddContents(ctx context.Context, tx *dbo.DBContext
 	if err := da.GetAssessmentContentDA().BatchInsert(ctx, tx, assessmentContents); err != nil {
 		log.Error(ctx, "batch add assessments: batch insert assessment content failed",
 			log.Err(err),
-			log.Any("schedule_ids", scheduleIDs),
 			log.Any("assessment_contents", assessmentContents),
 			log.Any("operator", operator),
 		)

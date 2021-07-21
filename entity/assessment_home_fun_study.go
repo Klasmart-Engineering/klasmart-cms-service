@@ -127,14 +127,31 @@ type GetHomeFunStudyResult struct {
 	AssessFeedbackID string                  `json:"assess_feedback_id"`
 	AssessScore      HomeFunStudyAssessScore `json:"assess_score" enums:"1,2,3,4,5"`
 	AssessComment    string                  `json:"assess_comment"`
+	Outcomes         []*HomeFunStudyOutcome  `json:"outcomes"`
 }
 
+type HomeFunStudyOutcome struct {
+	OutcomeID   string                    `json:"outcome_id"`
+	OutcomeName string                    `json:"outcome_name"`
+	Assumed     bool                      `json:"assumed"`
+	Status      HomeFunStudyOutcomeStatus `json:"status" enums:"achieved,not_achieved,not_attempted"`
+}
+
+type HomeFunStudyOutcomeStatus string
+
+const (
+	HomeFunStudyOutcomeStatusAchieved     HomeFunStudyOutcomeStatus = "achieved"
+	HomeFunStudyOutcomeStatusNotAchieved  HomeFunStudyOutcomeStatus = "not_achieved"
+	HomeFunStudyOutcomeStatusNotAttempted HomeFunStudyOutcomeStatus = "not_attempted"
+)
+
 type AssessHomeFunStudyArgs struct {
-	ID               string                   `json:"id"`
-	AssessFeedbackID string                   `json:"assess_feedback_id"`
-	AssessScore      HomeFunStudyAssessScore  `json:"assess_score" enums:"1,2,3,4,5"`
-	AssessComment    string                   `json:"assess_comment"`
-	Action           UpdateHomeFunStudyAction `json:"action" enums:"save,complete"`
+	ID               string                           `json:"id"`
+	AssessFeedbackID string                           `json:"assess_feedback_id"`
+	AssessScore      HomeFunStudyAssessScore          `json:"assess_score" enums:"1,2,3,4,5"`
+	AssessComment    string                           `json:"assess_comment"`
+	Action           UpdateHomeFunStudyAction         `json:"action" enums:"save,complete"`
+	Outcomes         []*UpdateHomeFunStudyOutcomeArgs `json:"outcomes"`
 }
 
 type UpdateHomeFunStudyAction string
@@ -150,4 +167,9 @@ func (a UpdateHomeFunStudyAction) Valid() bool {
 		return true
 	}
 	return false
+}
+
+type UpdateHomeFunStudyOutcomeArgs struct {
+	OutcomeID string                    `json:"outcome_id"`
+	Status    HomeFunStudyOutcomeStatus `json:"status"`
 }

@@ -132,14 +132,10 @@ func (m *homeFunStudyModel) GetDetail(ctx context.Context, operator *entity.Oper
 	}
 
 	result := &entity.GetHomeFunStudyResult{
-		ID:               study.ID,
-		ScheduleID:       study.ScheduleID,
-		Title:            study.Title,
-		TeacherIDs:       study.TeacherIDs,
-		TeacherNames:     teacherNames,
-		StudentID:        study.StudentID,
-		StudentName:      studentName,
-		Status:           study.Status,
+		ID:         study.ID,
+		ScheduleID: study.ScheduleID,
+		Title:      study.Title,
+		TeacherIDs: study.TeacherIDs, TeacherNames: teacherNames, StudentID: study.StudentID, StudentName: studentName, Status: study.Status,
 		DueAt:            study.DueAt,
 		CompleteAt:       study.CompleteAt,
 		AssessFeedbackID: study.AssessFeedbackID,
@@ -149,6 +145,71 @@ func (m *homeFunStudyModel) GetDetail(ctx context.Context, operator *entity.Oper
 
 	if result.AssessScore == 0 {
 		result.AssessScore = entity.HomeFunStudyAssessScoreAverage
+	}
+
+	// fill outcomes
+
+	// batch get assessment outcomes
+	var assessmentOutcomes []*entity.AssessmentOutcome
+	if err := da.GetAssessmentOutcomeDA().Query(ctx, &da.QueryAssessmentOutcomeConditions{
+		AssessmentIDs: entity.NullStrings{Strings: []string{id}, Valid: true},
+		Checked:       entity.NullBool{Bool: true, Valid: true},
+	}, &assessmentOutcomes); err != nil {
+		log.Error(ctx, "assess home fun study: query assessment outcome failed",
+			log.Err(err),
+			log.String("id", id),
+		)
+		return nil, err
+	}
+
+	// batch get outcome attendance map
+	var outcomeIDs []string
+	for _, ao := range assessmentOutcomes {
+		outcomeIDs = append(outcomeIDs, ao.OutcomeID)
+	}
+	outcomeAttendances, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, dbo.MustGetDB(ctx), id, outcomeIDs)
+	if err != nil {
+		log.Error(ctx, "assess home fun study: query outcome attendance failed",
+			log.Err(err),
+			log.String("id", id),
+		)
+		return nil, err
+	}
+	outcomeAttendanceMap := make(map[string][]*entity.OutcomeAttendance, len(outcomeAttendances))
+	for _, oa := range outcomeAttendances {
+		outcomeAttendanceMap[oa.OutcomeID] = append(outcomeAttendanceMap[oa.OutcomeID], oa)
+	}
+
+	// batch get outcome map
+	outcomes, err := GetOutcomeModel().GetByIDs(ctx, operator, dbo.MustGetDB(ctx), outcomeIDs)
+	outcomeMap := make(map[string]*entity.Outcome, len(outcomes))
+	for _, o := range outcomes {
+		outcomeMap[o.ID] = o
+	}
+	for _, ao := range assessmentOutcomes {
+		var outcomeName string
+		var assumed bool
+		outcome := outcomeMap[ao.OutcomeID]
+		if outcome != nil {
+			outcomeName = outcome.Name
+			assumed = outcome.Assumed
+		}
+		var status entity.HomeFunStudyOutcomeStatus
+		if ao.Skip {
+			status = entity.HomeFunStudyOutcomeStatusNotAttempted
+		} else {
+			if len(outcomeAttendanceMap[ao.OutcomeID]) > 0 {
+				status = entity.HomeFunStudyOutcomeStatusAchieved
+			} else {
+				status = entity.HomeFunStudyOutcomeStatusNotAchieved
+			}
+		}
+		result.Outcomes = append(result.Outcomes, &entity.HomeFunStudyOutcome{
+			OutcomeID:   ao.OutcomeID,
+			OutcomeName: outcomeName,
+			Assumed:     assumed,
+			Status:      status,
+		})
 	}
 
 	return result, nil
@@ -551,6 +612,66 @@ func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operato
 			log.Any("study", *study))
 		return err
 	}
+
+	// TODO: Medivh: get all related outcome ids
+	var outcomeIDs []string
+
+	// batch insert assessment outcomes
+	var insertingAssessmentOutcomes []*entity.AssessmentOutcome
+	for _, oid := range outcomeIDs {
+		insertingAssessmentOutcomes = append(insertingAssessmentOutcomes, &entity.AssessmentOutcome{
+			ID:           utils.NewID(),
+			AssessmentID: study.ID,
+			OutcomeID:    oid,
+			Checked:      true,
+		})
+	}
+	if err := da.GetAssessmentOutcomeDA().BatchInsert(ctx, tx, insertingAssessmentOutcomes); err != nil {
+		log.Error(ctx, "save home fun study: batch insert assessment outcomes failed",
+			log.Err(err),
+			log.Any("inserting_assessment_outcomes", insertingAssessmentOutcomes),
+			log.Any("args", args),
+		)
+		return err
+	}
+
+	// batch get all outcomes
+	outcomes, err := GetOutcomeModel().GetByIDs(ctx, operator, tx, outcomeIDs)
+	if err != nil {
+		log.Error(ctx, "save home fun study: batch get outcomes failed",
+			log.Err(err),
+			log.Any("outcome_ids", outcomeIDs),
+			log.Any("args", args),
+		)
+		return err
+	}
+	outcomeMap := make(map[string]*entity.Outcome, len(outcomes))
+	for _, o := range outcomes {
+		outcomeMap[o.ID] = o
+	}
+
+	// add outcome attendance
+	var insertingOutcomeAttendances []*entity.OutcomeAttendance
+	for _, o := range outcomes {
+		if !o.Assumed {
+			continue
+		}
+		insertingOutcomeAttendances = append(insertingOutcomeAttendances, &entity.OutcomeAttendance{
+			ID:           utils.NewID(),
+			AssessmentID: study.ID,
+			OutcomeID:    o.ID,
+			AttendanceID: study.StudentID,
+		})
+	}
+	if err := da.GetOutcomeAttendanceDA().BatchInsert(ctx, tx, insertingOutcomeAttendances); err != nil {
+		log.Error(ctx, "save home fun study: batch insert outcome attendance failed",
+			log.Err(err),
+			log.Any("inserting_outcome_attendance", insertingOutcomeAttendances),
+			log.Any("args", args),
+		)
+		return err
+	}
+
 	return nil
 }
 
@@ -638,6 +759,53 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 			log.Any("study", study),
 		)
 		return ErrHomeFunStudyHasNewFeedback
+	}
+
+	// loop update outcomes status
+	for _, o := range args.Outcomes {
+		e := entity.AssessmentOutcome{
+			AssessmentID: args.ID,
+			OutcomeID:    o.OutcomeID,
+			Skip:         o.Status == entity.HomeFunStudyOutcomeStatusNotAttempted,
+		}
+		if err := da.GetAssessmentOutcomeDA().UpdateByAssessmentIDAndOutcomeID(ctx, tx, &e); err != nil {
+			log.Error(ctx, "assess home fun study: update assessment outcome failed",
+				log.Err(err),
+				log.Any("e", e),
+				log.Any("args", args),
+			)
+			return err
+		}
+	}
+
+	// batch update outcome attendance list, use full update mode.
+	var deletingOutcomeIDs []string
+	var insertingOutcomeAttendances []*entity.OutcomeAttendance
+	for _, o := range args.Outcomes {
+		deletingOutcomeIDs = append(deletingOutcomeIDs, o.OutcomeID)
+		insertingOutcomeAttendances = append(insertingOutcomeAttendances, &entity.OutcomeAttendance{
+			ID:           utils.NewID(),
+			AssessmentID: args.ID,
+			OutcomeID:    o.OutcomeID,
+			AttendanceID: study.StudentID,
+		})
+	}
+	if err := da.GetOutcomeAttendanceDA().BatchDeleteByAssessmentIDAndOutcomeIDs(ctx, tx, args.ID, deletingOutcomeIDs); err != nil {
+		log.Error(ctx, "assess home fun study: batch delete outcome attendance failed",
+			log.String("assessment_id", args.ID),
+			log.Strings("delete_outcome_ids", deletingOutcomeIDs),
+			log.Any("args", args),
+			log.Err(err),
+		)
+		return err
+	}
+	if err := da.GetOutcomeAttendanceDA().BatchInsert(ctx, tx, insertingOutcomeAttendances); err != nil {
+		log.Error(ctx, "assess home fun study: batch insert outcome attendance failed",
+			log.Any("inserting_outcome_attendances", insertingOutcomeAttendances),
+			log.Any("args", args),
+			log.Err(err),
+		)
+		return err
 	}
 
 	if args.Action == entity.UpdateHomeFunStudyActionComplete {
