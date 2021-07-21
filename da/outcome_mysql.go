@@ -30,6 +30,7 @@ type OutcomeCondition struct {
 	Assumed        sql.NullBool
 	OrganizationID sql.NullString
 	SourceID       sql.NullString
+	SourceIDs      dbo.NullStrings
 	FuzzyKey       sql.NullString
 	AuthorIDs      dbo.NullStrings
 	AncestorIDs    dbo.NullStrings
@@ -118,6 +119,11 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 	if c.SourceID.Valid {
 		wheres = append(wheres, "source_id=?")
 		params = append(params, c.SourceID.String)
+	}
+
+	if c.SourceIDs.Valid {
+		wheres = append(wheres, "source_id in (?)")
+		params = append(params, c.SourceIDs.Strings)
 	}
 
 	if c.AncestorIDs.Valid {
@@ -303,6 +309,7 @@ func (o OutcomeSQLDA) SearchOutcome(ctx context.Context, op *entity.Operator, tx
 		log.Error(ctx, "SearchOutcome failed",
 			log.Err(err),
 			log.Any("condition", condition))
+		return
 	}
 	outcomeIDs := make([]string, len(outcomes))
 	for i := range outcomes {
@@ -333,25 +340,5 @@ func (o OutcomeSQLDA) UpdateLatestHead(ctx context.Context, op *entity.Operator,
 		return err
 	}
 
-	// clean cache
-	var outcomes []*entity.Outcome
-	err = tx.Where("latest_id=? and delete_at=0", newHeader).Find(&outcomes).Error
-	if err != nil {
-		log.Error(ctx, "UpdateLatestHead: Find failed",
-			log.Err(err),
-			log.String("old", oldHeader),
-			log.String("new", newHeader))
-		return err
-	}
-	if len(outcomes) < 1 {
-		log.Info(ctx, "UpdateLatestHead: Find outcomes return empty",
-			log.String("old", oldHeader),
-			log.String("new", newHeader))
-		return nil
-	}
-	ids := make([]string, len(outcomes))
-	for i := range outcomes {
-		ids[i] = outcomes[i].ID
-	}
 	return nil
 }

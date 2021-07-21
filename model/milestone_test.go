@@ -3,9 +3,10 @@ package model
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"testing"
 )
 
 func TestMilestoneModel_GenerateShortcode(t *testing.T) {
@@ -42,7 +43,7 @@ func TestMilestoneModel_Create(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = GetMilestoneModel().Create(ctx, op, milestone, req.OutcomeAncestorIDs, false)
+	err = GetMilestoneModel().Create(ctx, op, milestone, req.OutcomeAncestorIDs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +77,7 @@ func TestMilestoneModel_Update(t *testing.T) {
 	perms := make(map[external.PermissionName]bool)
 	perms[external.EditUnpublishedMilestone] = true
 	perms[external.EditPublishedMilestone] = true
-	err = GetMilestoneModel().Update(ctx, op, perms, milestone, req.OutcomeAncestorIDs, req.WithPublish)
+	err = GetMilestoneModel().Update(ctx, op, perms, milestone, req.OutcomeAncestorIDs)
 	if err != nil {
 		t.Fatal(err)
 	}

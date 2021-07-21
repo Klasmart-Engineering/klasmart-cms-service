@@ -71,8 +71,9 @@ const (
 )
 
 const (
-	LiveTokenExpiresAt = 24 * 30 * time.Hour
-	LiveTokenIssuedAt  = 30 * time.Second
+	LiveTokenExpiresAt              = 24 * 30 * time.Hour
+	LiveTokenIssuedAt               = 30 * time.Second
+	LiveClassTypeLiveTokenExpiresAt = 15 * time.Minute
 )
 
 const (
@@ -149,4 +150,9 @@ const (
 
 const (
 	CookieKey = "Cookie"
+)
+
+const (
+	VisibilitySettingsGroupOrg    = "org"
+	VisibilitySettingsGroupSchool = "school"
 )

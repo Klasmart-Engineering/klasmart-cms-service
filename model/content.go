@@ -228,6 +228,18 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 		return ErrUpdateContentFailed
 	}
 
+	if content.PublishStatus == entity.ContentStatusPublished {
+		//更新content的path
+		err := cm.checkAndUpdateContentPath(ctx, tx, content, user)
+		if err != nil {
+			return err
+		}
+		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, entity.NewPath(content.DirPath), entity.ContentLink(content.ID), user)
+		if err != nil {
+			return err
+		}
+	}
+
 	//If scope changed, refresh visibility settings
 	if scope != nil && len(scope) > 0 {
 		err = cm.refreshContentVisibilitySettings(ctx, tx, content.ID, scope)
@@ -268,8 +280,16 @@ func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateCont
 		return ErrInvalidSelectForm
 	}
 
-	_, _, _, _, _, _, _, _, err = prepareAllNeededName(ctx, op, []string{op.OrgID}, []string{op.UserID},
-		[]string{c.Program}, c.Subject, c.Category, c.SubCategory, c.Grade, c.Age)
+	_, err = prepareAllNeededName(ctx, op, entity.ExternalOptions{
+		OrgIDs:     []string{op.OrgID},
+		UsrIDs:     []string{op.UserID},
+		ProgIDs:    []string{c.Program},
+		SubjectIDs: c.Subject,
+		CatIDs:     c.Category,
+		SubcatIDs:  c.SubCategory,
+		GradeIDs:   c.Grade,
+		AgeIDs:     c.Age,
+	})
 	if err != nil {
 		log.Error(ctx, "checkContentInfo: prepareAllNeededName failed", log.Err(err), log.Any("op", op), log.Any("req", c))
 		return err
@@ -319,7 +339,10 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 	}
 
 	_, contentList, err := da.GetContentDA().SearchContent(ctx, tx, &da.ContentCondition{
-		IDS: subContentIDs,
+		IDS: entity.NullStrings{
+			Strings: subContentIDs,
+			Valid:   true,
+		},
 	})
 	if err != nil {
 		log.Error(ctx, "search content data failed", log.Any("IDS", subContentIDs), log.Err(err))
@@ -609,7 +632,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	if status == entity.ContentStatusPublished {
 		//更新Folder信息
 		//update folder info
-		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, content.DirPath, entity.ContentLink(content.ID), operator)
+		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, entity.NewPath(content.DirPath), entity.ContentLink(content.ID), operator)
 		if err != nil {
 			return err
 		}
@@ -741,8 +764,14 @@ func (cm *ContentModel) PublishContentBulkTx(ctx context.Context, ids []string, 
 }
 func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error {
 	updateIDs := make([]string, 0)
+	if len(ids) < 1 {
+		return nil
+	}
 	_, contents, err := da.GetContentDA().SearchContent(ctx, tx, &da.ContentCondition{
-		IDS: ids,
+		IDS: entity.NullStrings{
+			Strings: ids,
+			Valid:   true,
+		},
 	})
 	if err != nil {
 		log.Error(ctx, "can't read content on delete contentdata", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
@@ -1151,10 +1180,16 @@ func (cm *ContentModel) DeleteContentBulkTx(ctx context.Context, ids []string, u
 	})
 }
 func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error {
+	if len(ids) < 1 {
+		return nil
+	}
 	deletedIDs := make([]string, 0)
 	deletedIDs = append(deletedIDs, ids...)
 	_, contents, err := da.GetContentDA().SearchContent(ctx, tx, &da.ContentCondition{
-		IDS: ids,
+		IDS: entity.NullStrings{
+			Strings: ids,
+			Valid:   true,
+		},
 	})
 	if err != nil {
 		log.Error(ctx, "can't read content on delete contentdata", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
@@ -1410,9 +1445,6 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 
 	obj := cm.prepareCloneContentParams(ctx, content, user)
 
-	now := time.Now()
-	obj.UpdateAt = now.Unix()
-	obj.CreateAt = now.Unix()
 	id, err := da.GetContentDA().CreateContent(ctx, tx, *obj)
 	if err != nil {
 		log.Error(ctx, "clone contentdata failed", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
@@ -2306,8 +2338,12 @@ func (cm *ContentModel) ContentDataCount(ctx context.Context, tx *dbo.DBContext,
 		return nil, err
 	}
 	subContentIDs := cd.SubContentIDs(ctx)
+
 	_, subContents, err := da.GetContentDA().SearchContent(ctx, tx, &da.ContentCondition{
-		IDS: subContentIDs,
+		IDS: entity.NullStrings{
+			Strings: subContentIDs,
+			Valid:   true,
+		},
 	})
 	if err != nil {
 		log.Error(ctx, "search data failed", log.Err(err), log.String("cid", cid),

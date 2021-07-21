@@ -1,5 +1,7 @@
 package entity
 
+import "gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+
 const (
 	OutcomeStatusDraft     = "draft"
 	OutcomeStatusPending   = "pending"
@@ -44,17 +46,18 @@ type Outcome struct {
 	LatestID     string `gorm:"type:varchar(255);NOT NULL;column:latest_id" dynamodbav:"latest_id" json:"latest_id" dynamoupdate:":lsi"`
 	Assumed      bool   `gorm:"type:tinyint(255);NOT NULL;column:assumed" dynamodbav:"assumed" json:"assumed" dynamoupdate:":asum"`
 
-	CreateAt      int64        `gorm:"type:bigint;NOT NULL;column:create_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
-	UpdateAt      int64        `gorm:"type:bigint;NOT NULL;column:update_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
-	DeleteAt      int64        `gorm:"type:bigint;column:delete_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
-	Sets          []*Set       `gorm:"-" json:"sets"`
-	Programs      []string     `gorm:"-"`
-	Subjects      []string     `gorm:"-"`
-	Categories    []string     `gorm:"-"`
-	Subcategories []string     `gorm:"-"`
-	Grades        []string     `gorm:"-"`
-	Ages          []string     `gorm:"-"`
-	Milestones    []*Milestone `gorm:"-" json:"milestones"`
+	CreateAt       int64        `gorm:"type:bigint;NOT NULL;column:create_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
+	UpdateAt       int64        `gorm:"type:bigint;NOT NULL;column:update_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
+	DeleteAt       int64        `gorm:"type:bigint;column:delete_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
+	Sets           []*Set       `gorm:"-" json:"sets"`
+	Programs       []string     `gorm:"-"`
+	Subjects       []string     `gorm:"-"`
+	Categories     []string     `gorm:"-"`
+	Subcategories  []string     `gorm:"-"`
+	Grades         []string     `gorm:"-"`
+	Ages           []string     `gorm:"-"`
+	Milestones     []*Milestone `gorm:"-" json:"milestones"`
+	EditingOutcome *Outcome     `gorm:"-" json:"-"`
 }
 
 func (Outcome) TableName() string {
@@ -63,6 +66,10 @@ func (Outcome) TableName() string {
 
 func (oc Outcome) GetID() interface{} {
 	return oc.ID
+}
+
+func (oc Outcome) HasLocked() bool {
+	return oc.LockedBy != "" && oc.LockedBy != constant.LockedByNoBody
 }
 
 type OutcomeCondition struct {

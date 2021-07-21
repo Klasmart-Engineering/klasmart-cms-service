@@ -16,14 +16,14 @@ import (
 
 type LessonData struct {
 	SegmentId         string              `json:"segmentId"`
-	Condition         string              `json:"condition"`
+	Condition         string              `json:"condition,omitempty"`
 	MaterialId        string              `json:"materialId"`
-	Material          *entity.ContentInfo `json:"material"`
-	NextNode          []*LessonData       `json:"next"`
-	TeacherManual     string              `json:"teacher_manual"`
-	TeacherManualName string              `json:"teacher_manual_name"`
+	Material          *entity.ContentInfo `json:"material,omitempty"`
+	NextNode          []*LessonData       `json:"next,omitempty"`
+	TeacherManual     string              `json:"teacher_manual,omitempty"`
+	TeacherManualName string              `json:"teacher_manual_name,omitempty"`
 
-	TeacherManualBatch []*entity.TeacherManualFile `json:"teacher_manual_batch"`
+	TeacherManualBatch []*entity.TeacherManualFile `json:"teacher_manual_batch,omitempty"`
 }
 
 func (l *LessonData) Unmarshal(ctx context.Context, data string) error {
@@ -183,8 +183,14 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 func (l *LessonData) PrepareVersion(ctx context.Context) error {
 	//list all related content ids
 	ids := l.SubContentIDs(ctx)
+	if len(ids) < 1 {
+		return nil
+	}
 	_, contentList, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), &da.ContentCondition{
-		IDS: ids,
+		IDS: entity.NullStrings{
+			Strings: ids,
+			Valid:   true,
+		},
 	})
 	if err != nil {
 		return err
@@ -237,8 +243,15 @@ func (l *LessonData) PrepareResult(ctx context.Context, tx *dbo.DBContext, conte
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		materialList = append(materialList, l.MaterialId)
 	})
+	if len(materialList) < 1 {
+		return nil
+	}
+
 	_, contentList, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), &da.ContentCondition{
-		IDS: materialList,
+		IDS: entity.NullStrings{
+			Strings: materialList,
+			Valid:   true,
+		},
 	})
 	if err != nil {
 		return err
@@ -258,7 +271,8 @@ func (l *LessonData) PrepareResult(ctx context.Context, tx *dbo.DBContext, conte
 		//if is head quarter, remove unpublished materials
 		newContentList := make([]*entity.Content, 0)
 		for i := range contentList {
-			if contentList[i].PublishStatus == entity.ContentStatusPublished {
+			if contentList[i].PublishStatus == entity.ContentStatusPublished ||
+				contentList[i].PublishStatus == entity.ContentStatusArchive {
 				newContentList = append(newContentList, contentList[i])
 			}
 		}

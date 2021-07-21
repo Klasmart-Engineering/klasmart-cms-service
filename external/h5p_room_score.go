@@ -95,10 +95,11 @@ type H5PUserScores struct {
 }
 
 type H5PSetScoreRequest struct {
-	RoomID    string
-	ContentID string
-	StudentID string
-	Score     float64
+	RoomID       string
+	StudentID    string
+	ContentID    string
+	SubContentID string
+	Score        float64
 }
 
 type H5PRoomScoreServiceProvider interface {
@@ -140,63 +141,69 @@ func (s H5PRoomScoreService) BatchGet(ctx context.Context, operator *entity.Oper
 query {
 	{{range $i, $e := .}}
 	q{{$i}}: Room(room_id: "{{$e}}") {
-		scoresByUser {
-			user {
-				user_id
-				given_name
-				family_name
+		...scoresByUser
+  	}
+	{{end}}
+}
+fragment scoresByUser on Room {
+	scoresByUser {
+		user {
+			user_id
+			given_name
+			family_name
+		}
+		scores {
+			content {
+				content_id
+				name
+				type
+				fileType
+				h5p_id
+				subcontent_id
 			}
-			scores {
+			score {
+				min
+				max
+				sum
+				scoreFrequency
+				mean
+				scores
+				answers {
+					answer
+					score
+					date
+					minimumPossibleScore
+					maximumPossibleScore
+				}
+				median
+				medians
+			}
+			teacherScores {
+				teacher {
+					user_id
+					given_name
+					family_name
+				}
+				student {
+					user_id
+					given_name
+					family_name
+				}
 				content {
 					content_id
 					name
 					type
 					fileType
 					h5p_id
+					subcontent_id
 				}
-				score {
-					min
-					max
-					sum
-					scoreFrequency
-					mean
-					scores
-					answers {
-						answer
-						score
-						date
-						minimumPossibleScore
-						maximumPossibleScore
-					}
-					median
-					medians
-				}
-				teacherScores {
-					teacher {
-						user_id
-						given_name
-						family_name
-					}
-					student {
-						user_id
-						given_name
-						family_name
-					}
-					content {
-						content_id
-						name
-						type
-						fileType
-						h5p_id
-					}
-					score
-					date
-				}
+				score
+				date
 			}
 		}
-  	}
-	{{end}}
-}`
+	}
+}
+`
 
 	temp, err := template.New("").Parse(query)
 	if err != nil {
@@ -295,10 +302,11 @@ func (s H5PRoomScoreService) BatchSet(ctx context.Context, operator *entity.Oper
 mutation {
 	{{range $i, $e := .}}
 	q{{$i}}: setScore(
-		score: {{$e.Score}}
-		content_id: "{{$e.ContentID}}"
-		student_id: "{{$e.StudentID}}"
 		room_id: "{{$e.RoomID}}"
+		student_id: "{{$e.StudentID}}"
+		content_id: "{{$e.ContentID}}"
+		subcontent_id: "{{$e.SubContentID}}"
+		score: {{$e.Score}}
 	) {
 		teacher {
 			user_id

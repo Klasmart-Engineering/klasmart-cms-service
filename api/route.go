@@ -20,6 +20,7 @@ func (s Server) registeRoute() {
 	})
 
 	s.engine.GET("/v1/ping", s.ping)
+	s.engine.GET("/v1/version", s.version)
 
 	if config.Get().KidsLoopRegion == constant.KidsloopCN {
 		users := s.engine.Group("/v1/users")
@@ -300,8 +301,12 @@ func (s Server) registeRoute() {
 		milestone.DELETE("/milestones", s.mustLogin, s.deleteMilestone)
 
 		milestone.GET("/milestones", s.mustLogin, s.searchMilestone)
+		milestone.GET("/private_milestones", s.mustLogin, s.searchPrivateMilestone)
+		milestone.GET("/pending_milestones", s.mustLogin, s.searchPendingMilestone)
 
-		milestone.POST("/milestones/publish", s.mustLogin, s.publishMilestone)
+		milestone.PUT("/bulk_publish/milestones", s.mustLogin, s.bulkPublishMilestone)
+		milestone.PUT("/bulk_approve/milestones", s.mustLogin, s.bulkApproveMilestone)
+		milestone.PUT("/bulk_reject/milestones", s.mustLogin, s.bulkRejectMilestone)
 	}
 
 	organizationPermissions := s.engine.Group("/v1/organization_permissions")
@@ -324,4 +329,12 @@ func (s Server) registeRoute() {
 // @Router /ping [get]
 func (s Server) ping(c *gin.Context) {
 	c.String(http.StatusOK, "pong")
+}
+
+func (s Server) version(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"git_hash":        constant.GitHash,
+		"build_timestamp": constant.BuildTimestamp,
+		"latest_migrate":  constant.LatestMigrate,
+	})
 }

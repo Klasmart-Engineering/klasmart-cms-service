@@ -21,7 +21,6 @@ func TestAMS(t *testing.T) {
 	config.Set(cfg)
 	result, err := external.GetClassServiceProvider().BatchGet(context.Background(), &entity.Operator{
 		UserID: "",
-		Role:   "",
 		OrgID:  "",
 		Token:  "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ5NGI2ZmNjLTk0MDgtNTRjMi1hYzI5LTEzYzc5NmY0Yjg2MSIsImVtYWlsIjoidGVhY2hjazAwMTExQHlvcG1haWwuY29tIiwiZXhwIjoxNjEwMzQwNzIzLCJpc3MiOiJraWRzbG9vcCJ9.RHQ8Xm4HnH_6nEEyCAKDkqskOkI_zsCz10IU8OkuT4tQLgtGc7a0PLTLPpngyG9K0a409Rq87VDVBkY4B8W7buXmjtrDcMzSiHlxK1i4gwV6-iR2KPVQniHiC1urqfEh8Pe2eXM38tE5SERgJRIeehwB8bh3TQeBUldEABh0IqHrwPVOSkgLieRbxQZYYP2h1GppSeaYVC-hEqHO88e0dgN3p6r0iheECstZqdKdioJFtjoVMOp-xlS23Rs-J3AF0nYDZZn6XN02EUYMcmi0LtGT30qyrIOl4ULyRlNDcG165F_n9kg_U6tSwlR7s2SiwOLiGabSNFAG4CtoOBT0Iw; _gat_gtag_UA_149920485_2=1",
 	}, []string{"cec8deca-1107-4d08-8507-030accafc0e2"})
@@ -78,7 +77,6 @@ func TestGetAboutOrgInfo(t *testing.T) {
 	dbo.ReplaceGlobal(newDBO)
 	op := &entity.Operator{
 		UserID: "",
-		Role:   "",
 		OrgID:  "",
 		Token:  "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ5NGI2ZmNjLTk0MDgtNTRjMi1hYzI5LTEzYzc5NmY0Yjg2MSIsImVtYWlsIjoidGVhY2hjazAwMTExQHlvcG1haWwuY29tIiwiZXhwIjoxNjEwMzYxMTE3LCJpc3MiOiJraWRzbG9vcCJ9.uxQuYcezJf27oamOcZTm8tXTrcdPfnie_u8MNuV1af7bVX40CDqMknG903ertkjoFjBHb8_RujeIsIiYPfsROCpKdUsMmQyUpSjxgaQPjG_n6-1MSvqoujXNsrb1nhcL0gV_e179UBYDn9wxv3zR7WhJDqK9UJnab14qRygJvJ8ElYB3EOYaKflRTZsReUBy53Wke4OCwatHijijOMXM4KOIWiRRx6-9zpAwmiJf0h75d3_VAZJ2msNSn6VBY4qMUbrXYa2vjCdI4_rMgnu0zvdG8NrImnQPWwlU8K8yNTbYVrY46hazWYhN7RY6ZXful1kSudx7yMOAUWu_P44C1w; _gat_gtag_UA_149920485_2=1",
 	}
@@ -113,7 +111,6 @@ func TestPrepareDataByOrg(t *testing.T) {
 	InitData()
 	op := &entity.Operator{
 		UserID: "",
-		Role:   "",
 		OrgID:  "",
 		Token:  "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ5NGI2ZmNjLTk0MDgtNTRjMi1hYzI5LTEzYzc5NmY0Yjg2MSIsImVtYWlsIjoidGVhY2hjazAwMTExQHlvcG1haWwuY29tIiwiZXhwIjoxNjEwMzYxMTE3LCJpc3MiOiJraWRzbG9vcCJ9.uxQuYcezJf27oamOcZTm8tXTrcdPfnie_u8MNuV1af7bVX40CDqMknG903ertkjoFjBHb8_RujeIsIiYPfsROCpKdUsMmQyUpSjxgaQPjG_n6-1MSvqoujXNsrb1nhcL0gV_e179UBYDn9wxv3zR7WhJDqK9UJnab14qRygJvJ8ElYB3EOYaKflRTZsReUBy53Wke4OCwatHijijOMXM4KOIWiRRx6-9zpAwmiJf0h75d3_VAZJ2msNSn6VBY4qMUbrXYa2vjCdI4_rMgnu0zvdG8NrImnQPWwlU8K8yNTbYVrY46hazWYhN7RY6ZXful1kSudx7yMOAUWu_P44C1w; _gat_gtag_UA_149920485_2=1",
 	}

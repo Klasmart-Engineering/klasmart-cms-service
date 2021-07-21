@@ -31,14 +31,15 @@ type ListStudyAssessmentsResult struct {
 }
 
 type ListStudyAssessmentsResultItem struct {
-	ID            string   `json:"id"`
-	Title         string   `json:"title"`
-	TeacherNames  []string `json:"teacher_names"`
-	ClassName     string   `json:"class_name"`
-	DueAt         int64    `json:"due_at"`
-	CompleteRate  float64  `json:"complete_rate"`
-	RemainingTime int64    `json:"remaining_time"`
-	CompleteAt    int64    `json:"complete_at"`
+	ID            string                `json:"id"`
+	Title         string                `json:"title"`
+	TeacherNames  []string              `json:"teacher_names"`
+	ClassName     string                `json:"class_name"`
+	DueAt         int64                 `json:"due_at"`
+	CompleteRate  float64               `json:"complete_rate"`
+	RemainingTime int64                 `json:"remaining_time"`
+	CompleteAt    int64                 `json:"complete_at"`
+	LessonPlan    *AssessmentLessonPlan `json:"lesson_plan"`
 	// debug
 	ScheduleID string `json:"schedule_id"`
 	CreateAt   int64  `json:"create_at"`
@@ -55,13 +56,16 @@ type AssessmentH5PRoom struct {
 }
 
 type AssessmentH5PUser struct {
-	UserID     string
-	Comment    string
-	Contents   []*AssessmentH5PContentScore
-	ContentMap map[string]*AssessmentH5PContentScore
+	UserID                 string
+	Comment                string
+	Contents               []*AssessmentH5PContentScore
+	ContentsMapByH5PID     map[string][]*AssessmentH5PContentScore
+	ContentMapBySubH5PID   map[string]*AssessmentH5PContentScore
+	ContentsMapByContentID map[string][]*AssessmentH5PContentScore
 }
 
 type AssessmentH5PContentScore struct {
+	OrderedID        int
 	H5PID            string
 	ContentID        string
 	ContentName      string
@@ -71,4 +75,6 @@ type AssessmentH5PContentScore struct {
 	MaxPossibleScore float64
 	AchievedScore    float64
 	Scores           []float64
+	SubH5PID         string // add: 2021.06.24
+	SubContentNumber int    // add: 2021.06.24
 }
