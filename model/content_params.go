@@ -279,16 +279,15 @@ func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *
 func (cm *ContentModel) getContentPath(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	dirPath := content.DirPath
 
-	//if content.SourceID != "" {
-	//	sourceContent, err := da.GetContentDA().GetContentByID(ctx, tx, content.SourceID)
-	//	if err != nil {
-	//		log.Error(ctx, "get source content failed", log.Err(err), log.Any("content", content))
-	//		return err
-	//	}
-	//	dirPath = sourceContent.DirPath
-	//	content.DirPath = dirPath
-	//	return nil
-	//}
+	if content.SourceID != "" {
+		sourceContent, err := da.GetContentDA().GetContentByID(ctx, tx, content.SourceID)
+		if err != nil {
+			log.Error(ctx, "get source content failed", log.Err(err), log.Any("content", content))
+			return err
+		}
+		content.DirPath = sourceContent.DirPath
+		return nil
+	}
 
 	contentPath, err := GetFolderModel().MustGetPath(ctx, tx, entity.OwnerTypeOrganization, entity.FolderItemTypeFolder, dirPath.String(), entity.FolderPartitionMaterialAndPlans, user)
 	if err != nil {

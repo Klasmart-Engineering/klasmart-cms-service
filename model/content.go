@@ -586,10 +586,12 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		OrgID:  content.Org,
 	}
 
-	//更新content的path
-	err = cm.getContentPath(ctx, tx, content, operator)
-	if err != nil {
-		return err
+	if status == entity.ContentStatusPublished {
+		//更新content的path
+		err = cm.getContentPath(ctx, tx, content, operator)
+		if err != nil {
+			return err
+		}
 	}
 
 	rejectReason := strings.Join(reason, constant.StringArraySeparator)
