@@ -36,7 +36,7 @@ type programGroupModel struct {
 
 func (s programGroupModel) GetByProgramID(ctx context.Context, id string, operator *entity.Operator) (*entity.ProgramGroup, error) {
 	pg := new(entity.ProgramGroup)
-	err := da.GetProgramDA().Get(ctx, id, pg)
+	err := da.GetProgramGroupDA().Get(ctx, id, pg)
 	if err == dbo.ErrRecordNotFound {
 		return nil, constant.ErrRecordNotFound
 	}
