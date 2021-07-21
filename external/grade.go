@@ -41,13 +41,17 @@ func (s AmsGradeService) BatchGet(ctx context.Context, operator *entity.Operator
 	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
 
 	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range _ids {
-		fmt.Fprintf(sb, "q%d: grade(id: \"%s\") {id name status system}\n", index, id)
+
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$grade_id_", ": ID!", len(_ids)))
+	for index := range _ids {
+		fmt.Fprintf(sb, "q%d: grade(id: $grade_id_%d) {id name status system}\n", index, index)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+	for index, id := range _ids {
+		request.Var(fmt.Sprintf("grade_id_%d", index), id)
+	}
 
 	data := map[string]*Grade{}
 	response := &chlorine.Response{
