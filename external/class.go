@@ -215,15 +215,19 @@ func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Oper
 			pageUserIDs := _userIDs[start:end]
 
 			sb := new(strings.Builder)
-			sb.WriteString("query {")
-			for index, id := range pageUserIDs {
-				fmt.Fprintf(sb, "q%d: user(user_id: \"%s\") {\n", index, id)
+			fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$user_id_", ": ID!", len(pageUserIDs)))
+			for index := range pageUserIDs {
+				fmt.Fprintf(sb, "q%d: user(user_id: $user_id_%d) {\n", index, index)
 				fmt.Fprintln(sb, "classesTeaching {id:class_id name:class_name status}")
 				fmt.Fprintln(sb, "classesStudying {id:class_id name:class_name status}}")
 			}
 			sb.WriteString("}")
 
 			request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+			for index, id := range pageUserIDs {
+				request.Var(fmt.Sprintf("user_id_%d", index), id)
+			}
+
 			data := map[string]*struct {
 				ClassesTeaching []*Class `json:"classesTeaching"`
 				ClassesStudying []*Class `json:"classesStudying"`
@@ -297,13 +301,17 @@ func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, operator *ent
 	_organizationIDs, indexMapping := utils.SliceDeduplicationMap(organizationIDs)
 
 	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range _organizationIDs {
-		fmt.Fprintf(sb, "q%d: organization(organization_id: \"%s\") {classes{id: class_id name: class_name status}}\n", index, id)
+
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$organization_id_", ": ID!", len(_organizationIDs)))
+	for index := range _organizationIDs {
+		fmt.Fprintf(sb, "q%d: organization(organization_id: $organization_id_%d) {classes{id: class_id name: class_name status}}\n", index, index)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+	for index, id := range _organizationIDs {
+		request.Var(fmt.Sprintf("organization_id_%d", index), id)
+	}
 
 	data := map[string]*struct {
 		Classes []*Class `json:"classes"`
@@ -363,13 +371,17 @@ func (s AmsClassService) GetBySchoolIDs(ctx context.Context, operator *entity.Op
 	_schoolIDs, indexMapping := utils.SliceDeduplicationMap(schoolIDs)
 
 	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range _schoolIDs {
-		fmt.Fprintf(sb, "q%d: school(school_id: \"%s\") {classes{id: class_id name: class_name status}}\n", index, id)
+
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$school_id_", ": ID!", len(_schoolIDs)))
+	for index := range _schoolIDs {
+		fmt.Fprintf(sb, "q%d: school(school_id: $school_id_%d) {classes{id: class_id name: class_name status}}\n", index, index)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+	for index, id := range _schoolIDs {
+		request.Var(fmt.Sprintf("school_id_%d", index), id)
+	}
 
 	data := map[string]*struct {
 		Classes []*Class `json:"classes"`

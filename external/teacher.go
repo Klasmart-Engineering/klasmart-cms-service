@@ -10,6 +10,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type TeacherServiceProvider interface {
@@ -155,19 +156,23 @@ func (s AmsTeacherService) GetByOrganization(ctx context.Context, operator *enti
 	return teachers, nil
 }
 
+//TODO:No Test Program
 func (s AmsTeacherService) GetByOrganizations(ctx context.Context, operator *entity.Operator, organizationIDs []string) (map[string][]*Teacher, error) {
 	if len(organizationIDs) == 0 {
 		return map[string][]*Teacher{}, nil
 	}
 
 	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range organizationIDs {
-		fmt.Fprintf(sb, "q%d: organization(organization_id: \"%s\") {classes{teachers{id:user_id name:user_name}}}\n", index, id)
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$organization_id_", ": ID!", len(organizationIDs)))
+	for index := range organizationIDs {
+		fmt.Fprintf(sb, "q%d: organization(organization_id: $organization_id_%d) {classes{teachers{id:user_id name:user_name}}}\n", index, index)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+	for index, id := range organizationIDs {
+		request.Var(fmt.Sprintf("organization_id_%d", index), id)
+	}
 
 	data := map[string]*struct {
 		Classes []struct {
@@ -249,19 +254,23 @@ func (s AmsTeacherService) GetBySchool(ctx context.Context, operator *entity.Ope
 	return teachers, nil
 }
 
+//TODO:No Test Program
 func (s AmsTeacherService) GetBySchools(ctx context.Context, operator *entity.Operator, schoolIDs []string) (map[string][]*Teacher, error) {
 	if len(schoolIDs) == 0 {
 		return map[string][]*Teacher{}, nil
 	}
 
 	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range schoolIDs {
-		fmt.Fprintf(sb, "q%d: school(school_id: \"%s\") {classes{teachers{id:user_id name:user_name}}}\n", index, id)
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$school_id_", ": ID!", len(schoolIDs)))
+	for index := range schoolIDs {
+		fmt.Fprintf(sb, "q%d: school(school_id: $school_id_%d) {classes{teachers{id:user_id name:user_name}}}\n", index, index)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+	for index, id := range schoolIDs {
+		request.Var(fmt.Sprintf("school_id_%d", index), id)
+	}
 
 	data := map[string]*struct {
 		Classes []struct {
@@ -297,19 +306,23 @@ func (s AmsTeacherService) GetBySchools(ctx context.Context, operator *entity.Op
 	return teachers, nil
 }
 
+//TODO:No Test Program
 func (s AmsTeacherService) GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*Teacher, error) {
 	if len(classIDs) == 0 {
 		return map[string][]*Teacher{}, nil
 	}
 
 	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range classIDs {
-		fmt.Fprintf(sb, "q%d: class(class_id: \"%s\") {teachers{id:user_id name:user_name}}\n", index, id)
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$class_id_", ": ID!", len(classIDs)))
+	for index := range classIDs {
+		fmt.Fprintf(sb, "q%d: class(class_id: $class_id_%d) {teachers{id:user_id name:user_name}}\n", index, index)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+	for index, id := range classIDs {
+		request.Var(fmt.Sprintf("class_id_%d", index), id)
+	}
 
 	data := map[string]*struct {
 		Teachers []*Teacher `json:"teachers"`

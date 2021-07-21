@@ -241,6 +241,13 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			}}
 		}
 
+		if oldMilestone.Status != entity.MilestoneStatusDraft && oldMilestone.Status != entity.MilestoneStatusRejected {
+			log.Error(ctx, "Update: status not allowed edit",
+				log.Any("op", op),
+				log.Any("milestone", oldMilestone))
+			return ErrInvalidPublishStatus
+		}
+
 		if !m.allowUpdateMilestone(ctx, op, perms, oldMilestone) {
 			log.Warn(ctx, "Update: no permission",
 				log.Any("op", op),
@@ -1171,20 +1178,24 @@ func (m MilestoneModel) getParentIDs(ctx context.Context, milestones []*entity.M
 func (m MilestoneModel) getBySourceID(ctx context.Context, tx *dbo.DBContext, sourceID string) (*entity.Milestone, error) {
 	_, res, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
 		SourceID: sql.NullString{String: sourceID, Valid: true},
-		Status:   sql.NullString{String: entity.OutcomeStatusDraft, Valid: true},
 	})
 	if err != nil {
 		log.Error(ctx, "getBySourceID: failed",
 			log.String("source_id", sourceID))
 		return nil, err
 	}
-	if len(res) != 1 {
-		log.Debug(ctx, "getBySourceID: error",
-			log.String("source_id", sourceID),
-			log.Any("milestones", res))
-		return nil, constant.ErrInternalServer
+
+	// TODO: optimisation logic
+	for _, v := range res {
+		if v.SourceID != v.ID {
+			return v, nil
+		}
 	}
-	return res[0], nil
+
+	log.Debug(ctx, "getBySourceID: error",
+		log.String("source_id", sourceID),
+		log.Any("milestones", res))
+	return nil, constant.ErrInternalServer
 }
 
 func (m MilestoneModel) canPublish(ctx context.Context, milestones []*entity.Milestone) (publishIDs, hideIDs []string, ancestorLatest map[string]string, err error) {
@@ -1354,6 +1365,7 @@ func (m *MilestoneModel) updateMilestone(old *entity.Milestone, new *entity.Mile
 	milestone.Subcategories = new.Subcategories
 	milestone.Grades = new.Grades
 	milestone.Ages = new.Ages
+	milestone.Status = entity.MilestoneStatusDraft
 	return &milestone
 }
 
@@ -1368,6 +1380,12 @@ func (m *MilestoneModel) allowUpdateMilestone(ctx context.Context, operator *ent
 	}
 
 	if perms[external.EditPublishedMilestone] && milestone.Status == entity.MilestoneStatusPublished {
+		return true
+	}
+
+	if perms[external.EditMyUnpublishedMilestone] &&
+		milestone.Status != entity.MilestoneStatusPublished &&
+		milestone.AuthorID == operator.UserID {
 		return true
 	}
 
