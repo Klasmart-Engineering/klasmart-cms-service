@@ -129,7 +129,7 @@ func (c *ContentExporter) CollectRelatedResources(ctx context.Context, contentLi
 		//Add thumbnail
 		ret.Thumbnail = append(ret.Thumbnail, contentList[i].Thumbnail)
 
-		contentData, err := model.CreateContentData(ctx, contentList[i].ContentType, contentList[i].Data)
+		contentData, err := model.GetContentModel().CreateContentData(ctx, contentList[i].ContentType, contentList[i].Data)
 		if err != nil {
 			fmt.Printf("Can't unmarshal content plan data, id: %v, data: %v, err: %v\n", contentList[i].ID, contentList[i].Data, err)
 			return nil, err
@@ -174,7 +174,7 @@ func (c *ContentExporter) GetExportContents(ctx context.Context, condition da.Co
 //GetExportImmediateContents get content list to export by search condition
 func (c *ContentExporter) GetExportImmediateContents(ctx context.Context, condition da.ContentCondition) ([]*entity.Content, []string, error) {
 	//Search content by conditions
-	_, contentList, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), condition)
+	_, contentList, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), &condition)
 	if err != nil {
 		fmt.Printf("Can't get contents, err: %v\n", err)
 		return nil, nil, err
@@ -187,7 +187,7 @@ func (c *ContentExporter) GetExportImmediateContents(ctx context.Context, condit
 		if contentList[i].ContentType != entity.ContentTypePlan {
 			continue
 		}
-		planData, err := model.CreateContentData(ctx, contentList[i].ContentType, contentList[i].Data)
+		planData, err := model.GetContentModel().CreateContentData(ctx, contentList[i].ContentType, contentList[i].Data)
 		if err != nil {
 			fmt.Printf("Can't unmarshal content plan data, id: %v, data: %v, err: %v\n", contentList[i].ID, contentList[i].Data, err)
 			return nil, nil, err
