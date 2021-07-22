@@ -183,15 +183,15 @@ type ScheduleFilterSubject struct {
 
 type ScheduleRelationCondition struct {
 	ConflictCondition     *ConflictCondition
-	ScheduleID            sql.NullString
+	ScheduleFilterSubject *ScheduleFilterSubject
+	NotStartCondition     *NotStartCondition
 	RelationID            sql.NullString
 	RelationType          sql.NullString
+	ScheduleID            sql.NullString
+	ScheduleAndRelations  []*ScheduleAndRelations
 	RelationTypes         entity.NullStrings
 	RelationIDs           entity.NullStrings
-	NotStartCondition     *NotStartCondition
-	ScheduleFilterSubject *ScheduleFilterSubject
 	ScheduleIDs           entity.NullStrings
-	ScheduleAndRelations  []*ScheduleAndRelations
 }
 
 type ScheduleAndRelations struct {

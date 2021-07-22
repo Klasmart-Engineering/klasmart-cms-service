@@ -30,6 +30,7 @@ const (
 	ScheduleRelationTypeParticipantTeacher ScheduleRelationType = "participant_teacher"
 	ScheduleRelationTypeParticipantStudent ScheduleRelationType = "participant_student"
 	ScheduleRelationTypeSubject            ScheduleRelationType = "Subject"
+	ScheduleRelationTypeLearningOutcome    ScheduleRelationType = "learning_outcome"
 )
 
 func (s ScheduleRelationType) String() string {

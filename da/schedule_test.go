@@ -54,15 +54,15 @@ func TestGetTeachLoadByCondition(t *testing.T) {
 		ClassIDs:   []string{"5751555a-cc18-4662-9ae5-a5ad90569f79", "49b3be6a-d139-4f82-9b77-0acc89525d3f"},
 		TeacherIDs: []string{"4fde6e1b-8efe-58e9-a404-51fb98ebf9b8", "42098862-28b1-5417-9800-3b89e557a2b9"},
 		TimeRanges: []*entity.ScheduleTimeRange{
-			&entity.ScheduleTimeRange{
+			{
 				StartAt: 1605456000,
 				EndAt:   1605544740,
 			},
-			&entity.ScheduleTimeRange{
+			{
 				StartAt: 1605456000,
 				EndAt:   1605544740,
 			},
-			&entity.ScheduleTimeRange{
+			{
 				StartAt: 1605456000,
 				EndAt:   1605544740,
 			},
