@@ -3105,6 +3105,8 @@ func (s *scheduleModel) PrepareScheduleTimeViewCondition(ctx context.Context, qu
 			for _, item := range schoolList {
 				relationIDs = append(relationIDs, item.ID)
 			}
+
+			relationIDs = append(relationIDs, op.UserID)
 		}
 		condition.RelationIDs = entity.NullStrings{
 			Strings: relationIDs,
