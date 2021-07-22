@@ -27,7 +27,7 @@ func setup() {
 		RedisConfig: config.RedisConfig{
 			OpenCache: true,
 			Host:      os.Getenv("redis_host"),
-			Port:      16379,
+			Port:      6379,
 			Password:  "",
 		},
 		AMS: config.AMSConfig{

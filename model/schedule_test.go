@@ -20,8 +20,21 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestScheduleModel_Add(t *testing.T) {
+func TestAdd(t *testing.T) {
+	op := initOperator()
 
+	schedule := &entity.ScheduleAddView{
+		Title:              "ky's schedule",
+		ClassType:          entity.ScheduleClassTypeHomework,
+		IsHomeFun:          true,
+		LearningOutcomeIDs: []string{"60a36fd8de590052a3c5de00"},
+	}
+	outcomeIDs, err := GetScheduleModel().Add(context.TODO(), op, schedule)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(outcomeIDs)
 }
 
 func TestScheduleModel_GetByID(t *testing.T) {
@@ -83,7 +96,7 @@ func TestGetTeachLoadByCondition(t *testing.T) {
 }
 
 func TestGetLearningOutcomeIDs(t *testing.T) {
-	outcomeIDs, err := GetScheduleModel().GetLearningOutcomeIDs(context.TODO(), &entity.Operator{}, "6099c496e05f6e940027387c")
+	outcomeIDs, err := GetScheduleModel().GetLearningOutcomeIDs(context.TODO(), &entity.Operator{}, "60f92a4cc9b482f7b98259a6")
 	if err != nil {
 		t.Fatal(err)
 	}
