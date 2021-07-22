@@ -3,17 +3,38 @@ package model
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
+	"testing"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"log"
-	"testing"
-	"time"
 )
 
-func TestScheduleModel_Add(t *testing.T) {
+func TestMain(m *testing.M) {
+	setup()
+	code := m.Run()
+	os.Exit(code)
+}
 
+func TestAdd(t *testing.T) {
+	op := initOperator()
+
+	schedule := &entity.ScheduleAddView{
+		Title:              "ky's schedule",
+		ClassType:          entity.ScheduleClassTypeHomework,
+		IsHomeFun:          true,
+		LearningOutcomeIDs: []string{"60a36fd8de590052a3c5de00"},
+	}
+	outcomeIDs, err := GetScheduleModel().Add(context.TODO(), op, schedule)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(outcomeIDs)
 }
 
 func TestScheduleModel_GetByID(t *testing.T) {
@@ -54,15 +75,15 @@ func TestGetTeachLoadByCondition(t *testing.T) {
 		ClassIDs:   []string{"5751555a-cc18-4662-9ae5-a5ad90569f79", "49b3be6a-d139-4f82-9b77-0acc89525d3f"},
 		TeacherIDs: []string{"4fde6e1b-8efe-58e9-a404-51fb98ebf9b8", "42098862-28b1-5417-9800-3b89e557a2b9"},
 		TimeRanges: []*entity.ScheduleTimeRange{
-			&entity.ScheduleTimeRange{
+			{
 				StartAt: 1605456000,
 				EndAt:   1605544740,
 			},
-			&entity.ScheduleTimeRange{
+			{
 				StartAt: 1605456000,
 				EndAt:   1605544740,
 			},
-			&entity.ScheduleTimeRange{
+			{
 				StartAt: 1605456000,
 				EndAt:   1605544740,
 			},
@@ -72,4 +93,13 @@ func TestGetTeachLoadByCondition(t *testing.T) {
 	for _, item := range result {
 		t.Log(item.TeacherID, ":", item.ClassType, item.Durations)
 	}
+}
+
+func TestGetLearningOutcomeIDs(t *testing.T) {
+	outcomeIDs, err := GetScheduleModel().GetLearningOutcomeIDs(context.TODO(), &entity.Operator{}, "60f92a4cc9b482f7b98259a6")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(outcomeIDs)
 }

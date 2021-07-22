@@ -27,7 +27,6 @@ type ISchedulePermissionModel interface {
 }
 
 type schedulePermissionModel struct {
-	testSchedulePermissionRepeatFlag bool
 }
 
 func (s *schedulePermissionModel) GetUnDefineClass(ctx context.Context, op *entity.Operator, permissionMap map[external.PermissionName]bool) (*entity.ScheduleFilterClass, error) {
