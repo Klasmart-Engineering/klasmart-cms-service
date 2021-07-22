@@ -18,7 +18,7 @@ import (
 func setup() {
 	config.Set(&config.Config{
 		DBConfig: config.DBConfig{
-			ConnectionString: "root:root@tcp(127.0.0.1:3306)/kidsloop2?parseTime=true&charset=utf8mb4",
+			ConnectionString: os.Getenv("connection_string"),
 			MaxOpenConns:     8,
 			MaxIdleConns:     8,
 			ShowLog:          true,
@@ -111,5 +111,21 @@ func TestSearch(t *testing.T) {
 	t.Log(count)
 	for _, v := range outcomes {
 		t.Log(v.EditingOutcome)
+	}
+}
+
+func TestSearchWithoutRelation(t *testing.T) {
+	setup()
+	ctx := context.TODO()
+	count, outcomes, err := GetOutcomeModel().SearchWithoutRelation(ctx, &entity.Operator{}, &entity.OutcomeCondition{
+		Page:     1,
+		PageSize: 10,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(count)
+	for _, v := range outcomes {
+		t.Log(v)
 	}
 }

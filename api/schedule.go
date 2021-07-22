@@ -76,6 +76,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		ClassID:                data.ClassID,
 		ClassType:              data.ClassType,
 		Title:                  data.Title,
+		LearningOutcomeIDs:     data.LearningOutcomeIDs,
 	})
 	if err != nil {
 		log.Debug(ctx, "request data verify error", log.Err(err), log.Any("operator", op), log.Any("requestData", data))
@@ -286,6 +287,16 @@ func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditVa
 			return err
 		}
 	}
+
+	// check learning outcome
+	learningOutcomeIDs := utils.SliceDeduplicationExcludeEmpty(input.LearningOutcomeIDs)
+	if len(input.LearningOutcomeIDs) != len(learningOutcomeIDs) {
+		log.Debug(ctx, "add schedule: invalid learning_outcome_ids",
+			log.Any("learning_outcome_ids", input.LearningOutcomeIDs))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return constant.ErrInvalidArgs
+	}
+
 	return nil
 }
 
@@ -308,7 +319,8 @@ func (s *Server) addSchedule(c *gin.Context) {
 	ctx := c.Request.Context()
 	data := new(entity.ScheduleAddView)
 	if err := c.ShouldBind(data); err != nil {
-		log.Info(ctx, "add schedule: should bind body failed", log.Err(err))
+		log.Info(ctx, "add schedule: should bind body failed",
+			log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -321,11 +333,16 @@ func (s *Server) addSchedule(c *gin.Context) {
 		ClassID:                data.ClassID,
 		ClassType:              data.ClassType,
 		Title:                  data.Title,
+		LearningOutcomeIDs:     data.LearningOutcomeIDs,
 	})
 	if err != nil {
-		log.Debug(ctx, "request data verify error", log.Err(err), log.Any("operator", op), log.Any("requestData", data))
+		log.Debug(ctx, "request data verify error",
+			log.Err(err),
+			log.Any("operator", op),
+			log.Any("requestData", data))
 		return
 	}
+
 	_, err = model.GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
 		external.ScheduleCreateEvent,
 		external.ScheduleCreateMySchoolEvent,
@@ -339,6 +356,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
+
 	loc := utils.GetTimeLocationByOffset(data.TimeZoneOffset)
 	log.Debug(ctx, "time location", log.Any("location", loc), log.Int("offset", data.TimeZoneOffset))
 	data.OrgID = op.OrgID

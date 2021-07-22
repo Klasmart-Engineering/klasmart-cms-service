@@ -384,6 +384,7 @@ type ScheduleAddView struct {
 	TimeZoneOffset         int               `json:"time_zone_offset"`
 	Location               *time.Location    `json:"-"`
 	IsHomeFun              bool              `json:"is_home_fun"`
+	LearningOutcomeIDs     []string          `json:"learning_outcome_ids"`
 }
 
 type ScheduleEditValidation struct {
@@ -394,6 +395,7 @@ type ScheduleEditValidation struct {
 	ClassID                string
 	ClassType              ScheduleClassType
 	Title                  string
+	LearningOutcomeIDs     []string
 }
 
 func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
@@ -501,6 +503,7 @@ type ScheduleDetailsView struct {
 	Program              *ScheduleShortInfo            `json:"program"`
 	Teachers             []*ScheduleAccessibleUserView `json:"teachers"`
 	ExistAssessment      bool                          `json:"exist_assessment"`
+	OutcomeIDs           []string                      `json:"outcome_ids"`
 }
 
 type ScheduleRoleType string
@@ -588,12 +591,13 @@ type ScheduleLessonPlanMaterial struct {
 }
 
 type ScheduleVerify struct {
-	ClassID      string
-	SubjectIDs   []string
-	ProgramID    string
-	LessonPlanID string
-	ClassType    ScheduleClassType
-	IsHomeFun    bool
+	ClassID            string
+	SubjectIDs         []string
+	ProgramID          string
+	LessonPlanID       string
+	ClassType          ScheduleClassType
+	IsHomeFun          bool
+	LearningOutcomeIDs []string
 }
 
 // ScheduleEditType include delete and edit
@@ -677,6 +681,7 @@ type ScheduleRelationInput struct {
 	ParticipantsTeacherIDs []string
 	ParticipantsStudentIDs []string
 	SubjectIDs             []string
+	LearningOutcomeIDs     []string
 }
 
 type ProcessScheduleDueAtInput struct {
@@ -752,9 +757,10 @@ type ScheduleViewDetail struct {
 	Students       []*ScheduleShortInfo `json:"students"`
 	RoomID         string               `json:"room_id"`
 	//LiveToken     string               `json:"live_token"`
-	ExistAssessment    bool   `json:"exist_assessment"`
-	CompleteAssessment bool   `json:"complete_assessment"`
-	Description        string `json:"description"`
+	ExistAssessment    bool     `json:"exist_assessment"`
+	CompleteAssessment bool     `json:"complete_assessment"`
+	Description        string   `json:"description"`
+	OutcomeIDs         []string `json:"outcome_ids"`
 }
 
 type ScheduleTeachingLoadInput struct {

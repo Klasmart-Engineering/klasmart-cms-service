@@ -25,6 +25,7 @@ type IOutcomeModel interface {
 	Update(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) error
 	Delete(ctx context.Context, operator *entity.Operator, outcomeID string) error
 	Search(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
+	SearchWithoutRelation(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
 
 	Lock(ctx context.Context, operator *entity.Operator, outcomeID string) (string, error)
 
@@ -84,6 +85,7 @@ func (ocm OutcomeModel) GenerateShortcode(ctx context.Context, op *entity.Operat
 	err = ocm.Cache(ctx, op, index, shortcode)
 	return shortcode, err
 }
+
 func (ocm OutcomeModel) Current(ctx context.Context, op *entity.Operator) (int, error) {
 	return da.GetShortcodeRedis(ctx).Get(ctx, op, string(entity.KindOutcome))
 }
@@ -652,6 +654,19 @@ func (ocm OutcomeModel) Search(ctx context.Context, user *entity.Operator, condi
 		}
 		return nil
 	})
+	return total, outcomes, err
+}
+
+func (ocm OutcomeModel) SearchWithoutRelation(ctx context.Context, user *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
+	var outcomes []*entity.Outcome
+	total, err := da.GetOutcomeDA().Page(ctx, da.NewOutcomeCondition(condition), &outcomes)
+	if err != nil {
+		log.Error(ctx, "SearchWithoutRelation: da.GetOutcomeDA().Query failed",
+			log.Any("op", user),
+			log.Any("condition", condition))
+		return 0, nil, err
+	}
+
 	return total, outcomes, err
 }
 

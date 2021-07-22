@@ -3,11 +3,12 @@ package model
 import (
 	"context"
 	"errors"
+	"sort"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sort"
-	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -20,11 +21,11 @@ var (
 )
 
 type RepeatConfig struct {
+	MaxTime time.Time
+	MinTime time.Time
 	*entity.RepeatOptions
 	Location      *time.Location
 	RepeatEndYear int
-	MaxTime       time.Time
-	MinTime       time.Time
 }
 
 func NewRepeatConfig(options *entity.RepeatOptions, loc *time.Location) *RepeatConfig {
@@ -43,13 +44,12 @@ type RepeatBaseTimeStamp struct {
 }
 
 type RepeatCyclePlan struct {
-	ctx context.Context
-
+	ctx             context.Context
 	repeatCfg       *RepeatConfig
 	BaseTimeStamp   *RepeatBaseTimeStamp
-	Diff            []*RepeatBaseTimeStamp
 	Interval        DynamicIntervalFunc
 	sourceTimeStamp *RepeatBaseTimeStamp
+	Diff            []*RepeatBaseTimeStamp
 }
 
 func NewRepeatCyclePlan(ctx context.Context, baseStart int64, baseEnd int64, repeatCfg *RepeatConfig) (*RepeatCyclePlan, error) {
@@ -61,7 +61,7 @@ func NewRepeatCyclePlan(ctx context.Context, baseStart int64, baseEnd int64, rep
 			End:   baseEnd,
 		},
 		Diff: []*RepeatBaseTimeStamp{
-			&RepeatBaseTimeStamp{
+			{
 				Start: 0,
 				End:   0,
 			},
