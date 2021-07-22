@@ -568,20 +568,25 @@ func (f *FolderModel) RemoveItemBulk(ctx context.Context, fids []string, operato
 }
 
 func (f *FolderModel) MoveItemBulk(ctx context.Context, req entity.MoveFolderIDBulkRequest, operator *entity.Operator) error {
-	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		distFolder, err := f.getFolderMaybeRoot(ctx, tx, req.Dist, req.OwnerType, req.Partition, operator)
-		if err != nil {
-			return err
-		}
-		err = f.batchMoveItem(ctx, tx, req.FolderInfo, req.OwnerType, req.Partition, distFolder, operator)
-		if err != nil {
-			return err
-		}
-		return nil
+	//分批事务，3个一组
+	//Transaction in batches, groups of 5
+	err := utils.SegmentLoop(ctx, len(req.FolderInfo), 5, func(start, end int) error {
+		return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+			distFolder, err := f.getFolderMaybeRoot(ctx, tx, req.Dist, req.OwnerType, req.Partition, operator)
+			if err != nil {
+				return err
+			}
+			err = f.batchMoveItem(ctx, tx, req.FolderInfo[start:end], req.OwnerType, req.Partition, distFolder, operator)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
 	})
 	if err != nil {
 		return err
 	}
+
 	return nil
 
 }
