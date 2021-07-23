@@ -33,6 +33,7 @@ func GetHomeFunStudyModel() IHomeFunStudyModel {
 }
 
 type IHomeFunStudyModel interface {
+	Query(ctx context.Context, operator *entity.Operator, conditions *da.QueryHomeFunStudyCondition, result interface{}) error
 	Get(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error)
 	GetDetail(ctx context.Context, operator *entity.Operator, id string) (*entity.GetHomeFunStudyResult, error)
 	GetByScheduleIDAndStudentID(ctx context.Context, operator *entity.Operator, scheduleID string, studentID string) (*entity.HomeFunStudy, error)
@@ -44,6 +45,17 @@ type IHomeFunStudyModel interface {
 
 type homeFunStudyModel struct {
 	assessmentBase
+}
+
+func (m *homeFunStudyModel) Query(ctx context.Context, operator *entity.Operator, conditions *da.QueryHomeFunStudyCondition, result interface{}) error {
+	if err := da.GetHomeFunStudyDA().Query(ctx, conditions, result); err != nil {
+		log.Error(ctx, "query home fun study: query failed",
+			log.Err(err),
+			log.Any("conditions", conditions),
+		)
+		return err
+	}
+	return nil
 }
 
 func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error) {

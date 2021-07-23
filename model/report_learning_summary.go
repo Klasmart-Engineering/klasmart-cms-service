@@ -92,19 +92,25 @@ func (l *learningSummaryReportModel) querySubjectFilterItems(ctx context.Context
 }
 
 func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryLiveClassesSummaryResult, error) {
-	// find related schedules
-	schedules, err := l.findRelatedSchedules(ctx, tx, operator, filter)
+	// find related schedules and make by schedule id
+	schedules, err := l.findRelatedSchedules(ctx, tx, operator, filter, []entity.AssessmentType{entity.AssessmentTypeLive, entity.AssessmentTypeClass})
 	if err != nil {
 		return nil, err
 	}
 
-	// find related assessments
-	assessments, err := l.findRelatedAssessments(ctx, tx, operator, filter)
+	// find related assessments and make map by schedule id
+	scheduleIDs := make([]string, 0, len(schedules))
+	for _, s := range schedules {
+		scheduleIDs = append(scheduleIDs, s.ID)
+	}
+	assessments, err := l.findRelatedAssessments(ctx, tx, operator, scheduleIDs, filter.StudentID)
 	if err != nil {
 		return nil, err
 	}
-
-	// find related comments (live: room comments)
+	assessmentMap := make(map[string]*entity.Assessment, len(assessments))
+	for _, a := range assessments {
+		assessmentMap[a.ScheduleID] = a
+	}
 
 	// calculate student attend percent
 	attend := 0.0
@@ -112,50 +118,10 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 		attend = float64(len(schedules)) / float64(len(assessments))
 	}
 
-	//  result
-	result := &entity.QueryLiveClassesSummaryResult{
-		Attend: attend,
-		Items:  nil,
-	}
-	log.Debug(ctx, "query live classes summary", log.Any("result", result))
-
-	// query schedule and assessment aggregation items
-	panic("implement me")
-}
-
-func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) ([]*entity.ScheduleVariable, error) {
-	// find related schedule ids by student id
-	studentID := filter.StudentID
-	relations, err := GetScheduleRelationModel().Query(ctx, operator, &da.ScheduleRelationCondition{
-		RelationID: sql.NullString{
-			String: studentID,
-			Valid:  true,
-		},
-		RelationTypes: entity.NullStrings{
-			Strings: []string{
-				string(entity.ScheduleRelationTypeClassRosterStudent),
-				string(entity.ScheduleRelationTypeParticipantStudent),
-			},
-			Valid: true,
-		},
-	})
+	// find related comments and make map by schedule id  (live: room comments)
+	roomCommentMap, err := getAssessmentH5P().batchGetRoomCommentMap(ctx, operator, scheduleIDs)
 	if err != nil {
-		log.Error(ctx, "query subject filter items: query schedule relations failed",
-			log.Err(err),
-			log.Any("filter", filter),
-		)
-		return nil, err
-	}
-	scheduleIDs := make([]string, 0, len(relations))
-	for _, r := range relations {
-		scheduleIDs = append(scheduleIDs, r.ScheduleID)
-	}
-	scheduleIDs = utils.SliceDeduplicationExcludeEmpty(scheduleIDs)
-
-	// batch get schedules
-	schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, operator, scheduleIDs, nil)
-	if err != nil {
-		log.Error(ctx, "query subject filter items: batch get schedules failed",
+		log.Error(ctx, "query live classes summary: batch get room comment map failed",
 			log.Err(err),
 			log.Strings("schedule_ids", scheduleIDs),
 			log.Any("filter", filter),
@@ -163,68 +129,223 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 		return nil, err
 	}
 
-	// filter schedule by org
-	filterSchedules := make([]*entity.ScheduleVariable, 0, len(schedules))
+	// find related lesson plan name map
+	lessonPlanIDs := make([]string, 0, len(schedules))
 	for _, s := range schedules {
-		if s.OrgID != operator.OrgID {
-			continue
-		}
-		filterSchedules = append(filterSchedules, s)
+		lessonPlanIDs = append(lessonPlanIDs, s.LessonPlanID)
+	}
+	lessonPlanNames, err := GetContentModel().GetContentNameByIDList(ctx, tx, lessonPlanIDs)
+	lessonPlanNameMap := make(map[string]string, len(lessonPlanNames))
+	for _, lp := range lessonPlanNames {
+		lessonPlanNameMap[lp.ID] = lp.Name
 	}
 
-	return filterSchedules, nil
+	// TODO: Medivh: find related outcomes and make map by schedule id
+	var outcomeMap map[string][]*entity.Outcome
+
+	//  assembly result
+	result := &entity.QueryLiveClassesSummaryResult{Attend: attend}
+	for _, s := range schedules {
+		assessment := assessmentMap[s.ID]
+		item := entity.LiveClassSummaryItem{
+			ClassStartTime: s.StartAt,
+			ScheduleTitle:  s.Title,
+			LessonPlanName: lessonPlanNameMap[s.LessonPlanID],
+			ScheduleID:     s.ID,
+		}
+		if assessment == nil {
+			item.Absent = true
+		} else {
+			item.AssessmentID = assessment.ID
+		}
+		if comments := roomCommentMap[s.ID][filter.StudentID]; len(comments) > 0 {
+			item.TeacherFeedback = comments[len(comments)-1]
+		}
+		if outcomes := outcomeMap[s.ID]; len(outcomes) > 0 {
+			for _, o := range outcomes {
+				item.Outcomes = append(item.Outcomes, &entity.LearningSummaryOutcome{
+					ID:   o.ID,
+					Name: o.Name,
+				})
+			}
+		}
+		result.Items = append(result.Items, &item)
+	}
+
+	log.Debug(ctx, "query live classes summary result", log.Any("result", result))
+
+	return result, nil
 }
 
-func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) ([]*entity.Assessment, error) {
-	// find assessment ids by student id
-	var attendances []*entity.AssessmentAttendance
-	if err := da.GetAssessmentAttendanceDA().Query(ctx, &da.QueryAssessmentAttendanceConditions{
-		Role: entity.NullAssessmentAttendanceRole{
-			Value: entity.AssessmentAttendanceRoleStudent,
-			Valid: true,
-		},
-		AttendanceID: entity.NullString{
-			String: filter.StudentID,
-			Valid:  true,
-		},
-	}, &attendances); err != nil {
-		log.Error(ctx, "find related assessments: query assessment attendance relations failed",
-			log.Err(err),
-			log.Any("filter", filter),
-		)
-		return nil, err
-	}
-	assessmentIDs := make([]string, 0, len(attendances))
-	for _, a := range attendances {
-		assessmentIDs = append(assessmentIDs, a.ID)
-	}
+func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter, types []entity.AssessmentType) ([]*entity.ScheduleVariable, error) {
+	// TODO: Medivh: query schedules
+	panic("implement me")
+}
 
-	// batch get assessments
+func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string, studentID string) ([]*entity.Assessment, error) {
+	// query assessments
 	var assessments []*entity.Assessment
 	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
-		IDs: entity.NullStrings{
-			Strings: assessmentIDs,
+		ScheduleIDs: entity.NullStrings{
+			Strings: scheduleIDs,
 			Valid:   true,
 		},
-		OrgID: entity.NullString{
-			String: operator.OrgID,
-			Valid:  true,
+		StudentIDs: entity.NullStrings{
+			Strings: []string{studentID},
+			Valid:   true,
 		},
 	}, assessments); err != nil {
 		log.Error(ctx, "find related assessments: query assessment attendance relations failed",
 			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
+			log.String("student_id", studentID),
+		)
+		return nil, err
+	}
+	return assessments, nil
+}
+
+func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryAssignmentsSummaryResult, error) {
+	// find related schedules and make by schedule id
+	schedules, err := l.findRelatedSchedules(ctx, tx, operator, filter, []entity.AssessmentType{entity.AssessmentTypeStudy, entity.AssessmentTypeHomeFunStudy})
+	if err != nil {
+		return nil, err
+	}
+
+	// find related study assessments and make map by schedule id
+	scheduleIDs := make([]string, 0, len(schedules))
+	for _, s := range schedules {
+		scheduleIDs = append(scheduleIDs, s.ID)
+	}
+	studyAssessments, err := l.findRelatedAssessments(ctx, tx, operator, scheduleIDs, filter.StudentID)
+	if err != nil {
+		return nil, err
+	}
+	studyAssessmentMap := make(map[string]*entity.Assessment, len(studyAssessments))
+	for _, a := range studyAssessments {
+		studyAssessmentMap[a.ScheduleID] = a
+	}
+
+	// find related home fun study assessments and make map by schedule id
+	var homeFunStudyAssessments []*entity.HomeFunStudy
+	if err := GetHomeFunStudyModel().Query(ctx, operator, &da.QueryHomeFunStudyCondition{
+		ScheduleIDs: entity.NullStrings{
+			Strings: scheduleIDs,
+			Valid:   true,
+		},
+	}, &homeFunStudyAssessments); err != nil {
+		log.Error(ctx, "query assignments summary: query home fun study failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
+		)
+		return nil, err
+	}
+	homeFunStudyAssessmentMap := make(map[string]*entity.HomeFunStudy, len(homeFunStudyAssessments))
+	for _, a := range homeFunStudyAssessments {
+		homeFunStudyAssessmentMap[a.ScheduleID] = a
+	}
+
+	// calculate student completed percent
+	completedCount := 0
+	for _, a := range studyAssessments {
+		if a.Status == entity.AssessmentStatusComplete {
+			completedCount++
+		}
+	}
+	for _, a := range homeFunStudyAssessments {
+		if a.Status == entity.AssessmentStatusComplete {
+			completedCount++
+		}
+	}
+	totalCount := len(studyAssessments) + len(homeFunStudyAssessments)
+	completed := 0.0
+	if totalCount > 0 {
+		completed = float64(completedCount) / float64(totalCount)
+	}
+
+	// find related study assessments comments and make map by schedule id (live: room comments)
+	roomCommentMap, err := getAssessmentH5P().batchGetRoomCommentMap(ctx, operator, scheduleIDs)
+	if err != nil {
+		log.Error(ctx, "query live classes summary: batch get room comment map failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
 			log.Any("filter", filter),
 		)
 		return nil, err
 	}
 
-	return assessments, nil
-}
+	// find related lesson plan and make name map
+	lessonPlanIDs := make([]string, 0, len(schedules))
+	for _, s := range schedules {
+		lessonPlanIDs = append(lessonPlanIDs, s.LessonPlanID)
+	}
+	lessonPlanNames, err := GetContentModel().GetContentNameByIDList(ctx, tx, lessonPlanIDs)
+	if err != nil {
+		log.Error(ctx, "query assignments summary: batch get lesson plans failed",
+			log.Err(err),
+			log.Strings("lesson_plan_ids", lessonPlanIDs),
+			log.Any("filter", filter),
+		)
+		return nil, err
+	}
+	lessonPlanNameMap := make(map[string]string, len(lessonPlanNames))
+	for _, lp := range lessonPlanNames {
+		lessonPlanNameMap[lp.ID] = lp.Name
+	}
 
-func (l *learningSummaryReportModel) calcStudentAttendPercent(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (float64, error) {
-	panic("implement me")
-}
+	// TODO: Medivh: find related outcomes and make map by schedule id
+	var outcomeMap map[string][]*entity.Outcome
 
-func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryAssignmentsSummaryResult, error) {
-	panic("implement me")
+	// assembly result
+	result := &entity.QueryAssignmentsSummaryResult{Completed: completed}
+	for _, s := range schedules {
+		if s.IsHomeFun {
+			assessment := homeFunStudyAssessmentMap[s.ID]
+			if assessment == nil {
+				continue
+			}
+			item := entity.AssignmentsSummaryHomeFunStudyItem{
+				AssessmentTitle: assessment.Title,
+				TeacherFeedback: assessment.AssessComment,
+				ScheduleID:      s.ID,
+				AssessmentID:    assessment.ID,
+			}
+			if outcomes := outcomeMap[s.ID]; len(outcomes) > 0 {
+				for _, o := range outcomes {
+					item.Outcomes = append(item.Outcomes, &entity.LearningSummaryOutcome{
+						ID:   o.ID,
+						Name: o.Name,
+					})
+				}
+			}
+			result.HomeFunStudyItems = append(result.HomeFunStudyItems, &item)
+		} else {
+			assessment := studyAssessmentMap[s.ID]
+			if assessment == nil {
+				continue
+			}
+			item := entity.AssignmentsSummaryStudyItem{
+				AssessmentTitle: assessment.Title,
+				LessonPlanName:  lessonPlanNameMap[s.LessonPlanID],
+				ScheduleID:      s.ID,
+				AssessmentID:    assessment.ID,
+			}
+			if outcomes := outcomeMap[s.ID]; len(outcomes) > 0 {
+				for _, o := range outcomes {
+					item.Outcomes = append(item.Outcomes, &entity.LearningSummaryOutcome{
+						ID:   o.ID,
+						Name: o.Name,
+					})
+				}
+			}
+			if comments := roomCommentMap[s.ID][filter.StudentID]; len(comments) > 0 {
+				item.TeacherFeedback = comments[len(comments)-1]
+			}
+			result.StudyItems = append(result.StudyItems, &item)
+		}
+	}
+
+	log.Debug(ctx, "query assignments summary result", log.Any("result", result))
+
+	return result, nil
 }

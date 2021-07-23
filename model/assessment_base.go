@@ -179,7 +179,7 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 
 	// fill student view items
 	if view.Schedule.ClassType != entity.ScheduleClassTypeOfflineClass {
-		result.StudentViewItems, err = getAssessmentH5p().getH5PStudentViewItems(ctx, operator, tx, view)
+		result.StudentViewItems, err = getAssessmentH5P().getH5PStudentViewItems(ctx, operator, tx, view)
 		if err != nil {
 			log.Error(ctx, "get assessment detail: get student view items failed",
 				log.Err(err),

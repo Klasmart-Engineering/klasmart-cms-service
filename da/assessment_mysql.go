@@ -179,6 +179,7 @@ type QueryAssessmentConditions struct {
 	Status                       entity.NullAssessmentStatus                       `json:"status"`
 	ScheduleIDs                  entity.NullStrings                                `json:"schedule_ids"`
 	TeacherIDs                   entity.NullStrings                                `json:"teacher_ids"`
+	StudentIDs                   entity.NullStrings                                `json:"student_ids"`
 	AllowTeacherIDs              entity.NullStrings                                `json:"allow_teacher_ids"`
 	AllowTeacherIDAndStatusPairs entity.NullAssessmentAllowTeacherIDAndStatusPairs `json:"teacher_id_and_status_pairs"`
 	ClassTypes                   entity.NullScheduleClassTypes                     `json:"class_types"`
@@ -224,6 +225,12 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 		t.Appendf("exists (select 1 from assessments_attendances"+
 			" where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and attendance_id in (?))",
 			utils.SliceDeduplication(c.TeacherIDs.Strings))
+	}
+
+	if c.StudentIDs.Valid {
+		t.Appendf("exists (select 1 from assessments_attendances"+
+			" where assessments.id = assessments_attendances.assessment_id and role = 'student' and attendance_id in (?))",
+			utils.SliceDeduplication(c.StudentIDs.Strings))
 	}
 
 	if c.AllowTeacherIDs.Valid {

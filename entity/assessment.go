@@ -92,3 +92,12 @@ type BatchAddAssessmentSuperArgs struct {
 	LessonPlanMap             map[string]*AssessmentExternalLessonPlan
 	ScheduleIDToOutcomeIDsMap map[string][]string
 }
+
+type AssessmentType string
+
+const (
+	AssessmentTypeLive         AssessmentType = "live"
+	AssessmentTypeClass        AssessmentType = "class"
+	AssessmentTypeStudy        AssessmentType = "study"
+	AssessmentTypeHomeFunStudy AssessmentType = "home_fun_study"
+)

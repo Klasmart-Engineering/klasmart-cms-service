@@ -64,7 +64,7 @@ type QueryLiveClassesSummaryResult struct {
 }
 
 type LiveClassSummaryItem struct {
-	Attend          string                    `json:"attend"`
+	Absent          bool                      `json:"absent"`
 	ClassStartTime  int64                     `json:"class_start_time"`
 	ScheduleTitle   string                    `json:"schedule_title"`
 	LessonPlanName  string                    `json:"lesson_plan_name"`
