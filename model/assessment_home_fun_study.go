@@ -613,8 +613,15 @@ func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operato
 		return err
 	}
 
-	// TODO: Medivh: get all related outcome ids
-	var outcomeIDs []string
+	// get all related outcome ids
+	outcomeIDs, err := GetScheduleModel().GetLearningOutcomeIDs(ctx, operator, args.ScheduleID)
+	if err != nil {
+		log.Error(ctx, "save home fun study: get outcome ids failed",
+			log.Err(err),
+			log.Any("args", args),
+		)
+		return err
+	}
 
 	// batch insert assessment outcomes
 	var insertingAssessmentOutcomes []*entity.AssessmentOutcome
