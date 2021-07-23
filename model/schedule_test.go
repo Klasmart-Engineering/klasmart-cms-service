@@ -11,6 +11,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
@@ -96,10 +97,23 @@ func TestGetTeachLoadByCondition(t *testing.T) {
 }
 
 func TestGetLearningOutcomeIDs(t *testing.T) {
-	outcomeIDs, err := GetScheduleModel().GetLearningOutcomeIDs(context.TODO(), &entity.Operator{}, "60f92a4cc9b482f7b98259a6")
+	result, err := GetScheduleModel().GetLearningOutcomeIDs(context.TODO(), &entity.Operator{}, []string{"60f92a4cc9b482f7b98259a6", "6099c496e05f6e940027387c"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Log(outcomeIDs)
+	t.Log(result)
+}
+
+func TestQueryUnsafe(t *testing.T) {
+	schedules, err := GetScheduleModel().QueryUnsafe(context.TODO(), &da.ScheduleCondition{
+		IDs: entity.NullStrings{Strings: []string{"60f929bb7604f720d1943c33", "60f92bd0f964d549bf922b46"}, Valid: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, v := range schedules {
+		t.Log(v)
+	}
 }
