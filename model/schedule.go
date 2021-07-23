@@ -55,7 +55,7 @@ type IScheduleModel interface {
 	GetSubjects(ctx context.Context, op *entity.Operator, programID string) ([]*entity.ScheduleShortInfo, error)
 	GetClassTypes(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
 	GetRosterClassNotStartScheduleIDs(ctx context.Context, rosterClassID string, userIDs []string) ([]string, error)
-	GetLearningOutcomeIDs(ctx context.Context, op *entity.Operator, scheduleID string) ([]string, error)
+	GetLearningOutcomeIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]string, error)
 	GetScheduleViewByID(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleViewDetail, error)
 	GetSubjectsBySubjectIDs(ctx context.Context, op *entity.Operator, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error)
 	GetVariableDataByIDs(ctx context.Context, op *entity.Operator, ids []string, include *entity.ScheduleInclude) ([]*entity.ScheduleVariable, error)
@@ -63,6 +63,8 @@ type IScheduleModel interface {
 	//prepareScheduleTimeViewCondition(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) (*da.ScheduleCondition, error)
 	Query(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]*entity.ScheduleListView, error)
 	QueryScheduledDates(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]string, error)
+	// without permission check, internal function call
+	QueryUnsafe(ctx context.Context, condition *da.ScheduleCondition) ([]*entity.Schedule, error)
 }
 
 type scheduleModel struct {
@@ -403,6 +405,7 @@ func (s *scheduleModel) GetSchoolIDsByUserIDs(ctx context.Context, op *entity.Op
 	}
 	return result, nil
 }
+
 func (s *scheduleModel) GetSchoolIDsByClassIDs(ctx context.Context, op *entity.Operator, classIDs []string) ([]string, error) {
 	classSchoolMap, err := external.GetSchoolServiceProvider().GetByClasses(ctx, op, classIDs)
 	if err != nil {
@@ -969,6 +972,7 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 
 	return schedule, nil
 }
+
 func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error) {
 	schedule, err := s.checkScheduleStatus(ctx, operator, viewData.ID)
 	if err != nil {
@@ -1440,6 +1444,7 @@ func (s *scheduleModel) QueryByDB(ctx context.Context, op *entity.Operator, cond
 
 	return scheduleList, nil
 }
+
 func (s *scheduleModel) QueryByCondition(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error) {
 	cacheData, err := s.queryByCache(ctx, op, condition)
 	if err == nil {
@@ -2308,6 +2313,7 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 		_, outcomes, err := GetOutcomeModel().SearchWithoutRelation(ctx, operator, &entity.OutcomeCondition{
 			IDs:           v.LearningOutcomeIDs,
 			PublishStatus: entity.OutcomeStatusPublished,
+			Assumed:       -1,
 		})
 		if err != nil {
 			log.Error(ctx, "verifyData: GetOutcomeModel().SearchWithoutRelation error",
@@ -2794,19 +2800,30 @@ func (s *scheduleModel) GetRosterClassNotStartScheduleIDs(ctx context.Context, r
 	return result, nil
 }
 
-func (s *scheduleModel) GetLearningOutcomeIDs(ctx context.Context, op *entity.Operator, scheduleID string) ([]string, error) {
-	outcomeIDs, err := da.GetScheduleRelationDA().GetRelationIDsByCondition(ctx, dbo.MustGetDB(ctx), &da.ScheduleRelationCondition{
-		ScheduleID:   sql.NullString{String: scheduleID, Valid: true},
+func (s *scheduleModel) GetLearningOutcomeIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]string, error) {
+	var scheduleRelations []*entity.ScheduleRelation
+	err := da.GetScheduleRelationDA().Query(ctx, &da.ScheduleRelationCondition{
+		ScheduleIDs:  entity.NullStrings{Strings: scheduleIDs, Valid: true},
 		RelationType: sql.NullString{String: string(entity.ScheduleRelationTypeLearningOutcome), Valid: true},
-	})
+	}, &scheduleRelations)
 	if err != nil {
 		log.Error(ctx, "GetLearningOutcomeIDs error",
 			log.Err(err),
 			log.Any("op", op),
-			log.String("scheduleID", scheduleID))
+			log.Any("scheduleIDs", scheduleIDs))
 		return nil, err
 	}
-	return outcomeIDs, nil
+
+	result := make(map[string][]string, len(scheduleIDs))
+	for _, v := range scheduleIDs {
+		result[v] = []string{}
+	}
+
+	for _, v := range scheduleRelations {
+		result[v.ScheduleID] = append(result[v.ScheduleID], v.RelationID)
+	}
+
+	return result, nil
 }
 
 func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleViewDetail, error) {
@@ -3144,6 +3161,7 @@ func (s *scheduleModel) Query(ctx context.Context, query *entity.ScheduleTimeVie
 	}
 	return result, nil
 }
+
 func (s *scheduleModel) QueryScheduledDates(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]string, error) {
 	condition, err := s.PrepareScheduleTimeViewCondition(ctx, query, op, loc)
 	if err != nil {
@@ -3154,6 +3172,17 @@ func (s *scheduleModel) QueryScheduledDates(ctx context.Context, query *entity.S
 		return nil, err
 	}
 	return result, nil
+}
+
+func (s *scheduleModel) QueryUnsafe(ctx context.Context, condition *da.ScheduleCondition) ([]*entity.Schedule, error) {
+	var scheduleList []*entity.Schedule
+	err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)
+	if err != nil {
+		log.Error(ctx, "schedule query error", log.Err(err), log.Any("condition", condition))
+		return nil, err
+	}
+
+	return scheduleList, nil
 }
 
 var (
