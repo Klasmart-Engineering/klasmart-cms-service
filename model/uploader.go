@@ -9,24 +9,23 @@ import (
 	"sync"
 )
 
-type IResourceUploaderModel interface{
+type IResourceUploaderModel interface {
 	GetResourceUploadPath(ctx context.Context, partition string, extension string) (string, string, error)
 	GetResourcePath(ctx context.Context, resourceId string) (string, error)
 }
 
 type ResourceUploaderModel struct {
-
 }
 
 func (r *ResourceUploaderModel) GetResourceUploadPath(ctx context.Context, partition string, extension string) (string, string, error) {
 	fileName := utils.NewID() + "." + extension
 	pat, err := storage.NewStoragePartition(ctx, partition, extension)
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "invalid partition", log.Err(err), log.String("partition", partition), log.String("extension", extension))
 		return "", "", err
 	}
 	path, err := storage.DefaultStorage().GetUploadFileTempPath(ctx, pat, fileName)
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "get upload file temp path failed", log.Err(err), log.String("partition", partition), log.String("extension", extension))
 		return "", "", err
 	}
@@ -46,12 +45,13 @@ func (r *ResourceUploaderModel) GetResourcePath(ctx context.Context, resourceId 
 	}
 
 	pat, err := storage.NewStoragePartition(ctx, parts[0], extensionPairs[1])
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "invalid partition", log.Err(err), log.String("resourceId", resourceId), log.Strings("parts", parts))
 		return "", err
 	}
 	return storage.DefaultStorage().GetFileTempPath(ctx, pat, parts[1])
 }
+
 var (
 	_uploaderModel     IResourceUploaderModel
 	_uploaderModelOnce sync.Once
@@ -63,4 +63,3 @@ func GetResourceUploaderModel() IResourceUploaderModel {
 	})
 	return _uploaderModel
 }
-

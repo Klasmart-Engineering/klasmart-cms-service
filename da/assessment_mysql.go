@@ -173,17 +173,37 @@ func (a *assessmentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items
 	return nil
 }
 
+type StudentQueryAssessmentConditions struct {
+	IDs             entity.NullStrings          `json:"ids"`
+	StudentID       string                      `json:"student_ids"`
+	TeacherIDs      entity.NullStrings          `json:"teacher_ids"`
+	Status          entity.NullAssessmentStatus `json:"status"`
+	CreatedBetween  NullTimeRange               `json:"created_between"`
+	UpdateBetween   NullTimeRange               `json:"update_between"`
+	CompleteBetween NullTimeRange               `json:"complete_between"`
+	ClassType       entity.AssessmentClassType  `json:"class_type"`
+
+	OrderBy string    `json:"order_by"`
+	Pager   dbo.Pager `json:"pager"`
+}
+
 type QueryAssessmentConditions struct {
 	IDs                          entity.NullStrings                                `json:"ids"`
 	OrgID                        entity.NullString                                 `json:"org_id"`
 	Status                       entity.NullAssessmentStatus                       `json:"status"`
 	ScheduleIDs                  entity.NullStrings                                `json:"schedule_ids"`
+	StudentIDs                   entity.NullStrings                                `json:"student_ids"`
 	TeacherIDs                   entity.NullStrings                                `json:"teacher_ids"`
 	AllowTeacherIDs              entity.NullStrings                                `json:"allow_teacher_ids"`
 	AllowTeacherIDAndStatusPairs entity.NullAssessmentAllowTeacherIDAndStatusPairs `json:"teacher_id_and_status_pairs"`
 	ClassTypes                   entity.NullScheduleClassTypes                     `json:"class_types"`
 	ClassIDs                     entity.NullStrings                                `json:"class_ids"`
 	ClassIDsOrTeacherIDs         NullClassIDsOrTeacherIDs                          `json:"class_ids_or_teacher_ids"`
+
+	CreatedBetween  NullTimeRange     `json:"created_between"`
+	UpdateBetween   NullTimeRange     `json:"update_between"`
+	CompleteBetween NullTimeRange     `json:"complete_between"`
+	ClassType       entity.NullString `json:"class_type"`
 
 	OrderBy entity.NullAssessmentsOrderBy `json:"order_by"`
 	Pager   dbo.Pager                     `json:"pager"`
@@ -197,6 +217,12 @@ type ClassIDsOrTeacherIDs struct {
 type NullClassIDsOrTeacherIDs struct {
 	Value ClassIDsOrTeacherIDs
 	Valid bool
+}
+
+type NullTimeRange struct {
+	StartAt int64
+	EndAt   int64
+	Valid   bool
 }
 
 func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
@@ -224,6 +250,26 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 		t.Appendf("exists (select 1 from assessments_attendances"+
 			" where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and attendance_id in (?))",
 			utils.SliceDeduplication(c.TeacherIDs.Strings))
+	}
+	if c.StudentIDs.Valid {
+		t.Appendf("exists (select 1 from assessments_attendances"+
+			" where assessments.id = assessments_attendances.assessment_id and role = 'student' and attendance_id in (?))",
+			utils.SliceDeduplication(c.StudentIDs.Strings))
+	}
+
+	if c.CreatedBetween.Valid {
+		t.Appendf("(create_at BETWEEN ? AND ?)", c.CreatedBetween.StartAt, c.CreatedBetween.EndAt)
+	}
+	if c.UpdateBetween.Valid {
+		t.Appendf("(update_at BETWEEN ? AND ?)", c.UpdateBetween.StartAt, c.UpdateBetween.EndAt)
+	}
+	if c.CompleteBetween.Valid {
+		t.Appendf("(complete_time BETWEEN ? AND ?)", c.CompleteBetween.StartAt, c.CompleteBetween.EndAt)
+	}
+	if c.ClassType.Valid {
+		t.Appendf("exists (select 1 from schedules"+
+			" where assessments.schedule_id = schedules.id and class_type = ? and is_home_fun=false)",
+			c.ClassType.String)
 	}
 
 	if c.AllowTeacherIDs.Valid {
@@ -286,6 +332,10 @@ func (c *QueryAssessmentConditions) GetOrderBy() string {
 		return "create_at"
 	case entity.AssessmentOrderByCreateAtDesc:
 		return "create_at desc"
+	case entity.AssessmentOrderByUpdateAt:
+		return "update_at"
+	case entity.AssessmentOrderByUpdateAtDesc:
+		return "update_at desc"
 	}
 	return ""
 }

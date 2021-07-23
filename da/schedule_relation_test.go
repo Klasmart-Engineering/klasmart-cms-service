@@ -31,16 +31,16 @@ func TestScheduleFilterSubject(t *testing.T) {
 	t.Log(parameters)
 }
 
-func TestScheduleAndRelationCondition(t *testing.T){
-	condition:=&ScheduleRelationCondition{
+func TestScheduleAndRelationCondition(t *testing.T) {
+	condition := &ScheduleRelationCondition{
 		ScheduleAndRelations: []*ScheduleAndRelations{
 			{
 				ScheduleID:  "00000",
-				RelationIDs: []string{"11111","222222","33333"},
+				RelationIDs: []string{"11111", "222222", "33333"},
 			},
 			{
 				ScheduleID:  "111111",
-				RelationIDs: []string{"3333","44444","66666"},
+				RelationIDs: []string{"3333", "44444", "66666"},
 			},
 		},
 	}

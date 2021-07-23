@@ -2,6 +2,48 @@ package entity
 
 import "strings"
 
+const (
+	AssessmentClassTypeClass        AssessmentClassType = "class"
+	AssessmentClassTypeLive         AssessmentClassType = "live"
+	AssessmentClassTypeStudy        AssessmentClassType = "study"
+	AssessmentClassTypeHomeFunStudy AssessmentClassType = "home_fun_study"
+)
+
+type ScheduleClassTypeDesc struct {
+	ClassType ScheduleClassType
+	IsHomeFun bool
+}
+
+type AssessmentClassType string
+
+func (a AssessmentClassType) ToScheduleClassType() ScheduleClassTypeDesc {
+	switch a {
+	case AssessmentClassTypeClass:
+		return ScheduleClassTypeDesc{ClassType: ScheduleClassTypeOnlineClass, IsHomeFun: false}
+	case AssessmentClassTypeLive:
+		return ScheduleClassTypeDesc{ClassType: ScheduleClassTypeOfflineClass, IsHomeFun: false}
+	case AssessmentClassTypeStudy:
+		return ScheduleClassTypeDesc{ClassType: ScheduleClassTypeHomework, IsHomeFun: false}
+	case AssessmentClassTypeHomeFunStudy:
+		return ScheduleClassTypeDesc{ClassType: ScheduleClassTypeHomework, IsHomeFun: true}
+	}
+	return ScheduleClassTypeDesc{ClassType: ScheduleClassTypeOnlineClass, IsHomeFun: false}
+}
+
+func NewAssessmentClassType(name string) AssessmentClassType {
+	switch name {
+	case "class":
+		return AssessmentClassTypeClass
+	case "live":
+		return AssessmentClassTypeLive
+	case "study":
+		return AssessmentClassTypeStudy
+	case "home_fun_study":
+		return AssessmentClassTypeHomeFunStudy
+	}
+	return AssessmentClassTypeClass
+}
+
 type Assessment struct {
 	ID         string `gorm:"column:id;type:varchar(64);primary_key" json:"id"`
 	ScheduleID string `gorm:"column:schedule_id;type:varchar(64);not null" json:"schedule_id"`
@@ -91,4 +133,37 @@ type BatchAddAssessmentSuperArgs struct {
 	OutcomeMap                map[string]*Outcome
 	LessonPlanMap             map[string]*AssessmentExternalLessonPlan
 	ScheduleIDToOutcomeIDsMap map[string][]string
+}
+
+type StudentAssessmentTeacher struct {
+	ID        string `json:"id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+}
+
+type StudentAssessmentSchedule struct {
+	ID         string                       `json:"id"`
+	Title      string                       `json:"title"`
+	Type       string                       `json:"type"`
+	Attachment *StudentAssessmentAttachment `json:"attachment,omitempty"`
+}
+type StudentAssessmentAttachment struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type StudentAssessment struct {
+	ID                  string                        `json:"id"`
+	Title               string                        `json:"title"`
+	Comment             string                        `json:"comment"`
+	Score               int                           `json:"score"`
+	Status              string                        `json:"status"`
+	CreateAt            int64                         `json:"create_at"`
+	UpdateAt            int64                         `json:"update_at"`
+	CompleteAt          int64                         `json:"complete_at"`
+	Teacher             *StudentAssessmentTeacher     `json:"teacher,omitempty"`
+	Schedule            *StudentAssessmentSchedule    `json:"schedule,omitempty"`
+	FeedbackAttachments []StudentAssessmentAttachment `json:"feedback_attachments,omitempty"`
+
+	ScheduleID string `json:"-"`
 }

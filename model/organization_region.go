@@ -10,22 +10,23 @@ import (
 	"sync"
 )
 
-type IOrganizationRegion interface{
+type IOrganizationRegion interface {
 	GetOrganizationByHeadquarter(ctx context.Context, db *dbo.DBContext, headquarterID string) ([]string, error)
 	GetOrganizationByHeadquarterForDetails(ctx context.Context, db *dbo.DBContext, operator *entity.Operator) ([]*entity.RegionOrganizationInfo, error)
 }
 
 type OrganizationRegion struct {
 }
-func (o *OrganizationRegion) GetOrganizationByHeadquarter(ctx context.Context, db *dbo.DBContext, headquarterID string) ([]string, error){
+
+func (o *OrganizationRegion) GetOrganizationByHeadquarter(ctx context.Context, db *dbo.DBContext, headquarterID string) ([]string, error) {
 	records, err := da.GetOrganizationRegionDA().GetOrganizationByHeadquarter(ctx, db, headquarterID)
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "GetOrganizationByHeadquarter failed",
 			log.Err(err),
 			log.String("headquarterID", headquarterID))
 		return nil, err
 	}
-	orgIDs := make([]string ,len(records))
+	orgIDs := make([]string, len(records))
 	for i := range records {
 		orgIDs[i] = records[i].OrganizationID
 	}
@@ -33,7 +34,7 @@ func (o *OrganizationRegion) GetOrganizationByHeadquarter(ctx context.Context, d
 }
 func (o *OrganizationRegion) GetOrganizationByHeadquarterForDetails(ctx context.Context, db *dbo.DBContext, operator *entity.Operator) ([]*entity.RegionOrganizationInfo, error) {
 	oids, err := o.GetOrganizationByHeadquarter(ctx, db, operator.OrgID)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, operator, oids)

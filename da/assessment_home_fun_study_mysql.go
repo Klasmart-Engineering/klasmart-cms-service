@@ -28,12 +28,19 @@ type homeFunStudyDA struct {
 }
 
 type QueryHomeFunStudyCondition struct {
-	OrgID                        entity.NullString                                 `json:"org_id"`
-	ScheduleID                   entity.NullString                                 `json:"schedule_id"`
-	ScheduleIDs                  entity.NullStrings                                `json:"schedule_ids"`
-	TeacherIDs                   utils.NullSQLJSONStringArray                      `json:"teacher_ids"`
-	StudentIDs                   entity.NullStrings                                `json:"student_ids"`
-	Status                       entity.NullAssessmentStatus                       `json:"status"`
+	IDs         entity.NullStrings           `json:"ids"`
+	OrgID       entity.NullString            `json:"org_id"`
+	ScheduleID  entity.NullString            `json:"schedule_id"`
+	ScheduleIDs entity.NullStrings           `json:"schedule_ids"`
+	TeacherIDs  utils.NullSQLJSONStringArray `json:"teacher_ids"`
+	StudentIDs  entity.NullStrings           `json:"student_ids"`
+	Status      entity.NullAssessmentStatus  `json:"status"`
+
+	CreatedBetween  NullTimeRange     `json:"created_between"`
+	UpdateBetween   NullTimeRange     `json:"update_between"`
+	CompleteBetween NullTimeRange     `json:"complete_between"`
+	ClassType       entity.NullString `json:"class_type"`
+
 	OrderBy                      entity.NullListHomeFunStudiesOrderBy              `json:"order_by"`
 	AllowTeacherIDs              entity.NullStrings                                `json:"allow_teacher_ids"`
 	AllowTeacherIDAndStatusPairs entity.NullAssessmentAllowTeacherIDAndStatusPairs `json:"allow_pairs"`
@@ -42,6 +49,10 @@ type QueryHomeFunStudyCondition struct {
 
 func (c *QueryHomeFunStudyCondition) GetConditions() ([]string, []interface{}) {
 	b := NewSQLTemplate("delete_at = 0")
+
+	if c.IDs.Valid {
+		b.Appendf("id in (?)", c.IDs.Strings)
+	}
 
 	if c.OrgID.Valid {
 		b.Appendf("exists (select 1 from schedules"+
@@ -80,6 +91,21 @@ func (c *QueryHomeFunStudyCondition) GetConditions() ([]string, []interface{}) {
 		b.Appendf("status = ?", c.Status.Value)
 	}
 
+	if c.CreatedBetween.Valid {
+		b.Appendf("(create_at BETWEEN ? AND ?)", c.CreatedBetween.StartAt, c.CreatedBetween.EndAt)
+	}
+	if c.UpdateBetween.Valid {
+		b.Appendf("(update_at BETWEEN ? AND ?)", c.UpdateBetween.StartAt, c.UpdateBetween.EndAt)
+	}
+	if c.CompleteBetween.Valid {
+		b.Appendf("(complete_at BETWEEN ? AND ?)", c.CompleteBetween.StartAt, c.CompleteBetween.EndAt)
+	}
+	if c.ClassType.Valid {
+		b.Appendf("exists (select 1 from schedules"+
+			" where home_fun_studies.schedule_id = schedules.id and class_type = ? and is_home_fun=true)",
+			c.ClassType.String)
+	}
+
 	if c.AllowTeacherIDs.Valid {
 		allowTeacherIDs := utils.SliceDeduplication(c.AllowTeacherIDs.Strings)
 		t2 := NewSQLTemplate("")
@@ -116,6 +142,14 @@ func (c *QueryHomeFunStudyCondition) GetOrderBy() string {
 		return "latest_feedback_at"
 	case entity.ListHomeFunStudiesOrderByLatestFeedbackAtDesc:
 		return "latest_feedback_at desc"
+	case entity.ListHomeFunStudiesOrderByCreateAt:
+		return "create_at"
+	case entity.ListHomeFunStudiesOrderByCreateAtDesc:
+		return "create_at desc"
+	case entity.ListHomeFunStudiesOrderByUpdateAt:
+		return "update_at"
+	case entity.ListHomeFunStudiesOrderByUpdateAtDesc:
+		return "update_at desc"
 	}
 	return ""
 }

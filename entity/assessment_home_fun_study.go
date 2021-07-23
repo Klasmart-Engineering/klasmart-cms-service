@@ -68,6 +68,10 @@ const (
 	ListHomeFunStudiesOrderByLatestFeedbackAtDesc ListHomeFunStudiesOrderBy = "-latest_feedback_at"
 	ListHomeFunStudiesOrderByCompleteAt           ListHomeFunStudiesOrderBy = "complete_at"
 	ListHomeFunStudiesOrderByCompleteAtDesc       ListHomeFunStudiesOrderBy = "-complete_at"
+	ListHomeFunStudiesOrderByCreateAt             ListHomeFunStudiesOrderBy = "create_at"
+	ListHomeFunStudiesOrderByCreateAtDesc         ListHomeFunStudiesOrderBy = "-create_at"
+	ListHomeFunStudiesOrderByUpdateAt             ListHomeFunStudiesOrderBy = "update_at"
+	ListHomeFunStudiesOrderByUpdateAtDesc         ListHomeFunStudiesOrderBy = "-update_at"
 )
 
 func (ob ListHomeFunStudiesOrderBy) Valid() bool {
@@ -75,7 +79,11 @@ func (ob ListHomeFunStudiesOrderBy) Valid() bool {
 	case ListHomeFunStudiesOrderByLatestFeedbackAt,
 		ListHomeFunStudiesOrderByLatestFeedbackAtDesc,
 		ListHomeFunStudiesOrderByCompleteAt,
-		ListHomeFunStudiesOrderByCompleteAtDesc:
+		ListHomeFunStudiesOrderByCompleteAtDesc,
+		ListHomeFunStudiesOrderByCreateAt,
+		ListHomeFunStudiesOrderByCreateAtDesc,
+		ListHomeFunStudiesOrderByUpdateAt,
+		ListHomeFunStudiesOrderByUpdateAtDesc:
 		return true
 	}
 	return false
