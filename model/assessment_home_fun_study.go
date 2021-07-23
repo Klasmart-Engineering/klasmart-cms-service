@@ -163,7 +163,7 @@ func (m *homeFunStudyModel) GetDetail(ctx context.Context, operator *entity.Oper
 	}
 
 	// batch get outcome attendance map
-	var outcomeIDs []string
+	outcomeIDs := make([]string, 0, len(assessmentOutcomes))
 	for _, ao := range assessmentOutcomes {
 		outcomeIDs = append(outcomeIDs, ao.OutcomeID)
 	}
