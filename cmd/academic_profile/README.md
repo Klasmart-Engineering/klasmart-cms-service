@@ -19,5 +19,5 @@ go build -o ap
 ### mapping
 
 ```bash
-./ap mapping -mysql "user:password@tcp(ip:port)/db_name?parseTime=true&charset=utf8mb4"
+./ap mapping --mysql "user:password@tcp(ip:port)/db_name?parseTime=true&charset=utf8mb4"
 ```
