@@ -1,6 +1,8 @@
 package entity
 
-import "strings"
+import (
+	"strings"
+)
 
 const (
 	AssessmentClassTypeClass        AssessmentClassType = "class"
@@ -136,9 +138,9 @@ type BatchAddAssessmentSuperArgs struct {
 }
 
 type StudentAssessmentTeacher struct {
-	ID        string `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	ID         string `json:"id"`
+	GivenName  string `json:"given_name"`
+	FamilyName string `json:"family_name"`
 }
 
 type StudentAssessmentSchedule struct {
@@ -155,7 +157,7 @@ type StudentAssessmentAttachment struct {
 type StudentAssessment struct {
 	ID                  string                        `json:"id"`
 	Title               string                        `json:"title"`
-	Comment             string                        `json:"comment"`
+	Comment             []string                      `json:"comment"`
 	Score               int                           `json:"score"`
 	Status              string                        `json:"status"`
 	CreateAt            int64                         `json:"create_at"`
@@ -166,4 +168,48 @@ type StudentAssessment struct {
 	FeedbackAttachments []StudentAssessmentAttachment `json:"feedback_attachments,omitempty"`
 
 	ScheduleID string `json:"-"`
+	FeedbackID string `json:"-"`
+	StudentID  string `json:"-"`
+
+	IsHomeFun bool `json:"-"`
+}
+
+type StudentCollectRelatedIDs struct {
+	ScheduleIDs      []string
+	AllAssessmentIDs []string
+	FeedbackIDs      []string
+	AssessmentsIDs   []string
+}
+
+type StudentQueryAssessmentConditions struct {
+	ID        string `form:"assessment_id"`
+	OrgID     string `form:"org_id"`
+	StudentID string `form:"student_id"`
+	TeacherID string `form:"teacher_id"`
+	Status    string `form:"status"`
+
+	CreatedStartAt int64 `form:"create_at_ge"`
+	CreatedEndAt   int64 `form:"create_at_le"`
+
+	UpdateStartAt   int64 `form:"update_at_ge"`
+	UpdateEndAt     int64 `form:"update_at_le"`
+	CompleteStartAt int64 `form:"complete_at_ge"`
+	CompleteEndAt   int64 `form:"complete_at_le"`
+
+	ClassType string `form:"type"`
+
+	OrderBy  string `form:"order_by"`
+	Page     int    `form:"page"`
+	PageSize int    `form:"page_size"`
+}
+
+type SearchStudentAssessmentsResponse struct {
+	List  []*StudentAssessment `json:"list"`
+	Total int                  `json:"total"`
+}
+
+type NullTimeRange struct {
+	StartAt int64
+	EndAt   int64
+	Valid   bool
 }

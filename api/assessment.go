@@ -61,3 +61,64 @@ func (s *Server) getAssessmentsSummary(c *gin.Context) {
 		return
 	}
 }
+
+// @Summary get student assessments
+// @Description get student assessments
+// @Tags assessments
+// @ID getStudentAssessments
+// @Accept json
+// @Produce json
+// @Param type query string true "type search"
+// @Param status query string false "status search"
+// @Param order_by query string false "order by"
+// @Param teacher_id query string false "teacher id search"
+// @Param assessment_id query string false "assessment id search"
+// @Param create_at_ge query string false "create_at greater search"
+// @Param create_at_le query string false "create_at less search"
+// @Param update_at_le query string false "update_at greater search"
+// @Param update_at_le query string false "update_at less search"
+// @Param complete_at_ge query string false "complete_at greater search"
+// @Param complete_at_le query string false "complete_at less search"
+// @Param page query string false "page search"
+// @Param page_size query string false "page size search"
+// @Success 200 {object} entity.AssessmentsSummary
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /assessments_summary [get]
+func (s *Server) getStudentAssessments(c *gin.Context) {
+	ctx := c.Request.Context()
+	args := entity.QueryAssessmentsSummaryArgs{}
+
+	operator := s.getOperator(c)
+	if operator.OrgID == "" {
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	conditions := new(entity.StudentQueryAssessmentConditions)
+	err := c.ShouldBindQuery(conditions)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	conditions.OrgID = operator.OrgID
+	conditions.StudentID = operator.UserID
+	total, result, err := model.GetAssessmentModel().StudentQuery(ctx, operator, dbo.MustGetDB(ctx), conditions)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, &entity.SearchStudentAssessmentsResponse{
+			List:  result,
+			Total: total,
+		})
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	default:
+		log.Error(ctx, "list assessments: list failed",
+			log.Err(err),
+			log.Any("args", args),
+		)
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+}

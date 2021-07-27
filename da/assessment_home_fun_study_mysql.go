@@ -36,10 +36,10 @@ type QueryHomeFunStudyCondition struct {
 	StudentIDs  entity.NullStrings           `json:"student_ids"`
 	Status      entity.NullAssessmentStatus  `json:"status"`
 
-	CreatedBetween  NullTimeRange     `json:"created_between"`
-	UpdateBetween   NullTimeRange     `json:"update_between"`
-	CompleteBetween NullTimeRange     `json:"complete_between"`
-	ClassType       entity.NullString `json:"class_type"`
+	CreatedBetween  entity.NullTimeRange `json:"created_between"`
+	UpdateBetween   entity.NullTimeRange `json:"update_between"`
+	CompleteBetween entity.NullTimeRange `json:"complete_between"`
+	ClassType       entity.NullString    `json:"class_type"`
 
 	OrderBy                      entity.NullListHomeFunStudiesOrderBy              `json:"order_by"`
 	AllowTeacherIDs              entity.NullStrings                                `json:"allow_teacher_ids"`

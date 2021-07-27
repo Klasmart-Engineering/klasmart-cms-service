@@ -173,20 +173,6 @@ func (a *assessmentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items
 	return nil
 }
 
-type StudentQueryAssessmentConditions struct {
-	IDs             entity.NullStrings          `json:"ids"`
-	StudentID       string                      `json:"student_ids"`
-	TeacherIDs      entity.NullStrings          `json:"teacher_ids"`
-	Status          entity.NullAssessmentStatus `json:"status"`
-	CreatedBetween  NullTimeRange               `json:"created_between"`
-	UpdateBetween   NullTimeRange               `json:"update_between"`
-	CompleteBetween NullTimeRange               `json:"complete_between"`
-	ClassType       entity.AssessmentClassType  `json:"class_type"`
-
-	OrderBy string    `json:"order_by"`
-	Pager   dbo.Pager `json:"pager"`
-}
-
 type QueryAssessmentConditions struct {
 	IDs                          entity.NullStrings                                `json:"ids"`
 	OrgID                        entity.NullString                                 `json:"org_id"`
@@ -200,10 +186,10 @@ type QueryAssessmentConditions struct {
 	ClassIDs                     entity.NullStrings                                `json:"class_ids"`
 	ClassIDsOrTeacherIDs         NullClassIDsOrTeacherIDs                          `json:"class_ids_or_teacher_ids"`
 
-	CreatedBetween  NullTimeRange     `json:"created_between"`
-	UpdateBetween   NullTimeRange     `json:"update_between"`
-	CompleteBetween NullTimeRange     `json:"complete_between"`
-	ClassType       entity.NullString `json:"class_type"`
+	CreatedBetween  entity.NullTimeRange `json:"created_between"`
+	UpdateBetween   entity.NullTimeRange `json:"update_between"`
+	CompleteBetween entity.NullTimeRange `json:"complete_between"`
+	ClassType       entity.NullString    `json:"class_type"`
 
 	OrderBy entity.NullAssessmentsOrderBy `json:"order_by"`
 	Pager   dbo.Pager                     `json:"pager"`
@@ -217,12 +203,6 @@ type ClassIDsOrTeacherIDs struct {
 type NullClassIDsOrTeacherIDs struct {
 	Value ClassIDsOrTeacherIDs
 	Valid bool
-}
-
-type NullTimeRange struct {
-	StartAt int64
-	EndAt   int64
-	Valid   bool
 }
 
 func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
