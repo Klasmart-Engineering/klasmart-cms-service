@@ -626,7 +626,7 @@ func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operato
 	}
 
 	// get all related outcome ids
-	outcomeIDs, err := GetScheduleModel().GetLearningOutcomeIDs(ctx, operator, args.ScheduleID)
+	outcomeIDsMap, err := GetScheduleModel().GetLearningOutcomeIDs(ctx, operator, []string{args.ScheduleID})
 	if err != nil {
 		log.Error(ctx, "save home fun study: get outcome ids failed",
 			log.Err(err),
@@ -634,6 +634,7 @@ func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operato
 		)
 		return err
 	}
+	outcomeIDs := outcomeIDsMap[args.ScheduleID]
 
 	// batch insert assessment outcomes
 	var insertingAssessmentOutcomes []*entity.AssessmentOutcome
