@@ -146,6 +146,14 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 		lessonPlanIDs = append(lessonPlanIDs, s.LessonPlanID)
 	}
 	lessonPlanNames, err := GetContentModel().GetContentNameByIDList(ctx, tx, lessonPlanIDs)
+	if err != nil {
+		log.Error(ctx, "query live classes summary: batch get content names failed",
+			log.Err(err),
+			log.Strings("lesson_plan_ids", lessonPlanIDs),
+			log.Any("filter", filter),
+		)
+		return nil, err
+	}
 	lessonPlanNameMap := make(map[string]string, len(lessonPlanNames))
 	for _, lp := range lessonPlanNames {
 		lessonPlanNameMap[lp.ID] = lp.Name
@@ -154,6 +162,11 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 	// find related outcomes and make map by schedule ids
 	scheduleOutcomesMap, err := l.findRelatedOutcomes(ctx, tx, operator, scheduleIDs)
 	if err != nil {
+		log.Error(ctx, "query live classes summary: find related outcomes failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
+			log.Any("filter", filter),
+		)
 		return nil, err
 	}
 
@@ -211,18 +224,22 @@ func (l *learningSummaryReportModel) sortLiveClassesSummaryItemsByStartTimeAsc(i
 func (l *learningSummaryReportModel) findRelatedOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) (map[string][]*entity.Outcome, error) {
 	scheduleOutcomeIDsMap, err := GetScheduleModel().GetLearningOutcomeIDs(ctx, operator, scheduleIDs)
 	if err != nil {
-		log.Error(ctx, "find related outcomes failed",
+		log.Error(ctx, "find related outcomes: get schedule outcome ids failed",
 			log.Err(err),
 			log.Strings("schedule_ids", scheduleIDs),
 		)
 		return nil, err
 	}
-	var outcomeIDs []string
+	outcomeIDs := make([]string, 0, len(scheduleOutcomeIDsMap))
 	for _, scheduleOutcomeIDs := range scheduleOutcomeIDsMap {
 		outcomeIDs = append(outcomeIDs, scheduleOutcomeIDs...)
 	}
 	outcomes, err := GetOutcomeModel().GetByIDs(ctx, operator, tx, outcomeIDs)
 	if err != nil {
+		log.Error(ctx, "find related outcomes: batch get schedule outcome failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
+		)
 		return nil, err
 	}
 	outcomeMap := make(map[string]*entity.Outcome, len(outcomes))
@@ -334,6 +351,10 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 	// find related schedules and make by schedule id
 	schedules, err := l.findRelatedSchedules(ctx, tx, operator, []entity.AssessmentType{entity.AssessmentTypeStudy, entity.AssessmentTypeHomeFunStudy}, filter)
 	if err != nil {
+		log.Error(ctx, "query assignments summary: find related schedules failed",
+			log.Err(err),
+			log.Any("filter", filter),
+		)
 		return nil, err
 	}
 
@@ -344,6 +365,11 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 	}
 	studyAssessments, err := l.findRelatedAssessments(ctx, tx, operator, scheduleIDs, filter.StudentID)
 	if err != nil {
+		log.Error(ctx, "query assignments summary: find related assessments failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
+			log.Any("filter", filter),
+		)
 		return nil, err
 	}
 	studyAssessmentMap := make(map[string]*entity.Assessment, len(studyAssessments))
@@ -391,7 +417,7 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 	// find related study assessments comments and make map by schedule id (live: room comments)
 	roomCommentMap, err := getAssessmentH5P().batchGetRoomCommentMap(ctx, operator, scheduleIDs)
 	if err != nil {
-		log.Error(ctx, "query live classes summary: batch get room comment map failed",
+		log.Error(ctx, "query assignments summary: batch get room comment map failed",
 			log.Err(err),
 			log.Strings("schedule_ids", scheduleIDs),
 			log.Any("filter", filter),
@@ -421,10 +447,27 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 	// find related outcomes and make map by schedule ids
 	scheduleOutcomesMap, err := l.findRelatedOutcomes(ctx, tx, operator, scheduleIDs)
 	if err != nil {
+		log.Error(ctx, "query assignments summary: find related outcomes failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
+			log.Any("filter", filter),
+		)
 		return nil, err
 	}
 
 	// assembly result
+	result := l.assemblyAssignmentsSummaryResult(filter, schedules, scheduleOutcomesMap, lessonPlanNameMap, studyAssessmentMap, homeFunStudyAssessmentMap, roomCommentMap, completed)
+
+	// sort study items and home fun study items
+	l.sortAssignmentsSummaryStudyItems(result.StudyItems)
+	l.sortAssignmentsSummaryHomeFunStudyItems(result.HomeFunStudyItems)
+
+	log.Debug(ctx, "query assignments summary result", log.Any("result", result))
+
+	return result, nil
+}
+
+func (l *learningSummaryReportModel) assemblyAssignmentsSummaryResult(filter *entity.LearningSummaryFilter, schedules []*entity.Schedule, scheduleOutcomesMap map[string][]*entity.Outcome, lessonPlanNameMap map[string]string, studyAssessmentMap map[string]*entity.Assessment, homeFunStudyAssessmentMap map[string]*entity.HomeFunStudy, roomCommentMap map[string]map[string][]string, completed float64) *entity.QueryAssignmentsSummaryResult {
 	result := &entity.QueryAssignmentsSummaryResult{Completed: completed}
 	for _, s := range schedules {
 		if s.IsHomeFun {
@@ -474,14 +517,7 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 			result.StudyItems = append(result.StudyItems, &item)
 		}
 	}
-
-	// sort study items and home fun study items
-	l.sortAssignmentsSummaryStudyItems(result.StudyItems)
-	l.sortAssignmentsSummaryHomeFunStudyItems(result.HomeFunStudyItems)
-
-	log.Debug(ctx, "query assignments summary result", log.Any("result", result))
-
-	return result, nil
+	return result
 }
 
 func (l *learningSummaryReportModel) sortAssignmentsSummaryStudyItems(items []*entity.AssignmentsSummaryStudyItem) {
