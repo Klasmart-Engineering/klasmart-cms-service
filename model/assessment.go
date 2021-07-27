@@ -20,7 +20,8 @@ var (
 )
 
 var (
-	ErrInvalidOrderByValue = errors.New("invalid order by value")
+	ErrInvalidOrderByValue   = errors.New("invalid order by value")
+	ErrInvalidAssessmentType = errors.New("invalid assessment type")
 )
 
 func GetAssessmentModel() IAssessmentModel {
@@ -158,7 +159,13 @@ func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operat
 }
 
 func (m *assessmentModel) StudentQuery(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, condition *entity.StudentQueryAssessmentConditions) (int, []*entity.StudentAssessment, error) {
-	scheduleClassType := entity.NewAssessmentClassType(condition.ClassType).ToScheduleClassType()
+	assessmentType := entity.AssessmentType(condition.ClassType)
+	if !assessmentType.Valid() {
+		log.Warn(ctx, "invalid assessment type",
+			log.String("assessmentType", assessmentType.String()))
+		return 0, nil, ErrInvalidAssessmentType
+	}
+	scheduleClassType := assessmentType.ToScheduleClassType()
 	if scheduleClassType.IsHomeFun {
 		//Query assessments
 		return m.studentsAssessmentQuery(ctx, operator, tx, scheduleClassType, condition)
@@ -168,7 +175,7 @@ func (m *assessmentModel) StudentQuery(ctx context.Context, operator *entity.Ope
 }
 
 func (m *assessmentModel) studentsAssessmentQuery(ctx context.Context,
-	operator *entity.Operator, tx *dbo.DBContext, scheduleClassType entity.ScheduleClassTypeDesc,
+	operator *entity.Operator, tx *dbo.DBContext, scheduleClassType entity.AssessmentScheduleType,
 	condition *entity.StudentQueryAssessmentConditions) (int, []*entity.StudentAssessment, error) {
 	studentIDs := entity.NullStrings{
 		Strings: []string{condition.StudentID},
@@ -298,7 +305,7 @@ func (m *assessmentModel) assessmentsToStudentAssessments(ctx context.Context,
 }
 
 func (m *assessmentModel) studentsHomeFunStudyQuery(ctx context.Context,
-	operator *entity.Operator, tx *dbo.DBContext, scheduleClassType entity.ScheduleClassTypeDesc,
+	operator *entity.Operator, tx *dbo.DBContext, scheduleClassType entity.AssessmentScheduleType,
 	condition *entity.StudentQueryAssessmentConditions) (int, []*entity.StudentAssessment, error) {
 	studentIDs := entity.NullStrings{
 		Strings: []string{condition.StudentID},

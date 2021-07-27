@@ -113,6 +113,10 @@ func (s *Server) getStudentAssessments(c *gin.Context) {
 		})
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case model.ErrInvalidOrderByValue:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidAssessmentType:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		log.Error(ctx, "list assessments: list failed",
 			log.Err(err),

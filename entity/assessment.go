@@ -5,45 +5,48 @@ import (
 )
 
 const (
-	AssessmentClassTypeClass        AssessmentClassType = "class"
-	AssessmentClassTypeLive         AssessmentClassType = "live"
-	AssessmentClassTypeStudy        AssessmentClassType = "study"
-	AssessmentClassTypeHomeFunStudy AssessmentClassType = "home_fun_study"
+	AssessmentTypeClass        AssessmentType = "class"
+	AssessmentTypeLive         AssessmentType = "live"
+	AssessmentTypeStudy        AssessmentType = "study"
+	AssessmentTypeHomeFunStudy AssessmentType = "home_fun_study"
 )
 
-type ScheduleClassTypeDesc struct {
+type AssessmentScheduleType struct {
 	ClassType ScheduleClassType
 	IsHomeFun bool
 }
 
-type AssessmentClassType string
+type AssessmentType string
 
-func (a AssessmentClassType) ToScheduleClassType() ScheduleClassTypeDesc {
+func (a AssessmentType) ToScheduleClassType() AssessmentScheduleType {
 	switch a {
-	case AssessmentClassTypeClass:
-		return ScheduleClassTypeDesc{ClassType: ScheduleClassTypeOnlineClass, IsHomeFun: false}
-	case AssessmentClassTypeLive:
-		return ScheduleClassTypeDesc{ClassType: ScheduleClassTypeOfflineClass, IsHomeFun: false}
-	case AssessmentClassTypeStudy:
-		return ScheduleClassTypeDesc{ClassType: ScheduleClassTypeHomework, IsHomeFun: false}
-	case AssessmentClassTypeHomeFunStudy:
-		return ScheduleClassTypeDesc{ClassType: ScheduleClassTypeHomework, IsHomeFun: true}
+	case AssessmentTypeClass:
+		return AssessmentScheduleType{ClassType: ScheduleClassTypeOnlineClass, IsHomeFun: false}
+	case AssessmentTypeLive:
+		return AssessmentScheduleType{ClassType: ScheduleClassTypeOfflineClass, IsHomeFun: false}
+	case AssessmentTypeStudy:
+		return AssessmentScheduleType{ClassType: ScheduleClassTypeHomework, IsHomeFun: false}
+	case AssessmentTypeHomeFunStudy:
+		return AssessmentScheduleType{ClassType: ScheduleClassTypeHomework, IsHomeFun: true}
 	}
-	return ScheduleClassTypeDesc{ClassType: ScheduleClassTypeOnlineClass, IsHomeFun: false}
+	return AssessmentScheduleType{ClassType: ScheduleClassTypeOnlineClass, IsHomeFun: false}
 }
 
-func NewAssessmentClassType(name string) AssessmentClassType {
-	switch name {
-	case "class":
-		return AssessmentClassTypeClass
-	case "live":
-		return AssessmentClassTypeLive
-	case "study":
-		return AssessmentClassTypeStudy
-	case "home_fun_study":
-		return AssessmentClassTypeHomeFunStudy
+func (a AssessmentType) Valid() bool {
+	switch a {
+	case AssessmentTypeClass:
+		return true
+	case AssessmentTypeLive:
+		return true
+	case AssessmentTypeStudy:
+		return true
+	case AssessmentTypeHomeFunStudy:
+		return true
 	}
-	return AssessmentClassTypeClass
+	return false
+}
+func (a AssessmentType) String() string {
+	return string(a)
 }
 
 type Assessment struct {
