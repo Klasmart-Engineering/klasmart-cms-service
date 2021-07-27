@@ -676,7 +676,7 @@ func (m *assessmentModel) queryTeacherMap(ctx context.Context, operator *entity.
 }
 
 func (m *assessmentModel) querySchedulesMap(ctx context.Context, scheduleIDs []string) (map[string]*entity.Schedule, error) {
-	schedules, err := GetScheduleModel().QueryUnsafe(ctx, &da.ScheduleCondition{IDs: entity.NullStrings{
+	schedules, err := GetScheduleModel().QueryUnsafe(ctx, &entity.ScheduleQueryCondition{IDs: entity.NullStrings{
 		Strings: scheduleIDs,
 		Valid:   true,
 	}})
