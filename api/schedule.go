@@ -76,7 +76,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		ClassID:                data.ClassID,
 		ClassType:              data.ClassType,
 		Title:                  data.Title,
-		LearningOutcomeIDs:     data.LearningOutcomeIDs,
+		OutcomeIDs:             data.OutcomeIDs,
 	})
 	if err != nil {
 		log.Debug(ctx, "request data verify error", log.Err(err), log.Any("operator", op), log.Any("requestData", data))
@@ -289,10 +289,10 @@ func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditVa
 	}
 
 	// check learning outcome
-	learningOutcomeIDs := utils.SliceDeduplicationExcludeEmpty(input.LearningOutcomeIDs)
-	if len(input.LearningOutcomeIDs) != len(learningOutcomeIDs) {
+	learningOutcomeIDs := utils.SliceDeduplicationExcludeEmpty(input.OutcomeIDs)
+	if len(input.OutcomeIDs) != len(learningOutcomeIDs) {
 		log.Debug(ctx, "add schedule: invalid learning_outcome_ids",
-			log.Any("learning_outcome_ids", input.LearningOutcomeIDs))
+			log.Any("learning_outcome_ids", input.OutcomeIDs))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return constant.ErrInvalidArgs
 	}
@@ -333,7 +333,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 		ClassID:                data.ClassID,
 		ClassType:              data.ClassType,
 		Title:                  data.Title,
-		LearningOutcomeIDs:     data.LearningOutcomeIDs,
+		OutcomeIDs:             data.OutcomeIDs,
 	})
 	if err != nil {
 		log.Debug(ctx, "request data verify error",
