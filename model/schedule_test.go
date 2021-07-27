@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -108,6 +109,8 @@ func TestQueryUnsafe(t *testing.T) {
 	schedules, err := GetScheduleModel().QueryUnsafe(context.TODO(), &entity.ScheduleQueryCondition{
 		IDs:               entity.NullStrings{Strings: []string{"60f929bb7604f720d1943c33", "60f92bd0f964d549bf922b46"}, Valid: true},
 		RelationSchoolIDs: entity.NullStrings{Strings: []string{"60f929bb7604f720d1943c33", "60f92bd0f964d549bf922b46"}, Valid: true},
+		ClassTypes:        entity.NullStrings{Strings: []string{string(entity.ScheduleClassTypeHomework), string(entity.ScheduleClassTypeLabelOnlineClass)}, Valid: true},
+		IsHomefun:         sql.NullBool{false, true},
 	})
 	if err != nil {
 		t.Fatal(err)
