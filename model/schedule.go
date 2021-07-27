@@ -64,7 +64,7 @@ type IScheduleModel interface {
 	Query(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]*entity.ScheduleListView, error)
 	QueryScheduledDates(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]string, error)
 	// without permission check, internal function call
-	QueryUnsafe(ctx context.Context, condition *da.ScheduleCondition) ([]*entity.Schedule, error)
+	QueryUnsafe(ctx context.Context, condition *entity.ScheduleQueryCondition) ([]*entity.Schedule, error)
 }
 
 type scheduleModel struct {
@@ -777,13 +777,13 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 	viewData.SubjectIDs = utils.SliceDeduplicationExcludeEmpty(viewData.SubjectIDs)
 	// verify data
 	err := s.verifyData(ctx, op, &entity.ScheduleVerify{
-		ClassID:            viewData.ClassID,
-		SubjectIDs:         viewData.SubjectIDs,
-		ProgramID:          viewData.ProgramID,
-		LessonPlanID:       viewData.LessonPlanID,
-		ClassType:          viewData.ClassType,
-		IsHomeFun:          viewData.IsHomeFun,
-		LearningOutcomeIDs: viewData.LearningOutcomeIDs,
+		ClassID:      viewData.ClassID,
+		SubjectIDs:   viewData.SubjectIDs,
+		ProgramID:    viewData.ProgramID,
+		LessonPlanID: viewData.LessonPlanID,
+		ClassType:    viewData.ClassType,
+		IsHomeFun:    viewData.IsHomeFun,
+		OutcomeIDs:   viewData.OutcomeIDs,
 	})
 	if err != nil {
 		log.Error(ctx, "add schedule: verify data error",
@@ -810,7 +810,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 
 	// homefun study can bind learning outcome
 	if viewData.ClassType == entity.ScheduleClassTypeHomework && viewData.IsHomeFun {
-		relationInput.LearningOutcomeIDs = viewData.LearningOutcomeIDs
+		relationInput.LearningOutcomeIDs = viewData.OutcomeIDs
 	}
 
 	relations, err := s.prepareScheduleRelationAddData(ctx, op, relationInput)
@@ -985,13 +985,13 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 	viewData.SubjectIDs = utils.SliceDeduplicationExcludeEmpty(viewData.SubjectIDs)
 	// verify data
 	err = s.verifyData(ctx, operator, &entity.ScheduleVerify{
-		ClassID:            viewData.ClassID,
-		SubjectIDs:         viewData.SubjectIDs,
-		ProgramID:          viewData.ProgramID,
-		LessonPlanID:       viewData.LessonPlanID,
-		ClassType:          viewData.ClassType,
-		IsHomeFun:          viewData.IsHomeFun,
-		LearningOutcomeIDs: viewData.LearningOutcomeIDs,
+		ClassID:      viewData.ClassID,
+		SubjectIDs:   viewData.SubjectIDs,
+		ProgramID:    viewData.ProgramID,
+		LessonPlanID: viewData.LessonPlanID,
+		ClassType:    viewData.ClassType,
+		IsHomeFun:    viewData.IsHomeFun,
+		OutcomeIDs:   viewData.OutcomeIDs,
 	})
 	if err != nil {
 		log.Error(ctx, "update schedule: verify data error",
@@ -1019,7 +1019,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 
 	// homefun study can bind learning outcome
 	if viewData.ClassType == entity.ScheduleClassTypeHomework && viewData.IsHomeFun {
-		relationInput.LearningOutcomeIDs = viewData.LearningOutcomeIDs
+		relationInput.LearningOutcomeIDs = viewData.OutcomeIDs
 	}
 
 	relations, err := s.prepareScheduleRelationUpdateData(ctx, operator, relationInput)
@@ -2309,28 +2309,28 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 	_, err = s.VerifyLessonPlanAuthed(ctx, operator, v.LessonPlanID)
 
 	// verify learning outcome
-	if len(v.LearningOutcomeIDs) > 0 {
+	if len(v.OutcomeIDs) > 0 {
 		_, outcomes, err := GetOutcomeModel().SearchWithoutRelation(ctx, operator, &entity.OutcomeCondition{
-			IDs:           v.LearningOutcomeIDs,
+			IDs:           v.OutcomeIDs,
 			PublishStatus: entity.OutcomeStatusPublished,
 			Assumed:       -1,
 		})
 		if err != nil {
 			log.Error(ctx, "verifyData: GetOutcomeModel().SearchWithoutRelation error",
 				log.Err(err),
-				log.Any("outcomeIDs", v.LearningOutcomeIDs))
+				log.Any("outcomeIDs", v.OutcomeIDs))
 			return err
 		}
 
-		if len(outcomes) != len(v.LearningOutcomeIDs) {
+		if len(outcomes) != len(v.OutcomeIDs) {
 			log.Error(ctx, "verifyData: learning outcome not found",
-				log.Any("outcomeIDs", v.LearningOutcomeIDs),
+				log.Any("outcomeIDs", v.OutcomeIDs),
 				log.Any("outcomes", outcomes))
 			return constant.ErrRecordNotFound
 		}
 	}
 
-	return err
+	return nil
 }
 
 func (s *scheduleModel) VerifyLessonPlanAuthed(ctx context.Context, operator *entity.Operator, lessonPlanID string) (bool, error) {
@@ -3174,9 +3174,20 @@ func (s *scheduleModel) QueryScheduledDates(ctx context.Context, query *entity.S
 	return result, nil
 }
 
-func (s *scheduleModel) QueryUnsafe(ctx context.Context, condition *da.ScheduleCondition) ([]*entity.Schedule, error) {
+func (s *scheduleModel) QueryUnsafe(ctx context.Context, condition *entity.ScheduleQueryCondition) ([]*entity.Schedule, error) {
 	var scheduleList []*entity.Schedule
-	err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)
+	daCondition := &da.ScheduleCondition{
+		IDs:                condition.IDs,
+		OrgID:              condition.OrgID,
+		StartAtGe:          condition.StartAtGe,
+		StartAtLt:          condition.StartAtLt,
+		RelationSchoolIDs:  condition.RelationSchoolIDs,
+		RelationClassIDs:   condition.RelationClassIDs,
+		RelationTeacherIDs: condition.RelationTeacherIDs,
+		RelationStudentIDs: condition.RelationStudentIDs,
+		DeleteAt:           condition.DeleteAt,
+	}
+	err := da.GetScheduleDA().Query(ctx, daCondition, &scheduleList)
 	if err != nil {
 		log.Error(ctx, "schedule query error", log.Err(err), log.Any("condition", condition))
 		return nil, err

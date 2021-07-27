@@ -11,7 +11,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
@@ -25,10 +24,10 @@ func TestAdd(t *testing.T) {
 	op := initOperator()
 
 	schedule := &entity.ScheduleAddView{
-		Title:              "ky's schedule",
-		ClassType:          entity.ScheduleClassTypeHomework,
-		IsHomeFun:          true,
-		LearningOutcomeIDs: []string{"60a36fd8de590052a3c5de00"},
+		Title:      "ky's schedule",
+		ClassType:  entity.ScheduleClassTypeHomework,
+		IsHomeFun:  true,
+		OutcomeIDs: []string{"60a36fd8de590052a3c5de00"},
 	}
 	outcomeIDs, err := GetScheduleModel().Add(context.TODO(), op, schedule)
 	if err != nil {
@@ -106,8 +105,9 @@ func TestGetLearningOutcomeIDs(t *testing.T) {
 }
 
 func TestQueryUnsafe(t *testing.T) {
-	schedules, err := GetScheduleModel().QueryUnsafe(context.TODO(), &da.ScheduleCondition{
-		IDs: entity.NullStrings{Strings: []string{"60f929bb7604f720d1943c33", "60f92bd0f964d549bf922b46"}, Valid: true},
+	schedules, err := GetScheduleModel().QueryUnsafe(context.TODO(), &entity.ScheduleQueryCondition{
+		IDs:               entity.NullStrings{Strings: []string{"60f929bb7604f720d1943c33", "60f92bd0f964d549bf922b46"}, Valid: true},
+		RelationSchoolIDs: entity.NullStrings{Strings: []string{"60f929bb7604f720d1943c33", "60f92bd0f964d549bf922b46"}, Valid: true},
 	})
 	if err != nil {
 		t.Fatal(err)

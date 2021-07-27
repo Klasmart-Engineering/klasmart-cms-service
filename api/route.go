@@ -128,6 +128,8 @@ func (s Server) registeRoute() {
 		assessments.GET("/study_assessments", s.mustLogin, s.listStudyAssessments)
 		assessments.GET("/study_assessments/:id", s.mustLogin, s.getStudyAssessmentDetail)
 		assessments.PUT("/study_assessments/:id", s.mustLogin, s.updateStudyAssessment)
+
+		assessments.GET("/assessments_for_student", s.mustLogin, s.getStudentAssessments)
 	}
 
 	homeFunStudies := s.engine.Group("/v1")
