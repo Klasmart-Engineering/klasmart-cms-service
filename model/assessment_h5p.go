@@ -15,7 +15,7 @@ import (
 
 type assessmentH5P struct{}
 
-func getAssessmentH5p() *assessmentH5P {
+func getAssessmentH5P() *assessmentH5P {
 	return &assessmentH5P{}
 }
 

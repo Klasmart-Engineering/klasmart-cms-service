@@ -24,10 +24,10 @@ func TestAdd(t *testing.T) {
 	op := initOperator()
 
 	schedule := &entity.ScheduleAddView{
-		Title:              "ky's schedule",
-		ClassType:          entity.ScheduleClassTypeHomework,
-		IsHomeFun:          true,
-		LearningOutcomeIDs: []string{"60a36fd8de590052a3c5de00"},
+		Title:      "ky's schedule",
+		ClassType:  entity.ScheduleClassTypeHomework,
+		IsHomeFun:  true,
+		OutcomeIDs: []string{"60a36fd8de590052a3c5de00"},
 	}
 	outcomeIDs, err := GetScheduleModel().Add(context.TODO(), op, schedule)
 	if err != nil {
@@ -96,10 +96,24 @@ func TestGetTeachLoadByCondition(t *testing.T) {
 }
 
 func TestGetLearningOutcomeIDs(t *testing.T) {
-	outcomeIDs, err := GetScheduleModel().GetLearningOutcomeIDs(context.TODO(), &entity.Operator{}, "60f92a4cc9b482f7b98259a6")
+	result, err := GetScheduleModel().GetLearningOutcomeIDs(context.TODO(), &entity.Operator{}, []string{"60f92a4cc9b482f7b98259a6", "6099c496e05f6e940027387c"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Log(outcomeIDs)
+	t.Log(result)
+}
+
+func TestQueryUnsafe(t *testing.T) {
+	schedules, err := GetScheduleModel().QueryUnsafe(context.TODO(), &entity.ScheduleQueryCondition{
+		IDs:               entity.NullStrings{Strings: []string{"60f929bb7604f720d1943c33", "60f92bd0f964d549bf922b46"}, Valid: true},
+		RelationSchoolIDs: entity.NullStrings{Strings: []string{"60f929bb7604f720d1943c33", "60f92bd0f964d549bf922b46"}, Valid: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, v := range schedules {
+		t.Log(v)
+	}
 }

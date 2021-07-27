@@ -46,6 +46,8 @@ const (
 	AssessmentOrderByCompleteTimeDesc AssessmentOrderBy = "-complete_time"
 	AssessmentOrderByCreateAt         AssessmentOrderBy = "create_at"
 	AssessmentOrderByCreateAtDesc     AssessmentOrderBy = "-create_at"
+	AssessmentOrderByUpdateAt         AssessmentOrderBy = "update_at"
+	AssessmentOrderByUpdateAtDesc     AssessmentOrderBy = "-update_at"
 )
 
 func (ob AssessmentOrderBy) Valid() bool {
@@ -55,7 +57,9 @@ func (ob AssessmentOrderBy) Valid() bool {
 		AssessmentOrderByCompleteTime,
 		AssessmentOrderByCompleteTimeDesc,
 		AssessmentOrderByCreateAt,
-		AssessmentOrderByCreateAtDesc:
+		AssessmentOrderByCreateAtDesc,
+		AssessmentOrderByUpdateAt,
+		AssessmentOrderByUpdateAtDesc:
 		return true
 	default:
 		return false

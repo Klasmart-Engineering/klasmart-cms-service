@@ -130,6 +130,7 @@ type QueryAssessmentAttendanceConditions struct {
 	AssessmentIDs entity.NullStrings
 	Role          entity.NullAssessmentAttendanceRole
 	Checked       entity.NullBool
+	AttendanceID  entity.NullString
 }
 
 func (c *QueryAssessmentAttendanceConditions) GetConditions() ([]string, []interface{}) {
@@ -142,6 +143,9 @@ func (c *QueryAssessmentAttendanceConditions) GetConditions() ([]string, []inter
 	}
 	if c.Checked.Valid {
 		t.Appendf("checked = ?", c.Checked.Bool)
+	}
+	if c.AttendanceID.Valid {
+		t.Appendf("attendance_id = ?", c.AttendanceID.String)
 	}
 	return t.DBOConditions()
 }

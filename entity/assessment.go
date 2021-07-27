@@ -1,6 +1,53 @@
 package entity
 
-import "strings"
+import (
+	"strings"
+)
+
+const (
+	AssessmentTypeClass        AssessmentType = "class"
+	AssessmentTypeLive         AssessmentType = "live"
+	AssessmentTypeStudy        AssessmentType = "study"
+	AssessmentTypeHomeFunStudy AssessmentType = "home_fun_study"
+)
+
+type AssessmentScheduleType struct {
+	ClassType ScheduleClassType
+	IsHomeFun bool
+}
+
+type AssessmentType string
+
+func (a AssessmentType) ToScheduleClassType() AssessmentScheduleType {
+	switch a {
+	case AssessmentTypeClass:
+		return AssessmentScheduleType{ClassType: ScheduleClassTypeOnlineClass, IsHomeFun: false}
+	case AssessmentTypeLive:
+		return AssessmentScheduleType{ClassType: ScheduleClassTypeOfflineClass, IsHomeFun: false}
+	case AssessmentTypeStudy:
+		return AssessmentScheduleType{ClassType: ScheduleClassTypeHomework, IsHomeFun: false}
+	case AssessmentTypeHomeFunStudy:
+		return AssessmentScheduleType{ClassType: ScheduleClassTypeHomework, IsHomeFun: true}
+	}
+	return AssessmentScheduleType{ClassType: ScheduleClassTypeOnlineClass, IsHomeFun: false}
+}
+
+func (a AssessmentType) Valid() bool {
+	switch a {
+	case AssessmentTypeClass:
+		return true
+	case AssessmentTypeLive:
+		return true
+	case AssessmentTypeStudy:
+		return true
+	case AssessmentTypeHomeFunStudy:
+		return true
+	}
+	return false
+}
+func (a AssessmentType) String() string {
+	return string(a)
+}
 
 type Assessment struct {
 	ID         string `gorm:"column:id;type:varchar(64);primary_key" json:"id"`
@@ -91,4 +138,81 @@ type BatchAddAssessmentSuperArgs struct {
 	OutcomeMap                map[string]*Outcome
 	LessonPlanMap             map[string]*AssessmentExternalLessonPlan
 	ScheduleIDToOutcomeIDsMap map[string][]string
+}
+
+type StudentAssessmentTeacher struct {
+	ID         string `json:"id"`
+	GivenName  string `json:"given_name"`
+	FamilyName string `json:"family_name"`
+}
+
+type StudentAssessmentSchedule struct {
+	ID         string                       `json:"id"`
+	Title      string                       `json:"title"`
+	Type       string                       `json:"type"`
+	Attachment *StudentAssessmentAttachment `json:"attachment,omitempty"`
+}
+type StudentAssessmentAttachment struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type StudentAssessment struct {
+	ID                  string                        `json:"id"`
+	Title               string                        `json:"title"`
+	Comment             []string                      `json:"comment"`
+	Score               int                           `json:"score"`
+	Status              string                        `json:"status"`
+	CreateAt            int64                         `json:"create_at"`
+	UpdateAt            int64                         `json:"update_at"`
+	CompleteAt          int64                         `json:"complete_at"`
+	Teacher             *StudentAssessmentTeacher     `json:"teacher,omitempty"`
+	Schedule            *StudentAssessmentSchedule    `json:"schedule,omitempty"`
+	FeedbackAttachments []StudentAssessmentAttachment `json:"feedback_attachments,omitempty"`
+
+	ScheduleID string `json:"-"`
+	FeedbackID string `json:"-"`
+	StudentID  string `json:"-"`
+
+	IsHomeFun bool `json:"-"`
+}
+
+type StudentCollectRelatedIDs struct {
+	ScheduleIDs      []string
+	AllAssessmentIDs []string
+	FeedbackIDs      []string
+	AssessmentsIDs   []string
+}
+
+type StudentQueryAssessmentConditions struct {
+	ID        string `form:"assessment_id"`
+	OrgID     string `form:"org_id"`
+	StudentID string `form:"student_id"`
+	TeacherID string `form:"teacher_id"`
+	Status    string `form:"status"`
+
+	CreatedStartAt int64 `form:"create_at_ge"`
+	CreatedEndAt   int64 `form:"create_at_le"`
+
+	UpdateStartAt   int64 `form:"update_at_ge"`
+	UpdateEndAt     int64 `form:"update_at_le"`
+	CompleteStartAt int64 `form:"complete_at_ge"`
+	CompleteEndAt   int64 `form:"complete_at_le"`
+
+	ClassType string `form:"type"`
+
+	OrderBy  string `form:"order_by"`
+	Page     int    `form:"page"`
+	PageSize int    `form:"page_size"`
+}
+
+type SearchStudentAssessmentsResponse struct {
+	List  []*StudentAssessment `json:"list"`
+	Total int                  `json:"total"`
+}
+
+type NullTimeRange struct {
+	StartAt int64
+	EndAt   int64
+	Valid   bool
 }

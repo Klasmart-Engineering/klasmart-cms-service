@@ -121,8 +121,8 @@ func TestAmsSchoolService_GetByUsers(t *testing.T) {
 	for i, item := range userInfos {
 		userIDs[i] = item.ID
 	}
-	userIDs = append(userIDs,userIDs...)
-	userIDs = append(userIDs,userIDs...)
+	userIDs = append(userIDs, userIDs...)
+	userIDs = append(userIDs, userIDs...)
 	schools, err := GetSchoolServiceProvider().GetByUsers(context.TODO(),
 		testOperator,
 		testOperator.OrgID,
@@ -137,14 +137,14 @@ func TestAmsSchoolService_GetByUsers(t *testing.T) {
 		t.Error("GetSchoolServiceProvider().GetByUsers() get empty slice")
 		return
 	}
-	count:=0
+	count := 0
 	for key, school := range schools {
 		if school == nil {
 			t.Error("GetSchoolServiceProvider().GetByUsers() get null")
 			return
 		}
-		t.Logf("%s:%d",key,len(school))
-		if len(school)==0{
+		t.Logf("%s:%d", key, len(school))
+		if len(school) == 0 {
 			count++
 		}
 	}

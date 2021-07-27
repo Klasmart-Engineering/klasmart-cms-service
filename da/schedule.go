@@ -339,7 +339,7 @@ func (s *scheduleDA) GetTeachLoadByCondition(ctx context.Context, tx *dbo.DBCont
 		}
 	}
 
-	rows, err := tx.Debug().Table(constant.TableNameSchedule).
+	rows, err := tx.Table(constant.TableNameSchedule).
 		Select(sql.String()).
 		Joins(fmt.Sprintf("inner join  %s on (%s.id = %s.schedule_id)",
 			constant.TableNameScheduleRelation,
@@ -503,6 +503,8 @@ type ScheduleCondition struct {
 	NotStart                 sql.NullBool
 
 	RelationClassIDs    entity.NullStrings
+	RelationTeacherIDs  entity.NullStrings
+	RelationStudentIDs  entity.NullStrings
 	TeachLoadTimeRanges []*entity.ScheduleTimeRange
 	TeachLoadTeacherIDs entity.NullStrings
 
@@ -603,10 +605,10 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.RelationIDs.Strings)
 	}
 	if c.RelationSchoolIDs.Valid {
-		sql := fmt.Sprintf("exists(select 1 from %s where relation_id in (?) and %s.id = %s.schedule_id)",
-			constant.TableNameScheduleRelation, constant.TableNameSchedule, constant.TableNameScheduleRelation)
+		sql := fmt.Sprintf("exists(select 1 from %s where relation_id in (?) and %s.id = %s.schedule_id and %s.relation_type = ?)",
+			constant.TableNameScheduleRelation, constant.TableNameSchedule, constant.TableNameScheduleRelation, constant.TableNameScheduleRelation)
 		wheres = append(wheres, sql)
-		params = append(params, c.RelationSchoolIDs.Strings)
+		params = append(params, c.RelationSchoolIDs.Strings, entity.ScheduleRelationTypeSchool)
 	}
 	if c.OrgID.Valid {
 		wheres = append(wheres, "org_id = ?")
@@ -630,6 +632,7 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		wheres = append(wheres, sql)
 		params = append(params, c.RosterClassID.String, entity.ScheduleRelationTypeClassRosterClass)
 	}
+
 	if c.NotStart.Valid {
 		notEditAt := time.Now().Add(constant.ScheduleAllowEditTime).Unix()
 		wheres = append(wheres, " ((due_at=0 and start_at=0 and end_at=0) || (start_at = 0 and due_at > ?) || (start_at > ?)) ")
@@ -645,6 +648,27 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 			entity.ScheduleRelationTypeParticipantClass,
 		})
 	}
+
+	if c.RelationTeacherIDs.Valid {
+		sql := fmt.Sprintf("exists(select 1 from %s where relation_id in (?) and relation_type in (?) and %s.id = %s.schedule_id)",
+			constant.TableNameScheduleRelation, constant.TableNameSchedule, constant.TableNameScheduleRelation)
+		wheres = append(wheres, sql)
+		params = append(params, c.RelationTeacherIDs.Strings, []entity.ScheduleRelationType{
+			entity.ScheduleRelationTypeClassRosterTeacher,
+			entity.ScheduleRelationTypeParticipantTeacher,
+		})
+	}
+
+	if c.RelationStudentIDs.Valid {
+		sql := fmt.Sprintf("exists(select 1 from %s where relation_id in (?) and relation_type in (?) and %s.id = %s.schedule_id)",
+			constant.TableNameScheduleRelation, constant.TableNameSchedule, constant.TableNameScheduleRelation)
+		wheres = append(wheres, sql)
+		params = append(params, c.RelationStudentIDs.Strings, []entity.ScheduleRelationType{
+			entity.ScheduleRelationTypeClassRosterStudent,
+			entity.ScheduleRelationTypeParticipantStudent,
+		})
+	}
+
 	if c.TeachLoadTeacherIDs.Valid {
 		sql := fmt.Sprintf("%s.relation_id in (?) and %s.relation_type in (?)",
 			constant.TableNameScheduleRelation, constant.TableNameScheduleRelation)
@@ -655,14 +679,6 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 				entity.ScheduleRelationTypeClassRosterTeacher.String(),
 			})
 	}
-	//if c.TeacherID.Valid {
-	//	sql := fmt.Sprintf("exists(select 1 from %s where relation_id = ? and relation_type in (?) and %s.id = %s.schedule_id)",
-	//		constant.TableNameScheduleRelation, constant.TableNameSchedule, constant.TableNameScheduleRelation)
-	//	wheres = append(wheres, sql)
-	//	params = append(params, c.TeacherID.String, []entity.ScheduleRelationType{
-	//		entity.ScheduleRelationTypeClassRosterTeacher,
-	//	})
-	//}
 
 	if c.DeleteAt.Valid {
 		wheres = append(wheres, "delete_at>0")

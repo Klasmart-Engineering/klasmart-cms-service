@@ -2,6 +2,7 @@ package entity
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"time"
 
@@ -216,6 +217,7 @@ func (s ScheduleClassType) Valid() bool {
 		return false
 	}
 }
+
 func (s ScheduleClassType) ToLabel() ScheduleClassTypeLabel {
 	switch s {
 	case ScheduleClassTypeOnlineClass:
@@ -384,7 +386,7 @@ type ScheduleAddView struct {
 	TimeZoneOffset         int               `json:"time_zone_offset"`
 	Location               *time.Location    `json:"-"`
 	IsHomeFun              bool              `json:"is_home_fun"`
-	LearningOutcomeIDs     []string          `json:"learning_outcome_ids"`
+	OutcomeIDs             []string          `json:"outcome_ids"`
 }
 
 type ScheduleEditValidation struct {
@@ -395,7 +397,7 @@ type ScheduleEditValidation struct {
 	ClassID                string
 	ClassType              ScheduleClassType
 	Title                  string
-	LearningOutcomeIDs     []string
+	OutcomeIDs             []string
 }
 
 func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
@@ -538,6 +540,7 @@ type ScheduleBasicDataInput struct {
 	TeacherIDs   []string
 	StudentIDs   []string
 }
+
 type ScheduleUserInput struct {
 	ID   string               `json:"id"`
 	Type ScheduleRelationType `json:"type"`
@@ -550,10 +553,12 @@ type ScheduleSearchView struct {
 	Title   string `json:"title"`
 	ScheduleBasic
 }
+
 type ScheduleShortInfo struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
+
 type SchedulePlain struct {
 	*Schedule
 }
@@ -591,13 +596,13 @@ type ScheduleLessonPlanMaterial struct {
 }
 
 type ScheduleVerify struct {
-	ClassID            string
-	SubjectIDs         []string
-	ProgramID          string
-	LessonPlanID       string
-	ClassType          ScheduleClassType
-	IsHomeFun          bool
-	LearningOutcomeIDs []string
+	ClassID      string
+	SubjectIDs   []string
+	ProgramID    string
+	LessonPlanID string
+	ClassType    ScheduleClassType
+	IsHomeFun    bool
+	OutcomeIDs   []string
 }
 
 // ScheduleEditType include delete and edit
@@ -770,6 +775,7 @@ type ScheduleTeachingLoadInput struct {
 	TeacherIDs []string
 	TimeRanges []*ScheduleTimeRange
 }
+
 type ScheduleTimeRange struct {
 	StartAt int64
 	EndAt   int64
@@ -801,4 +807,16 @@ type ScheduleTimeViewQuery struct {
 	EndAtLe        int64    `json:"end_at_le"`
 	Anytime        bool     `json:"anytime"`
 	OrderBy        string   `json:"order_by"`
+}
+
+type ScheduleQueryCondition struct {
+	IDs                NullStrings
+	OrgID              sql.NullString
+	StartAtGe          sql.NullInt64
+	StartAtLt          sql.NullInt64
+	RelationSchoolIDs  NullStrings
+	RelationClassIDs   NullStrings
+	RelationTeacherIDs NullStrings
+	RelationStudentIDs NullStrings
+	DeleteAt           sql.NullInt64
 }
