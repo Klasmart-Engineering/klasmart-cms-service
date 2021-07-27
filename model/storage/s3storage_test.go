@@ -59,14 +59,14 @@ func TestLocalS3(t *testing.T) {
 	os.Setenv("AWS_ACCESS_KEY_ID", "test_access_key")
 	os.Setenv("AWS_SECRET_ACCESS_KEY", "test_secret_key")
 	defaultStorage = newS3Storage(S3StorageConfig{
-		Endpoint: "http://192.168.1.233:65432",
-		Bucket:    "fucking-bucket",
+		Endpoint:   "http://192.168.1.233:65432",
+		Bucket:     "fucking-bucket",
 		Accelerate: false,
-		Region:    "us-east-1",
+		Region:     "us-east-1",
 		//ArnBucket: os.Getenv("storage_arn_bucket"),
 	})
 	err := defaultStorage.OpenStorage(context.TODO())
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 		return
 	}
@@ -104,7 +104,7 @@ func TestCDNSignature2(t *testing.T) {
 		//CDNRestrictedViewer:           true,
 		CDNPath:           "https://res-kl2-dev-cms.kidsloop.net",
 		CDNPrivateKeyPath: "./rsa_private_key.pem",
-		CDNKeyId: "K3PUGKGK3R1NHM",
+		CDNKeyId:          "K3PUGKGK3R1NHM",
 	}
 	ctx := context.Background()
 	partition := "thumbnail"
@@ -161,7 +161,7 @@ func TestCDNSignature2(t *testing.T) {
 
 func TestURLEncode(t *testing.T) {
 	s, err := url.Parse("http://192.168.0.127:654321")
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 		return
 	}

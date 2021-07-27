@@ -135,7 +135,7 @@ func BHexToNum(ctx context.Context, hexString string) (int, error) {
 	length := len(hexString)
 	ind := 0
 	power := 1
-	for i := length-1; i>=0; i-- {
+	for i := length - 1; i >= 0; i-- {
 		var value int
 		var ok bool
 		if value, ok = indMap[hexString[i]]; !ok {
