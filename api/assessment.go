@@ -86,7 +86,7 @@ func (s *Server) getAssessmentsSummary(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /assessments_summary [get]
+// @Router /assessments_for_student [get]
 func (s *Server) getStudentAssessments(c *gin.Context) {
 	ctx := c.Request.Context()
 	args := entity.QueryAssessmentsSummaryArgs{}
