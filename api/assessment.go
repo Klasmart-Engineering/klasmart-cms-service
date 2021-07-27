@@ -82,7 +82,7 @@ func (s *Server) getAssessmentsSummary(c *gin.Context) {
 // @Param complete_at_le query string false "complete_at less search"
 // @Param page query string false "page search"
 // @Param page_size query string false "page size search"
-// @Success 200 {object} entity.AssessmentsSummary
+// @Success 200 {object} entity.SearchStudentAssessmentsResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
