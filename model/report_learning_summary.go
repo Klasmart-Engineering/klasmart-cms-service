@@ -8,6 +8,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"sort"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -45,48 +46,11 @@ func (l *learningSummaryReportModel) QueryFilterItems(ctx context.Context, tx *d
 }
 
 func (l *learningSummaryReportModel) querySubjectFilterItems(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) ([]*entity.QueryLearningSummaryFilterResultItem, error) {
-	// TODO: Medivh: find related schedule ids by filter
-	scheduleCondition := da.ScheduleCondition{
-		OrgID: sql.NullString{
-			String: operator.OrgID,
-			Valid:  true,
-		},
-	}
-	if filter.WeekStart > 0 {
-		scheduleCondition.StartAtGe = sql.NullInt64{
-			Int64: filter.WeekStart,
-			Valid: true,
-		}
-	}
-	if filter.WeekEnd > 0 {
-		scheduleCondition.StartAtLt = sql.NullInt64{
-			Int64: filter.WeekStart,
-			Valid: true,
-		}
-	}
-	if len(filter.SchoolID) > 0 {
-		scheduleCondition.RelationSchoolIDs = entity.NullStrings{
-			Strings: []string{filter.SchoolID},
-			Valid:   true,
-		}
-	}
-	if len(filter.ClassID) > 0 {
-		scheduleCondition.RelationClassIDs = entity.NullStrings{
-			Strings: []string{filter.ClassID},
-			Valid:   true,
-		}
-	}
-	if len(filter.TeacherID) > 0 {
-		// TODO: Medivh: add teacher id condition
-	}
-	if len(filter.StudentID) > 0 {
-		// TODO: Medivh: add student id condition
-	}
-	schedules, err := GetScheduleModel().QueryUnsafe(ctx, &scheduleCondition)
+	schedules, err := l.findRelatedSchedules(ctx, tx, operator, nil, filter)
 	if err != nil {
 		log.Error(ctx, "query subject filter items: query schedule failed",
 			log.Err(err),
-			log.Any("schedule_condition", scheduleCondition),
+			log.Any("filter", filter),
 		)
 		return nil, err
 	}
@@ -140,7 +104,7 @@ func (l *learningSummaryReportModel) querySubjectFilterItems(ctx context.Context
 
 func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryLiveClassesSummaryResult, error) {
 	// find related schedules and make by schedule id
-	schedules, err := l.findRelatedSchedules(ctx, tx, operator, filter, []entity.AssessmentType{entity.AssessmentTypeLive, entity.AssessmentTypeClass})
+	schedules, err := l.findRelatedSchedules(ctx, tx, operator, []entity.AssessmentType{entity.AssessmentTypeLive}, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -207,6 +171,7 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 			item.Absent = true
 		} else {
 			item.AssessmentID = assessment.ID
+			item.Status = assessment.Status
 		}
 		if comments := roomCommentMap[s.ID][filter.StudentID]; len(comments) > 0 {
 			item.TeacherFeedback = comments[len(comments)-1]
@@ -219,12 +184,28 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 				})
 			}
 		}
+		l.sortOutcomesByAlphabetAsc(item.Outcomes)
 		result.Items = append(result.Items, &item)
 	}
+
+	// sort items
+	l.sortLiveClassesSummaryItemsByStartTimeAsc(result.Items)
 
 	log.Debug(ctx, "query live classes summary result", log.Any("result", result))
 
 	return result, nil
+}
+
+func (l *learningSummaryReportModel) sortOutcomesByAlphabetAsc(items []*entity.LearningSummaryOutcome) {
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].Name < items[j].Name
+	})
+}
+
+func (l *learningSummaryReportModel) sortLiveClassesSummaryItemsByStartTimeAsc(items []*entity.LiveClassSummaryItem) {
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].ClassStartTime < items[j].ClassStartTime
+	})
 }
 
 func (l *learningSummaryReportModel) findRelatedOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) (map[string][]*entity.Outcome, error) {
@@ -257,9 +238,73 @@ func (l *learningSummaryReportModel) findRelatedOutcomes(ctx context.Context, tx
 	return scheduleOutcomesMap, nil
 }
 
-func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter, types []entity.AssessmentType) ([]*entity.ScheduleVariable, error) {
-	// TODO: Medivh: query schedules
-	panic("implement me")
+func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, types []entity.AssessmentType, filter *entity.LearningSummaryFilter) ([]*entity.Schedule, error) {
+	scheduleCondition := entity.ScheduleQueryCondition{
+		OrgID: sql.NullString{
+			String: operator.OrgID,
+			Valid:  true,
+		},
+	}
+	if filter.WeekStart > 0 {
+		scheduleCondition.StartAtGe = sql.NullInt64{
+			Int64: filter.WeekStart,
+			Valid: true,
+		}
+	}
+	if filter.WeekEnd > 0 {
+		scheduleCondition.StartAtLt = sql.NullInt64{
+			Int64: filter.WeekStart,
+			Valid: true,
+		}
+	}
+	if len(filter.SchoolID) > 0 {
+		scheduleCondition.RelationSchoolIDs = entity.NullStrings{
+			Strings: []string{filter.SchoolID},
+			Valid:   true,
+		}
+	}
+	if len(filter.ClassID) > 0 {
+		scheduleCondition.RelationClassIDs = entity.NullStrings{
+			Strings: []string{filter.ClassID},
+			Valid:   true,
+		}
+	}
+	if len(filter.TeacherID) > 0 {
+		scheduleCondition.RelationTeacherIDs = entity.NullStrings{
+			Strings: []string{filter.TeacherID},
+			Valid:   true,
+		}
+	}
+	if len(filter.StudentID) > 0 {
+		scheduleCondition.RelationStudentIDs = entity.NullStrings{
+			Strings: []string{filter.StudentID},
+			Valid:   true,
+		}
+	}
+	schedules, err := GetScheduleModel().QueryUnsafe(ctx, &entity.ScheduleQueryCondition{})
+	if err != nil {
+		log.Error(ctx, "find related schedules: query schedule failed",
+			log.Err(err),
+			log.Any("schedule_condition", scheduleCondition),
+		)
+		return nil, err
+	}
+	filterSchedules := make([]*entity.Schedule, 0, len(schedules))
+	for _, s := range schedules {
+		need := false
+		for _, t := range types {
+			classType := t.ToScheduleClassType()
+			if classType.ClassType == s.ClassType && classType.IsHomeFun == s.IsHomeFun {
+				need = true
+				break
+			}
+		}
+		if !need {
+			continue
+		}
+		filterSchedules = append(filterSchedules, s)
+	}
+	return schedules, nil
 }
 
 func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string, studentID string) ([]*entity.Assessment, error) {
@@ -287,7 +332,7 @@ func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context,
 
 func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryAssignmentsSummaryResult, error) {
 	// find related schedules and make by schedule id
-	schedules, err := l.findRelatedSchedules(ctx, tx, operator, filter, []entity.AssessmentType{entity.AssessmentTypeStudy, entity.AssessmentTypeHomeFunStudy})
+	schedules, err := l.findRelatedSchedules(ctx, tx, operator, []entity.AssessmentType{entity.AssessmentTypeStudy, entity.AssessmentTypeHomeFunStudy}, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -388,6 +433,7 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 				continue
 			}
 			item := entity.AssignmentsSummaryHomeFunStudyItem{
+				Status:          assessment.Status,
 				AssessmentTitle: assessment.Title,
 				TeacherFeedback: assessment.AssessComment,
 				ScheduleID:      s.ID,
@@ -408,6 +454,7 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 				continue
 			}
 			item := entity.AssignmentsSummaryStudyItem{
+				Status:          assessment.Status,
 				AssessmentTitle: assessment.Title,
 				LessonPlanName:  lessonPlanNameMap[s.LessonPlanID],
 				ScheduleID:      s.ID,
@@ -428,7 +475,23 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 		}
 	}
 
+	// sort study items and home fun study items
+	l.sortAssignmentsSummaryStudyItems(result.StudyItems)
+	l.sortAssignmentsSummaryHomeFunStudyItems(result.HomeFunStudyItems)
+
 	log.Debug(ctx, "query assignments summary result", log.Any("result", result))
 
 	return result, nil
+}
+
+func (l *learningSummaryReportModel) sortAssignmentsSummaryStudyItems(items []*entity.AssignmentsSummaryStudyItem) {
+	sort.Slice(items, func(i, j int) bool {
+		return true
+	})
+}
+
+func (l *learningSummaryReportModel) sortAssignmentsSummaryHomeFunStudyItems(items []*entity.AssignmentsSummaryHomeFunStudyItem) {
+	sort.Slice(items, func(i, j int) bool {
+		return true
+	})
 }

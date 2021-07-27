@@ -64,6 +64,7 @@ type QueryLiveClassesSummaryResult struct {
 }
 
 type LiveClassSummaryItem struct {
+	Status          AssessmentStatus          `json:"status"`
 	Absent          bool                      `json:"absent"`
 	ClassStartTime  int64                     `json:"class_start_time"`
 	ScheduleTitle   string                    `json:"schedule_title"`
@@ -87,6 +88,7 @@ type QueryAssignmentsSummaryResult struct {
 }
 
 type AssignmentsSummaryStudyItem struct {
+	Status          AssessmentStatus          `json:"status"`
 	AssessmentTitle string                    `json:"assessment_title"`
 	LessonPlanName  string                    `json:"lesson_plan_name"`
 	Outcomes        []*LearningSummaryOutcome `json:"outcomes"`
@@ -97,6 +99,7 @@ type AssignmentsSummaryStudyItem struct {
 }
 
 type AssignmentsSummaryHomeFunStudyItem struct {
+	Status          AssessmentStatus          `json:"status"`
 	AssessmentTitle string                    `json:"assessment_title"`
 	Outcomes        []*LearningSummaryOutcome `json:"outcomes"`
 	TeacherFeedback string                    `json:"teacher_feedback"`
