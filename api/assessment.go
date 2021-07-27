@@ -6,6 +6,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 )
@@ -95,8 +96,25 @@ func (s *Server) getStudentAssessments(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+
+	//check permission
+	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentViewTeacherFeedback670)
+	if err != nil {
+		log.Error(ctx, "hasPermission: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 670 failed",
+			log.Err(err),
+			log.Any("operator", operator),
+		)
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		log.Warn(ctx, "No permission", log.Any("operator", operator))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
+		return
+	}
+
 	conditions := new(entity.StudentQueryAssessmentConditions)
-	err := c.ShouldBindQuery(conditions)
+	err = c.ShouldBindQuery(conditions)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
