@@ -120,6 +120,7 @@ const (
 	AssessmentViewOrgInProgressAssessments425          PermissionName = "view_org_in_progress_assessments_425"
 	AssessmentViewSchoolCompletedAssessments426        PermissionName = "view_school_completed_assessments_426"
 	AssessmentViewSchoolInProgressAssessments427       PermissionName = "view_school_in_progress_assessments_427"
+	AssessmentViewTeacherFeedback670                   PermissionName = "view_teacher_feedback_670"
 
 	ViewUnPublishedMilestone     PermissionName = "view_unpublished_milestone_417"
 	ViewPublishedMilestone       PermissionName = "view_published_milestone_418"

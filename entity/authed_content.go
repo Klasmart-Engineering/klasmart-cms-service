@@ -26,7 +26,7 @@ type BatchDeleteAuthedContentRequest struct {
 
 type BatchDeleteAuthedContentByOrgsRequest struct {
 	OrgIDs     []string `json:"org_ids"`
-	FolderIDs []string `json:"folder_i_ds"`
+	FolderIDs  []string `json:"folder_ids"`
 	ContentIDs []string `json:"content_ids"`
 }
 
