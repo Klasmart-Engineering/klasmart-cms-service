@@ -517,11 +517,9 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 	feedbackMap map[string][]*entity.FeedbackAssignmentView,
 	scheduleCommentMap map[string][]string) error {
 
-	log.Debug(ctx, "assessments info",
-		log.Any("assessments", assessments))
 	for i := range assessments {
 		//build schedule
-		schedule := schedulesMap[assessments[i].ID]
+		schedule := schedulesMap[assessments[i].ScheduleID]
 		if schedule != nil {
 			scheduleAttachment := new(entity.StudentAssessmentAttachment)
 			err := json.Unmarshal([]byte(schedule.Attachment), scheduleAttachment)
