@@ -262,6 +262,19 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 			Valid:  true,
 		},
 	}
+	if len(types) > 0 {
+		scheduleCondition.ClassTypes.Valid = true
+		for _, t := range types {
+			scheduleType := t.ToScheduleClassType()
+			scheduleCondition.ClassTypes.Strings = append(scheduleCondition.ClassTypes.Strings, string(scheduleType.ClassType))
+			if scheduleType.IsHomeFun {
+				scheduleCondition.IsHomefun = sql.NullBool{
+					Bool:  true,
+					Valid: true,
+				}
+			}
+		}
+	}
 	if filter.WeekStart > 0 {
 		scheduleCondition.StartAtGe = sql.NullInt64{
 			Int64: filter.WeekStart,
@@ -305,21 +318,6 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 			log.Any("schedule_condition", scheduleCondition),
 		)
 		return nil, err
-	}
-	filterSchedules := make([]*entity.Schedule, 0, len(schedules))
-	for _, s := range schedules {
-		need := false
-		for _, t := range types {
-			classType := t.ToScheduleClassType()
-			if classType.ClassType == s.ClassType && classType.IsHomeFun == s.IsHomeFun {
-				need = true
-				break
-			}
-		}
-		if !need {
-			continue
-		}
-		filterSchedules = append(filterSchedules, s)
 	}
 	return schedules, nil
 }

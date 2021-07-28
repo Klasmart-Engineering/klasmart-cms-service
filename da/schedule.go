@@ -497,6 +497,7 @@ type ScheduleCondition struct {
 	RelationIDs              entity.NullStrings
 	RelationSchoolIDs        entity.NullStrings
 	ClassTypes               entity.NullStrings
+	IsHomefun                sql.NullBool
 	DueToEq                  sql.NullInt64
 	AnyTime                  sql.NullBool
 	RosterClassID            sql.NullString
@@ -618,6 +619,12 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		wheres = append(wheres, "class_type in (?)")
 		params = append(params, c.ClassTypes.Strings)
 	}
+
+	if c.IsHomefun.Valid {
+		wheres = append(wheres, "((is_home_fun = ? and class_type = ?) or (class_type != ?))")
+		params = append(params, c.IsHomefun.Bool, entity.ScheduleClassTypeHomework, entity.ScheduleClassTypeHomework)
+	}
+
 	if c.DueToEq.Valid {
 		wheres = append(wheres, "due_at = ?")
 		params = append(params, c.DueToEq.Int64)

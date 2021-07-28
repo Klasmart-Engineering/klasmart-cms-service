@@ -70,14 +70,14 @@ func (c *QueryHomeFunStudyCondition) GetConditions() ([]string, []interface{}) {
 	if c.TeacherIDs.Valid || c.StudentIDs.Valid {
 		flag := false
 		t2 := NewSQLTemplate("")
-		if len(c.TeacherIDs.Values) > 0 {
+		if c.TeacherIDs.Valid && len(c.TeacherIDs.Values) > 0 {
 			teacherIDs := utils.SliceDeduplication(c.TeacherIDs.Values)
 			for _, teacherID := range teacherIDs {
 				t2.Appendf("json_contains(teacher_ids, json_array(?))", teacherID)
 				flag = true
 			}
 		}
-		if len(c.StudentIDs.Strings) > 0 {
+		if c.StudentIDs.Valid && len(c.StudentIDs.Strings) > 0 {
 			t2.Appendf("student_id in (?)", c.StudentIDs.Strings)
 			flag = true
 		}
