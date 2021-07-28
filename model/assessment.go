@@ -236,6 +236,13 @@ func (m *assessmentModel) studentsAssessmentQuery(ctx context.Context,
 	}
 
 	var r []*entity.Assessment
+	if condition.Page < 1 {
+		condition.Page = 1
+	}
+	if condition.PageSize < 1 {
+		condition.PageSize = 10
+	}
+
 	conditions := &da.QueryAssessmentConditions{
 		IDs:                          ids,
 		OrgID:                        orgID,
