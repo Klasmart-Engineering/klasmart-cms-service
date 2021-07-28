@@ -34,6 +34,10 @@ type assessmentOutcomeDA struct {
 }
 
 func (*assessmentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentOutcome) error {
+	if len(items) == 0 {
+		log.Debug(ctx, "batch insert assessment outcome: no items")
+		return nil
+	}
 	var (
 		columns = []string{"id", "assessment_id", "outcome_id"}
 		matrix  [][]interface{}
