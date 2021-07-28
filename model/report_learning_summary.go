@@ -311,7 +311,7 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 			Valid:   true,
 		}
 	}
-	schedules, err := GetScheduleModel().QueryUnsafe(ctx, &entity.ScheduleQueryCondition{})
+	schedules, err := GetScheduleModel().QueryUnsafe(ctx, &scheduleCondition)
 	if err != nil {
 		log.Error(ctx, "find related schedules: query schedule failed",
 			log.Err(err),
@@ -334,7 +334,7 @@ func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context,
 			Strings: []string{studentID},
 			Valid:   true,
 		},
-	}, assessments); err != nil {
+	}, &assessments); err != nil {
 		log.Error(ctx, "find related assessments: query assessment attendance relations failed",
 			log.Err(err),
 			log.Strings("schedule_ids", scheduleIDs),
