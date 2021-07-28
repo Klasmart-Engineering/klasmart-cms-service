@@ -98,6 +98,11 @@ func (s *Server) queryLiveClassesSummary(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+	if filter.StudentID == "" {
+		log.Error(ctx, "query live classes summary: require student id")
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
 	result, err := model.GetLearningSummaryReportModel().QueryLiveClassesSummary(ctx, dbo.MustGetDB(ctx), operator, filter)
 	if err != nil {
 		log.Error(ctx, "query live classes summary failed",
@@ -145,6 +150,11 @@ func (s *Server) queryAssignmentsSummary(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+	if filter.StudentID == "" {
+		log.Error(ctx, "query assignments summary: require student id")
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
 	result, err := model.GetLearningSummaryReportModel().QueryAssignmentsSummary(ctx, dbo.MustGetDB(ctx), operator, filter)
 	if err != nil {
 		log.Error(ctx, "query assignments summary failed",
@@ -166,33 +176,43 @@ func (s *Server) queryAssignmentsSummary(c *gin.Context) {
 
 func (s *Server) parseLearningSummaryFilter(c *gin.Context) (*entity.LearningSummaryFilter, error) {
 	ctx := c.Request.Context()
+	var err error
 
+	year := 0
 	strYear := c.Query("year")
-	year, err := strconv.Atoi(strYear)
-	if err != nil {
-		log.Error(ctx, "parse learning summary filter: parse year field failed",
-			log.Err(err),
-			log.String("year", strYear),
-		)
-		return nil, err
+	if strYear != "" {
+		year, err = strconv.Atoi(strYear)
+		if err != nil {
+			log.Error(ctx, "parse learning summary filter: parse year field failed",
+				log.Err(err),
+				log.String("year", strYear),
+			)
+			return nil, err
+		}
 	}
+	weekStart := int64(0)
 	strWeekStart := c.Query("year")
-	weekStart, err := strconv.ParseInt(strWeekStart, 10, 64)
-	if err != nil {
-		log.Error(ctx, "parse learning summary filter: parse week_start field failed",
-			log.Err(err),
-			log.String("week_start", strWeekStart),
-		)
-		return nil, err
+	if strWeekStart != "" {
+		weekStart, err = strconv.ParseInt(strWeekStart, 10, 64)
+		if err != nil {
+			log.Error(ctx, "parse learning summary filter: parse week_start field failed",
+				log.Err(err),
+				log.String("week_start", strWeekStart),
+			)
+			return nil, err
+		}
 	}
+	weekEnd := int64(0)
 	strWeekEnd := c.Query("week_end")
-	weekEnd, err := strconv.ParseInt(strWeekEnd, 10, 64)
-	if err != nil {
-		log.Error(ctx, "parse learning summary filter: parse week_end field failed",
-			log.Err(err),
-			log.String("week_end", strWeekEnd),
-		)
-		return nil, err
+	if strWeekEnd != "" {
+		weekEnd, err = strconv.ParseInt(strWeekEnd, 10, 64)
+		if err != nil {
+			log.Error(ctx, "parse learning summary filter: parse week_end field failed",
+				log.Err(err),
+				log.String("week_end", strWeekEnd),
+			)
+			return nil, err
+		}
 	}
 	filter := entity.LearningSummaryFilter{
 		Year:      year,
