@@ -519,28 +519,28 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 	for i := range assessments {
 		//build schedule
 		schedule := schedulesMap[assessments[i].ID]
-		scheduleAttachment := new(entity.StudentAssessmentAttachment)
-		err := json.Unmarshal([]byte(schedule.Attachment), scheduleAttachment)
-		if err != nil {
-			log.Error(ctx, "Unmarshal schedule attachment failed",
-				log.Err(err),
-				log.Any("schedule", schedule),
-			)
-			return err
-		}
-		assessments[i].Schedule = &entity.StudentAssessmentSchedule{
-			ID:         schedule.ID,
-			Title:      schedule.Title,
-			Type:       schedule.ClassType.String(),
-			Attachment: scheduleAttachment,
+		if schedule != nil {
+			scheduleAttachment := new(entity.StudentAssessmentAttachment)
+			err := json.Unmarshal([]byte(schedule.Attachment), scheduleAttachment)
+			if err != nil {
+				log.Error(ctx, "Unmarshal schedule attachment failed",
+					log.Err(err),
+					log.Any("schedule", schedule),
+				)
+				return err
+			}
+			assessments[i].Schedule = &entity.StudentAssessmentSchedule{
+				ID:         schedule.ID,
+				Title:      schedule.Title,
+				Type:       schedule.ClassType.String(),
+				Attachment: scheduleAttachment,
+			}
 		}
 
 		//build teacher
 		assessmentTeacherID := teacherAssessmentsMap[assessments[i].ID]
 		assessments[i].Teacher = &entity.StudentAssessmentTeacher{
-			ID:         assessmentTeacherID,
-			GivenName:  teacherInfoMap[assessmentTeacherID].GivenName,
-			FamilyName: teacherInfoMap[assessmentTeacherID].FamilyName,
+			ID: assessmentTeacherID,
 		}
 		teacherInfo := teacherInfoMap[assessmentTeacherID]
 		if teacherInfo != nil && teacherInfo.Valid {
