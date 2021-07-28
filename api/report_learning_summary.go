@@ -98,6 +98,11 @@ func (s *Server) queryLiveClassesSummary(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+	if filter.StudentID == "" {
+		log.Error(ctx, "query live classes summary: require student id")
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
 	result, err := model.GetLearningSummaryReportModel().QueryLiveClassesSummary(ctx, dbo.MustGetDB(ctx), operator, filter)
 	if err != nil {
 		log.Error(ctx, "query live classes summary failed",
@@ -142,6 +147,11 @@ func (s *Server) queryAssignmentsSummary(c *gin.Context) {
 
 	filter, err := s.parseLearningSummaryFilter(c)
 	if err != nil {
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	if filter.StudentID == "" {
+		log.Error(ctx, "query assignments summary: require student id")
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
