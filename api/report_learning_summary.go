@@ -84,7 +84,7 @@ func (s *Server) queryLearningSummaryFilterItems(c *gin.Context) {
 // @Param teacher_id query string false "teacher_id"
 // @Param student_id query string false "student_id"
 // @Param subject_id query string false "subject_id"
-// @Success 200 {array} entity.QueryLiveClassesSummaryResult
+// @Success 200 {object} entity.QueryLiveClassesSummaryResult
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -95,6 +95,11 @@ func (s *Server) queryLiveClassesSummary(c *gin.Context) {
 
 	filter, err := s.parseLearningSummaryFilter(c)
 	if err != nil {
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	if filter.StudentID == "" {
+		log.Error(ctx, "query live classes summary: require student id")
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -131,7 +136,7 @@ func (s *Server) queryLiveClassesSummary(c *gin.Context) {
 // @Param teacher_id query string false "teacher_id"
 // @Param student_id query string false "student_id"
 // @Param subject_id query string false "subject_id"
-// @Success 200 {array} entity.QueryAssignmentsSummaryResult
+// @Success 200 {object} entity.QueryAssignmentsSummaryResult
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -142,6 +147,11 @@ func (s *Server) queryAssignmentsSummary(c *gin.Context) {
 
 	filter, err := s.parseLearningSummaryFilter(c)
 	if err != nil {
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	if filter.StudentID == "" {
+		log.Error(ctx, "query assignments summary: require student id")
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -166,33 +176,43 @@ func (s *Server) queryAssignmentsSummary(c *gin.Context) {
 
 func (s *Server) parseLearningSummaryFilter(c *gin.Context) (*entity.LearningSummaryFilter, error) {
 	ctx := c.Request.Context()
+	var err error
 
+	year := 0
 	strYear := c.Query("year")
-	year, err := strconv.Atoi(strYear)
-	if err != nil {
-		log.Error(ctx, "parse learning summary filter: parse year field failed",
-			log.Err(err),
-			log.String("year", strYear),
-		)
-		return nil, err
+	if strYear != "" {
+		year, err = strconv.Atoi(strYear)
+		if err != nil {
+			log.Error(ctx, "parse learning summary filter: parse year field failed",
+				log.Err(err),
+				log.String("year", strYear),
+			)
+			return nil, err
+		}
 	}
+	weekStart := int64(0)
 	strWeekStart := c.Query("year")
-	weekStart, err := strconv.ParseInt(strWeekStart, 10, 64)
-	if err != nil {
-		log.Error(ctx, "parse learning summary filter: parse week_start field failed",
-			log.Err(err),
-			log.String("week_start", strWeekStart),
-		)
-		return nil, err
+	if strWeekStart != "" {
+		weekStart, err = strconv.ParseInt(strWeekStart, 10, 64)
+		if err != nil {
+			log.Error(ctx, "parse learning summary filter: parse week_start field failed",
+				log.Err(err),
+				log.String("week_start", strWeekStart),
+			)
+			return nil, err
+		}
 	}
+	weekEnd := int64(0)
 	strWeekEnd := c.Query("week_end")
-	weekEnd, err := strconv.ParseInt(strWeekEnd, 10, 64)
-	if err != nil {
-		log.Error(ctx, "parse learning summary filter: parse week_end field failed",
-			log.Err(err),
-			log.String("week_end", strWeekEnd),
-		)
-		return nil, err
+	if strWeekEnd != "" {
+		weekEnd, err = strconv.ParseInt(strWeekEnd, 10, 64)
+		if err != nil {
+			log.Error(ctx, "parse learning summary filter: parse week_end field failed",
+				log.Err(err),
+				log.String("week_end", strWeekEnd),
+			)
+			return nil, err
+		}
 	}
 	filter := entity.LearningSummaryFilter{
 		Year:      year,

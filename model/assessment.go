@@ -568,7 +568,7 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 }
 
 func (m *assessmentModel) queryAssessmentComments(ctx context.Context, operator *entity.Operator, scheduleIDs []string, studentID string) (map[string][]string, error) {
-	commentMap, err := getAssessmentH5p().batchGetRoomCommentMap(ctx, operator, scheduleIDs)
+	commentMap, err := getAssessmentH5P().batchGetRoomCommentMap(ctx, operator, scheduleIDs)
 	if err != nil {
 		log.Error(ctx, "getAssessmentH5p.batchGetRoomCommentMap failed",
 			log.Err(err),
@@ -636,7 +636,6 @@ func (m *assessmentModel) queryFeedbackInfo(ctx context.Context, operator *entit
 }
 
 func (m *assessmentModel) queryTeacherMap(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, assessmentIDs []string) (map[string]string, map[string]*external.NullableUser, error) {
-
 	//query teachers in assessments
 	teacherAssessmentsMap := make(map[string]string)
 	attendances := make([]*entity.AssessmentAttendance, 0)

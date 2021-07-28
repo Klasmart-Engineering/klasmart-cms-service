@@ -814,6 +814,8 @@ type ScheduleQueryCondition struct {
 	OrgID              sql.NullString
 	StartAtGe          sql.NullInt64
 	StartAtLt          sql.NullInt64
+	ClassTypes         NullStrings
+	IsHomefun          sql.NullBool
 	RelationSchoolIDs  NullStrings
 	RelationClassIDs   NullStrings
 	RelationTeacherIDs NullStrings

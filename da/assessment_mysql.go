@@ -231,11 +231,6 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 			" where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and attendance_id in (?))",
 			utils.SliceDeduplication(c.TeacherIDs.Strings))
 	}
-	if c.StudentIDs.Valid {
-		t.Appendf("exists (select 1 from assessments_attendances"+
-			" where assessments.id = assessments_attendances.assessment_id and role = 'student' and attendance_id in (?))",
-			utils.SliceDeduplication(c.StudentIDs.Strings))
-	}
 
 	if c.CreatedBetween.Valid {
 		t.Appendf("(create_at BETWEEN ? AND ?)", c.CreatedBetween.StartAt, c.CreatedBetween.EndAt)
@@ -250,6 +245,12 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 		t.Appendf("exists (select 1 from schedules"+
 			" where assessments.schedule_id = schedules.id and class_type = ? and is_home_fun=false)",
 			c.ClassType.String)
+	}
+
+	if c.StudentIDs.Valid {
+		t.Appendf("exists (select 1 from assessments_attendances"+
+			" where assessments.id = assessments_attendances.assessment_id and role = 'student' and attendance_id in (?))",
+			utils.SliceDeduplication(c.StudentIDs.Strings))
 	}
 
 	if c.AllowTeacherIDs.Valid {

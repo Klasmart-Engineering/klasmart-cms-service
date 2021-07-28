@@ -3181,6 +3181,8 @@ func (s *scheduleModel) QueryUnsafe(ctx context.Context, condition *entity.Sched
 		OrgID:              condition.OrgID,
 		StartAtGe:          condition.StartAtGe,
 		StartAtLt:          condition.StartAtLt,
+		ClassTypes:         condition.ClassTypes,
+		IsHomefun:          condition.IsHomefun,
 		RelationSchoolIDs:  condition.RelationSchoolIDs,
 		RelationClassIDs:   condition.RelationClassIDs,
 		RelationTeacherIDs: condition.RelationTeacherIDs,
