@@ -456,11 +456,11 @@ func (m *assessmentModel) fillStudentAssessments(ctx context.Context,
 	}
 
 	//query Assessment Comments
-	commentMap, err := m.queryAssessmentComments(ctx, operator, collectedIDs.AssessmentsIDs, studentID)
+	commentMap, err := m.queryAssessmentComments(ctx, operator, collectedIDs.ScheduleIDs, studentID)
 	if err != nil {
 		log.Error(ctx, "queryAssessmentComments failed",
 			log.Err(err),
-			log.Strings("collectedIDs.AssessmentsIDs", collectedIDs.AssessmentsIDs),
+			log.Strings("collectedIDs.ScheduleIDs", collectedIDs.ScheduleIDs),
 			log.String("studentID", studentID),
 		)
 		return err
@@ -515,32 +515,33 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 	teacherInfoMap map[string]*external.NullableUser,
 	teacherAssessmentsMap map[string]string,
 	feedbackMap map[string][]*entity.FeedbackAssignmentView,
-	assessmentCommentMap map[string][]string) error {
+	scheduleCommentMap map[string][]string) error {
+
 	for i := range assessments {
 		//build schedule
-		schedule := schedulesMap[assessments[i].ID]
-		scheduleAttachment := new(entity.StudentAssessmentAttachment)
-		err := json.Unmarshal([]byte(schedule.Attachment), scheduleAttachment)
-		if err != nil {
-			log.Error(ctx, "Unmarshal schedule attachment failed",
-				log.Err(err),
-				log.Any("schedule", schedule),
-			)
-			return err
-		}
-		assessments[i].Schedule = &entity.StudentAssessmentSchedule{
-			ID:         schedule.ID,
-			Title:      schedule.Title,
-			Type:       schedule.ClassType.String(),
-			Attachment: scheduleAttachment,
+		schedule := schedulesMap[assessments[i].ScheduleID]
+		if schedule != nil {
+			scheduleAttachment := new(entity.StudentAssessmentAttachment)
+			err := json.Unmarshal([]byte(schedule.Attachment), scheduleAttachment)
+			if err != nil {
+				log.Error(ctx, "Unmarshal schedule attachment failed",
+					log.Err(err),
+					log.Any("schedule", schedule),
+				)
+				return err
+			}
+			assessments[i].Schedule = &entity.StudentAssessmentSchedule{
+				ID:         schedule.ID,
+				Title:      schedule.Title,
+				Type:       schedule.ClassType.String(),
+				Attachment: scheduleAttachment,
+			}
 		}
 
 		//build teacher
 		assessmentTeacherID := teacherAssessmentsMap[assessments[i].ID]
 		assessments[i].Teacher = &entity.StudentAssessmentTeacher{
-			ID:         assessmentTeacherID,
-			GivenName:  teacherInfoMap[assessmentTeacherID].GivenName,
-			FamilyName: teacherInfoMap[assessmentTeacherID].FamilyName,
+			ID: assessmentTeacherID,
 		}
 		teacherInfo := teacherInfoMap[assessmentTeacherID]
 		if teacherInfo != nil && teacherInfo.Valid {
@@ -561,24 +562,26 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 		}
 
 		if !assessments[i].IsHomeFun {
-			assessments[i].Comment = assessmentCommentMap[assessments[i].ID]
+			assessments[i].Comment = scheduleCommentMap[assessments[i].ScheduleID]
 		}
 	}
 	return nil
 }
 
-func (m *assessmentModel) queryAssessmentComments(ctx context.Context, operator *entity.Operator, assessmentIDs []string, studentID string) (map[string][]string, error) {
-	commentMap, err := getAssessmentH5P().batchGetRoomCommentMap(ctx, operator, assessmentIDs)
+func (m *assessmentModel) queryAssessmentComments(ctx context.Context, operator *entity.Operator, scheduleIDs []string, studentID string) (map[string][]string, error) {
+	commentMap, err := getAssessmentH5P().batchGetRoomCommentMap(ctx, operator, scheduleIDs)
 	if err != nil {
 		log.Error(ctx, "getAssessmentH5p.batchGetRoomCommentMap failed",
 			log.Err(err),
-			log.Strings("assessmentIDs", assessmentIDs),
+			log.Strings("scheduleIDs", scheduleIDs),
 		)
 		return nil, err
 	}
 	comments := make(map[string][]string)
-	for i := range assessmentIDs {
-		comments[assessmentIDs[i]] = commentMap[assessmentIDs[i]][studentID]
+	for i := range scheduleIDs {
+		if commentMap[scheduleIDs[i]] != nil {
+			comments[scheduleIDs[i]] = commentMap[scheduleIDs[i]][studentID]
+		}
 	}
 	return comments, nil
 }
