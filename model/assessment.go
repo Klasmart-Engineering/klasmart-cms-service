@@ -578,7 +578,9 @@ func (m *assessmentModel) queryAssessmentComments(ctx context.Context, operator 
 	}
 	comments := make(map[string][]string)
 	for i := range scheduleIDs {
-		comments[scheduleIDs[i]] = commentMap[scheduleIDs[i]][studentID]
+		if commentMap[scheduleIDs[i]] != nil {
+			comments[scheduleIDs[i]] = commentMap[scheduleIDs[i]][studentID]
+		}
 	}
 	return comments, nil
 }
