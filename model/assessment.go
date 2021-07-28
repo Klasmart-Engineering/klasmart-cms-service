@@ -516,6 +516,9 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 	teacherAssessmentsMap map[string]string,
 	feedbackMap map[string][]*entity.FeedbackAssignmentView,
 	scheduleCommentMap map[string][]string) error {
+
+	log.Debug(ctx, "assessments info",
+		log.Any("assessments", assessments))
 	for i := range assessments {
 		//build schedule
 		schedule := schedulesMap[assessments[i].ID]
