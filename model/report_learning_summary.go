@@ -185,6 +185,8 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 		} else {
 			item.AssessmentID = assessment.ID
 			item.Status = assessment.Status
+			item.CompleteAt = assessment.CompleteTime
+			item.CreateAt = assessment.CreateAt
 		}
 		if comments := roomCommentMap[s.ID][filter.StudentID]; len(comments) > 0 {
 			item.TeacherFeedback = comments[len(comments)-1]
@@ -479,6 +481,8 @@ func (l *learningSummaryReportModel) assemblyAssignmentsSummaryResult(filter *en
 				TeacherFeedback: assessment.AssessComment,
 				ScheduleID:      s.ID,
 				AssessmentID:    assessment.ID,
+				CompleteAt:      assessment.CompleteAt,
+				CreateAt:        assessment.CreateAt,
 			}
 			if outcomes := scheduleOutcomesMap[s.ID]; len(outcomes) > 0 {
 				for _, o := range outcomes {
@@ -526,6 +530,17 @@ func (l *learningSummaryReportModel) sortAssignmentsSummaryStudyItems(items []*e
 
 func (l *learningSummaryReportModel) sortAssignmentsSummaryHomeFunStudyItems(items []*entity.AssignmentsSummaryHomeFunStudyItem) {
 	sort.Slice(items, func(i, j int) bool {
-		return true
+		var timeI, timeJ int64
+		if items[i].Status == entity.AssessmentStatusComplete {
+			timeI = items[i].CompleteAt
+		} else {
+			timeI = items[i].CreateAt
+		}
+		if items[j].Status == entity.AssessmentStatusComplete {
+			timeJ = items[j].CompleteAt
+		} else {
+			timeJ = items[j].CreateAt
+		}
+		return timeI < timeJ
 	})
 }
