@@ -84,7 +84,7 @@ func (s *Server) queryLearningSummaryFilterItems(c *gin.Context) {
 // @Param teacher_id query string false "teacher_id"
 // @Param student_id query string false "student_id"
 // @Param subject_id query string false "subject_id"
-// @Success 200 {array} entity.QueryLiveClassesSummaryResult
+// @Success 200 {object} entity.QueryLiveClassesSummaryResult
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -136,7 +136,7 @@ func (s *Server) queryLiveClassesSummary(c *gin.Context) {
 // @Param teacher_id query string false "teacher_id"
 // @Param student_id query string false "student_id"
 // @Param subject_id query string false "subject_id"
-// @Success 200 {array} entity.QueryAssignmentsSummaryResult
+// @Success 200 {object} entity.QueryAssignmentsSummaryResult
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse

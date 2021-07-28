@@ -74,6 +74,9 @@ type LiveClassSummaryItem struct {
 	// for debug
 	ScheduleID   string `json:"schedule_id"`
 	AssessmentID string `json:"assessment_id"`
+	// for sorting
+	CompleteAt int64 `json:"complete_at"`
+	CreateAt   int64 `json:"create_at"`
 }
 
 type LearningSummaryOutcome struct {
@@ -106,4 +109,7 @@ type AssignmentsSummaryHomeFunStudyItem struct {
 	// for debug
 	ScheduleID   string `json:"schedule_id"`
 	AssessmentID string `json:"assessment_id"`
+	// for sorting
+	CompleteAt int64 `json:"complete_at"`
+	CreateAt   int64 `json:"create_at"`
 }
