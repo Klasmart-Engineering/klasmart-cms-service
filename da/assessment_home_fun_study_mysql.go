@@ -153,8 +153,3 @@ func (c *QueryHomeFunStudyCondition) GetOrderBy() string {
 	}
 	return ""
 }
-
-type FolderItem struct {
-	ID       string `json:"id"`        //文件夹id
-	ParentID string `json:"parent_id"` //父文件夹id
-}
