@@ -456,11 +456,11 @@ func (m *assessmentModel) fillStudentAssessments(ctx context.Context,
 	}
 
 	//query Assessment Comments
-	commentMap, err := m.queryAssessmentComments(ctx, operator, collectedIDs.AssessmentsIDs, studentID)
+	commentMap, err := m.queryAssessmentComments(ctx, operator, collectedIDs.ScheduleIDs, studentID)
 	if err != nil {
 		log.Error(ctx, "queryAssessmentComments failed",
 			log.Err(err),
-			log.Strings("collectedIDs.AssessmentsIDs", collectedIDs.AssessmentsIDs),
+			log.Strings("collectedIDs.ScheduleIDs", collectedIDs.ScheduleIDs),
 			log.String("studentID", studentID),
 		)
 		return err
@@ -515,7 +515,7 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 	teacherInfoMap map[string]*external.NullableUser,
 	teacherAssessmentsMap map[string]string,
 	feedbackMap map[string][]*entity.FeedbackAssignmentView,
-	assessmentCommentMap map[string][]string) error {
+	scheduleCommentMap map[string][]string) error {
 	for i := range assessments {
 		//build schedule
 		schedule := schedulesMap[assessments[i].ID]
@@ -561,24 +561,24 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 		}
 
 		if !assessments[i].IsHomeFun {
-			assessments[i].Comment = assessmentCommentMap[assessments[i].ID]
+			assessments[i].Comment = scheduleCommentMap[assessments[i].ScheduleID]
 		}
 	}
 	return nil
 }
 
-func (m *assessmentModel) queryAssessmentComments(ctx context.Context, operator *entity.Operator, assessmentIDs []string, studentID string) (map[string][]string, error) {
-	commentMap, err := getAssessmentH5p().batchGetRoomCommentMap(ctx, operator, assessmentIDs)
+func (m *assessmentModel) queryAssessmentComments(ctx context.Context, operator *entity.Operator, scheduleIDs []string, studentID string) (map[string][]string, error) {
+	commentMap, err := getAssessmentH5p().batchGetRoomCommentMap(ctx, operator, scheduleIDs)
 	if err != nil {
 		log.Error(ctx, "getAssessmentH5p.batchGetRoomCommentMap failed",
 			log.Err(err),
-			log.Strings("assessmentIDs", assessmentIDs),
+			log.Strings("scheduleIDs", scheduleIDs),
 		)
 		return nil, err
 	}
 	comments := make(map[string][]string)
-	for i := range assessmentIDs {
-		comments[assessmentIDs[i]] = commentMap[assessmentIDs[i]][studentID]
+	for i := range scheduleIDs {
+		comments[scheduleIDs[i]] = commentMap[scheduleIDs[i]][studentID]
 	}
 	return comments, nil
 }
