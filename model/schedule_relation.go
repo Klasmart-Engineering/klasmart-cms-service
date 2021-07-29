@@ -3,9 +3,10 @@ package model
 import (
 	"context"
 	"database/sql"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -26,9 +27,22 @@ type IScheduleRelationModel interface {
 	GetSubjects(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleShortInfo, error)
 	GetSubjectIDs(ctx context.Context, scheduleID string) ([]string, error)
 	GetSubjectsByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]*entity.ScheduleShortInfo, error)
+	GetOutcomeIDs(ctx context.Context, scheduleID string) ([]string, error)
 }
 
 type scheduleRelationModel struct {
+}
+
+var (
+	_scheduleRelationOnce  sync.Once
+	_scheduleRelationModel IScheduleRelationModel
+)
+
+func GetScheduleRelationModel() IScheduleRelationModel {
+	_scheduleRelationOnce.Do(func() {
+		_scheduleRelationModel = &scheduleRelationModel{}
+	})
+	return _scheduleRelationModel
 }
 
 func (s *scheduleRelationModel) GetSubjectsByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]*entity.ScheduleShortInfo, error) {
@@ -101,6 +115,7 @@ func (s *scheduleRelationModel) GetSubjectIDs(ctx context.Context, scheduleID st
 	}
 	return subjectIDs, nil
 }
+
 func (s *scheduleRelationModel) GetSubjects(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleShortInfo, error) {
 	subjectIDs, err := s.GetSubjectIDs(ctx, scheduleID)
 	if err != nil {
@@ -357,14 +372,30 @@ func (s *scheduleRelationModel) GetIDs(ctx context.Context, op *entity.Operator,
 	return result, nil
 }
 
-var (
-	_scheduleRelationOnce  sync.Once
-	_scheduleRelationModel IScheduleRelationModel
-)
+func (s *scheduleRelationModel) GetOutcomeIDs(ctx context.Context, scheduleID string) ([]string, error) {
+	var scheduleRelations []*entity.ScheduleRelation
+	relationCondition := da.ScheduleRelationCondition{
+		ScheduleID: sql.NullString{
+			String: scheduleID,
+			Valid:  true,
+		},
+		RelationType: sql.NullString{
+			String: string(entity.ScheduleRelationTypeLearningOutcome),
+			Valid:  true,
+		},
+	}
+	err := da.GetScheduleRelationDA().Query(ctx, relationCondition, &scheduleRelations)
+	if err != nil {
+		log.Error(ctx, "get users relation error",
+			log.Err(err),
+			log.Any("relationCondition", relationCondition))
+		return nil, err
+	}
 
-func GetScheduleRelationModel() IScheduleRelationModel {
-	_scheduleRelationOnce.Do(func() {
-		_scheduleRelationModel = &scheduleRelationModel{}
-	})
-	return _scheduleRelationModel
+	outcomeIDs := make([]string, len(scheduleRelations))
+	for i := range scheduleRelations {
+		outcomeIDs[i] = scheduleRelations[i].RelationID
+	}
+
+	return outcomeIDs, nil
 }
