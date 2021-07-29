@@ -1802,10 +1802,7 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 
 	// home fun study relation learning outcome
 	if result.ClassType == entity.ScheduleClassTypeHomework && result.IsHomeFun {
-		outcomeIDs, err := GetScheduleRelationModel().GetIDs(ctx, operator, &da.ScheduleRelationCondition{
-			ScheduleID:   sql.NullString{String: result.ID, Valid: true},
-			RelationType: sql.NullString{String: string(entity.ScheduleRelationTypeLearningOutcome), Valid: true},
-		})
+		outcomeIDs, err := GetScheduleRelationModel().GetOutcomeIDs(ctx, result.ID)
 		if err != nil {
 			log.Error(ctx, "get schedule relation learning outcomes error",
 				log.Err(err),
@@ -2899,10 +2896,7 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 
 	// home fun study relation learning outcome
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
-		outcomeIDs, err := GetScheduleRelationModel().GetIDs(ctx, op, &da.ScheduleRelationCondition{
-			ScheduleID:   sql.NullString{String: schedule.ID, Valid: true},
-			RelationType: sql.NullString{String: string(entity.ScheduleRelationTypeLearningOutcome), Valid: true},
-		})
+		outcomeIDs, err := GetScheduleRelationModel().GetOutcomeIDs(ctx, schedule.ID)
 		if err != nil {
 			log.Error(ctx, "get schedule relation learning outcomes error",
 				log.Err(err),
