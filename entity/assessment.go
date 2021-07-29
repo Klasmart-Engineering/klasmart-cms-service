@@ -21,9 +21,9 @@ type AssessmentType string
 func (a AssessmentType) ToScheduleClassType() AssessmentScheduleType {
 	switch a {
 	case AssessmentTypeClass:
-		return AssessmentScheduleType{ClassType: ScheduleClassTypeOnlineClass, IsHomeFun: false}
-	case AssessmentTypeLive:
 		return AssessmentScheduleType{ClassType: ScheduleClassTypeOfflineClass, IsHomeFun: false}
+	case AssessmentTypeLive:
+		return AssessmentScheduleType{ClassType: ScheduleClassTypeOnlineClass, IsHomeFun: false}
 	case AssessmentTypeStudy:
 		return AssessmentScheduleType{ClassType: ScheduleClassTypeHomework, IsHomeFun: false}
 	case AssessmentTypeHomeFunStudy:

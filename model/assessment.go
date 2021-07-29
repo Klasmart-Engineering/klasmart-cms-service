@@ -168,10 +168,10 @@ func (m *assessmentModel) StudentQuery(ctx context.Context, operator *entity.Ope
 	scheduleClassType := assessmentType.ToScheduleClassType()
 	if scheduleClassType.IsHomeFun {
 		//Query assessments
-		return m.studentsAssessmentQuery(ctx, operator, tx, scheduleClassType, condition)
+		return m.studentsHomeFunStudyQuery(ctx, operator, tx, scheduleClassType, condition)
 	}
 	//Query home fun study
-	return m.studentsHomeFunStudyQuery(ctx, operator, tx, scheduleClassType, condition)
+	return m.studentsAssessmentQuery(ctx, operator, tx, scheduleClassType, condition)
 }
 
 func (m *assessmentModel) studentsAssessmentQuery(ctx context.Context,
