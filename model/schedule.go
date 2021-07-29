@@ -1800,6 +1800,27 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 		result.ExistAssessment = existAssessment[result.ID]
 	}
 
+	// verify is complete assessment
+	assessments, err := GetAssessmentModel().Query(ctx, operator, dbo.MustGetDB(ctx), &da.QueryAssessmentConditions{
+		ScheduleIDs: entity.NullStrings{
+			Strings: []string{result.ID},
+			Valid:   true,
+		},
+	})
+	if err != nil {
+		log.Error(ctx, "get assessment error",
+			log.Err(err),
+			log.Any("scheduleID", result.ID))
+		return nil, err
+	}
+
+	for _, v := range assessments {
+		if v.Status == entity.AssessmentStatusComplete {
+			result.CompleteAssessment = true
+			break
+		}
+	}
+
 	// home fun study relation learning outcome
 	if result.ClassType == entity.ScheduleClassTypeHomework && result.IsHomeFun {
 		outcomeIDs, err := GetScheduleRelationModel().GetOutcomeIDs(ctx, result.ID)
@@ -2866,6 +2887,7 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 	for _, v := range assessments {
 		if v.Status == entity.AssessmentStatusComplete {
 			result.CompleteAssessment = true
+			break
 		}
 	}
 

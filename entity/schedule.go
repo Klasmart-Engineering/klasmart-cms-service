@@ -505,6 +505,7 @@ type ScheduleDetailsView struct {
 	Program              *ScheduleShortInfo            `json:"program"`
 	Teachers             []*ScheduleAccessibleUserView `json:"teachers"`
 	ExistAssessment      bool                          `json:"exist_assessment"`
+	CompleteAssessment   bool                          `json:"complete_assessment"`
 	OutcomeIDs           []string                      `json:"outcome_ids"`
 }
 
