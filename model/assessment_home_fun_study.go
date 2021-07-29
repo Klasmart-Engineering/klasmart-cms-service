@@ -542,6 +542,8 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 }
 
 func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.SaveHomeFunStudyArgs) error {
+	log.Debug(ctx, "save home fun study args", log.Any("args", args))
+
 	cond := da.QueryHomeFunStudyCondition{
 		ScheduleID: entity.NullString{
 			String: args.ScheduleID,
