@@ -61,13 +61,13 @@ type RedisConfig struct {
 	OpenCache bool   `yaml:"open_cache"`
 	Host      string `yaml:"host"`
 	Port      int    `yaml:"port"`
-	Password  string `yaml:"password"`
+	Password  string `yaml:"password" json:"-"`
 }
 
 type DBConfig struct {
 	DBMode string `yaml:"db_mode"`
 
-	ConnectionString string `yaml:"connection_string"`
+	ConnectionString string `yaml:"connection_string" json:"-"`
 	MaxOpenConns     int    `yaml:"max_open_conns"`
 	MaxIdleConns     int    `yaml:"max_idle_conns"`
 	ShowLog          bool   `yaml:"show_log"`
@@ -103,20 +103,20 @@ type ScheduleConfig struct {
 }
 
 type LiveTokenConfig struct {
-	PrivateKey interface{} `yaml:"private_key"`
+	PrivateKey interface{} `yaml:"private_key" json:"-"`
 	//PublicKey  string      `yaml:"public_key"`
 	AssetsUrlPrefix string `yaml:"assets_url_prefix"`
 }
 
 type AssessmentConfig struct {
 	CacheExpiration      time.Duration `json:"cache_expiration" yaml:"cache_expiration"`
-	AddAssessmentSecret  interface{}   `json:"add_assessment_secret"`
+	AddAssessmentSecret  interface{}   `json:"-"`
 	DefaultRemainingTime time.Duration `json:"default_remaining_time" yaml:"default_remaining_time"`
 }
 
 type AMSConfig struct {
 	EndPoint       string      `json:"endpoint" yaml:"endpoint"`
-	TokenVerifyKey interface{} `json:"token_verify_key" yaml:"token_verify_key"`
+	TokenVerifyKey interface{} `json:"-" yaml:"token_verify_key"`
 }
 
 type H5PServiceConfig struct {
@@ -125,8 +125,8 @@ type H5PServiceConfig struct {
 
 type KidsloopCNLoginConfig struct {
 	Open         string      `json:"open" yaml:"open"`
-	PrivateKey   interface{} `json:"private_key" yaml:"private_key"`
-	PublicKey    interface{} `json:"public_key" yaml:"public_key"`
+	PrivateKey   interface{} `json:"-" yaml:"private_key"`
+	PublicKey    interface{} `json:"-" yaml:"public_key"`
 	CookieDomain string      `json:"cookie_domain" yaml:"cookie_domain"`
 	InviteNotify string      `json:"invite_notify" yaml:"invite_notify"`
 }
@@ -138,7 +138,7 @@ type TencentConfig struct {
 type TencentSmsConfig struct {
 	SDKAppID         string `json:"sdk_app_id" yaml:"sdk_app_id"`
 	SecretID         string `json:"secret_id" yaml:"secret_id"`
-	SecretKey        string `json:"secret_key" yaml:"secret_key"`
+	SecretKey        string `json:"-" yaml:"secret_key"`
 	EndPoint         string `json:"endpoint" yaml:"endpoint"`
 	Sign             string `json:"sign" yaml:"sign"`
 	TemplateID       string `json:"template_id" yaml:"template_id"`
