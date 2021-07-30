@@ -1461,13 +1461,15 @@ func (ocm OutcomeModel) fillRelation(ctx context.Context, operator *entity.Opera
 				log.Any("outcomes", outcomes))
 			return err
 		}
-		for i := range relations {
-			for j := range outcomes {
+		for j := range outcomes {
+			var outcomeRelations []*entity.Relation
+			for i := range relations {
 				if relations[i].MasterID == outcomes[j].ID {
-					ocm.FillRelation(outcomes[j], []*entity.Relation{relations[i]})
+					outcomeRelations = append(outcomeRelations, relations[i])
 					break
 				}
 			}
+			ocm.FillRelation(outcomes[j], outcomeRelations)
 		}
 	}
 	return nil
@@ -1802,10 +1804,10 @@ func (ocm OutcomeModel) FillRelation(oc *entity.Outcome, relations []*entity.Rel
 	if len(oc.Subjects) > 0 {
 		oc.Subject = strings.Join(oc.Subjects, entity.JoinComma)
 	}
-	if len(oc.Developmental) > 0 {
+	if len(oc.Categories) > 0 {
 		oc.Developmental = strings.Join(oc.Categories, entity.JoinComma)
 	}
-	if len(oc.Skills) > 0 {
+	if len(oc.Subcategories) > 0 {
 		oc.Skills = strings.Join(oc.Subcategories, entity.JoinComma)
 	}
 	if len(oc.Grades) > 0 {
