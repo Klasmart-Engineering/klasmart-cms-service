@@ -565,7 +565,9 @@ func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operato
 		return err
 	}
 	var study *entity.HomeFunStudy
+	exists := false
 	if len(studies) > 0 {
+		exists = true
 		study = studies[0]
 		if study.Status == entity.AssessmentStatusComplete {
 			return ErrHomeFunStudyHasCompleted
@@ -625,6 +627,14 @@ func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operato
 			log.Err(err),
 			log.Any("study", *study))
 		return err
+	}
+
+	// if exists then direct exit
+	if exists {
+		log.Info(ctx, "save home fun study: assessment has existed",
+			log.Any("args", args),
+		)
+		return nil
 	}
 
 	// get all related outcome ids
@@ -789,6 +799,7 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 			AssessmentID: args.ID,
 			OutcomeID:    o.OutcomeID,
 			Skip:         o.Status == entity.HomeFunStudyOutcomeStatusNotAttempted,
+			Checked:      true,
 		}
 		if err := da.GetAssessmentOutcomeDA().UpdateByAssessmentIDAndOutcomeID(ctx, tx, &e); err != nil {
 			log.Error(ctx, "assess home fun study: update assessment outcome failed",
