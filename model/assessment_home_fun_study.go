@@ -631,6 +631,9 @@ func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operato
 
 	// if exists then direct exit
 	if exists {
+		log.Info(ctx, "save home fun study: assessment has existed",
+			log.Any("args", args),
+		)
 		return nil
 	}
 
