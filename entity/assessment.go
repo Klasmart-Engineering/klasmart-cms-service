@@ -168,7 +168,7 @@ type StudentAssessment struct {
 	CompleteAt          int64                         `json:"complete_at"`
 	Teacher             *StudentAssessmentTeacher     `json:"teacher,omitempty"`
 	Schedule            *StudentAssessmentSchedule    `json:"schedule,omitempty"`
-	FeedbackAttachments []StudentAssessmentAttachment `json:"feedback_attachments,omitempty"`
+	FeedbackAttachments []StudentAssessmentAttachment `json:"student_attachments,omitempty"`
 
 	ScheduleID string `json:"-"`
 	FeedbackID string `json:"-"`
