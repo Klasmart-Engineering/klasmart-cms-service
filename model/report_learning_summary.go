@@ -125,8 +125,8 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 
 	// calculate student attend percent
 	attend := 0.0
-	if len(assessments) != 0 {
-		attend = float64(len(schedules)) / float64(len(assessments))
+	if len(schedules) != 0 {
+		attend = float64(len(assessments)) / float64(len(schedules))
 	}
 
 	// find related comments and make map by schedule id  (live: room comments)
@@ -285,7 +285,7 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 	}
 	if filter.WeekEnd > 0 {
 		scheduleCondition.StartAtLt = sql.NullInt64{
-			Int64: filter.WeekStart,
+			Int64: filter.WeekEnd,
 			Valid: true,
 		}
 	}
@@ -396,24 +396,6 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 		homeFunStudyAssessmentMap[a.ScheduleID] = a
 	}
 
-	// calculate student completed percent
-	completedCount := 0
-	for _, a := range studyAssessments {
-		if a.Status == entity.AssessmentStatusComplete {
-			completedCount++
-		}
-	}
-	for _, a := range homeFunStudyAssessments {
-		if a.Status == entity.AssessmentStatusComplete {
-			completedCount++
-		}
-	}
-	totalCount := len(studyAssessments) + len(homeFunStudyAssessments)
-	completed := 0.0
-	if totalCount > 0 {
-		completed = float64(completedCount) / float64(totalCount)
-	}
-
 	// find related study assessments comments and make map by schedule id (live: room comments)
 	roomCommentMap, err := getAssessmentH5P().batchGetRoomCommentMap(ctx, operator, scheduleIDs)
 	if err != nil {
@@ -456,26 +438,30 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 	}
 
 	// assembly result
-	result := l.assemblyAssignmentsSummaryResult(filter, schedules, scheduleOutcomesMap, lessonPlanNameMap, studyAssessmentMap, homeFunStudyAssessmentMap, roomCommentMap, completed)
+	result := l.assemblyAssignmentsSummaryResult(filter, schedules, scheduleOutcomesMap, lessonPlanNameMap, studyAssessmentMap, homeFunStudyAssessmentMap, roomCommentMap)
 
-	// sort study items and home fun study items
-	l.sortAssignmentsSummaryStudyItems(result.StudyItems)
-	l.sortAssignmentsSummaryHomeFunStudyItems(result.HomeFunStudyItems)
+	// sort items
+	l.sortAssignmentsSummaryItems(result.Items)
 
 	log.Debug(ctx, "query assignments summary result", log.Any("result", result))
 
 	return result, nil
 }
 
-func (l *learningSummaryReportModel) assemblyAssignmentsSummaryResult(filter *entity.LearningSummaryFilter, schedules []*entity.Schedule, scheduleOutcomesMap map[string][]*entity.Outcome, lessonPlanNameMap map[string]string, studyAssessmentMap map[string]*entity.Assessment, homeFunStudyAssessmentMap map[string]*entity.HomeFunStudy, roomCommentMap map[string]map[string][]string, completed float64) *entity.QueryAssignmentsSummaryResult {
-	result := &entity.QueryAssignmentsSummaryResult{Completed: completed}
+func (l *learningSummaryReportModel) assemblyAssignmentsSummaryResult(filter *entity.LearningSummaryFilter, schedules []*entity.Schedule, scheduleOutcomesMap map[string][]*entity.Outcome, lessonPlanNameMap map[string]string, studyAssessmentMap map[string]*entity.Assessment, homeFunStudyAssessmentMap map[string]*entity.HomeFunStudy, roomCommentMap map[string]map[string][]string) *entity.QueryAssignmentsSummaryResult {
+	result := &entity.QueryAssignmentsSummaryResult{
+		StudyCount:        len(studyAssessmentMap),
+		HomeFunStudyCount: len(homeFunStudyAssessmentMap),
+		Items:             nil,
+	}
 	for _, s := range schedules {
 		if s.IsHomeFun {
 			assessment := homeFunStudyAssessmentMap[s.ID]
 			if assessment == nil {
 				continue
 			}
-			item := entity.AssignmentsSummaryHomeFunStudyItem{
+			item := entity.AssignmentsSummaryItem{
+				Type:            entity.AssessmentTypeHomeFunStudy,
 				Status:          assessment.Status,
 				AssessmentTitle: assessment.Title,
 				TeacherFeedback: assessment.AssessComment,
@@ -492,18 +478,21 @@ func (l *learningSummaryReportModel) assemblyAssignmentsSummaryResult(filter *en
 					})
 				}
 			}
-			result.HomeFunStudyItems = append(result.HomeFunStudyItems, &item)
+			result.Items = append(result.Items, &item)
 		} else {
 			assessment := studyAssessmentMap[s.ID]
 			if assessment == nil {
 				continue
 			}
-			item := entity.AssignmentsSummaryStudyItem{
+			item := entity.AssignmentsSummaryItem{
+				Type:            entity.AssessmentTypeHomeFunStudy,
 				Status:          assessment.Status,
 				AssessmentTitle: assessment.Title,
 				LessonPlanName:  lessonPlanNameMap[s.LessonPlanID],
 				ScheduleID:      s.ID,
 				AssessmentID:    assessment.ID,
+				CompleteAt:      assessment.CompleteTime,
+				CreateAt:        assessment.CreateAt,
 			}
 			if outcomes := scheduleOutcomesMap[s.ID]; len(outcomes) > 0 {
 				for _, o := range outcomes {
@@ -516,31 +505,14 @@ func (l *learningSummaryReportModel) assemblyAssignmentsSummaryResult(filter *en
 			if comments := roomCommentMap[s.ID][filter.StudentID]; len(comments) > 0 {
 				item.TeacherFeedback = comments[len(comments)-1]
 			}
-			result.StudyItems = append(result.StudyItems, &item)
+			result.Items = append(result.Items, &item)
 		}
 	}
 	return result
 }
 
-func (l *learningSummaryReportModel) sortAssignmentsSummaryStudyItems(items []*entity.AssignmentsSummaryStudyItem) {
+func (l *learningSummaryReportModel) sortAssignmentsSummaryItems(items []*entity.AssignmentsSummaryItem) {
 	sort.Slice(items, func(i, j int) bool {
-		return true
-	})
-}
-
-func (l *learningSummaryReportModel) sortAssignmentsSummaryHomeFunStudyItems(items []*entity.AssignmentsSummaryHomeFunStudyItem) {
-	sort.Slice(items, func(i, j int) bool {
-		var timeI, timeJ int64
-		if items[i].Status == entity.AssessmentStatusComplete {
-			timeI = items[i].CompleteAt
-		} else {
-			timeI = items[i].CreateAt
-		}
-		if items[j].Status == entity.AssessmentStatusComplete {
-			timeJ = items[j].CompleteAt
-		} else {
-			timeJ = items[j].CreateAt
-		}
-		return timeI < timeJ
+		return items[i].CompleteAt < items[j].CompleteAt
 	})
 }

@@ -218,3 +218,10 @@ type NullTimeRange struct {
 	EndAt   int64
 	Valid   bool
 }
+
+type H5PRoomComment struct {
+	Comment    string `json:"comment"`
+	TeacherID  string `json:"teacher_id"`
+	GivenName  string `json:"given_name"`
+	FamilyName string `json:"family_name"`
+}

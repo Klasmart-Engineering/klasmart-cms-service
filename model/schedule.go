@@ -1373,10 +1373,31 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 		return nil, err
 	}
 
+	var homeFunStudyAssessments []*entity.HomeFunStudy
+	err = GetHomeFunStudyModel().Query(ctx, op, &da.QueryHomeFunStudyCondition{
+		ScheduleIDs: entity.NullStrings{
+			Strings: scheduleIDs,
+			Valid:   len(scheduleIDs) > 0,
+		},
+	}, &homeFunStudyAssessments)
+	if err != nil {
+		log.Error(ctx, "get homefun study assessment error",
+			log.Err(err),
+			log.Any("scheduleIDs", scheduleIDs))
+		return nil, err
+	}
+
 	completeAssessmentMap := make(map[string]bool, len(assessments))
 	for _, v := range assessments {
 		if v.Status == entity.AssessmentStatusComplete {
 			completeAssessmentMap[v.ScheduleID] = true
+		}
+	}
+
+	completeHomefunStudyAssessmentMap := make(map[string]bool, len(homeFunStudyAssessments))
+	for _, v := range homeFunStudyAssessments {
+		if v.Status == entity.AssessmentStatusComplete {
+			completeHomefunStudyAssessmentMap[v.ScheduleID] = true
 		}
 	}
 
@@ -1427,6 +1448,9 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 		temp.ExistFeedback = existFeedback
 		temp.ExistAssessment = existAssessmentMap[item.ID]
 		temp.CompleteAssessment = completeAssessmentMap[item.ID]
+		if temp.ClassType == entity.ScheduleClassTypeHomework && temp.IsHomeFun {
+			temp.CompleteAssessment = completeHomefunStudyAssessmentMap[item.ID]
+		}
 
 		result = append(result, temp)
 	}
@@ -1800,12 +1824,53 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 		result.ExistAssessment = existAssessment[result.ID]
 	}
 
+	// verify is complete assessment
+	if result.ClassType == entity.ScheduleClassTypeHomework && result.IsHomeFun {
+		var homeFunStudyAssessments []*entity.HomeFunStudy
+		err = GetHomeFunStudyModel().Query(ctx, operator, &da.QueryHomeFunStudyCondition{
+			ScheduleID: entity.NullString{
+				String: result.ID,
+				Valid:  true,
+			},
+		}, &homeFunStudyAssessments)
+		if err != nil {
+			log.Error(ctx, "get homefun study assessment error",
+				log.Err(err),
+				log.Any("scheduleID", result.ID))
+			return nil, err
+		}
+
+		for _, v := range homeFunStudyAssessments {
+			if v.Status == entity.AssessmentStatusComplete {
+				result.CompleteAssessment = true
+				break
+			}
+		}
+	} else {
+		assessments, err := GetAssessmentModel().Query(ctx, operator, dbo.MustGetDB(ctx), &da.QueryAssessmentConditions{
+			ScheduleIDs: entity.NullStrings{
+				Strings: []string{result.ID},
+				Valid:   true,
+			},
+		})
+		if err != nil {
+			log.Error(ctx, "get assessment error",
+				log.Err(err),
+				log.Any("scheduleID", result.ID))
+			return nil, err
+		}
+
+		for _, v := range assessments {
+			if v.Status == entity.AssessmentStatusComplete {
+				result.CompleteAssessment = true
+				break
+			}
+		}
+	}
+
 	// home fun study relation learning outcome
 	if result.ClassType == entity.ScheduleClassTypeHomework && result.IsHomeFun {
-		outcomeIDs, err := GetScheduleRelationModel().GetIDs(ctx, operator, &da.ScheduleRelationCondition{
-			ScheduleID:   sql.NullString{String: result.ID, Valid: true},
-			RelationType: sql.NullString{String: string(entity.ScheduleRelationTypeLearningOutcome), Valid: true},
-		})
+		outcomeIDs, err := GetScheduleRelationModel().GetOutcomeIDs(ctx, result.ID)
 		if err != nil {
 			log.Error(ctx, "get schedule relation learning outcomes error",
 				log.Err(err),
@@ -2833,17 +2898,6 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 		return nil, err
 	}
 
-	assessments, err := GetAssessmentModel().Query(ctx, op, dbo.MustGetDB(ctx), &da.QueryAssessmentConditions{
-		ScheduleIDs: entity.NullStrings{
-			Strings: []string{id},
-			Valid:   true,
-		},
-	})
-	if err != nil {
-		log.Error(ctx, "get assessment error", log.Err(err), log.Any("scheduleID", id))
-		return nil, err
-	}
-
 	classType := entity.ScheduleShortInfo{
 		ID:   schedule.ClassType.String(),
 		Name: schedule.ClassType.ToLabel().String(),
@@ -2866,9 +2920,47 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 		Description:    schedule.Description,
 	}
 
-	for _, v := range assessments {
-		if v.Status == entity.AssessmentStatusComplete {
-			result.CompleteAssessment = true
+	// verify is complete assessment
+	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
+		var homeFunStudyAssessments []*entity.HomeFunStudy
+		err = GetHomeFunStudyModel().Query(ctx, op, &da.QueryHomeFunStudyCondition{
+			ScheduleID: entity.NullString{
+				String: schedule.ID,
+				Valid:  true,
+			},
+		}, &homeFunStudyAssessments)
+		if err != nil {
+			log.Error(ctx, "get homefun study assessment error",
+				log.Err(err),
+				log.Any("scheduleID", schedule.ID))
+			return nil, err
+		}
+
+		for _, v := range homeFunStudyAssessments {
+			if v.Status == entity.AssessmentStatusComplete {
+				result.CompleteAssessment = true
+				break
+			}
+		}
+	} else {
+		assessments, err := GetAssessmentModel().Query(ctx, op, dbo.MustGetDB(ctx), &da.QueryAssessmentConditions{
+			ScheduleIDs: entity.NullStrings{
+				Strings: []string{schedule.ID},
+				Valid:   true,
+			},
+		})
+		if err != nil {
+			log.Error(ctx, "get assessment error",
+				log.Err(err),
+				log.Any("scheduleID", schedule.ID))
+			return nil, err
+		}
+
+		for _, v := range assessments {
+			if v.Status == entity.AssessmentStatusComplete {
+				result.CompleteAssessment = true
+				break
+			}
 		}
 	}
 
@@ -2899,10 +2991,7 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 
 	// home fun study relation learning outcome
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
-		outcomeIDs, err := GetScheduleRelationModel().GetIDs(ctx, op, &da.ScheduleRelationCondition{
-			ScheduleID:   sql.NullString{String: schedule.ID, Valid: true},
-			RelationType: sql.NullString{String: string(entity.ScheduleRelationTypeLearningOutcome), Valid: true},
-		})
+		outcomeIDs, err := GetScheduleRelationModel().GetOutcomeIDs(ctx, schedule.ID)
 		if err != nil {
 			log.Error(ctx, "get schedule relation learning outcomes error",
 				log.Err(err),

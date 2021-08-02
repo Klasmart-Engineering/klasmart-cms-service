@@ -64,7 +64,7 @@ type QueryLiveClassesSummaryResult struct {
 }
 
 type LiveClassSummaryItem struct {
-	Status          AssessmentStatus          `json:"status"`
+	Status          AssessmentStatus          `json:"status" enums:"in_progress,complete"`
 	Absent          bool                      `json:"absent"`
 	ClassStartTime  int64                     `json:"class_start_time"`
 	ScheduleTitle   string                    `json:"schedule_title"`
@@ -85,27 +85,18 @@ type LearningSummaryOutcome struct {
 }
 
 type QueryAssignmentsSummaryResult struct {
-	Completed         float64                               `json:"completed"`
-	StudyItems        []*AssignmentsSummaryStudyItem        `json:"study_items"`
-	HomeFunStudyItems []*AssignmentsSummaryHomeFunStudyItem `json:"home_fun_study_items"`
+	StudyCount        int                       `json:"study_count"`
+	HomeFunStudyCount int                       `json:"home_fun_study_count"`
+	Items             []*AssignmentsSummaryItem `json:"items"`
 }
 
-type AssignmentsSummaryStudyItem struct {
-	Status          AssessmentStatus          `json:"status"`
+type AssignmentsSummaryItem struct {
+	Type            AssessmentType            `json:"assessment_type" enums:"class,live,study,home_fun_study"`
+	Status          AssessmentStatus          `json:"status" enums:"in_progress,complete"`
 	AssessmentTitle string                    `json:"assessment_title"`
 	LessonPlanName  string                    `json:"lesson_plan_name"`
-	Outcomes        []*LearningSummaryOutcome `json:"outcomes"`
 	TeacherFeedback string                    `json:"teacher_feedback"`
-	// for debug
-	ScheduleID   string `json:"schedule_id"`
-	AssessmentID string `json:"assessment_id"`
-}
-
-type AssignmentsSummaryHomeFunStudyItem struct {
-	Status          AssessmentStatus          `json:"status"`
-	AssessmentTitle string                    `json:"assessment_title"`
 	Outcomes        []*LearningSummaryOutcome `json:"outcomes"`
-	TeacherFeedback string                    `json:"teacher_feedback"`
 	// for debug
 	ScheduleID   string `json:"schedule_id"`
 	AssessmentID string `json:"assessment_id"`

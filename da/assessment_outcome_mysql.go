@@ -34,15 +34,19 @@ type assessmentOutcomeDA struct {
 }
 
 func (*assessmentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentOutcome) error {
+	if len(items) == 0 {
+		log.Debug(ctx, "batch insert assessment outcome: no items")
+		return nil
+	}
 	var (
-		columns = []string{"id", "assessment_id", "outcome_id"}
+		columns = []string{"id", "assessment_id", "outcome_id", "skip", "none_achieved", "checked"}
 		matrix  [][]interface{}
 	)
 	for _, item := range items {
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		matrix = append(matrix, []interface{}{item.ID, item.AssessmentID, item.OutcomeID})
+		matrix = append(matrix, []interface{}{item.ID, item.AssessmentID, item.OutcomeID, item.Skip, item.NoneAchieved, item.Checked})
 	}
 	format, values := SQLBatchInsert(entity.AssessmentOutcome{}.TableName(), columns, matrix)
 	if err := tx.Exec(format, values...).Error; err != nil {

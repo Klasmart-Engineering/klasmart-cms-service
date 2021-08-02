@@ -542,6 +542,8 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 }
 
 func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.SaveHomeFunStudyArgs) error {
+	log.Debug(ctx, "save home fun study args", log.Any("args", args))
+
 	cond := da.QueryHomeFunStudyCondition{
 		ScheduleID: entity.NullString{
 			String: args.ScheduleID,
@@ -563,7 +565,9 @@ func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operato
 		return err
 	}
 	var study *entity.HomeFunStudy
+	exists := false
 	if len(studies) > 0 {
+		exists = true
 		study = studies[0]
 		if study.Status == entity.AssessmentStatusComplete {
 			return ErrHomeFunStudyHasCompleted
@@ -623,6 +627,14 @@ func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operato
 			log.Err(err),
 			log.Any("study", *study))
 		return err
+	}
+
+	// if exists then direct exit
+	if exists {
+		log.Info(ctx, "save home fun study: assessment has existed",
+			log.Any("args", args),
+		)
+		return nil
 	}
 
 	// get all related outcome ids
@@ -787,6 +799,7 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 			AssessmentID: args.ID,
 			OutcomeID:    o.OutcomeID,
 			Skip:         o.Status == entity.HomeFunStudyOutcomeStatusNotAttempted,
+			Checked:      true,
 		}
 		if err := da.GetAssessmentOutcomeDA().UpdateByAssessmentIDAndOutcomeID(ctx, tx, &e); err != nil {
 			log.Error(ctx, "assess home fun study: update assessment outcome failed",
@@ -803,12 +816,14 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 	var insertingOutcomeAttendances []*entity.OutcomeAttendance
 	for _, o := range args.Outcomes {
 		deletingOutcomeIDs = append(deletingOutcomeIDs, o.OutcomeID)
-		insertingOutcomeAttendances = append(insertingOutcomeAttendances, &entity.OutcomeAttendance{
-			ID:           utils.NewID(),
-			AssessmentID: args.ID,
-			OutcomeID:    o.OutcomeID,
-			AttendanceID: study.StudentID,
-		})
+		if o.Status == entity.HomeFunStudyOutcomeStatusAchieved {
+			insertingOutcomeAttendances = append(insertingOutcomeAttendances, &entity.OutcomeAttendance{
+				ID:           utils.NewID(),
+				AssessmentID: args.ID,
+				OutcomeID:    o.OutcomeID,
+				AttendanceID: study.StudentID,
+			})
+		}
 	}
 	if err := da.GetOutcomeAttendanceDA().BatchDeleteByAssessmentIDAndOutcomeIDs(ctx, tx, args.ID, deletingOutcomeIDs); err != nil {
 		log.Error(ctx, "assess home fun study: batch delete outcome attendance failed",
