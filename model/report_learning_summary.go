@@ -125,7 +125,7 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 
 	// calculate student attend percent
 	attend := 0.0
-	if len(assessments) != 0 {
+	if len(schedules) != 0 {
 		attend = float64(len(assessments)) / float64(len(schedules))
 	}
 
