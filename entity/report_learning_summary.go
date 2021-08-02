@@ -64,7 +64,7 @@ type QueryLiveClassesSummaryResult struct {
 }
 
 type LiveClassSummaryItem struct {
-	Status          AssessmentStatus          `json:"status"`
+	Status          AssessmentStatus          `json:"status" enums:"in_progress,complete"`
 	Absent          bool                      `json:"absent"`
 	ClassStartTime  int64                     `json:"class_start_time"`
 	ScheduleTitle   string                    `json:"schedule_title"`
@@ -91,8 +91,8 @@ type QueryAssignmentsSummaryResult struct {
 }
 
 type AssignmentsSummaryItem struct {
-	Type            AssessmentType            `json:"assessment_type"`
-	Status          AssessmentStatus          `json:"status"`
+	Type            AssessmentType            `json:"assessment_type" enums:"class,live,study,home_fun_study"`
+	Status          AssessmentStatus          `json:"status" enums:"in_progress,complete"`
 	AssessmentTitle string                    `json:"assessment_title"`
 	LessonPlanName  string                    `json:"lesson_plan_name"`
 	TeacherFeedback string                    `json:"teacher_feedback"`

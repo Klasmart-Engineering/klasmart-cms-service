@@ -285,7 +285,7 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 	}
 	if filter.WeekEnd > 0 {
 		scheduleCondition.StartAtLt = sql.NullInt64{
-			Int64: filter.WeekStart,
+			Int64: filter.WeekEnd,
 			Valid: true,
 		}
 	}
