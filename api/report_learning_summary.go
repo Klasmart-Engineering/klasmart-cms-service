@@ -191,7 +191,7 @@ func (s *Server) parseLearningSummaryFilter(c *gin.Context) (*entity.LearningSum
 		}
 	}
 	weekStart := int64(0)
-	strWeekStart := c.Query("year")
+	strWeekStart := c.Query("week_start")
 	if strWeekStart != "" {
 		weekStart, err = strconv.ParseInt(strWeekStart, 10, 64)
 		if err != nil {
