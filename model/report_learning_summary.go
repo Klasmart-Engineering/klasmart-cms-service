@@ -126,7 +126,7 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 	// calculate student attend percent
 	attend := 0.0
 	if len(assessments) != 0 {
-		attend = float64(len(schedules)) / float64(len(assessments))
+		attend = float64(len(assessments)) / float64(len(schedules))
 	}
 
 	// find related comments and make map by schedule id  (live: room comments)
