@@ -141,9 +141,14 @@ type BatchAddAssessmentSuperArgs struct {
 }
 
 type StudentAssessmentTeacher struct {
+	Teacher *StudentAssessmentTeacherInfo `json:"teacher"`
+	Comment string                        `json:"comment"`
+}
+type StudentAssessmentTeacherInfo struct {
 	ID         string `json:"id"`
 	GivenName  string `json:"given_name"`
 	FamilyName string `json:"family_name"`
+	Avatar     string `json:"avatar"`
 }
 
 type StudentAssessmentSchedule struct {
@@ -160,19 +165,20 @@ type StudentAssessmentAttachment struct {
 type StudentAssessment struct {
 	ID                  string                        `json:"id"`
 	Title               string                        `json:"title"`
-	Comment             []string                      `json:"comment"`
 	Score               int                           `json:"score"`
 	Status              string                        `json:"status"`
 	CreateAt            int64                         `json:"create_at"`
 	UpdateAt            int64                         `json:"update_at"`
 	CompleteAt          int64                         `json:"complete_at"`
-	Teacher             *StudentAssessmentTeacher     `json:"teacher,omitempty"`
+	TeacherComments     []*StudentAssessmentTeacher   `json:"teacher_comments,omitempty"`
 	Schedule            *StudentAssessmentSchedule    `json:"schedule,omitempty"`
 	FeedbackAttachments []StudentAssessmentAttachment `json:"student_attachments,omitempty"`
 
-	ScheduleID string `json:"-"`
-	FeedbackID string `json:"-"`
-	StudentID  string `json:"-"`
+	ScheduleID string   `json:"-"`
+	FeedbackID string   `json:"-"`
+	StudentID  string   `json:"-"`
+	TeacherIDs []string `json:"-"`
+	Comment    string   `json:"-"`
 
 	IsHomeFun bool `json:"-"`
 }
@@ -215,4 +221,11 @@ type NullTimeRange struct {
 	StartAt int64
 	EndAt   int64
 	Valid   bool
+}
+
+type H5PRoomComment struct {
+	Comment    string `json:"comment"`
+	TeacherID  string `json:"teacher_id"`
+	GivenName  string `json:"given_name"`
+	FamilyName string `json:"family_name"`
 }

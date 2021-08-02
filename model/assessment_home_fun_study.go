@@ -816,12 +816,14 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 	var insertingOutcomeAttendances []*entity.OutcomeAttendance
 	for _, o := range args.Outcomes {
 		deletingOutcomeIDs = append(deletingOutcomeIDs, o.OutcomeID)
-		insertingOutcomeAttendances = append(insertingOutcomeAttendances, &entity.OutcomeAttendance{
-			ID:           utils.NewID(),
-			AssessmentID: args.ID,
-			OutcomeID:    o.OutcomeID,
-			AttendanceID: study.StudentID,
-		})
+		if o.Status == entity.HomeFunStudyOutcomeStatusAchieved {
+			insertingOutcomeAttendances = append(insertingOutcomeAttendances, &entity.OutcomeAttendance{
+				ID:           utils.NewID(),
+				AssessmentID: args.ID,
+				OutcomeID:    o.OutcomeID,
+				AttendanceID: study.StudentID,
+			})
+		}
 	}
 	if err := da.GetOutcomeAttendanceDA().BatchDeleteByAssessmentIDAndOutcomeIDs(ctx, tx, args.ID, deletingOutcomeIDs); err != nil {
 		log.Error(ctx, "assess home fun study: batch delete outcome attendance failed",
