@@ -15,13 +15,13 @@ func (s ClassUpdateMembersEvent) Valid() error {
 
 type ClassMember struct {
 	ID       string                 `json:"id"`
-	RoleType ClassUserRoleTypeEvent `json:"role_type" enums:"Student,Teachers"`
+	RoleType ClassUserRoleTypeEvent `json:"role_type" enums:"Student,TeacherComments"`
 }
 
 type ClassUserRoleTypeEvent string
 
 const (
-	ClassUserRoleTypeEventTeacher ClassUserRoleTypeEvent = "Teachers"
+	ClassUserRoleTypeEventTeacher ClassUserRoleTypeEvent = "TeacherComments"
 	ClassUserRoleTypeEventStudent ClassUserRoleTypeEvent = "Student"
 )
 

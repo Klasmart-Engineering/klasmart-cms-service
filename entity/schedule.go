@@ -497,7 +497,7 @@ type ScheduleDetailsView struct {
 	ParticipantsStudents []*ScheduleAccessibleUserView `json:"participants_students"`
 	IsHidden             bool                          `json:"is_hidden"`
 	IsHomeFun            bool                          `json:"is_home_fun"`
-	RoleType             ScheduleRoleType              `json:"role_type" enums:"Student,Teachers,Unknown"`
+	RoleType             ScheduleRoleType              `json:"role_type" enums:"Student,TeacherComments,Unknown"`
 	ExistFeedback        bool                          `json:"exist_feedback"`
 	LessonPlan           *ScheduleLessonPlan           `json:"lesson_plan"`
 	Class                *ScheduleAccessibleUserView   `json:"class"`
@@ -513,7 +513,7 @@ type ScheduleRoleType string
 
 const (
 	ScheduleRoleTypeStudent ScheduleRoleType = "Student"
-	ScheduleRoleTypeTeacher ScheduleRoleType = "Teachers"
+	ScheduleRoleTypeTeacher ScheduleRoleType = "TeacherComments"
 	ScheduleRoleTypeUnknown ScheduleRoleType = "Unknown"
 )
 
@@ -709,7 +709,7 @@ const ScheduleFilterUndefinedClass = "Undefined"
 type ScheduleFilterClass struct {
 	ID               string           `json:"id"`
 	Name             string           `json:"name"`
-	OperatorRoleType ScheduleRoleType `json:"operator_role_type" enums:"Student,Teachers,Unknown"`
+	OperatorRoleType ScheduleRoleType `json:"operator_role_type" enums:"Student,TeacherComments,Unknown"`
 }
 
 type ScheduleFilterSchool struct {
@@ -755,7 +755,7 @@ type ScheduleViewDetail struct {
 	Status         ScheduleStatus       `json:"status" enums:"NotStart,Started,Closed"`
 	IsHidden       bool                 `json:"is_hidden"`
 	IsHomeFun      bool                 `json:"is_home_fun"`
-	RoleType       ScheduleRoleType     `json:"role_type" enums:"Student,Teachers,Unknown"`
+	RoleType       ScheduleRoleType     `json:"role_type" enums:"Student,TeacherComments,Unknown"`
 	ExistFeedback  bool                 `json:"exist_feedback"`
 	LessonPlan     *ScheduleLessonPlan  `json:"lesson_plan"`
 	Class          *ScheduleShortInfo   `json:"class"`

@@ -415,10 +415,6 @@ func (m *assessmentModel) homeFunStudyToStudentAssessments(ctx context.Context,
 	operator *entity.Operator, tx *dbo.DBContext, studentID string, r []*entity.HomeFunStudy) ([]*entity.StudentAssessment, error) {
 	res := make([]*entity.StudentAssessment, len(r))
 	for i := range r {
-		comments := make([]string, 0)
-		if r[i].AssessComment != "" {
-			comments = append(comments, r[i].AssessComment)
-		}
 		teacherIDs := []string(r[i].TeacherIDs)
 		res[i] = &entity.StudentAssessment{
 			ID:         r[i].ID,
@@ -428,7 +424,7 @@ func (m *assessmentModel) homeFunStudyToStudentAssessments(ctx context.Context,
 			UpdateAt:   r[i].UpdateAt,
 			CompleteAt: r[i].CompleteAt,
 			ScheduleID: r[i].ScheduleID,
-			Comment:    comments,
+			Comment:    r[i].AssessComment,
 			Score:      int(r[i].AssessScore),
 			FeedbackID: r[i].AssessFeedbackID,
 			StudentID:  studentID,
@@ -525,7 +521,7 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 	teacherInfoMap map[string]*external.NullableUser,
 	teacherAssessmentsMap map[string][]string,
 	feedbackMap map[string][]*entity.FeedbackAssignmentView,
-	scheduleCommentMap map[string][]string) error {
+	scheduleCommentMap map[string]map[string]string) error {
 
 	for i := range assessments {
 		//build schedule
@@ -550,15 +546,28 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 
 		//build teacher
 		assessmentTeacherIDs := teacherAssessmentsMap[assessments[i].ID]
-		assessments[i].Teachers = make([]*entity.StudentAssessmentTeacher, len(assessmentTeacherIDs))
+		assessments[i].TeacherComments = make([]*entity.StudentAssessmentTeacher, len(assessmentTeacherIDs))
 		for j := range assessmentTeacherIDs {
-			assessments[i].Teachers[j] = &entity.StudentAssessmentTeacher{
-				ID: assessmentTeacherIDs[j],
+			teacherID := assessmentTeacherIDs[j]
+			assessments[i].TeacherComments[j].Teacher = &entity.StudentAssessmentTeacherInfo{
+				ID: teacherID,
 			}
 			teacherInfo := teacherInfoMap[assessmentTeacherIDs[j]]
 			if teacherInfo != nil && teacherInfo.Valid {
-				assessments[i].Teachers[j].GivenName = teacherInfo.GivenName
-				assessments[i].Teachers[j].FamilyName = teacherInfo.FamilyName
+				assessments[i].TeacherComments[j].Teacher.GivenName = teacherInfo.GivenName
+				assessments[i].TeacherComments[j].Teacher.FamilyName = teacherInfo.FamilyName
+				assessments[i].TeacherComments[j].Teacher.Avatar = teacherInfo.Avatar
+			}
+
+			//home fun comment is in assessment comment
+			if assessments[i].IsHomeFun {
+				assessments[i].TeacherComments[j].Comment = assessments[i].Comment
+			} else {
+				//query comment for teacher
+				comment, exists := scheduleCommentMap[assessments[i].ScheduleID][teacherID]
+				if exists {
+					assessments[i].TeacherComments[j].Comment = comment
+				}
 			}
 		}
 
@@ -573,16 +582,12 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 				}
 			}
 		}
-
-		if !assessments[i].IsHomeFun {
-			assessments[i].Comment = scheduleCommentMap[assessments[i].ScheduleID]
-		}
 	}
 	return nil
 }
 
-func (m *assessmentModel) queryAssessmentComments(ctx context.Context, operator *entity.Operator, scheduleIDs []string, studentID string) (map[string][]string, error) {
-	commentMap, err := getAssessmentH5P().batchGetRoomCommentMap(ctx, operator, scheduleIDs)
+func (m *assessmentModel) queryAssessmentComments(ctx context.Context, operator *entity.Operator, scheduleIDs []string, studentID string) (map[string]map[string]string, error) {
+	commentMap, err := getAssessmentH5P().batchGetRoomCommentObjectMap(ctx, operator, scheduleIDs)
 	if err != nil {
 		log.Error(ctx, "getAssessmentH5p.batchGetRoomCommentMap failed",
 			log.Err(err),
@@ -590,10 +595,13 @@ func (m *assessmentModel) queryAssessmentComments(ctx context.Context, operator 
 		)
 		return nil, err
 	}
-	comments := make(map[string][]string)
+	comments := make(map[string]map[string]string)
 	for i := range scheduleIDs {
 		if commentMap[scheduleIDs[i]] != nil {
-			comments[scheduleIDs[i]] = commentMap[scheduleIDs[i]][studentID]
+			studentComments := commentMap[scheduleIDs[i]][studentID]
+			for j := range studentComments {
+				comments[scheduleIDs[i]][studentComments[j].TeacherID] = studentComments[j].Comment
+			}
 		}
 	}
 	return comments, nil

@@ -65,7 +65,7 @@ func TestJsonTemp(t *testing.T) {
 //		},
 //		{
 //			ID:       "c88a6f42-4806-5cb2-be94-cc592a629053",
-//			RoleType: "Teachers",
+//			RoleType: "TeacherComments",
 //		},
 //	}
 //	b, _ := json.Marshal(data)

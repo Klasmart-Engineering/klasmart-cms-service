@@ -90,7 +90,7 @@ const (
 	TeacherManualSeparator  = "-"
 	FolderItemLinkSeparator = "-"
 
-	TeacherManualAssetsKeyword = "Teachers Manual"
+	TeacherManualAssetsKeyword = "TeacherComments Manual"
 
 	StringArraySeparator = ","
 )

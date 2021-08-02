@@ -141,10 +141,14 @@ type BatchAddAssessmentSuperArgs struct {
 }
 
 type StudentAssessmentTeacher struct {
+	Teacher *StudentAssessmentTeacherInfo `json:"teacher"`
+	Comment string                        `json:"comment"`
+}
+type StudentAssessmentTeacherInfo struct {
 	ID         string `json:"id"`
 	GivenName  string `json:"given_name"`
 	FamilyName string `json:"family_name"`
-	Comment    string `json:"comment"`
+	Avatar     string `json:"avatar"`
 }
 
 type StudentAssessmentSchedule struct {
@@ -161,13 +165,12 @@ type StudentAssessmentAttachment struct {
 type StudentAssessment struct {
 	ID                  string                        `json:"id"`
 	Title               string                        `json:"title"`
-	Comment             []string                      `json:"comment"`
 	Score               int                           `json:"score"`
 	Status              string                        `json:"status"`
 	CreateAt            int64                         `json:"create_at"`
 	UpdateAt            int64                         `json:"update_at"`
 	CompleteAt          int64                         `json:"complete_at"`
-	Teachers            []*StudentAssessmentTeacher   `json:"teacher,omitempty"`
+	TeacherComments     []*StudentAssessmentTeacher   `json:"teacher_comments,omitempty"`
 	Schedule            *StudentAssessmentSchedule    `json:"schedule,omitempty"`
 	FeedbackAttachments []StudentAssessmentAttachment `json:"student_attachments,omitempty"`
 
@@ -175,6 +178,7 @@ type StudentAssessment struct {
 	FeedbackID string   `json:"-"`
 	StudentID  string   `json:"-"`
 	TeacherIDs []string `json:"-"`
+	Comment    string   `json:"-"`
 
 	IsHomeFun bool `json:"-"`
 }
