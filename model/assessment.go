@@ -549,8 +549,10 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 		assessments[i].TeacherComments = make([]*entity.StudentAssessmentTeacher, len(assessmentTeacherIDs))
 		for j := range assessmentTeacherIDs {
 			teacherID := assessmentTeacherIDs[j]
-			assessments[i].TeacherComments[j].Teacher = &entity.StudentAssessmentTeacherInfo{
-				ID: teacherID,
+			assessments[i].TeacherComments[j] = &entity.StudentAssessmentTeacher{
+				Teacher: &entity.StudentAssessmentTeacherInfo{
+					ID: teacherID,
+				},
 			}
 			teacherInfo := teacherInfoMap[assessmentTeacherIDs[j]]
 			if teacherInfo != nil && teacherInfo.Valid {
