@@ -327,6 +327,49 @@ func (m *assessmentH5P) batchGetRoomCommentMap(ctx context.Context, operator *en
 	return result, nil
 }
 
+func (m *assessmentH5P) batchGetRoomCommentObjectMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]map[string][]*entity.H5PRoomComment, error) {
+	commentMap, err := external.GetH5PRoomCommentServiceProvider().BatchGet(ctx, operator, roomIDs)
+	if err != nil {
+		log.Error(ctx, "batch get room comment object map failed",
+			log.Strings("room_ids", roomIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	result := make(map[string]map[string][]*entity.H5PRoomComment, len(commentMap))
+	for roomID, users := range commentMap {
+		result[roomID] = make(map[string][]*entity.H5PRoomComment, len(users))
+		for _, u := range users {
+			for _, c := range u.TeacherComments {
+				var uid string
+				if c.Student != nil {
+					uid = c.Student.UserID
+				}
+				if uid == "" && u.User != nil {
+					uid = u.User.UserID
+				}
+				if uid == "" {
+					continue
+				}
+				comment := entity.H5PRoomComment{
+					Comment: c.Comment,
+				}
+				if c.Teacher != nil {
+					comment.TeacherID = c.Teacher.UserID
+					comment.GivenName = c.Teacher.GivenName
+					comment.FamilyName = c.Teacher.FamilyName
+				}
+				result[roomID][uid] = append(result[roomID][uid], &comment)
+			}
+		}
+	}
+	log.Debug(ctx, "batch get room comment object map",
+		log.Any("result", result),
+		log.Strings("room_ids", roomIDs),
+	)
+	return result, nil
+}
+
 func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, view *entity.AssessmentView) ([]*entity.AssessmentStudentViewH5PItem, error) {
 	roomMap, err := m.batchGetRoomScoreMap(ctx, operator, []string{view.RoomID}, true)
 	if err != nil {
