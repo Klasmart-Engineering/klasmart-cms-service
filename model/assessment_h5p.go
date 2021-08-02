@@ -330,7 +330,7 @@ func (m *assessmentH5P) batchGetRoomCommentMap(ctx context.Context, operator *en
 func (m *assessmentH5P) batchGetRoomCommentObjectMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]map[string][]*entity.H5PRoomComment, error) {
 	commentMap, err := external.GetH5PRoomCommentServiceProvider().BatchGet(ctx, operator, roomIDs)
 	if err != nil {
-		log.Error(ctx, "batch get room comment map failed",
+		log.Error(ctx, "batch get room comment object map failed",
 			log.Strings("room_ids", roomIDs),
 			log.Any("operator", operator),
 		)
@@ -363,7 +363,7 @@ func (m *assessmentH5P) batchGetRoomCommentObjectMap(ctx context.Context, operat
 			}
 		}
 	}
-	log.Debug(ctx, "batch get room comment map",
+	log.Debug(ctx, "batch get room comment object map",
 		log.Any("result", result),
 		log.Strings("room_ids", roomIDs),
 	)
