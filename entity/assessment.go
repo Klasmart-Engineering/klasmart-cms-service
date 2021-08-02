@@ -144,6 +144,7 @@ type StudentAssessmentTeacher struct {
 	ID         string `json:"id"`
 	GivenName  string `json:"given_name"`
 	FamilyName string `json:"family_name"`
+	Comment    string `json:"comment"`
 }
 
 type StudentAssessmentSchedule struct {
@@ -166,13 +167,14 @@ type StudentAssessment struct {
 	CreateAt            int64                         `json:"create_at"`
 	UpdateAt            int64                         `json:"update_at"`
 	CompleteAt          int64                         `json:"complete_at"`
-	Teacher             *StudentAssessmentTeacher     `json:"teacher,omitempty"`
+	Teachers            []*StudentAssessmentTeacher   `json:"teacher,omitempty"`
 	Schedule            *StudentAssessmentSchedule    `json:"schedule,omitempty"`
 	FeedbackAttachments []StudentAssessmentAttachment `json:"student_attachments,omitempty"`
 
-	ScheduleID string `json:"-"`
-	FeedbackID string `json:"-"`
-	StudentID  string `json:"-"`
+	ScheduleID string   `json:"-"`
+	FeedbackID string   `json:"-"`
+	StudentID  string   `json:"-"`
+	TeacherIDs []string `json:"-"`
 
 	IsHomeFun bool `json:"-"`
 }

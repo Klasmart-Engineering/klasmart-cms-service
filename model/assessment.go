@@ -165,6 +165,13 @@ func (m *assessmentModel) StudentQuery(ctx context.Context, operator *entity.Ope
 			log.String("assessmentType", assessmentType.String()))
 		return 0, nil, ErrInvalidAssessmentType
 	}
+	if condition.Page < 1 {
+		condition.Page = 1
+	}
+	if condition.PageSize < 1 {
+		condition.PageSize = 10
+	}
+
 	scheduleClassType := assessmentType.ToScheduleClassType()
 	if scheduleClassType.IsHomeFun {
 		//Query assessments
@@ -236,12 +243,6 @@ func (m *assessmentModel) studentsAssessmentQuery(ctx context.Context,
 	}
 
 	var r []*entity.Assessment
-	if condition.Page < 1 {
-		condition.Page = 1
-	}
-	if condition.PageSize < 1 {
-		condition.PageSize = 10
-	}
 
 	conditions := &da.QueryAssessmentConditions{
 		IDs:                          ids,
@@ -418,6 +419,7 @@ func (m *assessmentModel) homeFunStudyToStudentAssessments(ctx context.Context,
 		if r[i].AssessComment != "" {
 			comments = append(comments, r[i].AssessComment)
 		}
+		teacherIDs := []string(r[i].TeacherIDs)
 		res[i] = &entity.StudentAssessment{
 			ID:         r[i].ID,
 			Title:      r[i].Title,
@@ -430,6 +432,7 @@ func (m *assessmentModel) homeFunStudyToStudentAssessments(ctx context.Context,
 			Score:      int(r[i].AssessScore),
 			FeedbackID: r[i].AssessFeedbackID,
 			StudentID:  studentID,
+			TeacherIDs: teacherIDs,
 			IsHomeFun:  true,
 		}
 	}
@@ -474,7 +477,7 @@ func (m *assessmentModel) fillStudentAssessments(ctx context.Context,
 	}
 
 	//query teachers info in assessments
-	teacherAssessmentsMap, teacherInfoMap, err := m.queryTeacherMap(ctx, operator, tx, collectedIDs.AllAssessmentIDs)
+	teacherAssessmentsMap, teacherInfoMap, err := m.queryTeacherMap(ctx, operator, tx, assessments, collectedIDs.AllAssessmentIDs)
 	if err != nil {
 		log.Error(ctx, "GetTeacherServiceProvider.BatchGetNameMap failed",
 			log.Err(err),
@@ -520,7 +523,7 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 	assessments []*entity.StudentAssessment,
 	schedulesMap map[string]*entity.Schedule,
 	teacherInfoMap map[string]*external.NullableUser,
-	teacherAssessmentsMap map[string]string,
+	teacherAssessmentsMap map[string][]string,
 	feedbackMap map[string][]*entity.FeedbackAssignmentView,
 	scheduleCommentMap map[string][]string) error {
 
@@ -546,14 +549,17 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 		}
 
 		//build teacher
-		assessmentTeacherID := teacherAssessmentsMap[assessments[i].ID]
-		assessments[i].Teacher = &entity.StudentAssessmentTeacher{
-			ID: assessmentTeacherID,
-		}
-		teacherInfo := teacherInfoMap[assessmentTeacherID]
-		if teacherInfo != nil && teacherInfo.Valid {
-			assessments[i].Teacher.GivenName = teacherInfo.GivenName
-			assessments[i].Teacher.FamilyName = teacherInfo.FamilyName
+		assessmentTeacherIDs := teacherAssessmentsMap[assessments[i].ID]
+		assessments[i].Teachers = make([]*entity.StudentAssessmentTeacher, len(assessmentTeacherIDs))
+		for j := range assessmentTeacherIDs {
+			assessments[i].Teachers[j] = &entity.StudentAssessmentTeacher{
+				ID: assessmentTeacherIDs[j],
+			}
+			teacherInfo := teacherInfoMap[assessmentTeacherIDs[j]]
+			if teacherInfo != nil && teacherInfo.Valid {
+				assessments[i].Teachers[j].GivenName = teacherInfo.GivenName
+				assessments[i].Teachers[j].FamilyName = teacherInfo.FamilyName
+			}
 		}
 
 		//build student attachments
@@ -643,9 +649,13 @@ func (m *assessmentModel) queryFeedbackInfo(ctx context.Context, operator *entit
 	return feedbackMap, nil
 }
 
-func (m *assessmentModel) queryTeacherMap(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, assessmentIDs []string) (map[string]string, map[string]*external.NullableUser, error) {
+func (m *assessmentModel) queryTeacherMap(ctx context.Context,
+	operator *entity.Operator,
+	tx *dbo.DBContext,
+	assessments []*entity.StudentAssessment,
+	assessmentIDs []string) (map[string][]string, map[string]*external.NullableUser, error) {
 	//query teachers in assessments
-	teacherAssessmentsMap := make(map[string]string)
+	teacherAssessmentsMap := make(map[string][]string)
 	attendances := make([]*entity.AssessmentAttendance, 0)
 	err := da.GetAssessmentAttendanceDA().QueryTx(ctx, tx, &da.QueryAssessmentAttendanceConditions{
 		AssessmentIDs: entity.NullStrings{
@@ -666,10 +676,16 @@ func (m *assessmentModel) queryTeacherMap(ctx context.Context, operator *entity.
 	}
 
 	//collect teacher
-	teacherIDs := make([]string, len(attendances))
+	teacherIDs := make([]string, 0)
 	for i := range attendances {
-		teacherAssessmentsMap[attendances[i].AssessmentID] = attendances[i].AttendanceID
-		teacherIDs[i] = attendances[i].AttendanceID
+		teacherAssessmentsMap[attendances[i].AssessmentID] = append(teacherAssessmentsMap[attendances[i].AssessmentID], attendances[i].AttendanceID)
+		teacherIDs = append(teacherIDs, attendances[i].AttendanceID)
+	}
+
+	//collect home fun study teachers
+	for i := range assessments {
+		teacherAssessmentsMap[assessments[i].ID] = append(teacherAssessmentsMap[assessments[i].ID], assessments[i].TeacherIDs...)
+		teacherIDs = append(teacherIDs, assessments[i].TeacherIDs...)
 	}
 
 	//query teacher info
