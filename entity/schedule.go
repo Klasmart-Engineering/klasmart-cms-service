@@ -497,7 +497,7 @@ type ScheduleDetailsView struct {
 	ParticipantsStudents []*ScheduleAccessibleUserView `json:"participants_students"`
 	IsHidden             bool                          `json:"is_hidden"`
 	IsHomeFun            bool                          `json:"is_home_fun"`
-	RoleType             ScheduleRoleType              `json:"role_type" enums:"Student,TeacherComments,Unknown"`
+	RoleType             ScheduleRoleType              `json:"role_type" enums:"Student,Teacher,Unknown"`
 	ExistFeedback        bool                          `json:"exist_feedback"`
 	LessonPlan           *ScheduleLessonPlan           `json:"lesson_plan"`
 	Class                *ScheduleAccessibleUserView   `json:"class"`
@@ -513,7 +513,7 @@ type ScheduleRoleType string
 
 const (
 	ScheduleRoleTypeStudent ScheduleRoleType = "Student"
-	ScheduleRoleTypeTeacher ScheduleRoleType = "TeacherComments"
+	ScheduleRoleTypeTeacher ScheduleRoleType = "Teacher"
 	ScheduleRoleTypeUnknown ScheduleRoleType = "Unknown"
 )
 

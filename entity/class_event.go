@@ -21,7 +21,7 @@ type ClassMember struct {
 type ClassUserRoleTypeEvent string
 
 const (
-	ClassUserRoleTypeEventTeacher ClassUserRoleTypeEvent = "TeacherComments"
+	ClassUserRoleTypeEventTeacher ClassUserRoleTypeEvent = "Teacher"
 	ClassUserRoleTypeEventStudent ClassUserRoleTypeEvent = "Student"
 )
 
