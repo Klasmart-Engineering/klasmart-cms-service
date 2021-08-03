@@ -106,6 +106,10 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 	// find related schedules and make by schedule id
 	schedules, err := l.findRelatedSchedules(ctx, tx, operator, entity.ReportLearningSummaryTypeLiveClass, filter)
 	if err != nil {
+		log.Error(ctx, "query live classes summary: find related schedules failed",
+			log.Err(err),
+			log.Any("filter", filter),
+		)
 		return nil, err
 	}
 
@@ -116,6 +120,10 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 	}
 	assessments, err := l.findRelatedAssessments(ctx, tx, operator, entity.ReportLearningSummaryTypeLiveClass, filter, scheduleIDs)
 	if err != nil {
+		log.Error(ctx, "query live classes summary: find related assessments failed",
+			log.Err(err),
+			log.Any("filter", filter),
+		)
 		return nil, err
 	}
 	assessmentMap := make(map[string]*entity.Assessment, len(assessments))
@@ -266,10 +274,10 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 	}
 	if typo.Valid() {
 		scheduleCondition.ClassTypes.Valid = true
-		if typo == entity.ReportLearningSummaryTypeLiveClass {
+		switch typo {
+		case entity.ReportLearningSummaryTypeLiveClass:
 			scheduleCondition.ClassTypes.Strings = append(scheduleCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeOnlineClass))
-		}
-		if typo == entity.ReportLearningSummaryTypeAssignment {
+		case entity.ReportLearningSummaryTypeAssignment:
 			scheduleCondition.ClassTypes.Strings = append(scheduleCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeHomework))
 		}
 	}
