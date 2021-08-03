@@ -46,7 +46,7 @@ func (l *learningSummaryReportModel) QueryFilterItems(ctx context.Context, tx *d
 }
 
 func (l *learningSummaryReportModel) querySubjectFilterItems(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) ([]*entity.QueryLearningSummaryFilterResultItem, error) {
-	schedules, err := l.findRelatedSchedules(ctx, tx, operator, nil, filter)
+	schedules, err := l.findRelatedSchedules(ctx, tx, operator, entity.ReportLearningSummaryTypeInvalid, filter)
 	if err != nil {
 		log.Error(ctx, "query subject filter items: query schedule failed",
 			log.Err(err),
@@ -104,7 +104,7 @@ func (l *learningSummaryReportModel) querySubjectFilterItems(ctx context.Context
 
 func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryLiveClassesSummaryResult, error) {
 	// find related schedules and make by schedule id
-	schedules, err := l.findRelatedSchedules(ctx, tx, operator, []entity.AssessmentType{entity.AssessmentTypeLive}, filter)
+	schedules, err := l.findRelatedSchedules(ctx, tx, operator, entity.ReportLearningSummaryTypeLiveClass, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 	for _, s := range schedules {
 		scheduleIDs = append(scheduleIDs, s.ID)
 	}
-	assessments, err := l.findRelatedAssessments(ctx, tx, operator, scheduleIDs, filter.StudentID)
+	assessments, err := l.findRelatedAssessments(ctx, tx, operator, entity.ReportLearningSummaryTypeLiveClass, filter, scheduleIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -257,48 +257,34 @@ func (l *learningSummaryReportModel) findRelatedOutcomes(ctx context.Context, tx
 	return scheduleOutcomesMap, nil
 }
 
-func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, types []entity.AssessmentType, filter *entity.LearningSummaryFilter) ([]*entity.Schedule, error) {
+func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, typo entity.ReportLearningSummaryType, filter *entity.LearningSummaryFilter) ([]*entity.Schedule, error) {
 	scheduleCondition := entity.ScheduleQueryCondition{
 		OrgID: sql.NullString{
 			String: operator.OrgID,
 			Valid:  true,
 		},
 	}
-	if len(types) > 0 {
+	if typo.Valid() {
 		scheduleCondition.ClassTypes.Valid = true
-		existsHomeFunStudy := false
-		existsStudy := false
-		for _, t := range types {
-			if t == entity.AssessmentTypeHomeFunStudy {
-				existsHomeFunStudy = true
-			}
-			if t == entity.AssessmentTypeStudy {
-				existsStudy = true
-			}
-			scheduleType := t.ToScheduleClassType()
-			if scheduleType.IsHomeFun {
-				scheduleCondition.IsHomefun = sql.NullBool{
-					Bool:  true,
-					Valid: true,
-				}
-			} else {
-				scheduleCondition.ClassTypes.Strings = append(scheduleCondition.ClassTypes.Strings, string(scheduleType.ClassType))
-			}
+		if typo == entity.ReportLearningSummaryTypeLiveClass {
+			scheduleCondition.ClassTypes.Strings = append(scheduleCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeOnlineClass))
 		}
-		if existsHomeFunStudy && existsStudy {
-			scheduleCondition.IsHomefun.Valid = false
+		if typo == entity.ReportLearningSummaryTypeAssignment {
+			scheduleCondition.ClassTypes.Strings = append(scheduleCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeHomework))
 		}
 	}
-	if filter.WeekStart > 0 {
-		scheduleCondition.StartAtGe = sql.NullInt64{
-			Int64: filter.WeekStart,
-			Valid: true,
+	if typo.Valid() && typo == entity.ReportLearningSummaryTypeLiveClass {
+		if filter.WeekStart > 0 {
+			scheduleCondition.StartAtGe = sql.NullInt64{
+				Int64: filter.WeekStart,
+				Valid: true,
+			}
 		}
-	}
-	if filter.WeekEnd > 0 {
-		scheduleCondition.StartAtLt = sql.NullInt64{
-			Int64: filter.WeekEnd,
-			Valid: true,
+		if filter.WeekEnd > 0 {
+			scheduleCondition.StartAtLt = sql.NullInt64{
+				Int64: filter.WeekEnd,
+				Valid: true,
+			}
 		}
 	}
 	if len(filter.SchoolID) > 0 {
@@ -336,23 +322,31 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 	return schedules, nil
 }
 
-func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string, studentID string) ([]*entity.Assessment, error) {
+func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, typo entity.ReportLearningSummaryType, filter *entity.LearningSummaryFilter, scheduleIDs []string) ([]*entity.Assessment, error) {
 	// query assessments
 	var assessments []*entity.Assessment
-	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
+	cond := da.QueryAssessmentConditions{
 		ScheduleIDs: entity.NullStrings{
 			Strings: scheduleIDs,
 			Valid:   true,
 		},
 		StudentIDs: entity.NullStrings{
-			Strings: []string{studentID},
+			Strings: []string{filter.StudentID},
 			Valid:   true,
 		},
-	}, &assessments); err != nil {
+	}
+	if typo == entity.ReportLearningSummaryTypeAssignment && filter.WeekStart > 0 && filter.WeekEnd > 0 {
+		cond.CompleteBetween = entity.NullTimeRange{
+			StartAt: filter.WeekStart,
+			EndAt:   filter.WeekEnd,
+			Valid:   true,
+		}
+	}
+	if err := da.GetAssessmentDA().Query(ctx, &cond, &assessments); err != nil {
 		log.Error(ctx, "find related assessments: query assessment attendance relations failed",
 			log.Err(err),
 			log.Strings("schedule_ids", scheduleIDs),
-			log.String("student_id", studentID),
+			log.Any("filter", filter),
 		)
 		return nil, err
 	}
@@ -361,7 +355,7 @@ func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context,
 
 func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryAssignmentsSummaryResult, error) {
 	// find related schedules and make by schedule id
-	schedules, err := l.findRelatedSchedules(ctx, tx, operator, []entity.AssessmentType{entity.AssessmentTypeStudy, entity.AssessmentTypeHomeFunStudy}, filter)
+	schedules, err := l.findRelatedSchedules(ctx, tx, operator, entity.ReportLearningSummaryTypeAssignment, filter)
 	if err != nil {
 		log.Error(ctx, "query assignments summary: find related schedules failed",
 			log.Err(err),
@@ -375,7 +369,7 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 	for _, s := range schedules {
 		scheduleIDs = append(scheduleIDs, s.ID)
 	}
-	studyAssessments, err := l.findRelatedAssessments(ctx, tx, operator, scheduleIDs, filter.StudentID)
+	studyAssessments, err := l.findRelatedAssessments(ctx, tx, operator, entity.ReportLearningSummaryTypeAssignment, filter, scheduleIDs)
 	if err != nil {
 		log.Error(ctx, "query assignments summary: find related assessments failed",
 			log.Err(err),
