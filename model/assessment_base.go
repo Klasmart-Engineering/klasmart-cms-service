@@ -996,6 +996,9 @@ func (m *assessmentBase) batchAddOutcomes(ctx context.Context, tx *dbo.DBContext
 				if o != nil {
 					assumed = o.Assumed
 				}
+				if outcomeID == "" {
+					continue
+				}
 				assessmentOutcomes = append(assessmentOutcomes, &entity.AssessmentOutcome{
 					ID:           utils.NewID(),
 					AssessmentID: a.ID,
