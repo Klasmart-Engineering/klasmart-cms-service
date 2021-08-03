@@ -234,7 +234,7 @@ func (m *assessmentModel) studentsAssessmentQuery(ctx context.Context,
 	completeBetween := entity.NullTimeRange{Valid: false}
 	if condition.CompleteStartAt > 0 && condition.CompleteEndAt > 0 {
 		completeBetween.StartAt = condition.CompleteStartAt
-		completeBetween.EndAt = condition.CompleteStartAt
+		completeBetween.EndAt = condition.CompleteEndAt
 		completeBetween.Valid = true
 	}
 	ids := entity.NullStrings{
@@ -365,7 +365,7 @@ func (m *assessmentModel) studentsHomeFunStudyQuery(ctx context.Context,
 	completeBetween := entity.NullTimeRange{Valid: false}
 	if condition.CompleteStartAt > 0 && condition.CompleteEndAt > 0 {
 		completeBetween.StartAt = condition.CompleteStartAt
-		completeBetween.EndAt = condition.CompleteStartAt
+		completeBetween.EndAt = condition.CompleteEndAt
 		completeBetween.Valid = true
 	}
 	ids := entity.NullStrings{
