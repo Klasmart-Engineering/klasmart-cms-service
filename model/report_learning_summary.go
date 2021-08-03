@@ -454,12 +454,20 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 
 	// find related home fun study assessments and make map by schedule id
 	var homeFunStudyAssessments []*entity.HomeFunStudy
-	if err := GetHomeFunStudyModel().Query(ctx, operator, &da.QueryHomeFunStudyCondition{
+	cond := da.QueryHomeFunStudyCondition{
 		ScheduleIDs: entity.NullStrings{
 			Strings: scheduleIDs,
 			Valid:   true,
 		},
-	}, &homeFunStudyAssessments); err != nil {
+	}
+	if filter.WeekStart > 0 && filter.WeekEnd > 0 {
+		cond.CompleteBetween = entity.NullTimeRange{
+			StartAt: filter.WeekStart,
+			EndAt:   filter.WeekEnd,
+			Valid:   true,
+		}
+	}
+	if err := GetHomeFunStudyModel().Query(ctx, operator, &cond, &homeFunStudyAssessments); err != nil {
 		log.Error(ctx, "query assignments summary: query home fun study failed",
 			log.Err(err),
 			log.Strings("schedule_ids", scheduleIDs),
