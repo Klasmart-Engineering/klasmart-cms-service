@@ -282,13 +282,13 @@ func (l *learningSummaryReportModel) findRelatedAssessmentOutcomes(ctx context.C
 }
 
 func (l *learningSummaryReportModel) findRelatedHomeFunStudyOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, homeFunStudies []*entity.HomeFunStudy) (map[string][]*entity.Outcome, error) {
-	homeFunStudyIDs := make([]string, 0, len(homeFunStudies))
+	homeFunStudyScheduleIDs := make([]string, 0, len(homeFunStudies))
 	scheduleIDToHomeFunStudyMap := make(map[string]*entity.HomeFunStudy, len(homeFunStudies))
 	for _, s := range homeFunStudies {
-		homeFunStudyIDs = append(homeFunStudyIDs, s.ID)
+		homeFunStudyScheduleIDs = append(homeFunStudyScheduleIDs, s.ScheduleID)
 		scheduleIDToHomeFunStudyMap[s.ScheduleID] = s
 	}
-	scheduleIDToOutcomeIDsMap, err := GetScheduleModel().GetLearningOutcomeIDs(ctx, operator, homeFunStudyIDs)
+	scheduleIDToOutcomeIDsMap, err := GetScheduleModel().GetLearningOutcomeIDs(ctx, operator, homeFunStudyScheduleIDs)
 	if err != nil {
 		log.Error(ctx, "find related home fun study outcomes: get learning outcome ids failed",
 			log.Err(err),
@@ -305,6 +305,7 @@ func (l *learningSummaryReportModel) findRelatedHomeFunStudyOutcomes(ctx context
 		log.Error(ctx, "find related home fun study outcomes: get learning outcome ids failed",
 			log.Err(err),
 			log.Any("home_fun_studies", homeFunStudies),
+			log.Strings("home_fun_study_schedule_ids", homeFunStudyScheduleIDs),
 		)
 		return nil, err
 	}
