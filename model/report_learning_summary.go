@@ -46,7 +46,7 @@ func (l *learningSummaryReportModel) QueryFilterItems(ctx context.Context, tx *d
 }
 
 func (l *learningSummaryReportModel) querySubjectFilterItems(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) ([]*entity.QueryLearningSummaryFilterResultItem, error) {
-	schedules, err := l.findRelatedSchedules(ctx, tx, operator, nil, filter)
+	schedules, err := l.findRelatedSchedules(ctx, tx, operator, entity.ReportLearningSummaryTypeInvalid, filter)
 	if err != nil {
 		log.Error(ctx, "query subject filter items: query schedule failed",
 			log.Err(err),
@@ -104,8 +104,12 @@ func (l *learningSummaryReportModel) querySubjectFilterItems(ctx context.Context
 
 func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryLiveClassesSummaryResult, error) {
 	// find related schedules and make by schedule id
-	schedules, err := l.findRelatedSchedules(ctx, tx, operator, []entity.AssessmentType{entity.AssessmentTypeLive}, filter)
+	schedules, err := l.findRelatedSchedules(ctx, tx, operator, entity.ReportLearningSummaryTypeLiveClass, filter)
 	if err != nil {
+		log.Error(ctx, "query live classes summary: find related schedules failed",
+			log.Err(err),
+			log.Any("filter", filter),
+		)
 		return nil, err
 	}
 
@@ -114,8 +118,12 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 	for _, s := range schedules {
 		scheduleIDs = append(scheduleIDs, s.ID)
 	}
-	assessments, err := l.findRelatedAssessments(ctx, tx, operator, scheduleIDs, filter.StudentID)
+	assessments, err := l.findRelatedAssessments(ctx, tx, operator, entity.ReportLearningSummaryTypeLiveClass, filter, scheduleIDs)
 	if err != nil {
+		log.Error(ctx, "query live classes summary: find related assessments failed",
+			log.Err(err),
+			log.Any("filter", filter),
+		)
 		return nil, err
 	}
 	assessmentMap := make(map[string]*entity.Assessment, len(assessments))
@@ -160,7 +168,11 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 	}
 
 	// find related outcomes and make map by schedule ids
-	scheduleOutcomesMap, err := l.findRelatedOutcomes(ctx, tx, operator, scheduleIDs)
+	assessmentIDs := make([]string, 0, len(assessments))
+	for _, a := range assessments {
+		assessmentIDs = append(assessmentIDs, a.ID)
+	}
+	assessmentIDToOutcomesMap, err := l.findRelatedAssessmentOutcomes(ctx, tx, operator, assessmentIDs)
 	if err != nil {
 		log.Error(ctx, "query live classes summary: find related outcomes failed",
 			log.Err(err),
@@ -187,19 +199,19 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 			item.Status = assessment.Status
 			item.CompleteAt = assessment.CompleteTime
 			item.CreateAt = assessment.CreateAt
+			if outcomes := assessmentIDToOutcomesMap[assessment.ID]; len(outcomes) > 0 {
+				for _, o := range outcomes {
+					item.Outcomes = append(item.Outcomes, &entity.LearningSummaryOutcome{
+						ID:   o.ID,
+						Name: o.Name,
+					})
+				}
+				l.sortOutcomesByAlphabetAsc(item.Outcomes)
+			}
 		}
 		if comments := roomCommentMap[s.ID][filter.StudentID]; len(comments) > 0 {
 			item.TeacherFeedback = comments[len(comments)-1]
 		}
-		if outcomes := scheduleOutcomesMap[s.ID]; len(outcomes) > 0 {
-			for _, o := range outcomes {
-				item.Outcomes = append(item.Outcomes, &entity.LearningSummaryOutcome{
-					ID:   o.ID,
-					Name: o.Name,
-				})
-			}
-		}
-		l.sortOutcomesByAlphabetAsc(item.Outcomes)
 		result.Items = append(result.Items, &item)
 	}
 
@@ -223,24 +235,34 @@ func (l *learningSummaryReportModel) sortLiveClassesSummaryItemsByStartTimeAsc(i
 	})
 }
 
-func (l *learningSummaryReportModel) findRelatedOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) (map[string][]*entity.Outcome, error) {
-	scheduleOutcomeIDsMap, err := GetScheduleModel().GetLearningOutcomeIDs(ctx, operator, scheduleIDs)
-	if err != nil {
-		log.Error(ctx, "find related outcomes: get schedule outcome ids failed",
+func (l *learningSummaryReportModel) findRelatedAssessmentOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentIDs []string) (map[string][]*entity.Outcome, error) {
+	var assessmentOutcomes []*entity.AssessmentOutcome
+	if err := da.GetAssessmentOutcomeDA().Query(ctx, &da.QueryAssessmentOutcomeConditions{
+		AssessmentIDs: entity.NullStrings{
+			Strings: assessmentIDs,
+			Valid:   true,
+		},
+		Checked: entity.NullBool{
+			Bool:  true,
+			Valid: true,
+		},
+	}, &assessmentOutcomes); err != nil {
+		log.Error(ctx, "find related assessment outcomes: query assessment outcomes failed",
 			log.Err(err),
-			log.Strings("schedule_ids", scheduleIDs),
+			log.Strings("assessment_ids", assessmentIDs),
 		)
 		return nil, err
 	}
-	outcomeIDs := make([]string, 0, len(scheduleOutcomeIDsMap))
-	for _, scheduleOutcomeIDs := range scheduleOutcomeIDsMap {
-		outcomeIDs = append(outcomeIDs, scheduleOutcomeIDs...)
+	outcomeIDs := make([]string, 0, len(assessmentOutcomes))
+	for _, o := range assessmentOutcomes {
+		outcomeIDs = append(outcomeIDs, o.OutcomeID)
 	}
 	outcomes, err := GetOutcomeModel().GetByIDs(ctx, operator, tx, outcomeIDs)
 	if err != nil {
-		log.Error(ctx, "find related outcomes: batch get schedule outcome failed",
+		log.Error(ctx, "find related assessment outcomes: batch get schedule outcome failed",
 			log.Err(err),
-			log.Strings("schedule_ids", scheduleIDs),
+			log.Strings("outcome_ids", outcomeIDs),
+			log.Strings("assessment_ids", assessmentIDs),
 		)
 		return nil, err
 	}
@@ -248,45 +270,45 @@ func (l *learningSummaryReportModel) findRelatedOutcomes(ctx context.Context, tx
 	for _, o := range outcomes {
 		outcomeMap[o.ID] = o
 	}
-	scheduleOutcomesMap := make(map[string][]*entity.Outcome, len(scheduleOutcomeIDsMap))
-	for scheduleID, outcomeIDs := range scheduleOutcomeIDsMap {
-		for _, outcomeID := range outcomeIDs {
-			scheduleOutcomesMap[scheduleID] = append(scheduleOutcomesMap[scheduleID], outcomeMap[outcomeID])
+	assessmentIDToOutcomesMap := make(map[string][]*entity.Outcome, len(assessmentOutcomes))
+	for _, ao := range assessmentOutcomes {
+		o := outcomeMap[ao.OutcomeID]
+		if o == nil {
+			continue
 		}
+		assessmentIDToOutcomesMap[ao.AssessmentID] = append(assessmentIDToOutcomesMap[ao.AssessmentID], o)
 	}
-	return scheduleOutcomesMap, nil
+	return assessmentIDToOutcomesMap, nil
 }
 
-func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, types []entity.AssessmentType, filter *entity.LearningSummaryFilter) ([]*entity.Schedule, error) {
+func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, typo entity.ReportLearningSummaryType, filter *entity.LearningSummaryFilter) ([]*entity.Schedule, error) {
 	scheduleCondition := entity.ScheduleQueryCondition{
 		OrgID: sql.NullString{
 			String: operator.OrgID,
 			Valid:  true,
 		},
 	}
-	if len(types) > 0 {
+	if typo.Valid() {
 		scheduleCondition.ClassTypes.Valid = true
-		for _, t := range types {
-			scheduleType := t.ToScheduleClassType()
-			scheduleCondition.ClassTypes.Strings = append(scheduleCondition.ClassTypes.Strings, string(scheduleType.ClassType))
-			if scheduleType.IsHomeFun {
-				scheduleCondition.IsHomefun = sql.NullBool{
-					Bool:  true,
-					Valid: true,
-				}
+		switch typo {
+		case entity.ReportLearningSummaryTypeLiveClass:
+			scheduleCondition.ClassTypes.Strings = append(scheduleCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeOnlineClass))
+		case entity.ReportLearningSummaryTypeAssignment:
+			scheduleCondition.ClassTypes.Strings = append(scheduleCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeHomework))
+		}
+	}
+	if typo.Valid() && typo == entity.ReportLearningSummaryTypeLiveClass {
+		if filter.WeekStart > 0 {
+			scheduleCondition.StartAtGe = sql.NullInt64{
+				Int64: filter.WeekStart,
+				Valid: true,
 			}
 		}
-	}
-	if filter.WeekStart > 0 {
-		scheduleCondition.StartAtGe = sql.NullInt64{
-			Int64: filter.WeekStart,
-			Valid: true,
-		}
-	}
-	if filter.WeekEnd > 0 {
-		scheduleCondition.StartAtLt = sql.NullInt64{
-			Int64: filter.WeekEnd,
-			Valid: true,
+		if filter.WeekEnd > 0 {
+			scheduleCondition.StartAtLt = sql.NullInt64{
+				Int64: filter.WeekEnd,
+				Valid: true,
+			}
 		}
 	}
 	if len(filter.SchoolID) > 0 {
@@ -324,23 +346,31 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 	return schedules, nil
 }
 
-func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string, studentID string) ([]*entity.Assessment, error) {
+func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, typo entity.ReportLearningSummaryType, filter *entity.LearningSummaryFilter, scheduleIDs []string) ([]*entity.Assessment, error) {
 	// query assessments
 	var assessments []*entity.Assessment
-	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
+	cond := da.QueryAssessmentConditions{
 		ScheduleIDs: entity.NullStrings{
 			Strings: scheduleIDs,
 			Valid:   true,
 		},
 		StudentIDs: entity.NullStrings{
-			Strings: []string{studentID},
+			Strings: []string{filter.StudentID},
 			Valid:   true,
 		},
-	}, &assessments); err != nil {
+	}
+	if typo == entity.ReportLearningSummaryTypeAssignment && filter.WeekStart > 0 && filter.WeekEnd > 0 {
+		cond.CompleteBetween = entity.NullTimeRange{
+			StartAt: filter.WeekStart,
+			EndAt:   filter.WeekEnd,
+			Valid:   true,
+		}
+	}
+	if err := da.GetAssessmentDA().Query(ctx, &cond, &assessments); err != nil {
 		log.Error(ctx, "find related assessments: query assessment attendance relations failed",
 			log.Err(err),
 			log.Strings("schedule_ids", scheduleIDs),
-			log.String("student_id", studentID),
+			log.Any("filter", filter),
 		)
 		return nil, err
 	}
@@ -349,7 +379,7 @@ func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context,
 
 func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryAssignmentsSummaryResult, error) {
 	// find related schedules and make by schedule id
-	schedules, err := l.findRelatedSchedules(ctx, tx, operator, []entity.AssessmentType{entity.AssessmentTypeStudy, entity.AssessmentTypeHomeFunStudy}, filter)
+	schedules, err := l.findRelatedSchedules(ctx, tx, operator, entity.ReportLearningSummaryTypeAssignment, filter)
 	if err != nil {
 		log.Error(ctx, "query assignments summary: find related schedules failed",
 			log.Err(err),
@@ -363,7 +393,7 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 	for _, s := range schedules {
 		scheduleIDs = append(scheduleIDs, s.ID)
 	}
-	studyAssessments, err := l.findRelatedAssessments(ctx, tx, operator, scheduleIDs, filter.StudentID)
+	studyAssessments, err := l.findRelatedAssessments(ctx, tx, operator, entity.ReportLearningSummaryTypeAssignment, filter, scheduleIDs)
 	if err != nil {
 		log.Error(ctx, "query assignments summary: find related assessments failed",
 			log.Err(err),
@@ -427,7 +457,14 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 	}
 
 	// find related outcomes and make map by schedule ids
-	scheduleOutcomesMap, err := l.findRelatedOutcomes(ctx, tx, operator, scheduleIDs)
+	assessmentIDs := make([]string, 0, len(studyAssessments)+len(homeFunStudyAssessments))
+	for _, a := range studyAssessments {
+		assessmentIDs = append(assessmentIDs, a.ID)
+	}
+	for _, a := range homeFunStudyAssessments {
+		assessmentIDs = append(assessmentIDs, a.ID)
+	}
+	assessmentIDToOutcomesMap, err := l.findRelatedAssessmentOutcomes(ctx, tx, operator, assessmentIDs)
 	if err != nil {
 		log.Error(ctx, "query assignments summary: find related outcomes failed",
 			log.Err(err),
@@ -438,7 +475,7 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 	}
 
 	// assembly result
-	result := l.assemblyAssignmentsSummaryResult(filter, schedules, scheduleOutcomesMap, lessonPlanNameMap, studyAssessmentMap, homeFunStudyAssessmentMap, roomCommentMap)
+	result := l.assemblyAssignmentsSummaryResult(filter, schedules, assessmentIDToOutcomesMap, lessonPlanNameMap, studyAssessmentMap, homeFunStudyAssessmentMap, roomCommentMap)
 
 	// sort items
 	l.sortAssignmentsSummaryItems(result.Items)
@@ -448,7 +485,7 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 	return result, nil
 }
 
-func (l *learningSummaryReportModel) assemblyAssignmentsSummaryResult(filter *entity.LearningSummaryFilter, schedules []*entity.Schedule, scheduleOutcomesMap map[string][]*entity.Outcome, lessonPlanNameMap map[string]string, studyAssessmentMap map[string]*entity.Assessment, homeFunStudyAssessmentMap map[string]*entity.HomeFunStudy, roomCommentMap map[string]map[string][]string) *entity.QueryAssignmentsSummaryResult {
+func (l *learningSummaryReportModel) assemblyAssignmentsSummaryResult(filter *entity.LearningSummaryFilter, schedules []*entity.Schedule, assessmentIDToOutcomesMap map[string][]*entity.Outcome, lessonPlanNameMap map[string]string, studyAssessmentMap map[string]*entity.Assessment, homeFunStudyAssessmentMap map[string]*entity.HomeFunStudy, roomCommentMap map[string]map[string][]string) *entity.QueryAssignmentsSummaryResult {
 	result := &entity.QueryAssignmentsSummaryResult{
 		StudyCount:        len(studyAssessmentMap),
 		HomeFunStudyCount: len(homeFunStudyAssessmentMap),
@@ -470,7 +507,7 @@ func (l *learningSummaryReportModel) assemblyAssignmentsSummaryResult(filter *en
 				CompleteAt:      assessment.CompleteAt,
 				CreateAt:        assessment.CreateAt,
 			}
-			if outcomes := scheduleOutcomesMap[s.ID]; len(outcomes) > 0 {
+			if outcomes := assessmentIDToOutcomesMap[assessment.ID]; len(outcomes) > 0 {
 				for _, o := range outcomes {
 					item.Outcomes = append(item.Outcomes, &entity.LearningSummaryOutcome{
 						ID:   o.ID,
@@ -494,7 +531,7 @@ func (l *learningSummaryReportModel) assemblyAssignmentsSummaryResult(filter *en
 				CompleteAt:      assessment.CompleteTime,
 				CreateAt:        assessment.CreateAt,
 			}
-			if outcomes := scheduleOutcomesMap[s.ID]; len(outcomes) > 0 {
+			if outcomes := assessmentIDToOutcomesMap[assessment.ID]; len(outcomes) > 0 {
 				for _, o := range outcomes {
 					item.Outcomes = append(item.Outcomes, &entity.LearningSummaryOutcome{
 						ID:   o.ID,

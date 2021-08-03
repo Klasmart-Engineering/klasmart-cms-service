@@ -104,3 +104,20 @@ type AssignmentsSummaryItem struct {
 	CompleteAt int64 `json:"complete_at"`
 	CreateAt   int64 `json:"create_at"`
 }
+
+type ReportLearningSummaryType string
+
+const (
+	ReportLearningSummaryTypeInvalid    = "invalid"
+	ReportLearningSummaryTypeLiveClass  = "live_class"
+	ReportLearningSummaryTypeAssignment = "assignment"
+)
+
+func (t ReportLearningSummaryType) Valid() bool {
+	switch t {
+	case ReportLearningSummaryTypeLiveClass, ReportLearningSummaryTypeAssignment:
+		return true
+	default:
+		return false
+	}
+}
