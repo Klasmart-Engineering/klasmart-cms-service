@@ -3276,6 +3276,7 @@ func (s *scheduleModel) QueryUnsafe(ctx context.Context, condition *entity.Sched
 		RelationClassIDs:   condition.RelationClassIDs,
 		RelationTeacherIDs: condition.RelationTeacherIDs,
 		RelationStudentIDs: condition.RelationStudentIDs,
+		SubjectIDs:         condition.RelationSubjectIDs,
 		DeleteAt:           condition.DeleteAt,
 	}
 	err := da.GetScheduleDA().Query(ctx, daCondition, &scheduleList)
