@@ -131,12 +131,6 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 		assessmentMap[a.ScheduleID] = a
 	}
 
-	// calculate student attend percent
-	attend := 0.0
-	if len(schedules) != 0 {
-		attend = float64(len(assessments)) / float64(len(schedules))
-	}
-
 	// find related comments and make map by schedule id  (live: room comments)
 	roomCommentMap, err := getAssessmentH5P().batchGetRoomCommentMap(ctx, operator, scheduleIDs)
 	if err != nil {
@@ -183,7 +177,7 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 	}
 
 	//  assembly result
-	result := &entity.QueryLiveClassesSummaryResult{Attend: attend}
+	result := &entity.QueryLiveClassesSummaryResult{}
 	for _, s := range schedules {
 		assessment := assessmentMap[s.ID]
 		item := entity.LiveClassSummaryItem{
@@ -213,6 +207,17 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 			item.TeacherFeedback = comments[len(comments)-1]
 		}
 		result.Items = append(result.Items, &item)
+	}
+
+	// calculate student attend percent
+	attend := 0
+	for _, item := range result.Items {
+		if !item.Absent {
+			attend++
+		}
+	}
+	if len(result.Items) > 0 {
+		result.Attend = float64(attend) / float64(len(result.Items))
 	}
 
 	// sort items
@@ -377,6 +382,12 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 	if len(filter.StudentID) > 0 {
 		scheduleCondition.RelationStudentIDs = entity.NullStrings{
 			Strings: []string{filter.StudentID},
+			Valid:   true,
+		}
+	}
+	if len(filter.SubjectID) > 0 {
+		scheduleCondition.RelationSubjectIDs = entity.NullStrings{
+			Strings: []string{filter.SubjectID},
 			Valid:   true,
 		}
 	}
