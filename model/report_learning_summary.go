@@ -386,7 +386,10 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 		}
 	}
 	if len(filter.SubjectID) > 0 {
-		// TODO: Medivh: filter subject
+		scheduleCondition.RelationSubjectIDs = entity.NullStrings{
+			Strings: []string{filter.SubjectID},
+			Valid:   true,
+		}
 	}
 	schedules, err := GetScheduleModel().QueryUnsafe(ctx, &scheduleCondition)
 	if err != nil {
