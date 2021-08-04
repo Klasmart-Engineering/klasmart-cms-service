@@ -821,5 +821,6 @@ type ScheduleQueryCondition struct {
 	RelationClassIDs   NullStrings
 	RelationTeacherIDs NullStrings
 	RelationStudentIDs NullStrings
+	RelationSubjectIDs NullStrings
 	DeleteAt           sql.NullInt64
 }
