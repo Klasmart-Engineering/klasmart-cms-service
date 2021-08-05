@@ -1750,6 +1750,7 @@ func (ocm OutcomeModel) CollectRelation(oc *entity.Outcome) []*entity.Relation {
 	return relations
 }
 
+// TODO: Kyle: outcome relation data sync check
 func (ocm OutcomeModel) FillRelation(ctx context.Context, oc *entity.Outcome, relations []*entity.Relation) {
 	log.Debug(ctx, "fill relation",
 		log.Any("outcome", oc),
