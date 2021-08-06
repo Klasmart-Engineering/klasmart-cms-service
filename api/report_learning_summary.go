@@ -18,7 +18,8 @@ import (
 // @ID queryLearningSummaryFilterItems
 // @Accept json
 // @Produce json
-// @Param type query string true "filter type" enums(year,week,school,class,teacher,student,subject)
+// @Param summary_type query string true "learning summary type" enums(live_class,assignment)
+// @Param filter_type query string true "filter type" enums(year,week,school,class,teacher,student,subject)
 // @Param year query integer false "year"
 // @Param week_start query integer false "week start timestamp(unit: second)"
 // @Param week_end query integer false "week end timestamp(unit: second)"
@@ -35,10 +36,17 @@ func (s *Server) queryLearningSummaryFilterItems(c *gin.Context) {
 	ctx := c.Request.Context()
 	operator := s.getOperator(c)
 
-	strType := c.Query("type")
-	typo := entity.LearningSummaryFilterType(strType)
-	if !typo.Valid() {
-		log.Error(ctx, "parse learning summary filter: invalid type field", log.String("type", strType))
+	strSummaryType := c.Query("summary_type")
+	summaryType := entity.LearningSummaryType(strSummaryType)
+	if !summaryType.Valid() {
+		log.Error(ctx, "parse learning summary filter: invalid summary type", log.String("summary_type", strSummaryType))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	strFilterType := c.Query("filter_type")
+	filterType := entity.LearningSummaryFilterType(strFilterType)
+	if !filterType.Valid() {
+		log.Error(ctx, "parse learning summary filter: invalid filter type", log.String("filter_type", strFilterType))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -48,7 +56,8 @@ func (s *Server) queryLearningSummaryFilterItems(c *gin.Context) {
 		return
 	}
 	args := entity.QueryLearningSummaryFilterItemsArgs{
-		Type:                  typo,
+		SummaryType:           summaryType,
+		FilterType:            filterType,
 		LearningSummaryFilter: filter,
 	}
 	result, err := model.GetLearningSummaryReportModel().QueryFilterItems(ctx, dbo.MustGetDB(ctx), operator, &args)
