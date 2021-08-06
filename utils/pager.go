@@ -1,9 +1,10 @@
 package utils
 
 import (
+	"strconv"
+
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"strconv"
 )
 
 func GetDboPager(pageStr string, pageSizeStr string) dbo.Pager {
@@ -18,6 +19,19 @@ func GetDboPager(pageStr string, pageSizeStr string) dbo.Pager {
 	if page == 0 || pageSize == 0 {
 		return dbo.NoPager
 	}
+	return dbo.Pager{Page: page, PageSize: pageSize}
+}
+
+func GetDboPagerFromInt(page int, pageSize int) dbo.Pager {
+	if page < 0 || pageSize < 0 {
+		page = constant.DefaultPageIndex
+		pageSize = constant.DefaultPageSize
+	}
+
+	if page == 0 || pageSize == 0 {
+		return dbo.NoPager
+	}
+
 	return dbo.Pager{Page: page, PageSize: pageSize}
 }
 
