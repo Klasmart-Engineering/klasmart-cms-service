@@ -210,8 +210,8 @@ type StudentQueryAssessmentConditions struct {
 	ClassType string `form:"type"`
 
 	OrderBy  string `form:"order_by"`
-	Page     int    `form:"page"`
-	PageSize int    `form:"page_size"`
+	Page     string `form:"page"`
+	PageSize string `form:"page_size"`
 }
 
 type SearchStudentAssessmentsResponse struct {

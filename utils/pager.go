@@ -7,6 +7,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
+// recommended that GET request use
 func GetDboPager(pageStr string, pageSizeStr string) dbo.Pager {
 	page, err := strconv.Atoi(pageStr)
 	if err != nil {
@@ -22,14 +23,15 @@ func GetDboPager(pageStr string, pageSizeStr string) dbo.Pager {
 	return dbo.Pager{Page: page, PageSize: pageSize}
 }
 
+// recommended that POST & application/json request use
 func GetDboPagerFromInt(page int, pageSize int) dbo.Pager {
+	if page == -1 && pageSize == -1 {
+		return dbo.NoPager
+	}
+
 	if page < 0 || pageSize < 0 {
 		page = constant.DefaultPageIndex
 		pageSize = constant.DefaultPageSize
-	}
-
-	if page == 0 || pageSize == 0 {
-		return dbo.NoPager
 	}
 
 	return dbo.Pager{Page: page, PageSize: pageSize}
