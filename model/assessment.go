@@ -256,10 +256,7 @@ func (m *assessmentModel) studentsAssessmentQuery(ctx context.Context,
 		CompleteBetween:              completeBetween,
 		ClassType:                    classType,
 		OrderBy:                      orderBy,
-		Pager: dbo.Pager{
-			Page:     condition.Page,
-			PageSize: condition.PageSize,
-		},
+		Pager:                        utils.GetDboPager(condition.Page, condition.PageSize),
 	}
 	total, err := da.GetAssessmentDA().PageTx(ctx, tx, conditions, &r)
 	if err != nil {
@@ -392,7 +389,7 @@ func (m *assessmentModel) studentsHomeFunStudyQuery(ctx context.Context,
 		CompleteBetween: completeBetween,
 		ClassType:       classType,
 		OrderBy:         orderBy,
-		Pager:           utils.GetDboPagerFromInt(condition.Page, condition.PageSize),
+		Pager:           utils.GetDboPager(condition.Page, condition.PageSize),
 	}
 
 	total, err := da.GetHomeFunStudyDA().PageTx(ctx, tx, conditions, &r)
