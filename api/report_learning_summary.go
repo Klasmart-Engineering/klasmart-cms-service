@@ -49,8 +49,6 @@ func (s *Server) queryLearningSummaryTimeFilter(c *gin.Context) {
 			log.Any("args", args),
 		)
 	}
-
-	// handle error
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -100,6 +98,7 @@ func (s *Server) queryLearningSummaryRemainingFilter(c *gin.Context) {
 				log.String("week_start", strWeekStart),
 			)
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			return
 		}
 	}
 	weekEnd := int64(0)
@@ -112,6 +111,7 @@ func (s *Server) queryLearningSummaryRemainingFilter(c *gin.Context) {
 				log.String("week_end", strWeekEnd),
 			)
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			return
 		}
 	}
 	args := entity.QueryLearningSummaryRemainingFilterArgs{
@@ -129,8 +129,6 @@ func (s *Server) queryLearningSummaryRemainingFilter(c *gin.Context) {
 			log.Any("args", args),
 		)
 	}
-
-	// handle error
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
