@@ -18,6 +18,18 @@ func SliceDeduplication(s []string) []string {
 	return result
 }
 
+func IntSliceDeduplication(s []int) []int {
+	temp := make(map[int]bool)
+	var result []int
+	for i := range s {
+		if !temp[s[i]] {
+			temp[s[i]] = true
+			result = append(result, s[i])
+		}
+	}
+	return result
+}
+
 func StableSliceDeduplication(s []string) []string {
 	temp := make(map[string]bool)
 	var result []string
