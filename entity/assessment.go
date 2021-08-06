@@ -191,11 +191,13 @@ type StudentCollectRelatedIDs struct {
 }
 
 type StudentQueryAssessmentConditions struct {
-	ID        string `form:"assessment_id"`
-	OrgID     string `form:"org_id"`
-	StudentID string `form:"student_id"`
-	TeacherID string `form:"teacher_id"`
-	Status    string `form:"status"`
+	ID          string   `form:"assessment_id"`
+	OrgID       string   `form:"org_id"`
+	StudentID   string   `form:"student_id"`
+	TeacherID   string   `form:"teacher_id"`
+	ScheduleID  string   `form:"schedule_id"`
+	ScheduleIDs []string `form:"schedule_ids"`
+	Status      string   `form:"status"`
 
 	CreatedStartAt int64 `form:"create_at_ge"`
 	CreatedEndAt   int64 `form:"create_at_le"`
@@ -208,8 +210,8 @@ type StudentQueryAssessmentConditions struct {
 	ClassType string `form:"type"`
 
 	OrderBy  string `form:"order_by"`
-	Page     int    `form:"page"`
-	PageSize int    `form:"page_size"`
+	Page     string `form:"page"`
+	PageSize string `form:"page_size"`
 }
 
 type SearchStudentAssessmentsResponse struct {

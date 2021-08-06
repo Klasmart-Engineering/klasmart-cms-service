@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -11,7 +13,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
 )
 
 var (
@@ -165,12 +166,6 @@ func (m *assessmentModel) StudentQuery(ctx context.Context, operator *entity.Ope
 			log.String("assessmentType", assessmentType.String()))
 		return 0, nil, ErrInvalidAssessmentType
 	}
-	if condition.Page < 1 {
-		condition.Page = 1
-	}
-	if condition.PageSize < 1 {
-		condition.PageSize = 10
-	}
 
 	scheduleClassType := assessmentType.ToScheduleClassType()
 	if scheduleClassType.IsHomeFun {
@@ -187,6 +182,10 @@ func (m *assessmentModel) studentsAssessmentQuery(ctx context.Context,
 	studentIDs := entity.NullStrings{
 		Strings: []string{condition.StudentID},
 		Valid:   true,
+	}
+	scheduleIDs := entity.NullStrings{
+		Strings: condition.ScheduleIDs,
+		Valid:   len(condition.ScheduleIDs) > 0,
 	}
 	orgID := entity.NullString{
 		String: condition.OrgID,
@@ -250,16 +249,14 @@ func (m *assessmentModel) studentsAssessmentQuery(ctx context.Context,
 		Status:                       status,
 		StudentIDs:                   studentIDs,
 		TeacherIDs:                   teacherID,
+		ScheduleIDs:                  scheduleIDs,
 		AllowTeacherIDAndStatusPairs: entity.NullAssessmentAllowTeacherIDAndStatusPairs{},
 		CreatedBetween:               createBetween,
 		UpdateBetween:                updateBetween,
 		CompleteBetween:              completeBetween,
 		ClassType:                    classType,
 		OrderBy:                      orderBy,
-		Pager: dbo.Pager{
-			Page:     condition.Page,
-			PageSize: condition.PageSize,
-		},
+		Pager:                        utils.GetDboPager(condition.Page, condition.PageSize),
 	}
 	total, err := da.GetAssessmentDA().PageTx(ctx, tx, conditions, &r)
 	if err != nil {
@@ -327,6 +324,10 @@ func (m *assessmentModel) studentsHomeFunStudyQuery(ctx context.Context,
 		Values: utils.SQLJSONStringArray([]string{condition.TeacherID}),
 		Valid:  condition.TeacherID != "",
 	}
+	scheduleIDs := entity.NullStrings{
+		Strings: condition.ScheduleIDs,
+		Valid:   len(condition.ScheduleIDs) > 0,
+	}
 	orgID := entity.NullString{
 		String: condition.OrgID,
 		Valid:  true,
@@ -382,16 +383,15 @@ func (m *assessmentModel) studentsHomeFunStudyQuery(ctx context.Context,
 		Status:          status,
 		StudentIDs:      studentIDs,
 		TeacherIDs:      teacherIDs,
+		ScheduleIDs:     scheduleIDs,
 		CreatedBetween:  createBetween,
 		UpdateBetween:   updateBetween,
 		CompleteBetween: completeBetween,
 		ClassType:       classType,
 		OrderBy:         orderBy,
-		Pager: dbo.Pager{
-			Page:     condition.Page,
-			PageSize: condition.PageSize,
-		},
+		Pager:           utils.GetDboPager(condition.Page, condition.PageSize),
 	}
+
 	total, err := da.GetHomeFunStudyDA().PageTx(ctx, tx, conditions, &r)
 	if err != nil {
 		log.Error(ctx, "StudentQuery:GetHomeFunStudyDA.QueryTx failed",
