@@ -3,20 +3,17 @@ package model
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"sort"
 	"sync"
-
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 type ILearningSummaryReportModel interface {
-	QueryFilterItems(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryFilterItemsArgs) ([]*entity.QueryLearningSummaryFilterResultItem, error)
+	QueryTimeFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryTimeFilterArgs) ([]*entity.LearningSummaryFilterYear, error)
+	QueryRemainingFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryRemainingFilterArgs) ([]*entity.LearningSummaryFilterSchool, error)
 	QueryLiveClassesSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryLiveClassesSummaryResult, error)
 	QueryAssignmentsSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryAssignmentsSummaryResult, error)
 }
@@ -35,71 +32,12 @@ func GetLearningSummaryReportModel() ILearningSummaryReportModel {
 
 type learningSummaryReportModel struct{}
 
-func (l *learningSummaryReportModel) QueryFilterItems(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryFilterItemsArgs) ([]*entity.QueryLearningSummaryFilterResultItem, error) {
-	// check type equal subject, now only support subject
-	if args.FilterType != entity.LearningSummaryFilterTypeSubject {
-		log.Error(ctx, "query filter items: unsupported filter type in current phase", log.Any("args", args))
-		return nil, errors.New("unsupported filter type in current phase")
-	}
-	// query subject filter items
-	return l.querySubjectFilterItems(ctx, tx, operator, args.LearningSummaryFilter)
+func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryTimeFilterArgs) ([]*entity.LearningSummaryFilterYear, error) {
+	panic("implement me")
 }
 
-func (l *learningSummaryReportModel) querySubjectFilterItems(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) ([]*entity.QueryLearningSummaryFilterResultItem, error) {
-	schedules, err := l.findRelatedSchedules(ctx, tx, operator, entity.LearningSummaryTypeInvalid, filter)
-	if err != nil {
-		log.Error(ctx, "query subject filter items: query schedule failed",
-			log.Err(err),
-			log.Any("filter", filter),
-		)
-		return nil, err
-	}
-	scheduleIDs := make([]string, 0, len(schedules))
-	for _, s := range schedules {
-		scheduleIDs = append(scheduleIDs, s.ID)
-	}
-
-	// batch find subject ids by schedules
-	relations, err := GetScheduleRelationModel().Query(ctx, operator, &da.ScheduleRelationCondition{
-		ScheduleIDs: entity.NullStrings{
-			Strings: scheduleIDs,
-			Valid:   true,
-		},
-		RelationType: sql.NullString{
-			String: string(entity.ScheduleRelationTypeSubject),
-			Valid:  true,
-		},
-	})
-	subjectIDs := make([]string, 0, len(relations))
-	for _, r := range relations {
-		subjectIDs = append(subjectIDs, r.RelationID)
-	}
-	subjectIDs = utils.SliceDeduplicationExcludeEmpty(subjectIDs)
-
-	// batch get subjects
-	subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, subjectIDs)
-	if err != nil {
-		log.Error(ctx, "query subject filter items: batch get subject failed",
-			log.Err(err),
-			log.Strings("subject_ids", subjectIDs),
-			log.Any("filter", filter),
-		)
-		return nil, err
-	}
-
-	// assembly result
-	result := make([]*entity.QueryLearningSummaryFilterResultItem, 0, len(subjects))
-	for _, s := range subjects {
-		if s.Status == external.Inactive {
-			continue
-		}
-		result = append(result, &entity.QueryLearningSummaryFilterResultItem{
-			SubjectID:   s.ID,
-			SubjectName: s.Name,
-		})
-	}
-
-	return result, nil
+func (l *learningSummaryReportModel) QueryRemainingFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryRemainingFilterArgs) ([]*entity.LearningSummaryFilterSchool, error) {
+	panic("implement me")
 }
 
 func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryLiveClassesSummaryResult, error) {

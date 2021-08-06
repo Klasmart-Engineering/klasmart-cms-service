@@ -12,57 +12,119 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
-// @Summary query specified learning summary filter items
-// @Description list specified learning summary filter items
+// @Summary query learning summary time filter
+// @Description  query learning summary time filter
 // @Tags reports/learningSummary
-// @ID queryLearningSummaryFilterItems
+// @ID queryLearningSummaryTimeFilter
 // @Accept json
 // @Produce json
 // @Param summary_type query string true "learning summary type" enums(live_class,assignment)
-// @Param filter_type query string true "filter type" enums(year,week,school,class,teacher,student,subject)
-// @Param year query integer false "year"
-// @Param week_start query integer false "week start timestamp(unit: second)"
-// @Param week_end query integer false "week end timestamp(unit: second)"
-// @Param school_id query string false "school id"
-// @Param class_id query string false "class id"
-// @Param teacher_id query string false "teacher_id"
-// @Param student_id query string false "student_id"
-// @Success 200 {array} entity.QueryLearningSummaryFilterResultItem
+// @Success 200 {array} entity.LearningSummaryFilterYear
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/learning_summary/filters [get]
-func (s *Server) queryLearningSummaryFilterItems(c *gin.Context) {
+// @Router /reports/learning_summary/time_filter [get]
+func (s *Server) queryLearningSummaryTimeFilter(c *gin.Context) {
 	ctx := c.Request.Context()
 	operator := s.getOperator(c)
 
+	// parse args
 	strSummaryType := c.Query("summary_type")
 	summaryType := entity.LearningSummaryType(strSummaryType)
 	if !summaryType.Valid() {
-		log.Error(ctx, "parse learning summary filter: invalid summary type", log.String("summary_type", strSummaryType))
+		log.Error(ctx, "parse learning summary time filter: invalid summary type", log.String("summary_type", strSummaryType))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	strFilterType := c.Query("filter_type")
-	filterType := entity.LearningSummaryFilterType(strFilterType)
-	if !filterType.Valid() {
-		log.Error(ctx, "parse learning summary filter: invalid filter type", log.String("filter_type", strFilterType))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
+	args := entity.QueryLearningSummaryTimeFilterArgs{
+		SummaryType: summaryType,
+		OrgID:       operator.OrgID,
 	}
-	filter, err := s.parseLearningSummaryFilter(c)
+
+	// call business model
+	result, err := model.GetLearningSummaryReportModel().QueryTimeFilter(ctx, dbo.MustGetDB(ctx), operator, &args)
 	if err != nil {
+		log.Error(ctx, "query learning summary time filter failed",
+			log.Err(err),
+			log.Any("args", args),
+		)
+	}
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary query remaining learning summary filter
+// @Description query remaining learning summary filter
+// @Tags reports/learningSummary
+// @ID queryLearningSummaryRemainingFilter
+// @Accept json
+// @Produce json
+// @Param summary_type query string true "learning summary type" enums(live_class,assignment)
+// @Param week_start query integer false "week start timestamp(unit: second)"
+// @Param week_end query integer false "week end timestamp(unit: second)"
+// @Success 200 {array} entity.LearningSummaryFilterSchool
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /reports/learning_summary/remaining_filter [get]
+func (s *Server) queryLearningSummaryRemainingFilter(c *gin.Context) {
+	ctx := c.Request.Context()
+	operator := s.getOperator(c)
+
+	// parse args
+	strSummaryType := c.Query("summary_type")
+	summaryType := entity.LearningSummaryType(strSummaryType)
+	if !summaryType.Valid() {
+		log.Error(ctx, "parse learning summary remaining filter: invalid summary type", log.String("summary_type", strSummaryType))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	args := entity.QueryLearningSummaryFilterItemsArgs{
-		SummaryType:           summaryType,
-		FilterType:            filterType,
-		LearningSummaryFilter: filter,
+	var err error
+	weekStart := int64(0)
+	strWeekStart := c.Query("week_start")
+	if strWeekStart != "" {
+		weekStart, err = strconv.ParseInt(strWeekStart, 10, 64)
+		if err != nil {
+			log.Error(ctx, "query learning summary remaining filter: parse week_start field failed",
+				log.Err(err),
+				log.String("week_start", strWeekStart),
+			)
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			return
+		}
 	}
-	result, err := model.GetLearningSummaryReportModel().QueryFilterItems(ctx, dbo.MustGetDB(ctx), operator, &args)
+	weekEnd := int64(0)
+	strWeekEnd := c.Query("week_end")
+	if strWeekEnd != "" {
+		weekEnd, err = strconv.ParseInt(strWeekEnd, 10, 64)
+		if err != nil {
+			log.Error(ctx, "query learning summary remaining filter: parse week_end field failed",
+				log.Err(err),
+				log.String("week_end", strWeekEnd),
+			)
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			return
+		}
+	}
+	args := entity.QueryLearningSummaryRemainingFilterArgs{
+		SummaryType: summaryType,
+		OrgID:       operator.OrgID,
+		WeekStart:   weekStart,
+		WeekEnd:     weekEnd,
+	}
+
+	// call business model
+	result, err := model.GetLearningSummaryReportModel().QueryRemainingFilter(ctx, dbo.MustGetDB(ctx), operator, &args)
 	if err != nil {
-		log.Error(ctx, "query learning summary filter items: query filter items failed",
+		log.Error(ctx, "query learning summary remaining filter failed",
 			log.Err(err),
 			log.Any("args", args),
 		)
