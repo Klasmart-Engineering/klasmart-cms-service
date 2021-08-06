@@ -1,7 +1,8 @@
 package entity
 
 type QueryLearningSummaryFilterItemsArgs struct {
-	Type LearningSummaryFilterType `json:"type" enums:"year,week,school,class,teacher,student,subject"`
+	SummaryType LearningSummaryType       `json:"summary_type" enums:"live_class,assignment"`
+	FilterType  LearningSummaryFilterType `json:"filter_type" enums:"year,week,school,class,teacher,student,subject"`
 	*LearningSummaryFilter
 }
 
@@ -105,17 +106,17 @@ type AssignmentsSummaryItem struct {
 	CreateAt   int64 `json:"create_at"`
 }
 
-type ReportLearningSummaryType string
+type LearningSummaryType string
 
 const (
-	ReportLearningSummaryTypeInvalid    = "invalid"
-	ReportLearningSummaryTypeLiveClass  = "live_class"
-	ReportLearningSummaryTypeAssignment = "assignment"
+	LearningSummaryTypeInvalid    = "invalid"
+	LearningSummaryTypeLiveClass  = "live_class"
+	LearningSummaryTypeAssignment = "assignment"
 )
 
-func (t ReportLearningSummaryType) Valid() bool {
+func (t LearningSummaryType) Valid() bool {
 	switch t {
-	case ReportLearningSummaryTypeLiveClass, ReportLearningSummaryTypeAssignment:
+	case LearningSummaryTypeLiveClass, LearningSummaryTypeAssignment:
 		return true
 	default:
 		return false

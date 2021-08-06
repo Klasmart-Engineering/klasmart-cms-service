@@ -260,7 +260,7 @@ func (ocm OutcomeModel) Get(ctx context.Context, operator *entity.Operator, outc
 				log.String("outcome_id", outcomeID))
 			return err
 		}
-		ocm.FillRelation(outcome, relations)
+		ocm.FillRelation(ctx, outcome, relations)
 
 		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
 			OutcomeAncestor: sql.NullString{String: outcome.AncestorID, Valid: true},
@@ -606,7 +606,7 @@ func (ocm OutcomeModel) search(ctx context.Context, op *entity.Operator, tx *dbo
 		outcomeRelations[relations[i].MasterID] = append(outcomeRelations[relations[i].MasterID], relations[i])
 	}
 	for _, outcome := range outcomes {
-		ocm.FillRelation(outcome, outcomeRelations[outcome.ID])
+		ocm.FillRelation(ctx, outcome, outcomeRelations[outcome.ID])
 		outcome.EditingOutcome = lockedChildrenMap[outcome.ID]
 	}
 
@@ -1469,7 +1469,7 @@ func (ocm OutcomeModel) fillRelation(ctx context.Context, operator *entity.Opera
 					break
 				}
 			}
-			ocm.FillRelation(outcomes[j], outcomeRelations)
+			ocm.FillRelation(ctx, outcomes[j], outcomeRelations)
 		}
 	}
 	return nil
@@ -1750,38 +1750,12 @@ func (ocm OutcomeModel) CollectRelation(oc *entity.Outcome) []*entity.Relation {
 	return relations
 }
 
-func (ocm OutcomeModel) FillRelation(oc *entity.Outcome, relations []*entity.Relation) {
-	if len(relations) == 0 {
-		program := strings.TrimSpace(oc.Program)
-		if program != "" {
-			oc.Programs = strings.Split(program, entity.JoinComma)
-		}
-		subject := strings.TrimSpace(oc.Subject)
-		if subject != "" {
-			oc.Subjects = strings.Split(subject, entity.JoinComma)
-		}
-
-		category := strings.TrimSpace(oc.Developmental)
-		if category != "" {
-			oc.Categories = strings.Split(category, entity.JoinComma)
-		}
-
-		subcategories := strings.TrimSpace(oc.Skills)
-		if subcategories != "" {
-			oc.Subcategories = strings.Split(subcategories, entity.JoinComma)
-		}
-
-		grade := strings.TrimSpace(oc.Grade)
-		if grade != "" {
-			oc.Grades = strings.Split(grade, entity.JoinComma)
-		}
-
-		age := strings.TrimSpace(oc.Age)
-		if age != "" {
-			oc.Ages = strings.Split(age, entity.JoinComma)
-		}
-		return
-	}
+// TODO: Kyle: outcome relation data sync check
+func (ocm OutcomeModel) FillRelation(ctx context.Context, oc *entity.Outcome, relations []*entity.Relation) {
+	log.Debug(ctx, "fill relation",
+		log.Any("outcome", oc),
+		log.Any("relations", relations),
+	)
 	for i := range relations {
 		switch relations[i].RelationType {
 		case entity.ProgramType:
@@ -1800,21 +1774,33 @@ func (ocm OutcomeModel) FillRelation(oc *entity.Outcome, relations []*entity.Rel
 	}
 	if len(oc.Programs) > 0 {
 		oc.Program = strings.Join(oc.Programs, entity.JoinComma)
+	} else {
+		oc.Programs = strings.Split(oc.Program, entity.JoinComma)
 	}
 	if len(oc.Subjects) > 0 {
 		oc.Subject = strings.Join(oc.Subjects, entity.JoinComma)
+	} else {
+		oc.Subjects = strings.Split(oc.Subject, entity.JoinComma)
 	}
 	if len(oc.Categories) > 0 {
 		oc.Developmental = strings.Join(oc.Categories, entity.JoinComma)
+	} else {
+		oc.Categories = strings.Split(oc.Developmental, entity.JoinComma)
 	}
 	if len(oc.Subcategories) > 0 {
 		oc.Skills = strings.Join(oc.Subcategories, entity.JoinComma)
+	} else {
+		oc.Subcategories = strings.Split(oc.Skills, entity.JoinComma)
 	}
 	if len(oc.Grades) > 0 {
 		oc.Grade = strings.Join(oc.Grades, entity.JoinComma)
+	} else {
+		oc.Grades = strings.Split(oc.Grade, entity.JoinComma)
 	}
 	if len(oc.Ages) > 0 {
 		oc.Age = strings.Join(oc.Ages, entity.JoinComma)
+	} else {
+		oc.Ages = strings.Split(oc.Age, entity.JoinComma)
 	}
 }
 func (ocm OutcomeModel) UpdateOutcome(data *entity.Outcome, oc *entity.Outcome) {
