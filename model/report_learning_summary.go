@@ -470,6 +470,10 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 			Strings: scheduleIDs,
 			Valid:   true,
 		},
+		StudentIDs: entity.NullStrings{
+			Strings: []string{filter.StudentID},
+			Valid:   true,
+		},
 	}
 	if filter.WeekStart > 0 && filter.WeekEnd > 0 {
 		cond.CompleteBetween = entity.NullTimeRange{
@@ -601,7 +605,7 @@ func (l *learningSummaryReportModel) assemblyAssignmentsSummaryResult(filter *en
 				continue
 			}
 			item := entity.AssignmentsSummaryItem{
-				Type:            entity.AssessmentTypeHomeFunStudy,
+				Type:            entity.AssessmentTypeStudy,
 				Status:          assessment.Status,
 				AssessmentTitle: assessment.Title,
 				LessonPlanName:  lessonPlanNameMap[s.LessonPlanID],
