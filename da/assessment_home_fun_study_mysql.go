@@ -28,13 +28,15 @@ type homeFunStudyDA struct {
 }
 
 type QueryHomeFunStudyCondition struct {
-	IDs         entity.NullStrings           `json:"ids"`
-	OrgID       entity.NullString            `json:"org_id"`
-	ScheduleID  entity.NullString            `json:"schedule_id"`
-	ScheduleIDs entity.NullStrings           `json:"schedule_ids"`
-	TeacherIDs  utils.NullSQLJSONStringArray `json:"teacher_ids"`
-	StudentIDs  entity.NullStrings           `json:"student_ids"`
-	Status      entity.NullAssessmentStatus  `json:"status"`
+	IDs              entity.NullStrings           `json:"ids"`
+	OrgID            entity.NullString            `json:"org_id"`
+	ScheduleID       entity.NullString            `json:"schedule_id"`
+	ScheduleIDs      entity.NullStrings           `json:"schedule_ids"`
+	TeacherIDs       utils.NullSQLJSONStringArray `json:"teacher_ids"`
+	SearchTeacherIDs utils.NullSQLJSONStringArray `json:"search_teacher_ids"`
+	StudentIDs       entity.NullStrings           `json:"student_ids"`
+	SearchStudentIDs entity.NullStrings           `json:"search_student_ids"`
+	Status           entity.NullAssessmentStatus  `json:"status"`
 
 	CreatedBetween  entity.NullTimeRange `json:"created_between"`
 	UpdateBetween   entity.NullTimeRange `json:"update_between"`
@@ -67,24 +69,37 @@ func (c *QueryHomeFunStudyCondition) GetConditions() ([]string, []interface{}) {
 		b.Appendf("schedule_id in (?)", c.ScheduleIDs.Strings)
 	}
 
-	if c.TeacherIDs.Valid || c.StudentIDs.Valid {
+	if c.SearchTeacherIDs.Valid || c.SearchStudentIDs.Valid {
 		flag := false
 		t2 := NewSQLTemplate("")
-		if c.TeacherIDs.Valid && len(c.TeacherIDs.Values) > 0 {
-			teacherIDs := utils.SliceDeduplication(c.TeacherIDs.Values)
+		if c.SearchTeacherIDs.Valid && len(c.SearchTeacherIDs.Values) > 0 {
+			teacherIDs := utils.SliceDeduplication(c.SearchTeacherIDs.Values)
 			for _, teacherID := range teacherIDs {
 				t2.Appendf("json_contains(teacher_ids, json_array(?))", teacherID)
 				flag = true
 			}
 		}
-		if c.StudentIDs.Valid && len(c.StudentIDs.Strings) > 0 {
-			t2.Appendf("student_id in (?)", c.StudentIDs.Strings)
+		if c.SearchStudentIDs.Valid && len(c.SearchStudentIDs.Strings) > 0 {
+			t2.Appendf("student_id in (?)", c.SearchStudentIDs.Strings)
 			flag = true
 		}
 		if !flag {
 			return FalseSQLTemplate().DBOConditions()
 		}
 		b.AppendResult(t2.Or())
+	}
+
+	if c.TeacherIDs.Valid {
+		t := NewSQLTemplate("")
+		teacherIDs := utils.SliceDeduplication(c.SearchTeacherIDs.Values)
+		for _, teacherID := range teacherIDs {
+			t.Appendf("json_contains(teacher_ids, json_array(?))", teacherID)
+		}
+		b.AppendResult(t.Or())
+	}
+
+	if c.StudentIDs.Valid {
+		b.Appendf("student_id in (?)", c.StudentIDs.Strings)
 	}
 
 	if c.Status.Valid {
