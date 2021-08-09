@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -11,7 +13,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
 )
 
 var (
@@ -426,7 +427,7 @@ func (m *assessmentModel) homeFunStudyToStudentAssessments(ctx context.Context,
 			ScheduleID: r[i].ScheduleID,
 			Comment:    r[i].AssessComment,
 			Score:      int(r[i].AssessScore),
-			FeedbackID: r[i].AssessFeedbackID,
+			FeedbackID: r[i].LatestFeedbackID,
 			StudentID:  studentID,
 			TeacherIDs: teacherIDs,
 			IsHomeFun:  true,
