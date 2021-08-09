@@ -7,8 +7,10 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sort"
 	"sync"
+	"time"
 )
 
 type ILearningSummaryReportModel interface {
@@ -30,10 +32,92 @@ func GetLearningSummaryReportModel() ILearningSummaryReportModel {
 	return learningSummaryReportModelInstance
 }
 
-type learningSummaryReportModel struct{}
+type learningSummaryReportModel struct {
+	assessmentBase
+}
 
 func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryTimeFilterArgs) ([]*entity.LearningSummaryFilterYear, error) {
-	panic("implement me")
+	var result []*entity.LearningSummaryFilterYear
+
+	m := make(map[int][][2]int64)
+	switch args.SummaryType {
+	case entity.LearningSummaryTypeLiveClass:
+		schedules, err := l.findRelatedSchedules(ctx, tx, operator, entity.LearningSummaryTypeLiveClass, &entity.LearningSummaryFilter{})
+		if err != nil {
+			log.Error(ctx, "query time filter: find related schedules failed",
+				log.Err(err),
+				log.Any("args", args),
+			)
+			return nil, err
+		}
+		for _, s := range schedules {
+			year := time.Unix(s.StartAt, 0).Year()
+			weekStart, weekEnd := utils.FindWeekTimeRange(s.StartAt, time.Local)
+			m[year] = append(m[year], [2]int64{weekStart, weekEnd})
+		}
+	case entity.LearningSummaryTypeAssignment:
+		assessments, err := l.queryUnifiedAssessments(ctx, tx, operator, &entity.QueryUnifiedAssessmentArgs{
+			Types: entity.NullAssessmentTypes{
+				Value: []entity.AssessmentType{entity.AssessmentTypeStudy, entity.AssessmentTypeHomeFunStudy},
+				Valid: true,
+			},
+			Status: entity.NullAssessmentStatus{
+				Value: entity.AssessmentStatusComplete,
+				Valid: true,
+			},
+			OrgID: entity.NullString{
+				String: operator.OrgID,
+				Valid:  true,
+			},
+		})
+		if err != nil {
+			log.Error(ctx, "query time filter: query unified assessments failed",
+				log.Err(err),
+				log.Any("args", args),
+			)
+			return nil, err
+		}
+		for _, a := range assessments {
+			year := time.Unix(a.CompleteTime, 0).Year()
+			weekStart, weekEnd := utils.FindWeekTimeRange(a.CompleteTime, time.Local)
+			m[year] = append(m[year], [2]int64{weekStart, weekEnd})
+		}
+	}
+
+	// fill result
+	for year, weeks := range m {
+		item := entity.LearningSummaryFilterYear{Year: year}
+		weeks = l.deduplicationAndSortWeeks(weeks)
+		for _, w := range weeks {
+			item.Weeks = append(item.Weeks, entity.LearningSummaryFilterWeek{
+				WeekStart: w[0],
+				WeekEnd:   w[1],
+			})
+		}
+		result = append(result, &item)
+	}
+
+	// sort result
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Year < result[j].Year
+	})
+
+	return result, nil
+}
+
+func (l *learningSummaryReportModel) deduplicationAndSortWeeks(weeks [][2]int64) [][2]int64 {
+	deduplicationMap := make(map[[2]int64]struct{}, len(weeks))
+	deduplicationItems := make([][2]int64, 0, len(weeks))
+	for _, w := range weeks {
+		if _, ok := deduplicationMap[w]; !ok {
+			deduplicationMap[w] = struct{}{}
+			deduplicationItems = append(deduplicationItems, w)
+		}
+	}
+	sort.Slice(deduplicationItems, func(i, j int) bool {
+		return deduplicationItems[i][0] < deduplicationItems[j][0]
+	})
+	return deduplicationItems
 }
 
 func (l *learningSummaryReportModel) QueryRemainingFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryRemainingFilterArgs) ([]*entity.LearningSummaryFilterSchool, error) {

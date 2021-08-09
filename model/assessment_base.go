@@ -1452,3 +1452,92 @@ func (m *assessmentBase) sortedByLessonMaterialIDs(items []*entity.AssessmentLes
 		return idI < idJ
 	})
 }
+
+func (m *assessmentBase) queryUnifiedAssessments(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryUnifiedAssessmentArgs) ([]*entity.UnifiedAssessment, error) {
+	var result []*entity.UnifiedAssessment
+
+	// query base assessment
+	var classTypes entity.NullScheduleClassTypes
+	if args.Types.Valid {
+		if len(args.Types.Value) > 0 {
+			for _, c := range args.Types.Value {
+				if c.ToScheduleClassType().IsHomeFun {
+					continue
+				}
+				classTypes.Value = append(classTypes.Value)
+			}
+			if len(classTypes.Value) > 0 {
+				classTypes.Valid = true
+			}
+		} else {
+			classTypes.Valid = true
+		}
+	}
+	assessmentCond := da.QueryAssessmentConditions{
+		IDs:         args.IDs,
+		OrgID:       args.OrgID,
+		Status:      args.Status,
+		ScheduleIDs: args.ScheduleIDs,
+		ClassTypes:  classTypes,
+	}
+	var assessments []*entity.Assessment
+	if err := da.GetAssessmentDA().Query(ctx, &assessmentCond, &assessments); err != nil {
+		return nil, err
+	}
+	for _, a := range assessments {
+		result = append(result, &entity.UnifiedAssessment{
+			ID:           a.ID,
+			ScheduleID:   a.ScheduleID,
+			Title:        a.Title,
+			CompleteTime: a.CompleteTime,
+			Status:       a.Status,
+			CreateAt:     a.CreateAt,
+			UpdateAt:     a.UpdateAt,
+			DeleteAt:     a.DeleteAt,
+		})
+	}
+
+	// check whether include home fun study
+	includeHomeFunStudy := true
+	if args.Types.Valid {
+		hasHomeFunStudyType := false
+		for _, c := range args.Types.Value {
+			if c.ToScheduleClassType().IsHomeFun {
+				hasHomeFunStudyType = true
+				break
+			}
+		}
+		if !hasHomeFunStudyType {
+			includeHomeFunStudy = false
+		}
+	}
+	if !includeHomeFunStudy {
+		return result, nil
+	}
+
+	// query home fun study
+	homeFunStudyCond := da.QueryHomeFunStudyCondition{
+		IDs:         args.IDs,
+		OrgID:       args.OrgID,
+		ScheduleIDs: args.ScheduleIDs,
+		Status:      args.Status,
+	}
+	var homeFunStudies []*entity.HomeFunStudy
+	if err := da.GetHomeFunStudyDA().Query(ctx, &homeFunStudyCond, &homeFunStudies); err != nil {
+		return nil, err
+	}
+	for _, a := range homeFunStudies {
+		result = append(result, &entity.UnifiedAssessment{
+			ID:           a.ID,
+			ScheduleID:   a.ScheduleID,
+			Title:        a.Title,
+			CompleteTime: a.CompleteAt,
+			Status:       a.Status,
+			CreateAt:     a.CreateAt,
+			UpdateAt:     a.UpdateAt,
+			DeleteAt:     a.DeleteAt,
+		})
+	}
+
+	return result, nil
+}

@@ -45,8 +45,14 @@ func (a AssessmentType) Valid() bool {
 	}
 	return false
 }
+
 func (a AssessmentType) String() string {
 	return string(a)
+}
+
+type NullAssessmentTypes struct {
+	Value []AssessmentType
+	Valid bool
 }
 
 type Assessment struct {
@@ -230,4 +236,23 @@ type H5PRoomComment struct {
 	TeacherID  string `json:"teacher_id"`
 	GivenName  string `json:"given_name"`
 	FamilyName string `json:"family_name"`
+}
+
+type UnifiedAssessment struct {
+	ID           string           `json:"id"`
+	ScheduleID   string           `json:"schedule_id"`
+	Title        string           `json:"title"`
+	CompleteTime int64            `json:"complete_time"`
+	Status       AssessmentStatus `json:"status"`
+	CreateAt     int64            `json:"create_at"`
+	UpdateAt     int64            `json:"update_at"`
+	DeleteAt     int64            `json:"delete_at"`
+}
+
+type QueryUnifiedAssessmentArgs struct {
+	Types       NullAssessmentTypes  `json:"types"`
+	Status      NullAssessmentStatus `json:"status"`
+	OrgID       NullString           `json:"org_id"`
+	IDs         NullStrings          `json:"ids"`
+	ScheduleIDs NullStrings          `json:"schedule_ids"`
 }
