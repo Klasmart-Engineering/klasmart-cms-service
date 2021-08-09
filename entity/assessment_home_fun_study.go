@@ -14,6 +14,7 @@ type HomeFunStudy struct {
 	Status           AssessmentStatus         `gorm:"column:status;type:varchar(128)" json:"status"`
 	DueAt            int64                    `gorm:"column:due_at;type:bigint" json:"due_at"`
 	CompleteAt       int64                    `gorm:"column:complete_at;type:bigint" json:"complete_at"`
+	CompleteUserID   string                   `gorm:"column:complete_user_id;type:varchar(64)" json:"complete_user_id"`
 	LatestFeedbackID string                   `gorm:"column:latest_feedback_id;type:varchar(64)" json:"latest_feedback_id"`
 	LatestFeedbackAt int64                    `gorm:"column:latest_feedback_at;type:bigint" json:"latest_feedback_at"`
 	AssessFeedbackID string                   `gorm:"column:assess_feedback_id;type:varchar(64)" json:"assess_feedback_id"`
