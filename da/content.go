@@ -417,7 +417,7 @@ func (cd *DBContentDA) BatchUpdateContentPath(ctx context.Context, tx *dbo.DBCon
 	if len(cids) < 1 {
 		return nil
 	}
-	err := tx.Where("id IN (?)", cids).Updates(entity.Content{DirPath: dirPath}).Error
+	err := tx.Model(entity.Content{}).Where("id IN (?)", cids).Updates(entity.Content{DirPath: dirPath}).Error
 	if err != nil {
 		return err
 	}
