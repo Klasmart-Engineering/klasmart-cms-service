@@ -187,7 +187,6 @@ func (s Server) registeRoute() {
 	folders := s.engine.Group("/v1/folders")
 	{
 		folders.POST("", s.mustLogin, s.createFolder)
-		folders.POST("/items", s.mustLogin, s.addFolderItem)
 		folders.DELETE("/items/:item_id", s.mustLogin, s.removeFolderItem)
 		folders.DELETE("/items", s.mustLogin, s.removeFolderItemBulk)
 		folders.PUT("/items/details/:item_id", s.mustLogin, s.updateFolderItem)
