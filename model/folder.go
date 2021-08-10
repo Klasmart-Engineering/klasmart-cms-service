@@ -353,7 +353,6 @@ func (f *FolderModel) fetchSharedContentIDs(ctx context.Context, folders []*enti
 
 func (f *FolderModel) removeSharedFolderAndAuthedContent(ctx context.Context, tx *dbo.DBContext,
 	req *entity.HandleSharedFolderAndAuthedContentRequest, operator *entity.Operator) error {
-
 	//Remove folder share records
 	for folderID, pendingOrgList := range req.SharedFolderPendingOrgsMap {
 		if len(pendingOrgList.DeleteOrgs) > 0 {
@@ -374,14 +373,15 @@ func (f *FolderModel) removeSharedFolderAndAuthedContent(ctx context.Context, tx
 	//fetch all folders has content
 	for i := range req.ShareFolders {
 		//Judge if folder should delete share org
-		if len(req.SharedFolderPendingOrgsMap[req.ShareFolders[i].ID].DeleteOrgs) < 1 {
+		deleteOrgs := req.SharedFolderPendingOrgsMap[req.ShareFolders[i].ID].DeleteOrgs
+		if len(deleteOrgs) < 1 {
 			continue
 		}
 		//remove authed content when it should be deleted
-		if len(req.ContentFolderMap.ContentFolderMap[req.ShareFolders[i].ID]) > 0 {
-			contentIDs := req.ContentFolderMap.ContentFolderMap[req.ShareFolders[i].ID]
+		contentIDs := req.ContentFolderMap.ContentFolderMap[req.ShareFolders[i].ID]
+		if len(contentIDs) > 0 {
 			err := GetAuthedContentRecordsModel().BatchDelete(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
-				OrgIDs:     req.SharedFolderPendingOrgsMap[req.ShareFolders[i].ID].DeleteOrgs,
+				OrgIDs:     deleteOrgs,
 				FolderIDs:  []string{req.ShareFolders[i].ID},
 				ContentIDs: contentIDs,
 			}, operator)
