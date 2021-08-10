@@ -1556,8 +1556,7 @@ func (f *FolderModel) batchMoveItem(ctx context.Context,
 		return err
 	}
 
-	log.Warn(ctx, "invalid folder file type", log.Any("folderTypeWithIDList", folderTypeWithIDList), log.Any("operator", operator))
-	return ErrInvalidFolderItemType
+	return nil
 }
 
 func (f *FolderModel) hasFolderFileItem(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, partition entity.FolderPartition, owner string, link string) (bool, error) {
