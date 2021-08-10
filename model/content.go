@@ -226,6 +226,9 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 		//更新content的path
 		err := cm.getContentPath(ctx, tx, content, user)
 		if err != nil {
+			log.Error(ctx, "getContentPath failed",
+				log.Any("content", content),
+				log.Any("user", user))
 			return err
 		}
 	}
@@ -547,7 +550,6 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 }
 
 func (cm *ContentModel) BatchUpdateContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, path entity.Path) error {
-
 	err := da.GetContentDA().BatchUpdateContentPath(ctx, tx, cids, path)
 	if err != nil {
 		log.Error(ctx, "update content path failed", log.Err(err))

@@ -224,24 +224,31 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 
 	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		//5.Remove folder share records & Remove content auth records & Get contents from folders
-		err := f.removeSharedFolderAndAuthedContent(ctx, tx,
-			&entity.HandleSharedFolderAndAuthedContentRequest{
-				SharedFolderPendingOrgsMap: sharedFolderPendingOrgsMap,
-				ShareFolders:               folders,
-				ContentFolderMap:           contentFolderMap,
-			}, operator)
+		req := &entity.HandleSharedFolderAndAuthedContentRequest{
+			SharedFolderPendingOrgsMap: sharedFolderPendingOrgsMap,
+			ShareFolders:               folders,
+			ContentFolderMap:           contentFolderMap,
+		}
+		err := f.removeSharedFolderAndAuthedContent(ctx, tx, req, operator)
 		if err != nil {
+			log.Error(ctx, "removeSharedFolderAndAuthedContent failed",
+				log.Err(err),
+				log.Any("req", req))
 			return err
 		}
 		log.Info(ctx, "allContentIDs",
 			log.Any("allContentIDs", contentFolderMap))
 		//6.Add folder share records & authed contents
-		err = f.addSharedFolderAndAuthedContent(ctx, tx, &entity.HandleSharedFolderAndAuthedContentRequest{
+		req2 := &entity.HandleSharedFolderAndAuthedContentRequest{
 			SharedFolderPendingOrgsMap: sharedFolderPendingOrgsMap,
 			ShareFolders:               folders,
 			ContentFolderMap:           contentFolderMap,
-		}, operator)
+		}
+		err = f.addSharedFolderAndAuthedContent(ctx, tx, req2, operator)
 		if err != nil {
+			log.Error(ctx, "removeSharedFolderAndAuthedContent failed",
+				log.Err(err),
+				log.Any("req2", req2))
 			return err
 		}
 		return nil
@@ -554,13 +561,18 @@ func (f *FolderModel) RemoveItemBulk(ctx context.Context, fids []string, operato
 		//remove folder
 		err = f.batchRemoveItemInternal(ctx, tx, folders)
 		if err != nil {
-			log.Error(ctx, "batchRemoveItemInternal failed", log.Err(err), log.Any("folder", folders))
+			log.Error(ctx, "batchRemoveItemInternal failed",
+				log.Err(err),
+				log.Any("folder", folders))
 			return err
 		}
 
 		//repair folder items
 		err = f.batchRepairFolderItemsCountByIDs(ctx, tx, parentIDs)
 		if err != nil {
+			log.Error(ctx, "batchRepairFolderItemsCountByIDs failed",
+				log.Err(err),
+				log.Strings("parentIDs", parentIDs))
 			return err
 		}
 		return nil
@@ -574,10 +586,16 @@ func (f *FolderModel) MoveItemBulk(ctx context.Context, req entity.MoveFolderIDB
 		return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 			distFolder, err := f.getFolderMaybeRoot(ctx, tx, req.Dist, req.OwnerType, req.Partition, operator)
 			if err != nil {
+				log.Error(ctx, "getFolderMaybeRoot failed",
+					log.Err(err),
+					log.Any("req", req))
 				return err
 			}
 			err = f.batchMoveItem(ctx, tx, req.FolderInfo[start:end], req.OwnerType, req.Partition, distFolder, operator)
 			if err != nil {
+				log.Error(ctx, "batchMoveItem failed",
+					log.Err(err),
+					log.Any("req", req))
 				return err
 			}
 			return nil
@@ -797,6 +815,10 @@ func (f *FolderModel) checkMoveFolder(ctx context.Context, folder *entity.Folder
 	//check params
 	err := f.checkMoveItem(ctx, folder, distFolder)
 	if err != nil {
+		log.Error(ctx, "check move item failed",
+			log.Err(err),
+			log.Any("folder", folder),
+			log.Any("dist", distFolder))
 		return err
 	}
 	return nil
@@ -856,6 +878,8 @@ func (f *FolderModel) checkHeadquarterRegionOrganizations(ctx context.Context, o
 
 	regionOrgIDs, err := GetOrganizationRegionModel().GetOrganizationByHeadquarter(ctx, dbo.MustGetDB(ctx), operator.OrgID)
 	if err != nil {
+		log.Error(ctx, "GetOrganizationByHeadquarter failed",
+			log.Err(err))
 		return err
 	}
 	regionOrgMap := make(map[string]bool)
@@ -1149,6 +1173,9 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context,
 	folderIDs[len(folderIDs)-1] = distFolder.ID
 	err = f.updateMoveFolderItemCount(ctx, tx, folderIDs)
 	if err != nil {
+		log.Error(ctx, "updateMoveFolderItemCount failed",
+			log.Err(err),
+			log.Strings("folderIDs", folderIDs))
 		return err
 	}
 
@@ -1162,12 +1189,19 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext,
 
 	folder, err := f.getFolder(ctx, tx, fid)
 	if err != nil {
+		log.Error(ctx, "getFolder failed",
+			log.Err(err),
+			log.String("fid", fid))
 		return err
 	}
 	//检查参数是否有问题
 	//check params
 	err = f.checkMoveFolder(ctx, folder, distFolder)
 	if err != nil {
+		log.Error(ctx, "checkMoveFolder failed",
+			log.Err(err),
+			log.Any("folder", folder),
+			log.Any("distFolder", distFolder))
 		return err
 	}
 
@@ -1175,6 +1209,9 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext,
 	//get all items from the folder
 	descendantFolderIDs, err := f.getDescendantItemsIDs(ctx, folder)
 	if err != nil {
+		log.Error(ctx, "getDescendantItemsIDs failed",
+			log.Err(err),
+			log.Any("folder", folder))
 		return err
 	}
 
@@ -1229,6 +1266,10 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext,
 	//update item count
 	err = f.updateMoveFolderItemCount(ctx, tx, []string{originParentID, distFolder.ID})
 	if err != nil {
+		log.Error(ctx, "updateMoveFolderItemCount failed",
+			log.Err(err),
+			log.String("folder", originParentID),
+			log.String("distFolder.ID", distFolder.ID))
 		return err
 	}
 
@@ -1261,6 +1302,10 @@ func (f *FolderModel) handleMoveFolders(ctx context.Context, tx *dbo.DBContext,
 	for i := range folders {
 		err = f.checkMoveFolder(ctx, folders[i], distFolder)
 		if err != nil {
+			log.Error(ctx, "checkMoveFolder failed",
+				log.Err(err),
+				log.Any("folder", folders[i]),
+				log.Any("distFolder", distFolder))
 			return err
 		}
 	}
@@ -1269,6 +1314,9 @@ func (f *FolderModel) handleMoveFolders(ctx context.Context, tx *dbo.DBContext,
 	//get all items from the folder
 	descendantFolderMap, err := f.getDescendantItemsMapByFolders(ctx, folders)
 	if err != nil {
+		log.Error(ctx, "listContentInFolder failed",
+			log.Err(err),
+			log.Any("folders", folders))
 		return err
 	}
 
