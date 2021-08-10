@@ -285,7 +285,7 @@ type Content struct {
 
 	CopySourceID string `gorm:"type:varchar(50);column:copy_source_id"`
 
-	DirPath string `gorm:"type:varchar(2048);column:dir_path"`
+	DirPath Path `gorm:"type:varchar(2048);column:dir_path"`
 
 	CreateAt int64 `gorm:"type:bigint;NOT NULL;column:create_at"`
 	UpdateAt int64 `gorm:"type:bigint;NOT NULL;column:update_at"`

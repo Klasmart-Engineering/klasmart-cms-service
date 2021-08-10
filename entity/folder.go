@@ -15,9 +15,8 @@ const (
 	OwnerTypeOrganization OwnerType = 1
 	OwnerTypeUser         OwnerType = 2
 
-	FolderFileTypeContent    FolderFileType = "content"
-	FolderFileTypeFolder     FolderFileType = "folder"
-	FolderFileTypeFolderItem FolderFileType = "item"
+	FolderFileTypeContent FolderFileType = "content"
+	FolderFileTypeFolder  FolderFileType = "folder"
 
 	//RootAssetsFolderName FolderPartition = "assets"
 	//RootMaterialsAndPlansFolderName FolderPartition = "plans and materials"
@@ -33,14 +32,11 @@ func NewFolderFileType(fileType string) FolderFileType {
 		return FolderFileTypeContent
 	case "folder":
 		return FolderFileTypeFolder
-	case "item":
-		return FolderFileTypeFolderItem
 	}
 	return FolderFileTypeContent
 }
 func (f FolderFileType) Valid() bool {
-	if f == FolderFileTypeContent || f == FolderFileTypeFolder ||
-		f == FolderFileTypeFolderItem {
+	if f == FolderFileTypeContent || f == FolderFileTypeFolder {
 		return true
 	}
 	return false
@@ -173,6 +169,22 @@ type ShareFoldersDeleteAddOrgList struct {
 	DeleteOrgs []string
 	AddOrgs    []string
 }
+type ReplaceLinkedContentPathRequest struct {
+	FromFolder *FolderItem
+	DistFolder *FolderItem
+	ContentIDs []string
+}
+
+type HandleSharedFolderAndAuthedContentRequest struct {
+	SharedFolderPendingOrgsMap map[string]*ShareFoldersDeleteAddOrgList
+	ShareFolders               []*FolderItem
+	ContentFolderMap           *ContentFolderMap
+}
+
+type ContentFolderMap struct {
+	ContentFolderMap map[string][]string
+	AllContentIDs    []string
+}
 
 type FolderIdWithFileType struct {
 	ID             string         `json:"id"`
@@ -211,6 +223,11 @@ type UpdateFolderItemsCountRequest struct {
 	Count int
 }
 
+type FolderDescendantItemsAndPath struct {
+	DescendantFoldersMap  map[string][]*FolderItem
+	FolderChildrenPathMap map[string]Path
+}
+
 type Path string
 
 func (p Path) AsParentPath() string {
@@ -240,6 +257,9 @@ func (p Path) Parents() []string {
 }
 func (p Path) String() string {
 	return string(p)
+}
+func (p Path) Equal(p0 Path) bool {
+	return string(p) == string(p0)
 }
 
 func (p Path) IsChild(f string) bool {
