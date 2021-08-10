@@ -250,9 +250,10 @@ type UnifiedAssessment struct {
 }
 
 type QueryUnifiedAssessmentArgs struct {
-	Types       NullAssessmentTypes  `json:"types"`
-	Status      NullAssessmentStatus `json:"status"`
-	OrgID       NullString           `json:"org_id"`
-	IDs         NullStrings          `json:"ids"`
-	ScheduleIDs NullStrings          `json:"schedule_ids"`
+	Types           NullAssessmentTypes  `json:"types"`
+	Status          NullAssessmentStatus `json:"status"`
+	OrgID           NullString           `json:"org_id"`
+	IDs             NullStrings          `json:"ids"`
+	ScheduleIDs     NullStrings          `json:"schedule_ids"`
+	CompleteBetween NullTimeRange        `json:"complete_between"`
 }

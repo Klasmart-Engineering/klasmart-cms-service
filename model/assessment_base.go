@@ -1474,11 +1474,12 @@ func (m *assessmentBase) queryUnifiedAssessments(ctx context.Context, tx *dbo.DB
 		}
 	}
 	assessmentCond := da.QueryAssessmentConditions{
-		IDs:         args.IDs,
-		OrgID:       args.OrgID,
-		Status:      args.Status,
-		ScheduleIDs: args.ScheduleIDs,
-		ClassTypes:  classTypes,
+		IDs:             args.IDs,
+		OrgID:           args.OrgID,
+		Status:          args.Status,
+		ScheduleIDs:     args.ScheduleIDs,
+		ClassTypes:      classTypes,
+		CompleteBetween: args.CompleteBetween,
 	}
 	var assessments []*entity.Assessment
 	if err := da.GetAssessmentDA().Query(ctx, &assessmentCond, &assessments); err != nil {
@@ -1517,10 +1518,11 @@ func (m *assessmentBase) queryUnifiedAssessments(ctx context.Context, tx *dbo.DB
 
 	// query home fun study
 	homeFunStudyCond := da.QueryHomeFunStudyCondition{
-		IDs:         args.IDs,
-		OrgID:       args.OrgID,
-		ScheduleIDs: args.ScheduleIDs,
-		Status:      args.Status,
+		IDs:             args.IDs,
+		OrgID:           args.OrgID,
+		ScheduleIDs:     args.ScheduleIDs,
+		Status:          args.Status,
+		CompleteBetween: args.CompleteBetween,
 	}
 	var homeFunStudies []*entity.HomeFunStudy
 	if err := da.GetHomeFunStudyDA().Query(ctx, &homeFunStudyCond, &homeFunStudies); err != nil {
