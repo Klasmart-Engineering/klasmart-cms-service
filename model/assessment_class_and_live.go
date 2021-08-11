@@ -242,13 +242,13 @@ func (m *classAndLiveAssessmentModel) PrepareAddArgs(ctx context.Context, tx *db
 
 	// check class type
 	if schedule.ClassType != entity.ScheduleClassTypeOnlineClass && schedule.ClassType != entity.ScheduleClassTypeOfflineClass {
-		log.Info(ctx, "add class and live assessment: invalid schedule class type",
+		log.Error(ctx, "add class and live assessment: invalid schedule class type",
 			log.String("class_type", string(schedule.ClassType)),
 			log.Any("schedule", schedule),
 			log.Any("args", args),
 			log.Any("operator", operator),
 		)
-		return nil, nil
+		return nil, constant.ErrInvalidArgs
 	}
 
 	// fix empty org id

@@ -5,15 +5,19 @@ import (
 	"database/sql"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sort"
 	"sync"
+	"time"
 )
 
 type ILearningSummaryReportModel interface {
 	QueryTimeFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryTimeFilterArgs) ([]*entity.LearningSummaryFilterYear, error)
-	QueryRemainingFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryRemainingFilterArgs) ([]*entity.LearningSummaryFilterSchool, error)
+	QueryRemainingFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryRemainingFilterArgs) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error)
 	QueryLiveClassesSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryLiveClassesSummaryResult, error)
 	QueryAssignmentsSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryAssignmentsSummaryResult, error)
 }
@@ -30,14 +34,299 @@ func GetLearningSummaryReportModel() ILearningSummaryReportModel {
 	return learningSummaryReportModelInstance
 }
 
-type learningSummaryReportModel struct{}
-
-func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryTimeFilterArgs) ([]*entity.LearningSummaryFilterYear, error) {
-	panic("implement me")
+type learningSummaryReportModel struct {
+	assessmentBase
 }
 
-func (l *learningSummaryReportModel) QueryRemainingFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryRemainingFilterArgs) ([]*entity.LearningSummaryFilterSchool, error) {
-	panic("implement me")
+func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryTimeFilterArgs) ([]*entity.LearningSummaryFilterYear, error) {
+	fixedZone := time.FixedZone("time_filter", args.TimeOffset)
+	var result []*entity.LearningSummaryFilterYear
+
+	m := make(map[int][][2]int64)
+	switch args.SummaryType {
+	case entity.LearningSummaryTypeLiveClass:
+		schedules, err := l.findRelatedSchedules(ctx, tx, operator, entity.LearningSummaryTypeLiveClass, &entity.LearningSummaryFilter{})
+		if err != nil {
+			log.Error(ctx, "query time filter: find related schedules failed",
+				log.Err(err),
+				log.Any("args", args),
+			)
+			return nil, err
+		}
+		for _, s := range schedules {
+			year := time.Unix(s.StartAt, 0).Year()
+			weekStart, weekEnd := utils.FindWeekTimeRange(s.StartAt, fixedZone)
+			m[year] = append(m[year], [2]int64{weekStart, weekEnd})
+		}
+	case entity.LearningSummaryTypeAssignment:
+		assessments, err := l.queryUnifiedAssessments(ctx, tx, operator, &entity.QueryUnifiedAssessmentArgs{
+			Types: entity.NullAssessmentTypes{
+				Value: []entity.AssessmentType{entity.AssessmentTypeStudy, entity.AssessmentTypeHomeFunStudy},
+				Valid: true,
+			},
+			Status: entity.NullAssessmentStatus{
+				Value: entity.AssessmentStatusComplete,
+				Valid: true,
+			},
+			OrgID: entity.NullString{
+				String: operator.OrgID,
+				Valid:  true,
+			},
+		})
+		if err != nil {
+			log.Error(ctx, "query time filter: query unified assessments failed",
+				log.Err(err),
+				log.Any("args", args),
+			)
+			return nil, err
+		}
+		for _, a := range assessments {
+			year := time.Unix(a.CompleteTime, 0).Year()
+			weekStart, weekEnd := utils.FindWeekTimeRange(a.CompleteTime, fixedZone)
+			m[year] = append(m[year], [2]int64{weekStart, weekEnd})
+		}
+	}
+
+	// fill result
+	for year, weeks := range m {
+		item := entity.LearningSummaryFilterYear{Year: year}
+		weeks = l.deduplicationAndSortWeeks(weeks)
+		for _, w := range weeks {
+			item.Weeks = append(item.Weeks, entity.LearningSummaryFilterWeek{
+				WeekStart: w[0],
+				WeekEnd:   w[1],
+			})
+		}
+		result = append(result, &item)
+	}
+
+	// sort result
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Year < result[j].Year
+	})
+
+	return result, nil
+}
+
+func (l *learningSummaryReportModel) deduplicationAndSortWeeks(weeks [][2]int64) [][2]int64 {
+	deduplicationMap := make(map[[2]int64]struct{}, len(weeks))
+	deduplicationItems := make([][2]int64, 0, len(weeks))
+	for _, w := range weeks {
+		if _, ok := deduplicationMap[w]; !ok {
+			deduplicationMap[w] = struct{}{}
+			deduplicationItems = append(deduplicationItems, w)
+		}
+	}
+	sort.Slice(deduplicationItems, func(i, j int) bool {
+		return deduplicationItems[i][0] < deduplicationItems[j][0]
+	})
+	return deduplicationItems
+}
+
+func (l *learningSummaryReportModel) QueryRemainingFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryRemainingFilterArgs) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
+	schedules, err := l.findRelatedSchedules(ctx, tx, operator, args.SummaryType, &args.LearningSummaryFilter)
+	if err != nil {
+		log.Error(ctx, "query remaining filter school failed: find related schedules",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	scheduleIDs := make([]string, 0, len(schedules))
+	for _, s := range schedules {
+		scheduleIDs = append(scheduleIDs, s.ID)
+	}
+	switch args.FilterType {
+	case entity.LearningSummaryFilterTypeSchool:
+		return l.queryRemainingFilterSchool(ctx, tx, operator, scheduleIDs)
+	case entity.LearningSummaryFilterTypeClass:
+		return l.queryRemainingFilterClass(ctx, tx, operator, scheduleIDs)
+	case entity.LearningSummaryFilterTypeTeacher:
+		return l.queryRemainingFilterTeacher(ctx, tx, operator, scheduleIDs)
+	case entity.LearningSummaryFilterTypeStudent:
+		return l.queryRemainingFilterStudent(ctx, tx, operator, scheduleIDs)
+	case entity.LearningSummaryFilterTypeSubject:
+		return l.queryRemainingFilterSubject(ctx, tx, operator, scheduleIDs)
+	default:
+		log.Error(ctx, "query remaining filter: invalid filter type")
+		return nil, constant.ErrInvalidArgs
+	}
+}
+
+func (l *learningSummaryReportModel) queryRemainingFilterSchool(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
+	schoolIDs, err := l.batchGetScheduleRelationIDs(ctx, operator, scheduleIDs, []entity.ScheduleRelationType{entity.ScheduleRelationTypeSchool})
+	if err != nil {
+		log.Error(ctx, "query remaining filter school failed: batch get school relations failed",
+			log.Err(err),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	schoolNameMap, err := external.GetSchoolServiceProvider().BatchGetNameMap(ctx, operator, schoolIDs)
+	if err != nil {
+		log.Error(ctx, "query remaining filter school failed: batch get school name map failed",
+			log.Err(err),
+			log.Strings("school_ids", schoolIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	result := make([]*entity.QueryLearningSummaryRemainingFilterResultItem, 0, len(schoolIDs))
+	for _, schoolID := range schoolIDs {
+		result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
+			SchoolID:   schoolID,
+			SchoolName: schoolNameMap[schoolID],
+		})
+	}
+	return result, nil
+}
+
+func (l *learningSummaryReportModel) queryRemainingFilterClass(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
+	classIDs, err := l.batchGetScheduleRelationIDs(ctx, operator, scheduleIDs, []entity.ScheduleRelationType{entity.ScheduleRelationTypeClassRosterClass, entity.ScheduleRelationTypeParticipantClass})
+	if err != nil {
+		log.Error(ctx, "query remaining filter class failed: batch get classes relations failed",
+			log.Err(err),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	classNameMap, err := external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, classIDs)
+	if err != nil {
+		log.Error(ctx, "query remaining filter class failed: batch get class name map failed",
+			log.Err(err),
+			log.Strings("class_ids", classIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	result := make([]*entity.QueryLearningSummaryRemainingFilterResultItem, 0, len(classIDs))
+	for _, classID := range classIDs {
+		result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
+			ClassID:   classID,
+			ClassName: classNameMap[classID],
+		})
+	}
+	return result, nil
+}
+
+func (l *learningSummaryReportModel) queryRemainingFilterTeacher(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
+	teacherIDs, err := l.batchGetScheduleRelationIDs(ctx, operator, scheduleIDs, []entity.ScheduleRelationType{entity.ScheduleRelationTypeClassRosterTeacher, entity.ScheduleRelationTypeParticipantTeacher})
+	if err != nil {
+		log.Error(ctx, "query remaining filter teacher failed: batch get teachers relations failed",
+			log.Err(err),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	teacherNameMap, err := external.GetTeacherServiceProvider().BatchGetNameMap(ctx, operator, teacherIDs)
+	if err != nil {
+		log.Error(ctx, "query remaining filter teacher failed: batch get teacher name map failed",
+			log.Err(err),
+			log.Strings("teacher_ids", teacherIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	result := make([]*entity.QueryLearningSummaryRemainingFilterResultItem, 0, len(teacherIDs))
+	for _, teacherID := range teacherIDs {
+		result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
+			TeacherID:   teacherID,
+			TeacherName: teacherNameMap[teacherID],
+		})
+	}
+	return result, nil
+}
+
+func (l *learningSummaryReportModel) queryRemainingFilterStudent(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
+	studentIDs, err := l.batchGetScheduleRelationIDs(ctx, operator, scheduleIDs, []entity.ScheduleRelationType{entity.ScheduleRelationTypeClassRosterStudent, entity.ScheduleRelationTypeParticipantStudent})
+	if err != nil {
+		log.Error(ctx, "query remaining filter student failed: batch get students relations failed",
+			log.Err(err),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	studentNameMap, err := external.GetStudentServiceProvider().BatchGetNameMap(ctx, operator, studentIDs)
+	if err != nil {
+		log.Error(ctx, "query remaining filter student failed: batch get student name map failed",
+			log.Err(err),
+			log.Strings("student_ids", studentIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	result := make([]*entity.QueryLearningSummaryRemainingFilterResultItem, 0, len(studentIDs))
+	for _, studentID := range studentIDs {
+		result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
+			StudentID:   studentID,
+			StudentName: studentNameMap[studentID],
+		})
+	}
+	return result, nil
+}
+
+func (l *learningSummaryReportModel) queryRemainingFilterSubject(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
+	subjectIDs, err := l.batchGetScheduleRelationIDs(ctx, operator, scheduleIDs, []entity.ScheduleRelationType{entity.ScheduleRelationTypeSubject})
+	if err != nil {
+		log.Error(ctx, "query remaining filter student failed: batch get students relations failed",
+			log.Err(err),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	subjectNameMap, err := external.GetSubjectServiceProvider().BatchGetNameMap(ctx, operator, subjectIDs)
+	if err != nil {
+		log.Error(ctx, "query remaining filter student failed: batch get student name map failed",
+			log.Err(err),
+			log.Strings("subject_ids", subjectIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	result := make([]*entity.QueryLearningSummaryRemainingFilterResultItem, 0, len(subjectIDs))
+	for _, subjectID := range subjectIDs {
+		result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
+			SubjectID:   subjectID,
+			SubjectName: subjectNameMap[subjectID],
+		})
+	}
+	return result, nil
+}
+
+func (l *learningSummaryReportModel) batchGetScheduleRelationIDs(ctx context.Context, operator *entity.Operator, scheduleIDs []string, relationTypes []entity.ScheduleRelationType) ([]string, error) {
+	cond := da.ScheduleRelationCondition{
+		ScheduleIDs: entity.NullStrings{
+			Strings: scheduleIDs,
+			Valid:   true,
+		},
+		RelationTypes: entity.NullStrings{
+			Strings: []string{
+				string(entity.ScheduleRelationTypeSchool),
+			},
+			Valid: true,
+		},
+	}
+	if len(relationTypes) > 0 {
+		cond.RelationTypes.Valid = true
+		for _, r := range relationTypes {
+			cond.RelationTypes.Strings = append(cond.RelationTypes.Strings, string(r))
+		}
+	}
+	relations, err := GetScheduleRelationModel().Query(ctx, operator, &cond)
+	if err != nil {
+		log.Error(ctx, "batch get schedule relation ids: query schedule relations failed",
+			log.Err(err),
+			log.Any("schedule_ids", scheduleIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	relationIDs := make([]string, len(relations))
+	for _, s := range relations {
+		relationIDs = append(relationIDs, s.RelationID)
+	}
+	return relationIDs, nil
 }
 
 func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryLiveClassesSummaryResult, error) {
@@ -336,6 +625,56 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 			log.Any("schedule_condition", scheduleCondition),
 		)
 		return nil, err
+	}
+
+	// add related assessment filter
+	if typo.Valid() && typo == entity.LearningSummaryTypeAssignment &&
+		filter.WeekStart > 0 && filter.WeekEnd > 0 {
+		scheduleIDs := make([]string, 0, len(schedules))
+		cond := entity.QueryUnifiedAssessmentArgs{
+			Types: entity.NullAssessmentTypes{
+				Value: []entity.AssessmentType{entity.AssessmentTypeStudy, entity.AssessmentTypeHomeFunStudy},
+				Valid: true,
+			},
+			Status: entity.NullAssessmentStatus{
+				Value: entity.AssessmentStatusComplete,
+				Valid: true,
+			},
+			OrgID: entity.NullString{
+				String: operator.OrgID,
+				Valid:  true,
+			},
+			ScheduleIDs: entity.NullStrings{
+				Strings: scheduleIDs,
+				Valid:   true,
+			},
+			CompleteBetween: entity.NullTimeRange{
+				StartAt: filter.WeekStart,
+				EndAt:   filter.WeekEnd,
+				Valid:   true,
+			},
+		}
+		assessments, err := l.queryUnifiedAssessments(ctx, tx, operator, &cond)
+		if err != nil {
+			log.Error(ctx, "find related schedules: query unified assessments failed",
+				log.Err(err),
+				log.Any("cond", cond),
+				log.Any("type", typo),
+				log.Any("filter", filter),
+			)
+			return nil, err
+		}
+		filterScheduleIDs := make([]string, 0, len(assessments))
+		for _, a := range assessments {
+			filterScheduleIDs = append(filterScheduleIDs, a.ScheduleID)
+		}
+		filterSchedules := make([]*entity.Schedule, 0, len(schedules))
+		for _, s := range filterSchedules {
+			if utils.ContainsStr(filterScheduleIDs, s.ID) {
+				filterSchedules = append(filterSchedules, s)
+			}
+		}
+		schedules = filterSchedules
 	}
 	return schedules, nil
 }

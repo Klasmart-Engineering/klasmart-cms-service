@@ -1,6 +1,7 @@
 package entity
 
 type QueryLearningSummaryTimeFilterArgs struct {
+	TimeOffset  int                 `json:"time_offset"`
 	SummaryType LearningSummaryType `json:"summary_type" enums:"live_class,assignment"`
 	OrgID       string              `json:"org_id"`
 }
@@ -16,39 +17,9 @@ type LearningSummaryFilterWeek struct {
 }
 
 type QueryLearningSummaryRemainingFilterArgs struct {
-	SummaryType LearningSummaryType `json:"summary_type" enums:"live_class,assignment"`
-	OrgID       string              `json:"org_id"`
-	WeekStart   int64               `json:"week_start"`
-	WeekEnd     int64               `json:"week_end"`
-}
-
-type LearningSummaryFilterSchool struct {
-	ID      string                        `json:"id"`
-	Name    string                        `json:"name"`
-	Classes []*LearningSummaryFilterClass `json:"classes"`
-}
-
-type LearningSummaryFilterClass struct {
-	ID       string                          `json:"id"`
-	Name     string                          `json:"name"`
-	Teachers []*LearningSummaryFilterTeacher `json:"teachers"`
-}
-
-type LearningSummaryFilterTeacher struct {
-	ID       string                          `json:"id"`
-	Name     string                          `json:"name"`
-	Students []*LearningSummaryFilterStudent `json:"students"`
-}
-
-type LearningSummaryFilterStudent struct {
-	ID       string                          `json:"id"`
-	Name     string                          `json:"name"`
-	Subjects []*LearningSummaryFilterSubject `json:"subjects"`
-}
-
-type LearningSummaryFilterSubject struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	SummaryType LearningSummaryType                `json:"summary_type" enums:"live_class,assignment"`
+	FilterType  LearningSummaryRemainingFilterType `json:"filter_type" enums:"school,class,teacher,student,subject"`
+	LearningSummaryFilter
 }
 
 type LearningSummaryFilter struct {
@@ -62,23 +33,19 @@ type LearningSummaryFilter struct {
 	SubjectID string `json:"subject_id"`
 }
 
-type LearningSummaryFilterType string
+type LearningSummaryRemainingFilterType string
 
 const (
-	LearningSummaryFilterTypeYear    LearningSummaryFilterType = "year"
-	LearningSummaryFilterTypeWeek    LearningSummaryFilterType = "week"
-	LearningSummaryFilterTypeSchool  LearningSummaryFilterType = "school"
-	LearningSummaryFilterTypeClass   LearningSummaryFilterType = "class"
-	LearningSummaryFilterTypeTeacher LearningSummaryFilterType = "teacher"
-	LearningSummaryFilterTypeStudent LearningSummaryFilterType = "student"
-	LearningSummaryFilterTypeSubject LearningSummaryFilterType = "subject"
+	LearningSummaryFilterTypeSchool  LearningSummaryRemainingFilterType = "school"
+	LearningSummaryFilterTypeClass   LearningSummaryRemainingFilterType = "class"
+	LearningSummaryFilterTypeTeacher LearningSummaryRemainingFilterType = "teacher"
+	LearningSummaryFilterTypeStudent LearningSummaryRemainingFilterType = "student"
+	LearningSummaryFilterTypeSubject LearningSummaryRemainingFilterType = "subject"
 )
 
-func (l LearningSummaryFilterType) Valid() bool {
+func (l LearningSummaryRemainingFilterType) Valid() bool {
 	switch l {
-	case LearningSummaryFilterTypeYear,
-		LearningSummaryFilterTypeWeek,
-		LearningSummaryFilterTypeSchool,
+	case LearningSummaryFilterTypeSchool,
 		LearningSummaryFilterTypeClass,
 		LearningSummaryFilterTypeTeacher,
 		LearningSummaryFilterTypeStudent,
@@ -88,21 +55,21 @@ func (l LearningSummaryFilterType) Valid() bool {
 	return false
 }
 
-//type QueryLearningSummaryFilterResultItem struct {
-//	Year        int    `json:"year,omitempty"`
-//	WeekStart   int64  `json:"week_start,omitempty"`
-//	WeekEnd     int64  `json:"week_end,omitempty"`
-//	SchoolID    string `json:"school_id,omitempty"`
-//	SchoolName  string `json:"school_name,omitempty"`
-//	ClassID     string `json:"class_id,omitempty"`
-//	ClassName   string `json:"class_name,omitempty"`
-//	TeacherID   string `json:"teacher_id,omitempty"`
-//	TeacherName string `json:"teacher_name,omitempty"`
-//	StudentID   string `json:"student_id,omitempty"`
-//	StudentName string `json:"student_name,omitempty"`
-//	SubjectID   string `json:"subject_id,omitempty"`
-//	SubjectName string `json:"subject_name,omitempty"`
-//}
+type QueryLearningSummaryRemainingFilterResultItem struct {
+	Year        int    `json:"year,omitempty"`
+	WeekStart   int64  `json:"week_start,omitempty"`
+	WeekEnd     int64  `json:"week_end,omitempty"`
+	SchoolID    string `json:"school_id,omitempty"`
+	SchoolName  string `json:"school_name,omitempty"`
+	ClassID     string `json:"class_id,omitempty"`
+	ClassName   string `json:"class_name,omitempty"`
+	TeacherID   string `json:"teacher_id,omitempty"`
+	TeacherName string `json:"teacher_name,omitempty"`
+	StudentID   string `json:"student_id,omitempty"`
+	StudentName string `json:"student_name,omitempty"`
+	SubjectID   string `json:"subject_id,omitempty"`
+	SubjectName string `json:"subject_name,omitempty"`
+}
 
 type QueryLiveClassesSummaryResult struct {
 	Attend float64                 `json:"attend"`

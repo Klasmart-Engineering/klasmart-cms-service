@@ -35,7 +35,6 @@ func GetAssessmentModel() IAssessmentModel {
 type IAssessmentModel interface {
 	Query(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, conditions *da.QueryAssessmentConditions) ([]*entity.Assessment, error)
 	Summary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsSummaryArgs) (*entity.AssessmentsSummary, error)
-
 	StudentQuery(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, conditions *entity.StudentQueryAssessmentConditions) (int, []*entity.StudentAssessment, error)
 }
 

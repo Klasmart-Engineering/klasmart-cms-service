@@ -18,6 +18,7 @@ import (
 // @ID queryLearningSummaryTimeFilter
 // @Accept json
 // @Produce json
+// @Param time_offset query integer true "time offset (unit: second)"
 // @Param summary_type query string true "learning summary type" enums(live_class,assignment)
 // @Success 200 {array} entity.LearningSummaryFilterYear
 // @Failure 400 {object} BadRequestResponse
@@ -29,6 +30,16 @@ func (s *Server) queryLearningSummaryTimeFilter(c *gin.Context) {
 	operator := s.getOperator(c)
 
 	// parse args
+	strTimeOffset := c.Query("time_offset")
+	timeOffset, err := strconv.Atoi(strTimeOffset)
+	if err != nil {
+		log.Error(ctx, "query learning summary remaining filter: require time offset",
+			log.Err(err),
+			log.String("time_offset", strTimeOffset),
+		)
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
 	strSummaryType := c.Query("summary_type")
 	summaryType := entity.LearningSummaryType(strSummaryType)
 	if !summaryType.Valid() {
@@ -37,6 +48,7 @@ func (s *Server) queryLearningSummaryTimeFilter(c *gin.Context) {
 		return
 	}
 	args := entity.QueryLearningSummaryTimeFilterArgs{
+		TimeOffset:  timeOffset,
 		SummaryType: summaryType,
 		OrgID:       operator.OrgID,
 	}
@@ -68,9 +80,14 @@ func (s *Server) queryLearningSummaryTimeFilter(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param summary_type query string true "learning summary type" enums(live_class,assignment)
+// @Param filter_type query string true "filter type" enums(school,class,teacher,student,subject)
 // @Param week_start query integer false "week start timestamp(unit: second)"
 // @Param week_end query integer false "week end timestamp(unit: second)"
-// @Success 200 {array} entity.LearningSummaryFilterSchool
+// @Param school_id query string false "school id"
+// @Param class_id query string false "class id"
+// @Param teacher_id query string false "teacher_id"
+// @Param student_id query string false "student_id"
+// @Success 200 {array} entity.QueryLearningSummaryRemainingFilterResultItem
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -87,38 +104,23 @@ func (s *Server) queryLearningSummaryRemainingFilter(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	var err error
-	weekStart := int64(0)
-	strWeekStart := c.Query("week_start")
-	if strWeekStart != "" {
-		weekStart, err = strconv.ParseInt(strWeekStart, 10, 64)
-		if err != nil {
-			log.Error(ctx, "query learning summary remaining filter: parse week_start field failed",
-				log.Err(err),
-				log.String("week_start", strWeekStart),
-			)
-			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-			return
-		}
+	strFilterType := c.Query("filter_type")
+	filterType := entity.LearningSummaryRemainingFilterType(strFilterType)
+	if !filterType.Valid() {
+		log.Error(ctx, "parse learning summary remaining filter: invalid filter type", log.String("filter_type", strFilterType))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
 	}
-	weekEnd := int64(0)
-	strWeekEnd := c.Query("week_end")
-	if strWeekEnd != "" {
-		weekEnd, err = strconv.ParseInt(strWeekEnd, 10, 64)
-		if err != nil {
-			log.Error(ctx, "query learning summary remaining filter: parse week_end field failed",
-				log.Err(err),
-				log.String("week_end", strWeekEnd),
-			)
-			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-			return
-		}
+	filter, err := s.parseLearningSummaryFilter(c)
+	if err != nil {
+		log.Error(ctx, "parse learning summary remaining filter: invalid filter type", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
 	}
 	args := entity.QueryLearningSummaryRemainingFilterArgs{
-		SummaryType: summaryType,
-		OrgID:       operator.OrgID,
-		WeekStart:   weekStart,
-		WeekEnd:     weekEnd,
+		SummaryType:           summaryType,
+		FilterType:            filterType,
+		LearningSummaryFilter: *filter,
 	}
 
 	// call business model
