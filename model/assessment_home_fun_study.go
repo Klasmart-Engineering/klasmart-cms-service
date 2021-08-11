@@ -846,7 +846,7 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 	if args.Action == entity.UpdateHomeFunStudyActionComplete {
 		study.Status = entity.AssessmentStatusComplete
 		study.CompleteAt = time.Now().Unix()
-		study.CompleteUserID = operator.UserID
+		study.CompleteBy = operator.UserID
 		if err := da.GetHomeFunStudyDA().SaveTx(ctx, tx, &study); err != nil {
 			log.Error(ctx, "da.GetHomeFunStudyDA().SaveTx: save failed",
 				log.Err(err),
