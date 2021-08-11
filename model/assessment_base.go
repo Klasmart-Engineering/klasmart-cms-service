@@ -1482,6 +1482,10 @@ func (m *assessmentBase) queryUnifiedAssessments(ctx context.Context, tx *dbo.DB
 	}
 	var assessments []*entity.Assessment
 	if err := da.GetAssessmentDA().Query(ctx, &assessmentCond, &assessments); err != nil {
+		log.Error(ctx, "query unified assessments: query assessments failed",
+			log.Any("cond", assessmentCond),
+			log.Err(err),
+		)
 		return nil, err
 	}
 	for _, a := range assessments {
@@ -1525,6 +1529,10 @@ func (m *assessmentBase) queryUnifiedAssessments(ctx context.Context, tx *dbo.DB
 	}
 	var homeFunStudies []*entity.HomeFunStudy
 	if err := da.GetHomeFunStudyDA().Query(ctx, &homeFunStudyCond, &homeFunStudies); err != nil {
+		log.Error(ctx, "query unified assessments: query home fun studies failed",
+			log.Any("cond", homeFunStudyCond),
+			log.Err(err),
+		)
 		return nil, err
 	}
 	for _, a := range homeFunStudies {
