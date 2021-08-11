@@ -170,6 +170,9 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 				AttendanceIDs: outcomeAttendanceIDsMap[o.ID],
 				Checked:       assessmentOutcomeMap[o.ID].Checked,
 			}
+			if newOutcome.NoneAchieved || newOutcome.Skip {
+				newOutcome.AttendanceIDs = nil
+			}
 			result.Outcomes = append(result.Outcomes, &newOutcome)
 		}
 	}
@@ -1209,16 +1212,16 @@ func (m *assessmentBase) update(ctx context.Context, tx *dbo.DBContext, operator
 
 			// update outcome attendances
 			var (
-				outcomeIDs         []string
-				outcomeAttendances []*entity.OutcomeAttendance
+				deletingOutcomeIDs          []string
+				insertingOutcomeAttendances []*entity.OutcomeAttendance
 			)
 			for _, oa := range args.Outcomes {
-				outcomeIDs = append(outcomeIDs, oa.OutcomeID)
-				if oa.Skip {
+				deletingOutcomeIDs = append(deletingOutcomeIDs, oa.OutcomeID)
+				if oa.Skip || oa.NoneAchieved {
 					continue
 				}
 				for _, attendanceID := range oa.AttendanceIDs {
-					outcomeAttendances = append(outcomeAttendances, &entity.OutcomeAttendance{
+					insertingOutcomeAttendances = append(insertingOutcomeAttendances, &entity.OutcomeAttendance{
 						ID:           utils.NewID(),
 						AssessmentID: args.ID,
 						OutcomeID:    oa.OutcomeID,
@@ -1226,18 +1229,18 @@ func (m *assessmentBase) update(ctx context.Context, tx *dbo.DBContext, operator
 					})
 				}
 			}
-			if err := da.GetOutcomeAttendanceDA().BatchDeleteByAssessmentIDAndOutcomeIDs(ctx, tx, args.ID, outcomeIDs); err != nil {
+			if err := da.GetOutcomeAttendanceDA().BatchDeleteByAssessmentIDAndOutcomeIDs(ctx, tx, args.ID, deletingOutcomeIDs); err != nil {
 				log.Error(ctx, "update assessment: batch delete outcome attendance map failed by outcome ids",
 					log.Err(err),
-					log.Strings("outcome_ids", outcomeIDs),
+					log.Strings("outcome_ids", deletingOutcomeIDs),
 					log.Any("args", args),
 				)
 				return err
 			}
-			if err := da.GetOutcomeAttendanceDA().BatchInsert(ctx, tx, outcomeAttendances); err != nil {
+			if err := da.GetOutcomeAttendanceDA().BatchInsert(ctx, tx, insertingOutcomeAttendances); err != nil {
 				log.Error(ctx, "update assessment: batch insert outcome attendance map failed",
 					log.Err(err),
-					log.Any("outcome_attendances", outcomeAttendances),
+					log.Any("outcome_attendances", insertingOutcomeAttendances),
 					log.Any("args", args),
 				)
 				return err
@@ -1451,4 +1454,99 @@ func (m *assessmentBase) sortedByLessonMaterialIDs(items []*entity.AssessmentLes
 		}
 		return idI < idJ
 	})
+}
+
+func (m *assessmentBase) queryUnifiedAssessments(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryUnifiedAssessmentArgs) ([]*entity.UnifiedAssessment, error) {
+	var result []*entity.UnifiedAssessment
+
+	// query base assessment
+	var classTypes entity.NullScheduleClassTypes
+	if args.Types.Valid {
+		classTypes.Valid = true
+		if len(args.Types.Value) > 0 {
+			for _, c := range args.Types.Value {
+				if c.ToScheduleClassType().IsHomeFun {
+					continue
+				}
+				classTypes.Value = append(classTypes.Value)
+			}
+		}
+	}
+	assessmentCond := da.QueryAssessmentConditions{
+		IDs:             args.IDs,
+		OrgID:           args.OrgID,
+		Status:          args.Status,
+		ScheduleIDs:     args.ScheduleIDs,
+		ClassTypes:      classTypes,
+		CompleteBetween: args.CompleteBetween,
+	}
+	var assessments []*entity.Assessment
+	if err := da.GetAssessmentDA().Query(ctx, &assessmentCond, &assessments); err != nil {
+		log.Error(ctx, "query unified assessments: query assessments failed",
+			log.Any("cond", assessmentCond),
+			log.Err(err),
+		)
+		return nil, err
+	}
+	for _, a := range assessments {
+		result = append(result, &entity.UnifiedAssessment{
+			ID:           a.ID,
+			ScheduleID:   a.ScheduleID,
+			Title:        a.Title,
+			CompleteTime: a.CompleteTime,
+			Status:       a.Status,
+			CreateAt:     a.CreateAt,
+			UpdateAt:     a.UpdateAt,
+			DeleteAt:     a.DeleteAt,
+		})
+	}
+
+	// check whether include home fun study
+	includeHomeFunStudy := true
+	if args.Types.Valid {
+		hasHomeFunStudyType := false
+		for _, c := range args.Types.Value {
+			if c.ToScheduleClassType().IsHomeFun {
+				hasHomeFunStudyType = true
+				break
+			}
+		}
+		if !hasHomeFunStudyType {
+			includeHomeFunStudy = false
+		}
+	}
+	if !includeHomeFunStudy {
+		return result, nil
+	}
+
+	// query home fun study
+	homeFunStudyCond := da.QueryHomeFunStudyCondition{
+		IDs:             args.IDs,
+		OrgID:           args.OrgID,
+		ScheduleIDs:     args.ScheduleIDs,
+		Status:          args.Status,
+		CompleteBetween: args.CompleteBetween,
+	}
+	var homeFunStudies []*entity.HomeFunStudy
+	if err := da.GetHomeFunStudyDA().Query(ctx, &homeFunStudyCond, &homeFunStudies); err != nil {
+		log.Error(ctx, "query unified assessments: query home fun studies failed",
+			log.Any("cond", homeFunStudyCond),
+			log.Err(err),
+		)
+		return nil, err
+	}
+	for _, a := range homeFunStudies {
+		result = append(result, &entity.UnifiedAssessment{
+			ID:           a.ID,
+			ScheduleID:   a.ScheduleID,
+			Title:        a.Title,
+			CompleteTime: a.CompleteAt,
+			Status:       a.Status,
+			CreateAt:     a.CreateAt,
+			UpdateAt:     a.UpdateAt,
+			DeleteAt:     a.DeleteAt,
+		})
+	}
+
+	return result, nil
 }

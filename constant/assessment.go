@@ -7,4 +7,6 @@ const (
 
 	ListOptionAll                  = "all"
 	AssessmentDefaultRemainingTime = 7 * 24 * time.Hour
+
+	LearningSummaryFilterOptionNone = "none"
 )
