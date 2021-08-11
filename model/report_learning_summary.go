@@ -39,6 +39,22 @@ type learningSummaryReportModel struct {
 }
 
 func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryTimeFilterArgs) ([]*entity.LearningSummaryFilterYear, error) {
+	// try get cache
+	cacheResult, err := da.GetAssessmentRedisDA().GetQueryLearningSummaryTimeFilterResult(ctx, args)
+	if err != nil {
+		log.Debug(ctx, "query time filter: get cache failed",
+			log.Err(err),
+			log.Any("args", args),
+		)
+	} else {
+		log.Debug(ctx, "query time filter: hit cache",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("cache_result", cacheResult),
+		)
+		return cacheResult, nil
+	}
+
 	fixedZone := time.FixedZone("time_filter", args.TimeOffset)
 	var result []*entity.LearningSummaryFilterYear
 
@@ -104,6 +120,15 @@ func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *db
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Year < result[j].Year
 	})
+
+	// try set cache
+	if err := da.GetAssessmentRedisDA().SetQueryLearningSummaryTimeFilterResult(ctx, args, result); err != nil {
+		log.Debug(ctx, "query learning summary time filter: set cache failed",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("result", result),
+		)
+	}
 
 	return result, nil
 }
@@ -322,7 +347,7 @@ func (l *learningSummaryReportModel) batchGetScheduleRelationIDs(ctx context.Con
 		)
 		return nil, err
 	}
-	relationIDs := make([]string, len(relations))
+	relationIDs := make([]string, 0, len(relations))
 	for _, s := range relations {
 		relationIDs = append(relationIDs, s.RelationID)
 	}
