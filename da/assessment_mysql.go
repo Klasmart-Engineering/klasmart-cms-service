@@ -39,7 +39,7 @@ type assessmentDA struct {
 }
 
 func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error) {
-	cacheResult, err := GetAssessmentRedisDA().Item(ctx, id)
+	cacheResult, err := GetAssessmentRedisDA().GetAssessment(ctx, id)
 	if err != nil {
 		log.Info(ctx, "get assessment exclude soft deleted: get failed from cache",
 			log.Err(err),
@@ -66,7 +66,7 @@ func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBCont
 		return nil, err
 	}
 
-	if err := GetAssessmentRedisDA().CacheItem(ctx, id, &item); err != nil {
+	if err := GetAssessmentRedisDA().SetAssessment(ctx, id, &item); err != nil {
 		log.Info(ctx, "get assessment exclude soft deleted: cache item failed",
 			log.Err(err),
 			log.String("id", id),
@@ -98,7 +98,7 @@ func (a *assessmentDA) UpdateStatus(ctx context.Context, tx *dbo.DBContext, id s
 		return err
 	}
 
-	if err := GetAssessmentRedisDA().CleanItem(ctx, id); err != nil {
+	if err := GetAssessmentRedisDA().CleanAssessment(ctx, id); err != nil {
 		log.Info(ctx, "update assessment status: clean item cache failed",
 			log.Err(err),
 			log.String("id", id),
