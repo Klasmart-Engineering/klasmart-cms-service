@@ -1,6 +1,7 @@
 package entity
 
 type QueryLearningSummaryTimeFilterArgs struct {
+	TimeOffset  int                 `json:"time_offset"`
 	SummaryType LearningSummaryType `json:"summary_type" enums:"live_class,assignment"`
 	OrgID       string              `json:"org_id"`
 }

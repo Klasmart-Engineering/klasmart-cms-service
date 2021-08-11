@@ -18,6 +18,7 @@ import (
 // @ID queryLearningSummaryTimeFilter
 // @Accept json
 // @Produce json
+// @Param time_offset query integer true "time offset (unit: second)"
 // @Param summary_type query string true "learning summary type" enums(live_class,assignment)
 // @Success 200 {array} entity.LearningSummaryFilterYear
 // @Failure 400 {object} BadRequestResponse
@@ -29,6 +30,16 @@ func (s *Server) queryLearningSummaryTimeFilter(c *gin.Context) {
 	operator := s.getOperator(c)
 
 	// parse args
+	strTimeOffset := c.Query("time_offset")
+	timeOffset, err := strconv.Atoi(strTimeOffset)
+	if err != nil {
+		log.Error(ctx, "query learning summary remaining filter: require time offset",
+			log.Err(err),
+			log.String("time_offset", strTimeOffset),
+		)
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
 	strSummaryType := c.Query("summary_type")
 	summaryType := entity.LearningSummaryType(strSummaryType)
 	if !summaryType.Valid() {
@@ -37,6 +48,7 @@ func (s *Server) queryLearningSummaryTimeFilter(c *gin.Context) {
 		return
 	}
 	args := entity.QueryLearningSummaryTimeFilterArgs{
+		TimeOffset:  timeOffset,
 		SummaryType: summaryType,
 		OrgID:       operator.OrgID,
 	}

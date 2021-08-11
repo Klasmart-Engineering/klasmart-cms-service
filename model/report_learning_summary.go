@@ -39,6 +39,7 @@ type learningSummaryReportModel struct {
 }
 
 func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryTimeFilterArgs) ([]*entity.LearningSummaryFilterYear, error) {
+	fixedZone := time.FixedZone("time_filter", args.TimeOffset)
 	var result []*entity.LearningSummaryFilterYear
 
 	m := make(map[int][][2]int64)
@@ -54,7 +55,7 @@ func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *db
 		}
 		for _, s := range schedules {
 			year := time.Unix(s.StartAt, 0).Year()
-			weekStart, weekEnd := utils.FindWeekTimeRange(s.StartAt, time.Local)
+			weekStart, weekEnd := utils.FindWeekTimeRange(s.StartAt, fixedZone)
 			m[year] = append(m[year], [2]int64{weekStart, weekEnd})
 		}
 	case entity.LearningSummaryTypeAssignment:
@@ -81,7 +82,7 @@ func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *db
 		}
 		for _, a := range assessments {
 			year := time.Unix(a.CompleteTime, 0).Year()
-			weekStart, weekEnd := utils.FindWeekTimeRange(a.CompleteTime, time.Local)
+			weekStart, weekEnd := utils.FindWeekTimeRange(a.CompleteTime, fixedZone)
 			m[year] = append(m[year], [2]int64{weekStart, weekEnd})
 		}
 	}
