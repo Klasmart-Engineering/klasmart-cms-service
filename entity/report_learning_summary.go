@@ -19,7 +19,7 @@ type LearningSummaryFilterWeek struct {
 type QueryLearningSummaryRemainingFilterArgs struct {
 	SummaryType LearningSummaryType                `json:"summary_type" enums:"live_class,assignment"`
 	FilterType  LearningSummaryRemainingFilterType `json:"filter_type" enums:"school,class,teacher,student,subject"`
-	*LearningSummaryFilter
+	LearningSummaryFilter
 }
 
 type LearningSummaryFilter struct {

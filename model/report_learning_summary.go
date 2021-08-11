@@ -124,7 +124,7 @@ func (l *learningSummaryReportModel) deduplicationAndSortWeeks(weeks [][2]int64)
 }
 
 func (l *learningSummaryReportModel) QueryRemainingFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryRemainingFilterArgs) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
-	schedules, err := l.findRelatedSchedules(ctx, tx, operator, args.SummaryType, args.LearningSummaryFilter)
+	schedules, err := l.findRelatedSchedules(ctx, tx, operator, args.SummaryType, &args.LearningSummaryFilter)
 	if err != nil {
 		log.Error(ctx, "query remaining filter school failed: find related schedules",
 			log.Err(err),

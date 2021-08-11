@@ -120,7 +120,7 @@ func (s *Server) queryLearningSummaryRemainingFilter(c *gin.Context) {
 	args := entity.QueryLearningSummaryRemainingFilterArgs{
 		SummaryType:           summaryType,
 		FilterType:            filterType,
-		LearningSummaryFilter: filter,
+		LearningSummaryFilter: *filter,
 	}
 
 	// call business model
