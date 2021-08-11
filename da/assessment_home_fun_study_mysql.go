@@ -91,7 +91,7 @@ func (c *QueryHomeFunStudyCondition) GetConditions() ([]string, []interface{}) {
 
 	if c.TeacherIDs.Valid {
 		t := NewSQLTemplate("")
-		teacherIDs := utils.SliceDeduplication(c.SearchTeacherIDs.Values)
+		teacherIDs := utils.SliceDeduplication(c.TeacherIDs.Values)
 		for _, teacherID := range teacherIDs {
 			t.Appendf("json_contains(teacher_ids, json_array(?))", teacherID)
 		}
