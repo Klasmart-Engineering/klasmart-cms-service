@@ -1462,6 +1462,7 @@ func (m *assessmentBase) queryUnifiedAssessments(ctx context.Context, tx *dbo.DB
 	// query base assessment
 	var classTypes entity.NullScheduleClassTypes
 	if args.Types.Valid {
+		classTypes.Valid = true
 		if len(args.Types.Value) > 0 {
 			for _, c := range args.Types.Value {
 				if c.ToScheduleClassType().IsHomeFun {
@@ -1469,11 +1470,6 @@ func (m *assessmentBase) queryUnifiedAssessments(ctx context.Context, tx *dbo.DB
 				}
 				classTypes.Value = append(classTypes.Value)
 			}
-			if len(classTypes.Value) > 0 {
-				classTypes.Valid = true
-			}
-		} else {
-			classTypes.Valid = true
 		}
 	}
 	assessmentCond := da.QueryAssessmentConditions{
