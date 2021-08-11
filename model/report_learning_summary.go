@@ -103,15 +103,24 @@ func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *db
 		}
 	}
 
+	// calc current week
+	currentWeekStart, currentWeekEnd := utils.FindWeekTimeRange(time.Now().Unix(), fixedZone)
+
 	// fill result
 	for year, weeks := range m {
 		item := entity.LearningSummaryFilterYear{Year: year}
 		weeks = l.deduplicationAndSortWeeks(weeks)
 		for _, w := range weeks {
+			if w[0] == currentWeekStart && w[1] == currentWeekEnd {
+				continue
+			}
 			item.Weeks = append(item.Weeks, entity.LearningSummaryFilterWeek{
 				WeekStart: w[0],
 				WeekEnd:   w[1],
 			})
+		}
+		if len(item.Weeks) == 0 {
+			continue
 		}
 		result = append(result, &item)
 	}
