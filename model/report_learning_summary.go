@@ -378,6 +378,7 @@ func (l *learningSummaryReportModel) hasNoneSchoolOption(ctx context.Context, tx
 		log.Error(ctx, "has none school: batch get schedule class ids failed",
 			log.Err(err),
 			log.Any("operator", operator),
+			log.Strings("schedule_ids", scheduleIDs),
 		)
 		return false, err
 	}

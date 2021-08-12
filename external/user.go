@@ -353,7 +353,10 @@ func (s AmsUserService) FilterByPermission(ctx context.Context, operator *entity
 func (s AmsUserService) GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Operator, orgID string) ([]*User, error) {
 	userInfos, err := GetUserServiceProvider().GetByOrganization(ctx, op, orgID)
 	if err != nil {
-		log.Error(ctx, "GetUserServiceProvider.GetByOrganization error", log.Any("op", op))
+		log.Error(ctx, "GetUserServiceProvider.GetByOrganization error",
+			log.String("org_id", orgID),
+			log.Any("op", op),
+		)
 		return nil, err
 	}
 	userIDs := make([]string, len(userInfos))
@@ -362,7 +365,11 @@ func (s AmsUserService) GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Ope
 	}
 	userSchoolMap, err := GetSchoolServiceProvider().GetByUsers(ctx, op, orgID, userIDs)
 	if err != nil {
-		log.Error(ctx, "GetSchoolServiceProvider.GetByUsers error", log.Any("op", op), log.Strings("userIDs", userIDs))
+		log.Error(ctx, "GetSchoolServiceProvider.GetByUsers error",
+			log.Any("op", op),
+			log.String("org_id", orgID),
+			log.Strings("userIDs", userIDs),
+		)
 		return nil, err
 	}
 	userClassMap, err := GetClassServiceProvider().GetByUserIDs(ctx, op, userIDs)
