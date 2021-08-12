@@ -10,5 +10,6 @@ const (
 
 	AssessmentQueryLearningSummaryTimeFilterCacheExpiration = 24 * time.Hour
 
-	LearningSummaryFilterOptionNone = "none"
+	LearningSummaryFilterOptionNoneID   = "none"
+	LearningSummaryFilterOptionNoneName = "None"
 )
