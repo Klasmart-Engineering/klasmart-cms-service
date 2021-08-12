@@ -1463,13 +1463,11 @@ func (m *assessmentBase) queryUnifiedAssessments(ctx context.Context, tx *dbo.DB
 	var classTypes entity.NullScheduleClassTypes
 	if args.Types.Valid {
 		classTypes.Valid = true
-		if len(args.Types.Value) > 0 {
-			for _, c := range args.Types.Value {
-				if c.ToScheduleClassType().IsHomeFun {
-					continue
-				}
-				classTypes.Value = append(classTypes.Value)
+		for _, v := range args.Types.Value {
+			if v.ToScheduleClassType().IsHomeFun {
+				continue
 			}
+			classTypes.Value = append(classTypes.Value, v.ToScheduleClassType().ClassType)
 		}
 	}
 	assessmentCond := da.QueryAssessmentConditions{

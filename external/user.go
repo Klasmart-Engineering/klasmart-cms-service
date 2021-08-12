@@ -22,6 +22,7 @@ type UserServiceProvider interface {
 	GetByOrganization(ctx context.Context, operator *entity.Operator, organizationID string) ([]*User, error)
 	NewUser(ctx context.Context, operator *entity.Operator, email string) (string, error)
 	FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error)
+	GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Operator, orgID string) ([]*User, error)
 }
 
 type User struct {
@@ -347,4 +348,44 @@ func (s AmsUserService) FilterByPermission(ctx context.Context, operator *entity
 		log.Strings("result", filtered))
 
 	return filtered, nil
+}
+
+func (s AmsUserService) GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Operator, orgID string) ([]*User, error) {
+	userInfos, err := GetUserServiceProvider().GetByOrganization(ctx, op, orgID)
+	if err != nil {
+		log.Error(ctx, "GetUserServiceProvider.GetByOrganization error",
+			log.String("org_id", orgID),
+			log.Any("op", op),
+		)
+		return nil, err
+	}
+	userIDs := make([]string, len(userInfos))
+	for i, item := range userInfos {
+		userIDs[i] = item.ID
+	}
+	userSchoolMap, err := GetSchoolServiceProvider().GetByUsers(ctx, op, orgID, userIDs)
+	if err != nil {
+		log.Error(ctx, "GetSchoolServiceProvider.GetByUsers error",
+			log.Any("op", op),
+			log.String("org_id", orgID),
+			log.Strings("userIDs", userIDs),
+		)
+		return nil, err
+	}
+	userClassMap, err := GetClassServiceProvider().GetByUserIDs(ctx, op, userIDs)
+	if err != nil {
+		log.Error(ctx, "GetClassServiceProvider.GetByUserIDs error", log.Any("op", op), log.Strings("userIDs", userIDs))
+		return nil, err
+	}
+	result := make([]*User, 0)
+	for _, item := range userInfos {
+		if len(userSchoolMap[item.ID]) > 0 {
+			continue
+		}
+		if len(userClassMap[item.ID]) > 0 {
+			continue
+		}
+		result = append(result, item)
+	}
+	return result, nil
 }

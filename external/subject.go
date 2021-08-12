@@ -7,7 +7,6 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
@@ -77,8 +76,8 @@ func (s AmsSubjectService) BatchGet(ctx context.Context, operator *entity.Operat
 	for index := range ids {
 		subject := data[fmt.Sprintf("q%d", indexMapping[index])]
 		if subject == nil {
-			log.Error(ctx, "subject not found", log.String("id", ids[index]))
-			return nil, constant.ErrRecordNotFound
+			log.Debug(ctx, "subject not found", log.String("id", ids[index]))
+			continue
 		}
 		subjects = append(subjects, subject)
 	}
