@@ -209,10 +209,13 @@ func (l *learningSummaryReportModel) queryRemainingFilterSchool(ctx context.Cont
 	}
 	result := make([]*entity.QueryLearningSummaryRemainingFilterResultItem, 0, len(schoolIDs))
 	for _, schoolID := range schoolIDs {
-		result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
-			SchoolID:   schoolID,
-			SchoolName: schoolNameMap[schoolID],
-		})
+		name := schoolNameMap[schoolID]
+		if name != "" {
+			result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
+				SchoolID:   schoolID,
+				SchoolName: name,
+			})
+		}
 	}
 	has, err := l.hasNoneSchoolOption(ctx, tx, operator, scheduleIDs)
 	if err != nil {
@@ -252,10 +255,13 @@ func (l *learningSummaryReportModel) queryRemainingFilterClass(ctx context.Conte
 	}
 	result := make([]*entity.QueryLearningSummaryRemainingFilterResultItem, 0, len(classIDs))
 	for _, classID := range classIDs {
-		result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
-			ClassID:   classID,
-			ClassName: classNameMap[classID],
-		})
+		name := classNameMap[classID]
+		if name != "" {
+			result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
+				ClassID:   classID,
+				ClassName: name,
+			})
+		}
 	}
 	has, err := l.hasNoneClassOption(ctx, tx, operator, scheduleIDs)
 	if err != nil {
@@ -295,10 +301,13 @@ func (l *learningSummaryReportModel) queryRemainingFilterTeacher(ctx context.Con
 	}
 	result := make([]*entity.QueryLearningSummaryRemainingFilterResultItem, 0, len(teacherIDs))
 	for _, teacherID := range teacherIDs {
-		result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
-			TeacherID:   teacherID,
-			TeacherName: teacherNameMap[teacherID],
-		})
+		name := teacherNameMap[teacherID]
+		if name != "" {
+			result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
+				TeacherID:   teacherID,
+				TeacherName: name,
+			})
+		}
 	}
 	return result, nil
 }
@@ -323,10 +332,13 @@ func (l *learningSummaryReportModel) queryRemainingFilterStudent(ctx context.Con
 	}
 	result := make([]*entity.QueryLearningSummaryRemainingFilterResultItem, 0, len(studentIDs))
 	for _, studentID := range studentIDs {
-		result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
-			StudentID:   studentID,
-			StudentName: studentNameMap[studentID],
-		})
+		name := studentNameMap[studentID]
+		if name != "" {
+			result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
+				StudentID:   studentID,
+				StudentName: name,
+			})
+		}
 	}
 	return result, nil
 }
@@ -351,9 +363,10 @@ func (l *learningSummaryReportModel) queryRemainingFilterSubject(ctx context.Con
 	}
 	result := make([]*entity.QueryLearningSummaryRemainingFilterResultItem, 0, len(subjectIDs))
 	for _, subjectID := range subjectIDs {
+		name := subjectNameMap[subjectID]
 		result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
 			SubjectID:   subjectID,
-			SubjectName: subjectNameMap[subjectID],
+			SubjectName: name,
 		})
 	}
 	return result, nil
