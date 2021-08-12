@@ -360,6 +360,7 @@ func (l *learningSummaryReportModel) batchGetScheduleRelationIDs(ctx context.Con
 	for _, s := range relations {
 		relationIDs = append(relationIDs, s.RelationID)
 	}
+	relationIDs = utils.SliceDeduplication(relationIDs)
 	return relationIDs, nil
 }
 
