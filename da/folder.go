@@ -28,8 +28,11 @@ type IFolderDA interface {
 
 	BatchReplaceFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, oldPath, path entity.Path) error
 	BatchUpdateFolderPathPrefix(ctx context.Context, tx *dbo.DBContext, fids []string, prefix entity.Path) error
+	BatchUpdateFoldersPath(ctx context.Context, tx *dbo.DBContext, fids []string, dirPath entity.Path) error
 
 	DeleteFolder(ctx context.Context, tx *dbo.DBContext, fid string) error
+	BatchDeleteFolders(ctx context.Context, tx *dbo.DBContext, fids []string) error
+
 	GetFolderByID(ctx context.Context, tx *dbo.DBContext, fid string) (*entity.FolderItem, error)
 
 	GetFolderByIDList(ctx context.Context, tx *dbo.DBContext, fids []string) ([]*entity.FolderItem, error)
@@ -242,6 +245,28 @@ func (fda *FolderDA) BatchUpdateFolderPathByLink(ctx context.Context, tx *dbo.DB
 		return err
 	}
 
+	return nil
+}
+
+func (fda *FolderDA) BatchUpdateFoldersPath(ctx context.Context, tx *dbo.DBContext, fids []string, dirPath entity.Path) error {
+	if len(fids) < 1 {
+		return nil
+	}
+	err := tx.Where("id IN (?)", fids).Updates(entity.FolderItem{DirPath: dirPath, ParentID: dirPath.Parent()}).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (fda *FolderDA) BatchDeleteFolders(ctx context.Context, tx *dbo.DBContext, fids []string) error {
+	if len(fids) < 1 {
+		return nil
+	}
+	err := tx.Where("id IN (?)", fids).Updates(entity.FolderItem{DeleteAt: time.Now().Unix()}).Error
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -237,7 +237,7 @@ func (m *homeFunStudyModel) GetByScheduleIDAndStudentID(ctx context.Context, ope
 			String: scheduleID,
 			Valid:  true,
 		},
-		StudentIDs: entity.NullStrings{
+		SearchStudentIDs: entity.NullStrings{
 			Strings: []string{studentID},
 			Valid:   true,
 		},
@@ -319,12 +319,12 @@ func (m *homeFunStudyModel) Summary(ctx context.Context, tx *dbo.DBContext, oper
 			log.Any("operator", operator),
 		)
 		if len(teachers) > 0 {
-			cond.TeacherIDs.Valid = true
+			cond.SearchTeacherIDs.Valid = true
 			for _, item := range teachers {
-				cond.TeacherIDs.Values = append(cond.TeacherIDs.Values, item.ID)
+				cond.SearchTeacherIDs.Values = append(cond.SearchTeacherIDs.Values, item.ID)
 			}
 		} else {
-			cond.TeacherIDs.Valid = false
+			cond.SearchTeacherIDs.Valid = false
 		}
 	}
 
@@ -406,9 +406,9 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 			)
 			return nil, err
 		}
-		cond.TeacherIDs.Valid = true
+		cond.SearchTeacherIDs.Valid = true
 		for _, t := range teachers {
-			cond.TeacherIDs.Values = append(cond.TeacherIDs.Values, t.ID)
+			cond.SearchTeacherIDs.Values = append(cond.SearchTeacherIDs.Values, t.ID)
 		}
 	}
 	students, err := external.GetStudentServiceProvider().Query(ctx, operator, operator.OrgID, args.Query)
@@ -422,9 +422,9 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 		return nil, err
 	}
 	if len(students) > 0 {
-		cond.StudentIDs.Valid = true
+		cond.SearchStudentIDs.Valid = true
 		for _, s := range students {
-			cond.StudentIDs.Strings = append(cond.StudentIDs.Strings, s.ID)
+			cond.SearchStudentIDs.Strings = append(cond.SearchStudentIDs.Strings, s.ID)
 		}
 	}
 
@@ -549,7 +549,7 @@ func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operato
 			String: args.ScheduleID,
 			Valid:  true,
 		},
-		StudentIDs: entity.NullStrings{
+		SearchStudentIDs: entity.NullStrings{
 			Strings: []string{args.StudentID},
 			Valid:   true,
 		},

@@ -176,9 +176,9 @@ type StudentAssessment struct {
 	CreateAt            int64                         `json:"create_at"`
 	UpdateAt            int64                         `json:"update_at"`
 	CompleteAt          int64                         `json:"complete_at"`
-	TeacherComments     []*StudentAssessmentTeacher   `json:"teacher_comments,omitempty"`
-	Schedule            *StudentAssessmentSchedule    `json:"schedule,omitempty"`
-	FeedbackAttachments []StudentAssessmentAttachment `json:"student_attachments,omitempty"`
+	TeacherComments     []*StudentAssessmentTeacher   `json:"teacher_comments"`
+	Schedule            *StudentAssessmentSchedule    `json:"schedule"`
+	FeedbackAttachments []StudentAssessmentAttachment `json:"student_attachments"`
 
 	ScheduleID string   `json:"-"`
 	FeedbackID string   `json:"-"`
