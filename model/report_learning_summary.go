@@ -813,6 +813,9 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 	if typo.Valid() && typo == entity.LearningSummaryTypeAssignment &&
 		filter.WeekStart > 0 && filter.WeekEnd > 0 {
 		scheduleIDs := make([]string, 0, len(schedules))
+		for _, s := range schedules {
+			scheduleIDs = append(scheduleIDs, s.ID)
+		}
 		cond := entity.QueryUnifiedAssessmentArgs{
 			Types: entity.NullAssessmentTypes{
 				Value: []entity.AssessmentType{entity.AssessmentTypeStudy, entity.AssessmentTypeHomeFunStudy},
