@@ -171,6 +171,7 @@ func (l *learningSummaryReportModel) QueryRemainingFilter(ctx context.Context, t
 	for _, s := range schedules {
 		scheduleIDs = append(scheduleIDs, s.ID)
 	}
+	scheduleIDs = utils.SliceDeduplication(scheduleIDs)
 	switch args.FilterType {
 	case entity.LearningSummaryFilterTypeSchool:
 		return l.queryRemainingFilterSchool(ctx, tx, operator, scheduleIDs)
@@ -213,6 +214,21 @@ func (l *learningSummaryReportModel) queryRemainingFilterSchool(ctx context.Cont
 			SchoolName: schoolNameMap[schoolID],
 		})
 	}
+	has, err := l.hasNoneSchoolOption(ctx, tx, operator, scheduleIDs)
+	if err != nil {
+		log.Error(ctx, "query remaining filter school failed: check has none school option failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	if has {
+		result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
+			SchoolID:   constant.LearningSummaryFilterOptionNoneID,
+			SchoolName: constant.LearningSummaryFilterOptionNoneName,
+		})
+	}
 	return result, nil
 }
 
@@ -239,6 +255,21 @@ func (l *learningSummaryReportModel) queryRemainingFilterClass(ctx context.Conte
 		result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
 			ClassID:   classID,
 			ClassName: classNameMap[classID],
+		})
+	}
+	has, err := l.hasNoneClassOption(ctx, tx, operator, scheduleIDs)
+	if err != nil {
+		log.Error(ctx, "query remaining filter school failed: check has none class option failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	if has {
+		result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
+			ClassID:   constant.LearningSummaryFilterOptionNoneID,
+			ClassName: constant.LearningSummaryFilterOptionNoneName,
 		})
 	}
 	return result, nil
@@ -326,6 +357,56 @@ func (l *learningSummaryReportModel) queryRemainingFilterSubject(ctx context.Con
 		})
 	}
 	return result, nil
+}
+
+func (l *learningSummaryReportModel) hasNoneSchoolOption(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) (bool, error) {
+	relatedClassIDs, err := l.batchGetScheduleRelationIDs(ctx, operator, scheduleIDs, []entity.ScheduleRelationType{entity.ScheduleRelationTypeClassRosterClass, entity.ScheduleRelationTypeParticipantClass})
+	if err != nil {
+		log.Error(ctx, "has none school: batch get schedule class ids failed",
+			log.Err(err),
+			log.Any("operator", operator),
+		)
+		return false, err
+	}
+	classes, err := external.GetClassServiceProvider().GetOnlyUnderOrgClasses(ctx, operator, operator.OrgID)
+	if err != nil {
+		log.Error(ctx, "has none school: get only under org classes failed",
+			log.Err(err),
+			log.Any("operator", operator),
+		)
+		return false, err
+	}
+	classIDs := make([]string, 0, len(classes))
+	for _, c := range classes {
+		classIDs = append(classIDs, c.ID)
+	}
+
+	return utils.HasIntersection(relatedClassIDs, classIDs), nil
+}
+
+func (l *learningSummaryReportModel) hasNoneClassOption(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) (bool, error) {
+	relatedStudentIDs, err := l.batchGetScheduleRelationIDs(ctx, operator, scheduleIDs, []entity.ScheduleRelationType{entity.ScheduleRelationTypeClassRosterStudent, entity.ScheduleRelationTypeParticipantStudent})
+	if err != nil {
+		log.Error(ctx, "query remaining filter student failed: batch get students relations failed",
+			log.Err(err),
+			log.Any("operator", operator),
+		)
+		return false, err
+	}
+	users, err := external.GetUserServiceProvider().GetOnlyUnderOrgUsers(ctx, operator, operator.OrgID)
+	if err != nil {
+		log.Error(ctx, "has none school: get only under org classes failed",
+			log.Err(err),
+			log.Any("operator", operator),
+		)
+		return false, err
+	}
+	userIDS := make([]string, 0, len(users))
+	for _, u := range users {
+		userIDS = append(userIDS, u.ID)
+	}
+
+	return utils.HasIntersection(relatedStudentIDs, userIDS), nil
 }
 
 func (l *learningSummaryReportModel) batchGetScheduleRelationIDs(ctx context.Context, operator *entity.Operator, scheduleIDs []string, relationTypes []entity.ScheduleRelationType) ([]string, error) {
@@ -624,27 +705,79 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 		}
 	}
 	if len(filter.SchoolID) > 0 {
+		if filter.SchoolID == constant.LearningSummaryFilterOptionNoneID {
+			classes, err := external.GetClassServiceProvider().GetOnlyUnderOrgClasses(ctx, operator, operator.OrgID)
+			if err != nil {
+				log.Error(ctx, "find related schedules: get only under org classes failed",
+					log.Err(err),
+					log.Any("schedule_condition", scheduleCondition),
+				)
+				return nil, err
+			}
+			classIDs := make([]string, 0, len(classes))
+			for _, c := range classes {
+				classIDs = append(classIDs, c.ID)
+			}
+			scheduleCondition.RelationClassIDs = entity.NullStrings{
+				Strings: classIDs,
+				Valid:   true,
+			}
+		}
 		scheduleCondition.RelationSchoolIDs = entity.NullStrings{
 			Strings: []string{filter.SchoolID},
 			Valid:   true,
 		}
 	}
 	if len(filter.ClassID) > 0 {
-		scheduleCondition.RelationClassIDs = entity.NullStrings{
-			Strings: []string{filter.ClassID},
-			Valid:   true,
+		if filter.ClassID == constant.LearningSummaryFilterOptionNoneID {
+			users, err := external.GetUserServiceProvider().GetOnlyUnderOrgUsers(ctx, operator, operator.OrgID)
+			if err != nil {
+				log.Error(ctx, "find related schedules: get only under org users failed",
+					log.Err(err),
+					log.Any("schedule_condition", scheduleCondition),
+				)
+				return nil, err
+			}
+			userIDs := make([]string, 0, len(users))
+			for _, u := range users {
+				userIDs = append(userIDs, u.ID)
+			}
+			scheduleCondition.RelationTeacherIDs = entity.NullStrings{
+				Strings: userIDs,
+				Valid:   true,
+			}
+			scheduleCondition.RelationStudentIDs = entity.NullStrings{
+				Strings: userIDs,
+				Valid:   true,
+			}
+		}
+		if !scheduleCondition.RelationClassIDs.Valid {
+			scheduleCondition.RelationClassIDs.Strings = append(scheduleCondition.RelationClassIDs.Strings, filter.ClassID)
+		} else {
+			scheduleCondition.RelationClassIDs = entity.NullStrings{
+				Strings: []string{filter.ClassID},
+				Valid:   true,
+			}
 		}
 	}
 	if len(filter.TeacherID) > 0 {
-		scheduleCondition.RelationTeacherIDs = entity.NullStrings{
-			Strings: []string{filter.TeacherID},
-			Valid:   true,
+		if scheduleCondition.RelationTeacherIDs.Valid {
+			scheduleCondition.RelationTeacherIDs.Strings = append(scheduleCondition.RelationTeacherIDs.Strings, filter.TeacherID)
+		} else {
+			scheduleCondition.RelationTeacherIDs = entity.NullStrings{
+				Strings: []string{filter.TeacherID},
+				Valid:   true,
+			}
 		}
 	}
 	if len(filter.StudentID) > 0 {
-		scheduleCondition.RelationStudentIDs = entity.NullStrings{
-			Strings: []string{filter.StudentID},
-			Valid:   true,
+		if scheduleCondition.RelationStudentIDs.Valid {
+			scheduleCondition.RelationStudentIDs.Strings = append(scheduleCondition.RelationStudentIDs.Strings, filter.StudentID)
+		} else {
+			scheduleCondition.RelationStudentIDs = entity.NullStrings{
+				Strings: []string{filter.StudentID},
+				Valid:   true,
+			}
 		}
 	}
 	if len(filter.SubjectID) > 0 {
