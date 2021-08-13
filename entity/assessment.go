@@ -176,11 +176,11 @@ type StudentAssessment struct {
 	CreateAt            int64                         `json:"create_at"`
 	UpdateAt            int64                         `json:"update_at"`
 	CompleteAt          int64                         `json:"complete_at"`
-	CompleteBy          string                        `json:"complete_by"`
 	TeacherComments     []*StudentAssessmentTeacher   `json:"teacher_comments"`
 	Schedule            *StudentAssessmentSchedule    `json:"schedule"`
 	FeedbackAttachments []StudentAssessmentAttachment `json:"student_attachments"`
 
+	CompleteBy string   `json:"-"`
 	ScheduleID string   `json:"-"`
 	FeedbackID string   `json:"-"`
 	StudentID  string   `json:"-"`
