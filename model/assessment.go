@@ -621,6 +621,9 @@ func (m *assessmentModel) queryAssessmentComments(ctx context.Context, operator 
 		if commentMap[scheduleIDs[i]] != nil {
 			studentComments := commentMap[scheduleIDs[i]][studentID]
 			for j := range studentComments {
+				if studentComments[j] == nil {
+					continue
+				}
 				comments[scheduleIDs[i]][studentComments[j].TeacherID] = studentComments[j].Comment
 			}
 		}
