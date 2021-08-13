@@ -519,6 +519,20 @@ func (m *assessmentModel) fillStudentAssessments(ctx context.Context,
 	return nil
 }
 
+func (m *assessmentModel) isCommentNil(ctx context.Context,
+	assessment *entity.StudentAssessment,
+	scheduleCommentMap map[string]map[string]string,
+	teacherID string) bool {
+	//home fun comment is in assessment comment
+	if assessment.IsHomeFun {
+		return assessment.Comment == ""
+	}
+
+	//query comment for teacher
+	_, exists := scheduleCommentMap[assessment.ScheduleID][teacherID]
+	return !exists
+}
+
 func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 	assessments []*entity.StudentAssessment,
 	schedulesMap map[string]*entity.Schedule,
@@ -550,14 +564,17 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 
 		//build teacher
 		assessmentTeacherIDs := teacherAssessmentsMap[assessments[i].ID]
-		assessments[i].TeacherComments = make([]*entity.StudentAssessmentTeacher, len(assessmentTeacherIDs))
+		assessments[i].TeacherComments = make([]*entity.StudentAssessmentTeacher, 0, len(assessmentTeacherIDs))
 		for j := range assessmentTeacherIDs {
 			teacherID := assessmentTeacherIDs[j]
-			assessments[i].TeacherComments[j] = &entity.StudentAssessmentTeacher{
+			if !m.isCommentNil(ctx, assessments[i], scheduleCommentMap, teacherID) {
+				continue
+			}
+			assessments[i].TeacherComments = append(assessments[i].TeacherComments, &entity.StudentAssessmentTeacher{
 				Teacher: &entity.StudentAssessmentTeacherInfo{
 					ID: teacherID,
 				},
-			}
+			})
 			teacherInfo := teacherInfoMap[assessmentTeacherIDs[j]]
 			if teacherInfo != nil && teacherInfo.Valid {
 				assessments[i].TeacherComments[j].Teacher.GivenName = teacherInfo.GivenName
@@ -570,10 +587,8 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 				assessments[i].TeacherComments[j].Comment = assessments[i].Comment
 			} else {
 				//query comment for teacher
-				comment, exists := scheduleCommentMap[assessments[i].ScheduleID][teacherID]
-				if exists {
-					assessments[i].TeacherComments[j].Comment = comment
-				}
+				comment, _ := scheduleCommentMap[assessments[i].ScheduleID][teacherID]
+				assessments[i].TeacherComments[j].Comment = comment
 			}
 		}
 
