@@ -3,10 +3,11 @@ package da
 import (
 	"context"
 	"fmt"
-	"github.com/jinzhu/gorm"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"sync"
 	"time"
+
+	"github.com/jinzhu/gorm"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -67,7 +68,7 @@ func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBCont
 	}
 
 	if err := GetAssessmentRedisDA().CacheItem(ctx, id, &item); err != nil {
-		log.Info(ctx, "get assessment exclude soft deleted: cache item failed",
+		log.Warn(ctx, "get assessment exclude soft deleted: cache item failed",
 			log.Err(err),
 			log.String("id", id),
 		)
