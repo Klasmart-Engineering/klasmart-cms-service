@@ -4,6 +4,9 @@ type QueryLearningSummaryTimeFilterArgs struct {
 	TimeOffset  int                 `json:"time_offset"`
 	SummaryType LearningSummaryType `json:"summary_type" enums:"live_class,assignment"`
 	OrgID       string              `json:"org_id"`
+	SchoolIDs   []string            `json:"school_ids"`
+	TeacherID   string              `json:"teacher_id"`
+	StudentID   string              `json:"student_id"`
 }
 
 type LearningSummaryFilterYear struct {
@@ -23,14 +26,14 @@ type QueryLearningSummaryRemainingFilterArgs struct {
 }
 
 type LearningSummaryFilter struct {
-	Year      int    `json:"year"`
-	WeekStart int64  `json:"week_start"`
-	WeekEnd   int64  `json:"week_end"`
-	SchoolID  string `json:"school_id"`
-	ClassID   string `json:"class_id"`
-	TeacherID string `json:"teacher_id"`
-	StudentID string `json:"student_id"`
-	SubjectID string `json:"subject_id"`
+	Year      int      `json:"year"`
+	WeekStart int64    `json:"week_start"`
+	WeekEnd   int64    `json:"week_end"`
+	SchoolIDs []string `json:"school_ids"`
+	ClassID   string   `json:"class_id"`
+	TeacherID string   `json:"teacher_id"`
+	StudentID string   `json:"student_id"`
+	SubjectID string   `json:"subject_id"`
 }
 
 type LearningSummaryRemainingFilterType string
