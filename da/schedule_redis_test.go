@@ -225,6 +225,10 @@ func TestClean(t *testing.T) {
 			Valid:  true,
 		},
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	assert.Equal(t, result, data)
 
 	err = GetScheduleRedisDA().Clean(ctx, orgID)
