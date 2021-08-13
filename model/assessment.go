@@ -567,7 +567,7 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 		assessments[i].TeacherComments = make([]*entity.StudentAssessmentTeacher, 0, len(assessmentTeacherIDs))
 		for j := range assessmentTeacherIDs {
 			teacherID := assessmentTeacherIDs[j]
-			if !m.isCommentNil(ctx, assessments[i], scheduleCommentMap, teacherID) {
+			if m.isCommentNil(ctx, assessments[i], scheduleCommentMap, teacherID) {
 				continue
 			}
 			assessments[i].TeacherComments = append(assessments[i].TeacherComments, &entity.StudentAssessmentTeacher{
