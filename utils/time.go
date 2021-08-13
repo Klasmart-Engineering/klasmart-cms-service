@@ -32,6 +32,14 @@ func FindWeekTimeRange(ts int64, loc *time.Location) (startDay, endDay int64) {
 	endDay = EndOfDayByTime(lastOfWeeK, loc).Unix()
 	return
 }
+
+func FindWeekTimeRangeFromMonday(ts int64, loc *time.Location) (startDay, endDay int64) {
+	startDay, endDay = FindWeekTimeRange(ts, loc)
+	startDay = time.Unix(startDay, 0).AddDate(0, 0, 1).Unix()
+	endDay = time.Unix(endDay, 0).AddDate(0, 0, 1).Unix()
+	return
+}
+
 func FindWorkWeekTimeRange(ts int64, loc *time.Location) (startDay, endDay int64) {
 	tt := time.Unix(ts, 0).In(loc)
 	offset := int(time.Monday - tt.Weekday())

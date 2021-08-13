@@ -71,7 +71,7 @@ func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *db
 		}
 		for _, s := range schedules {
 			year := time.Unix(s.StartAt, 0).Year()
-			weekStart, weekEnd := utils.FindWeekTimeRange(s.StartAt, fixedZone)
+			weekStart, weekEnd := utils.FindWeekTimeRangeFromMonday(s.StartAt, fixedZone)
 			m[year] = append(m[year], [2]int64{weekStart, weekEnd})
 		}
 	case entity.LearningSummaryTypeAssignment:
@@ -98,13 +98,13 @@ func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *db
 		}
 		for _, a := range assessments {
 			year := time.Unix(a.CompleteTime, 0).Year()
-			weekStart, weekEnd := utils.FindWeekTimeRange(a.CompleteTime, fixedZone)
+			weekStart, weekEnd := utils.FindWeekTimeRangeFromMonday(a.CompleteTime, fixedZone)
 			m[year] = append(m[year], [2]int64{weekStart, weekEnd})
 		}
 	}
 
 	// calc current week
-	currentWeekStart, currentWeekEnd := utils.FindWeekTimeRange(time.Now().Unix(), fixedZone)
+	currentWeekStart, currentWeekEnd := utils.FindWeekTimeRangeFromMonday(time.Now().Unix(), fixedZone)
 
 	// fill result
 	for year, weeks := range m {
@@ -433,12 +433,6 @@ func (l *learningSummaryReportModel) batchGetScheduleRelationIDs(ctx context.Con
 		ScheduleIDs: entity.NullStrings{
 			Strings: scheduleIDs,
 			Valid:   true,
-		},
-		RelationTypes: entity.NullStrings{
-			Strings: []string{
-				string(entity.ScheduleRelationTypeSchool),
-			},
-			Valid: true,
 		},
 	}
 	if len(relationTypes) > 0 {
