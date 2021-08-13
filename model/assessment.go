@@ -570,26 +570,28 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 			if m.isCommentNil(ctx, assessments[i], scheduleCommentMap, teacherID) {
 				continue
 			}
-			assessments[i].TeacherComments = append(assessments[i].TeacherComments, &entity.StudentAssessmentTeacher{
+			teacherComment := &entity.StudentAssessmentTeacher{
 				Teacher: &entity.StudentAssessmentTeacherInfo{
 					ID: teacherID,
 				},
-			})
+			}
 			teacherInfo := teacherInfoMap[assessmentTeacherIDs[j]]
 			if teacherInfo != nil && teacherInfo.Valid {
-				assessments[i].TeacherComments[j].Teacher.GivenName = teacherInfo.GivenName
-				assessments[i].TeacherComments[j].Teacher.FamilyName = teacherInfo.FamilyName
-				assessments[i].TeacherComments[j].Teacher.Avatar = teacherInfo.Avatar
+				teacherComment.Teacher.GivenName = teacherInfo.GivenName
+				teacherComment.Teacher.FamilyName = teacherInfo.FamilyName
+				teacherComment.Teacher.Avatar = teacherInfo.Avatar
 			}
 
 			//home fun comment is in assessment comment
 			if assessments[i].IsHomeFun {
-				assessments[i].TeacherComments[j].Comment = assessments[i].Comment
+				teacherComment.Comment = assessments[i].Comment
 			} else {
 				//query comment for teacher
 				comment, _ := scheduleCommentMap[assessments[i].ScheduleID][teacherID]
-				assessments[i].TeacherComments[j].Comment = comment
+				teacherComment.Comment = comment
 			}
+
+			assessments[i].TeacherComments = append(assessments[i].TeacherComments, teacherComment)
 		}
 
 		//build student attachments
