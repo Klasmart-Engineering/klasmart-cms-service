@@ -422,6 +422,7 @@ func (m *assessmentModel) homeFunStudyToStudentAssessments(ctx context.Context,
 			CreateAt:   r[i].CreateAt,
 			UpdateAt:   r[i].UpdateAt,
 			CompleteAt: r[i].CompleteAt,
+			CompleteBy: r[i].CompleteBy,
 			ScheduleID: r[i].ScheduleID,
 			Comment:    r[i].AssessComment,
 			Score:      int(r[i].AssessScore),
@@ -472,7 +473,11 @@ func (m *assessmentModel) fillStudentAssessments(ctx context.Context,
 	}
 
 	//query teachers info in assessments
-	teacherAssessmentsMap, teacherInfoMap, err := m.queryTeacherMap(ctx, operator, tx, assessments, collectedIDs.AllAssessmentIDs)
+	teacherAssessmentsMap, teacherInfoMap, err := m.queryTeacherMap(ctx,
+		operator,
+		tx,
+		assessments,
+		collectedIDs.AllAssessmentIDs)
 	if err != nil {
 		log.Error(ctx, "GetTeacherServiceProvider.BatchGetNameMap failed",
 			log.Err(err),
@@ -693,7 +698,12 @@ func (m *assessmentModel) queryTeacherMap(ctx context.Context,
 
 	//collect home fun study teachers
 	for i := range assessments {
-		teacherAssessmentsMap[assessments[i].ID] = append(teacherAssessmentsMap[assessments[i].ID], assessments[i].TeacherIDs...)
+		if assessments[i].IsHomeFun && assessments[i].CompleteBy != "" {
+			teacherAssessmentsMap[assessments[i].ID] = append(teacherAssessmentsMap[assessments[i].ID], assessments[i].CompleteBy)
+			teacherIDs = append(teacherIDs, assessments[i].CompleteBy)
+		} else {
+			teacherAssessmentsMap[assessments[i].ID] = append(teacherAssessmentsMap[assessments[i].ID], assessments[i].TeacherIDs...)
+		}
 		teacherIDs = append(teacherIDs, assessments[i].TeacherIDs...)
 	}
 
