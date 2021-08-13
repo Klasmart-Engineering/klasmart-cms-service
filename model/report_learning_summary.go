@@ -198,6 +198,7 @@ func (l *learningSummaryReportModel) queryRemainingFilterSchool(ctx context.Cont
 		)
 		return nil, err
 	}
+	schoolIDs = utils.SliceDeduplicationExcludeEmpty(schoolIDs)
 	schoolNameMap, err := external.GetSchoolServiceProvider().BatchGetNameMap(ctx, operator, schoolIDs)
 	if err != nil {
 		log.Error(ctx, "query remaining filter school failed: batch get school name map failed",
@@ -244,6 +245,7 @@ func (l *learningSummaryReportModel) queryRemainingFilterClass(ctx context.Conte
 		)
 		return nil, err
 	}
+	classIDs = utils.SliceDeduplicationExcludeEmpty(classIDs)
 	classNameMap, err := external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, classIDs)
 	if err != nil {
 		log.Error(ctx, "query remaining filter class failed: batch get class name map failed",
@@ -290,6 +292,7 @@ func (l *learningSummaryReportModel) queryRemainingFilterTeacher(ctx context.Con
 		)
 		return nil, err
 	}
+	teacherIDs = utils.SliceDeduplicationExcludeEmpty(teacherIDs)
 	teacherNameMap, err := external.GetTeacherServiceProvider().BatchGetNameMap(ctx, operator, teacherIDs)
 	if err != nil {
 		log.Error(ctx, "query remaining filter teacher failed: batch get teacher name map failed",
@@ -321,6 +324,7 @@ func (l *learningSummaryReportModel) queryRemainingFilterStudent(ctx context.Con
 		)
 		return nil, err
 	}
+	studentIDs = utils.SliceDeduplicationExcludeEmpty(studentIDs)
 	studentNameMap, err := external.GetStudentServiceProvider().BatchGetNameMap(ctx, operator, studentIDs)
 	if err != nil {
 		log.Error(ctx, "query remaining filter student failed: batch get student name map failed",
@@ -352,6 +356,7 @@ func (l *learningSummaryReportModel) queryRemainingFilterSubject(ctx context.Con
 		)
 		return nil, err
 	}
+	subjectIDs = utils.SliceDeduplicationExcludeEmpty(subjectIDs)
 	subjectNameMap, err := external.GetSubjectServiceProvider().BatchGetNameMap(ctx, operator, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "query remaining filter student failed: batch get student name map failed",

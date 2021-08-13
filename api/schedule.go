@@ -972,17 +972,7 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	condition := &da.ScheduleCondition{
-		StartAtLt: sql.NullInt64{
-			Int64: time.Now().Add(constant.ScheduleAllowGoLiveTime).Unix(),
-			Valid: true,
-		},
-		RelationID: sql.NullString{
-			String: classID,
-			Valid:  true,
-		},
-	}
-	result, err := model.GetScheduleModel().GetLessonPlanByCondition(ctx, dbo.MustGetDB(ctx), op, condition)
+	result, err := model.GetReportModel().GetLessonPlanFilter(ctx, dbo.MustGetDB(ctx), op, classID)
 	switch err {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
