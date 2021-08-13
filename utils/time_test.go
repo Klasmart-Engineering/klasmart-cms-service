@@ -139,3 +139,37 @@ func TestEndOfDayByTime(t *testing.T) {
 		})
 	}
 }
+
+func TestFindWeekTimeRangeFromMonday(t *testing.T) {
+	type args struct {
+		ts  int64
+		loc *time.Location
+	}
+	tests := []struct {
+		name         string
+		args         args
+		wantStartDay int64
+		wantEndDay   int64
+	}{
+		{
+			name: "t1",
+			args: args{
+				ts:  1628841045,
+				loc: time.Local,
+			},
+			wantStartDay: 0,
+			wantEndDay:   0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotStartDay, gotEndDay := FindWeekTimeRangeFromMonday(tt.args.ts, tt.args.loc)
+			if gotStartDay != tt.wantStartDay {
+				t.Errorf("FindWeekTimeRangeFromMonday() gotStartDay = %v, want %v", time.Unix(gotStartDay, 0), time.Unix(tt.wantStartDay, 0))
+			}
+			if gotEndDay != tt.wantEndDay {
+				t.Errorf("FindWeekTimeRangeFromMonday() gotEndDay = %v, want %v", time.Unix(gotEndDay, 0), time.Unix(tt.wantEndDay, 0))
+			}
+		})
+	}
+}

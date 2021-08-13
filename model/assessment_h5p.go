@@ -528,19 +528,20 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 						continue
 					}
 					newLessonMaterial := entity.AssessmentStudentViewH5PLessonMaterial{
-						LessonMaterialID:   lm.ID,
-						LessonMaterialName: lm.Name,
-						LessonMaterialType: content.ContentType,
-						Answer:             content.Answer,
-						MaxScore:           content.MaxPossibleScore,
-						AchievedScore:      content.AchievedScore,
-						Attempted:          len(content.Answers) > 0 || len(content.Scores) > 0,
-						IsH5P:              lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
-						OutcomeNames:       lpOutcomeNameMap[lm.ID],
-						SubContentNumber:   content.SubContentNumber,
-						Number:             content.SubH5PID,
-						H5PID:              content.H5PID,
-						SubH5PID:           content.SubH5PID,
+						LessonMaterialID:     lm.ID,
+						LessonMaterialName:   lm.Name,
+						LessonMaterialType:   content.ContentType,
+						Answer:               content.Answer,
+						MaxScore:             content.MaxPossibleScore,
+						AchievedScore:        content.AchievedScore,
+						Attempted:            len(content.Answers) > 0 || len(content.Scores) > 0,
+						IsH5P:                lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
+						OutcomeNames:         lpOutcomeNameMap[lm.ID],
+						SubContentNumber:     content.SubContentNumber,
+						Number:               content.SubH5PID,
+						H5PID:                content.H5PID,
+						SubH5PID:             content.SubH5PID,
+						NotApplicableScoring: getAssessmentH5P().canScoring(content.ContentType),
 					}
 					newItem.LessonMaterials = append(newItem.LessonMaterials, &newLessonMaterial)
 				}
@@ -616,4 +617,62 @@ func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *en
 	sort.Sort(entity.AssessmentStudentViewH5PItemsOrder(r))
 
 	return r, nil
+}
+
+var canScoringMap = map[string]bool{
+	"Accordion":                    false,
+	"AdvancedBlanks":               true,
+	"AdventCalendar":               false,
+	"Agamotto":                     false,
+	"ArithmeticQuiz":               true,
+	"Audio":                        false,
+	"AudioRecorder":                false,
+	"AudioRecorderBookMaker":       false,
+	"BranchingScenario":            true,
+	"Chart":                        false,
+	"Collage":                      false,
+	"Column":                       true,
+	"CoursePresentationKID":        true,
+	"Dialogcards":                  false,
+	"Dictation":                    true,
+	"DocumentationTool":            false,
+	"DragQuestion":                 true,
+	"DragText":                     true,
+	"Essay":                        true,
+	"Blanks":                       true,
+	"ImageMultipleHotspotQuestion": true,
+	"ImageHotspotQuestion":         true,
+	"FindTheWords":                 true,
+	"Flashcards":                   true,
+	"GuessTheAnswer":               false,
+	"IFrameEmbed":                  false,
+	"ImageHotspots":                false,
+	"ImagePair":                    true,
+	"ImageSequencing":              true,
+	"ImageJuxtaposition":           false,
+	"ImageSlider":                  false,
+	"ImpressPresentation":          false,
+	"InteractiveBook":              true,
+	"InteractiveVideo":             true,
+	"JigsawPuzzleKID":              true,
+	"KewArCode":                    false,
+	"MarkTheWords":                 true,
+	"MemoryGame":                   true,
+	"MultipleChoice":               true,
+	"PersonalityQuiz":              false,
+	"Questionnaire":                false,
+	"QuestionSet":                  true,
+	"Shape":                        false,
+	"SingleChoiceSet":              true,
+	"SpeakTheWords":                true,
+	"SpeqkTheWordsSet":             true,
+	"Summary":                      true,
+	"Timeline":                     false,
+	"TrueFalse":                    true,
+	"TwitterUserFeed":              false,
+	"ThreeImage":                   false,
+}
+
+func (m *assessmentH5P) canScoring(contentType string) bool {
+	return canScoringMap[contentType]
 }
