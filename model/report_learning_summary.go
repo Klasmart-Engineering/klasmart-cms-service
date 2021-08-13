@@ -770,7 +770,7 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 				Valid:   true,
 			}
 		}
-		if !scheduleCondition.RelationClassIDs.Valid {
+		if scheduleCondition.RelationClassIDs.Valid {
 			scheduleCondition.RelationClassIDs.Strings = append(scheduleCondition.RelationClassIDs.Strings, filter.ClassID)
 		} else {
 			scheduleCondition.RelationClassIDs = entity.NullStrings{
