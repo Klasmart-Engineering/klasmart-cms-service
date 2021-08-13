@@ -56,7 +56,7 @@ func (s *Server) queryLearningSummaryTimeFilter(c *gin.Context) {
 		TimeOffset:  timeOffset,
 		SummaryType: summaryType,
 		OrgID:       operator.OrgID,
-		SchoolIDs:   utils.SliceDeduplicationExcludeEmpty(strings.Split(c.Query("school_id"), ",")),
+		SchoolIDs:   utils.SliceDeduplicationExcludeEmpty(strings.Split(c.Query("school_ids"), ",")),
 		TeacherID:   c.Query("teacher_id"),
 		StudentID:   c.Query("student_id"),
 	}
