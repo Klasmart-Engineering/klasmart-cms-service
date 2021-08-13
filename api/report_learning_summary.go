@@ -2,8 +2,10 @@ package api
 
 import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -20,6 +22,9 @@ import (
 // @Produce json
 // @Param time_offset query integer true "time offset (unit: second)"
 // @Param summary_type query string true "learning summary type" enums(live_class,assignment)
+// @Param school_ids query string false "school ids, use commas to separate"
+// @Param teacher_id query string false "teacher_id"
+// @Param student_id query string false "student_id"
 // @Success 200 {array} entity.LearningSummaryFilterYear
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -51,6 +56,9 @@ func (s *Server) queryLearningSummaryTimeFilter(c *gin.Context) {
 		TimeOffset:  timeOffset,
 		SummaryType: summaryType,
 		OrgID:       operator.OrgID,
+		SchoolIDs:   utils.SliceDeduplicationExcludeEmpty(strings.Split(c.Query("school_ids"), ",")),
+		TeacherID:   c.Query("teacher_id"),
+		StudentID:   c.Query("student_id"),
 	}
 
 	// call business model
@@ -83,7 +91,7 @@ func (s *Server) queryLearningSummaryTimeFilter(c *gin.Context) {
 // @Param filter_type query string true "filter type" enums(school,class,teacher,student,subject)
 // @Param week_start query integer false "week start timestamp(unit: second)"
 // @Param week_end query integer false "week end timestamp(unit: second)"
-// @Param school_id query string false "school id"
+// @Param school_id query string false "school ids, use commas to separate"
 // @Param class_id query string false "class id"
 // @Param teacher_id query string false "teacher_id"
 // @Param student_id query string false "student_id"
@@ -291,7 +299,7 @@ func (s *Server) parseLearningSummaryFilter(c *gin.Context) (*entity.LearningSum
 		Year:      year,
 		WeekStart: weekStart,
 		WeekEnd:   weekEnd,
-		SchoolID:  c.Query("school_id"),
+		SchoolIDs: utils.SliceDeduplicationExcludeEmpty(strings.Split(c.Query("school_id"), ",")),
 		ClassID:   c.Query("class_id"),
 		TeacherID: c.Query("teacher_id"),
 		StudentID: c.Query("student_id"),

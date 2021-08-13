@@ -169,7 +169,14 @@ func (da *assessmentRedisDA) CleanQueryLearningSummaryTimeFilterResult(ctx conte
 }
 
 func (da *assessmentRedisDA) generateQueryLearningSummaryTimeFilterResultCacheKey(args *entity.QueryLearningSummaryTimeFilterArgs) string {
-	return strings.Join([]string{RedisKeyPrefixAssessmentQueryLearningSummaryTimeFilter, args.OrgID, string(args.SummaryType), strconv.Itoa(args.TimeOffset)}, ":")
+	return strings.Join([]string{RedisKeyPrefixAssessmentQueryLearningSummaryTimeFilter,
+		args.OrgID,
+		string(args.SummaryType),
+		strconv.Itoa(args.TimeOffset),
+		strings.Join(args.SchoolIDs, ","),
+		args.TeacherID,
+		args.StudentID,
+	}, ":")
 }
 
 type baseAssessmentRedisDA struct{}
