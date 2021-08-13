@@ -701,7 +701,7 @@ func (m *assessmentModel) queryTeacherMap(ctx context.Context,
 		if assessments[i].IsHomeFun && assessments[i].CompleteBy != "" {
 			teacherAssessmentsMap[assessments[i].ID] = append(teacherAssessmentsMap[assessments[i].ID], assessments[i].CompleteBy)
 			teacherIDs = append(teacherIDs, assessments[i].CompleteBy)
-		} else {
+		} else if !assessments[i].IsHomeFun {
 			teacherAssessmentsMap[assessments[i].ID] = append(teacherAssessmentsMap[assessments[i].ID], assessments[i].TeacherIDs...)
 		}
 		teacherIDs = append(teacherIDs, assessments[i].TeacherIDs...)
