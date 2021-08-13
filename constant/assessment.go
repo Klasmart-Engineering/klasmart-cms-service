@@ -8,5 +8,8 @@ const (
 	ListOptionAll                  = "all"
 	AssessmentDefaultRemainingTime = 7 * 24 * time.Hour
 
-	LearningSummaryFilterOptionNone = "none"
+	AssessmentQueryLearningSummaryTimeFilterCacheExpiration = 24 * time.Hour
+
+	LearningSummaryFilterOptionNoneID   = "none"
+	LearningSummaryFilterOptionNoneName = "None"
 )

@@ -33,6 +33,7 @@ const (
 )
 
 const (
-	RedisKeyPrefixAssessmentItem    = "assessment:item"
-	RedisKeyPrefixAssessmentAddLock = "assessment:add"
+	RedisKeyPrefixAssessmentItem = "assessment:item"
+
+	RedisKeyPrefixAssessmentQueryLearningSummaryTimeFilter = "assessment:query_learning_summary_time_filter"
 )

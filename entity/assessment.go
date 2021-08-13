@@ -180,6 +180,7 @@ type StudentAssessment struct {
 	Schedule            *StudentAssessmentSchedule    `json:"schedule"`
 	FeedbackAttachments []StudentAssessmentAttachment `json:"student_attachments"`
 
+	CompleteBy string   `json:"-"`
 	ScheduleID string   `json:"-"`
 	FeedbackID string   `json:"-"`
 	StudentID  string   `json:"-"`

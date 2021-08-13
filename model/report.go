@@ -19,8 +19,10 @@ type IReportModel interface {
 	ListStudentsReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsAchievementReportRequest) (*entity.StudentsAchievementReportResponse, error)
 	GetStudentReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.GetStudentAchievementReportRequest) (*entity.StudentAchievementReportResponse, error)
 	GetTeacherReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, teacherID string) (*entity.TeacherReport, error)
-
+	GetLessonPlanFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string) ([]*entity.ScheduleShortInfo, error)
+	// DEPRECATED
 	ListStudentsPerformanceReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsPerformanceReportRequest) (*entity.ListStudentsPerformanceReportResponse, error)
+	// DEPRECATED
 	GetStudentPerformanceReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.GetStudentPerformanceReportRequest) (*entity.GetStudentPerformanceReportResponse, error)
 }
 
@@ -876,7 +878,7 @@ func (m *reportModel) getCompletedAssessments(ctx context.Context, tx *dbo.DBCon
 			Valid:   true,
 		},
 		ClassTypes: entity.NullScheduleClassTypes{
-			Value: []entity.ScheduleClassType{entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass},
+			Value: []entity.ScheduleClassType{entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass, entity.ScheduleClassTypeHomework},
 			Valid: true,
 		},
 		Status: entity.NullAssessmentStatus{
@@ -909,7 +911,7 @@ func (m *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, o
 	assessments := make([]*entity.Assessment, 0, len(scheduleIDs))
 	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
 		ClassTypes: entity.NullScheduleClassTypes{
-			Value: []entity.ScheduleClassType{entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass},
+			Value: []entity.ScheduleClassType{entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass, entity.ScheduleClassTypeHomework},
 			Valid: true,
 		},
 		ScheduleIDs: entity.NullStrings{
@@ -1432,3 +1434,77 @@ func (m *reportModel) getStudentInClass(ctx context.Context, operator *entity.Op
 }
 
 // endregion
+
+func (m *reportModel) GetLessonPlanFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string) ([]*entity.ScheduleShortInfo, error) {
+	// query assessments
+	cond := da.QueryAssessmentConditions{
+		OrgID: entity.NullString{
+			String: operator.OrgID,
+			Valid:  true,
+		},
+		Status: entity.NullAssessmentStatus{
+			Value: entity.AssessmentStatusComplete,
+			Valid: true,
+		},
+		ClassIDs: entity.NullStrings{
+			Strings: []string{classID},
+			Valid:   true,
+		},
+	}
+	assessments, err := GetAssessmentModel().Query(ctx, operator, tx, &cond)
+	if err != nil {
+		log.Error(ctx, "get lesson plan filter: query assessments failed",
+			log.Err(err),
+			log.Any("cond", cond),
+			log.String("class_id", classID),
+		)
+		return nil, err
+	}
+
+	// batch get schedules
+	scheduleIDs := make([]string, 0, len(assessments))
+	for _, a := range assessments {
+		scheduleIDs = append(scheduleIDs, a.ScheduleID)
+	}
+	scheduleIDs = utils.SliceDeduplicationExcludeEmpty(scheduleIDs)
+	if len(scheduleIDs) == 0 {
+		log.Debug(ctx, "get lesson plan filter: empty schedule ids",
+			log.Any("cond", cond),
+			log.String("class_id", classID),
+		)
+		return nil, nil
+	}
+	schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, operator, scheduleIDs, nil)
+	if err != nil {
+		log.Error(ctx, "get lesson plan filter: get schedules failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
+			log.String("class_id", classID),
+		)
+		return nil, err
+	}
+
+	// batch get lesson plans
+	lessonPlanIDs := make([]string, 0, len(schedules))
+	for _, s := range schedules {
+		lessonPlanIDs = append(lessonPlanIDs, s.LessonPlanID)
+	}
+	lessonPlanIDs = utils.SliceDeduplicationExcludeEmpty(lessonPlanIDs)
+	contents, err := GetContentModel().GetContentNameByIDList(ctx, tx, lessonPlanIDs)
+	if err != nil {
+		log.Error(ctx, "get lesson plan filter: get content names failed",
+			log.Err(err),
+			log.Strings("lesson_plan_ids", lessonPlanIDs),
+			log.String("class_id", classID),
+		)
+		return nil, err
+	}
+	result := make([]*entity.ScheduleShortInfo, 0, len(contents))
+	for _, c := range contents {
+		result = append(result, &entity.ScheduleShortInfo{
+			ID:   c.ID,
+			Name: c.Name,
+		})
+	}
+	return result, nil
+}
