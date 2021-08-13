@@ -519,6 +519,20 @@ func (m *assessmentModel) fillStudentAssessments(ctx context.Context,
 	return nil
 }
 
+func (m *assessmentModel) isCommentNil(ctx context.Context,
+	assessment *entity.StudentAssessment,
+	scheduleCommentMap map[string]map[string]string,
+	teacherID string) bool {
+	//home fun comment is in assessment comment
+	if assessment.IsHomeFun {
+		return assessment.Comment == ""
+	}
+
+	//query comment for teacher
+	_, exists := scheduleCommentMap[assessment.ScheduleID][teacherID]
+	return !exists
+}
+
 func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 	assessments []*entity.StudentAssessment,
 	schedulesMap map[string]*entity.Schedule,
@@ -550,31 +564,34 @@ func (m *assessmentModel) buildStudentAssessments(ctx context.Context,
 
 		//build teacher
 		assessmentTeacherIDs := teacherAssessmentsMap[assessments[i].ID]
-		assessments[i].TeacherComments = make([]*entity.StudentAssessmentTeacher, len(assessmentTeacherIDs))
+		assessments[i].TeacherComments = make([]*entity.StudentAssessmentTeacher, 0, len(assessmentTeacherIDs))
 		for j := range assessmentTeacherIDs {
 			teacherID := assessmentTeacherIDs[j]
-			assessments[i].TeacherComments[j] = &entity.StudentAssessmentTeacher{
+			if m.isCommentNil(ctx, assessments[i], scheduleCommentMap, teacherID) {
+				continue
+			}
+			teacherComment := &entity.StudentAssessmentTeacher{
 				Teacher: &entity.StudentAssessmentTeacherInfo{
 					ID: teacherID,
 				},
 			}
 			teacherInfo := teacherInfoMap[assessmentTeacherIDs[j]]
 			if teacherInfo != nil && teacherInfo.Valid {
-				assessments[i].TeacherComments[j].Teacher.GivenName = teacherInfo.GivenName
-				assessments[i].TeacherComments[j].Teacher.FamilyName = teacherInfo.FamilyName
-				assessments[i].TeacherComments[j].Teacher.Avatar = teacherInfo.Avatar
+				teacherComment.Teacher.GivenName = teacherInfo.GivenName
+				teacherComment.Teacher.FamilyName = teacherInfo.FamilyName
+				teacherComment.Teacher.Avatar = teacherInfo.Avatar
 			}
 
 			//home fun comment is in assessment comment
 			if assessments[i].IsHomeFun {
-				assessments[i].TeacherComments[j].Comment = assessments[i].Comment
+				teacherComment.Comment = assessments[i].Comment
 			} else {
 				//query comment for teacher
-				comment, exists := scheduleCommentMap[assessments[i].ScheduleID][teacherID]
-				if exists {
-					assessments[i].TeacherComments[j].Comment = comment
-				}
+				comment, _ := scheduleCommentMap[assessments[i].ScheduleID][teacherID]
+				teacherComment.Comment = comment
 			}
+
+			assessments[i].TeacherComments = append(assessments[i].TeacherComments, teacherComment)
 		}
 
 		//build student attachments
@@ -605,7 +622,15 @@ func (m *assessmentModel) queryAssessmentComments(ctx context.Context, operator 
 	for i := range scheduleIDs {
 		if commentMap[scheduleIDs[i]] != nil {
 			studentComments := commentMap[scheduleIDs[i]][studentID]
+			comments[scheduleIDs[i]] = make(map[string]string)
 			for j := range studentComments {
+				if studentComments[j] == nil {
+					continue
+				}
+				log.Debug(ctx, "test info",
+					log.Any("comments", comments),
+					log.Any("scheduleID", scheduleIDs[i]),
+					log.Any("studentComment", studentComments[j]))
 				comments[scheduleIDs[i]][studentComments[j].TeacherID] = studentComments[j].Comment
 			}
 		}
@@ -701,7 +726,7 @@ func (m *assessmentModel) queryTeacherMap(ctx context.Context,
 		if assessments[i].IsHomeFun && assessments[i].CompleteBy != "" {
 			teacherAssessmentsMap[assessments[i].ID] = append(teacherAssessmentsMap[assessments[i].ID], assessments[i].CompleteBy)
 			teacherIDs = append(teacherIDs, assessments[i].CompleteBy)
-		} else {
+		} else if !assessments[i].IsHomeFun {
 			teacherAssessmentsMap[assessments[i].ID] = append(teacherAssessmentsMap[assessments[i].ID], assessments[i].TeacherIDs...)
 		}
 		teacherIDs = append(teacherIDs, assessments[i].TeacherIDs...)
