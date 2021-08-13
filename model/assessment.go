@@ -624,6 +624,10 @@ func (m *assessmentModel) queryAssessmentComments(ctx context.Context, operator 
 				if studentComments[j] == nil {
 					continue
 				}
+				log.Debug(ctx, "test info",
+					log.Any("comments", comments),
+					log.Any("scheduleID", scheduleIDs[i]),
+					log.Any("studentComment", studentComments[j]))
 				comments[scheduleIDs[i]][studentComments[j].TeacherID] = studentComments[j].Comment
 			}
 		}
