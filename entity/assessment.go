@@ -107,10 +107,8 @@ type AssessmentStudentViewH5PLessonMaterial struct {
 	Attempted            bool     `json:"attempted"`
 	IsH5P                bool     `json:"is_h5p"`
 	OutcomeNames         []string `json:"outcome_names"`
-	SubContentNumber     int      `json:"sub_content_number"` // add: 2021.06.24
-	Number               string   `json:"number"`             // add: 2021.06.24
-	H5PID                string   `json:"h5p_id"`             // add: 2021.06.24
-	SubH5PID             string   `json:"sub_h5p_id"`         // add: 2021.06.24
+	H5PID                string   `json:"h5p_id"`     // add: 2021.06.24
+	SubH5PID             string   `json:"sub_h5p_id"` // add: 2021.06.24
 	NotApplicableScoring bool     `json:"not_applicable_scoring"`
 }
 
