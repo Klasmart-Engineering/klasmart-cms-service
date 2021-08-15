@@ -154,6 +154,7 @@ fragment scoresByUser on Room {
 		}
 		scores {
 			content {
+				parent_id
 				content_id
 				name
 				type

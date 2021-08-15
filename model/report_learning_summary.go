@@ -438,7 +438,6 @@ func (l *learningSummaryReportModel) hasNoneClassOption(ctx context.Context, tx 
 	for _, u := range users {
 		userIDS = append(userIDS, u.ID)
 	}
-
 	return utils.HasIntersection(relatedStudentIDs, userIDS), nil
 }
 

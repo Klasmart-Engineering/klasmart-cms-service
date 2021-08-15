@@ -50,34 +50,27 @@ type AddH5PAssessmentStudyInput struct {
 }
 
 type AssessmentH5PRoom struct {
-	//AnyoneAttempted bool
 	Users []*AssessmentH5PUser
-	//UserMap         map[string]*AssessmentH5PUser
 }
 
 type AssessmentH5PUser struct {
 	UserID   string
 	Comment  string
 	Contents []*AssessmentH5PContent
-	//ContentsMapByH5PID     map[string][]*AssessmentH5PContent
-	//ContentMapBySubH5PID   map[string]*AssessmentH5PContent
-	//ContentsMapByContentID map[string][]*AssessmentH5PContent
 }
 
 type AssessmentH5PContent struct {
-	OrderedID   int
-	H5PID       string
-	SubH5PID    string // add: 2021.06.24
-	ContentID   string
-	ContentName string
-	ContentType string
-	//Answer           string
-	Answers []*AssessmentH5PAnswer
-	//MaxPossibleScore float64
-	//AchievedScore    float64
-	Scores        []float64
-	TeacherScores []*AssessmentH5PTeacherScore
-	//SubContentNumber int    // add: 2021.06.24
+	OrderedID     int                          `json:"ordered_id"`
+	ParentID      string                       `json:"parent_id"`
+	H5PID         string                       `json:"h5p_id"`
+	SubH5PID      string                       `json:"sub_h5p_id"`
+	ContentID     string                       `json:"content_id"`
+	ContentName   string                       `json:"content_name"`
+	ContentType   string                       `json:"content_type"`
+	Answers       []*AssessmentH5PAnswer       `json:"answers"`
+	TeacherScores []*AssessmentH5PTeacherScore `json:"teacher_scores"`
+	Scores        []float64                    `json:"scores"`
+	Children      []*AssessmentH5PContent      `json:"children"`
 }
 
 type AssessmentH5PAnswer struct {
