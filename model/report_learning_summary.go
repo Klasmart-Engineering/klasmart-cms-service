@@ -232,21 +232,21 @@ func (l *learningSummaryReportModel) queryRemainingFilterSchool(ctx context.Cont
 			})
 		}
 	}
-	has, err := l.hasNoneSchoolOption(ctx, tx, operator, scheduleIDs)
-	if err != nil {
-		log.Error(ctx, "query remaining filter school failed: check has none school option failed",
-			log.Err(err),
-			log.Strings("schedule_ids", scheduleIDs),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	if has {
-		result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
-			SchoolID:   constant.LearningSummaryFilterOptionNoneID,
-			SchoolName: constant.LearningSummaryFilterOptionNoneName,
-		})
-	}
+	//has, err := l.hasNoneSchoolOption(ctx, tx, operator, scheduleIDs)
+	//if err != nil {
+	//	log.Error(ctx, "query remaining filter school failed: check has none school option failed",
+	//		log.Err(err),
+	//		log.Strings("schedule_ids", scheduleIDs),
+	//		log.Any("operator", operator),
+	//	)
+	//	return nil, err
+	//}
+	//if has {
+	//	result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
+	//		SchoolID:   constant.LearningSummaryFilterOptionNoneID,
+	//		SchoolName: constant.LearningSummaryFilterOptionNoneName,
+	//	})
+	//}
 	return result, nil
 }
 
@@ -279,21 +279,21 @@ func (l *learningSummaryReportModel) queryRemainingFilterClass(ctx context.Conte
 			})
 		}
 	}
-	has, err := l.hasNoneClassOption(ctx, tx, operator, scheduleIDs)
-	if err != nil {
-		log.Error(ctx, "query remaining filter school failed: check has none class option failed",
-			log.Err(err),
-			log.Strings("schedule_ids", scheduleIDs),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	if has {
-		result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
-			ClassID:   constant.LearningSummaryFilterOptionNoneID,
-			ClassName: constant.LearningSummaryFilterOptionNoneName,
-		})
-	}
+	//has, err := l.hasNoneClassOption(ctx, tx, operator, scheduleIDs)
+	//if err != nil {
+	//	log.Error(ctx, "query remaining filter school failed: check has none class option failed",
+	//		log.Err(err),
+	//		log.Strings("schedule_ids", scheduleIDs),
+	//		log.Any("operator", operator),
+	//	)
+	//	return nil, err
+	//}
+	//if has {
+	//	result = append(result, &entity.QueryLearningSummaryRemainingFilterResultItem{
+	//		ClassID:   constant.LearningSummaryFilterOptionNoneID,
+	//		ClassName: constant.LearningSummaryFilterOptionNoneName,
+	//	})
+	//}
 	return result, nil
 }
 
