@@ -410,14 +410,14 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 
 	// number lesson materials
 	for _, lessonMaterials := range result {
-		m.numberStudentViewH5PLessonMaterials(ctx, view, lessonMaterials)
+		m.numberAndFlagStudentViewH5PLessonMaterials(ctx, view, lessonMaterials)
 		m.sortNumberedStudentViewH5PLessonMaterials(ctx, lessonMaterials)
 	}
 
 	return result, nil
 }
 
-func (m *assessmentH5P) numberStudentViewH5PLessonMaterials(ctx context.Context, view *entity.AssessmentView, lessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial) {
+func (m *assessmentH5P) numberAndFlagStudentViewH5PLessonMaterials(ctx context.Context, view *entity.AssessmentView, lessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial) {
 	// sort by cms lesson materials
 	lmIndexMap := make(map[string]int, len(view.LessonMaterials))
 	for i, lm := range view.LessonMaterials {
@@ -436,6 +436,15 @@ func (m *assessmentH5P) numberStudentViewH5PLessonMaterials(ctx context.Context,
 	treedLessonMaterials := m.treeingStudentViewLessonMaterials(lessonMaterials)
 	m.sortTreedStudentViewH5PLessonMaterials(treedLessonMaterials)
 	m.doNumberStudentViewH5PLessonMaterials(treedLessonMaterials, "")
+	m.flagHasSubItems(treedLessonMaterials)
+}
+
+func (m *assessmentH5P) flagHasSubItems(treedLessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial) {
+	for _, lm := range treedLessonMaterials {
+		if len(lm.Children) > 0 {
+			lm.HasSubItems = true
+		}
+	}
 }
 
 func (m *assessmentH5P) sortNumberedStudentViewH5PLessonMaterials(ctx context.Context, lessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial) {
