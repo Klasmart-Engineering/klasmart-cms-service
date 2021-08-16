@@ -409,9 +409,11 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 	}
 
 	// number lesson materials
+	log.Debug(ctx, "batch get student view h5p lesson materials map: number start")
 	for _, lessonMaterials := range result {
 		m.numberStudentViewH5PLessonMaterials(view, lessonMaterials)
 	}
+	log.Debug(ctx, "batch get student view h5p lesson materials map: number end")
 
 	return result, nil
 }
@@ -475,7 +477,7 @@ func (m *assessmentH5P) treeingStudentViewLessonMaterials(contents []*entity.Ass
 	var level2Contents []*entity.AssessmentStudentViewH5PLessonMaterial
 	for _, root := range rootContents {
 		for _, c := range contents {
-			if c.ParentID == root.H5PID {
+			if c.ParentID == root.H5PID && c.ParentID != "" {
 				root.Children = append(root.Children, c)
 				level2Contents = append(level2Contents, c)
 			}
@@ -492,7 +494,7 @@ func (m *assessmentH5P) treeingRemainingStudentViewLessonMaterials(contents []*e
 	for _, parent := range parentContents {
 		var subContents []*entity.AssessmentStudentViewH5PLessonMaterial
 		for _, c := range contents {
-			if c.ParentID == parent.SubH5PID {
+			if c.ParentID == parent.SubH5PID && c.ParentID != "" {
 				parent.Children = append(parent.Children, c)
 				subContents = append(subContents, c)
 			}
