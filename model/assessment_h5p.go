@@ -489,17 +489,17 @@ func (m *assessmentH5P) treeingStudentViewLessonMaterials(contents []*entity.Ass
 
 //  treeingRemainingStudentViewLessonMaterials only apply to level 2
 func (m *assessmentH5P) treeingRemainingStudentViewLessonMaterials(contents []*entity.AssessmentStudentViewH5PLessonMaterial, parentContents []*entity.AssessmentStudentViewH5PLessonMaterial) {
-	var subContents []*entity.AssessmentStudentViewH5PLessonMaterial
 	for _, parent := range parentContents {
+		var subContents []*entity.AssessmentStudentViewH5PLessonMaterial
 		for _, c := range contents {
 			if c.ParentID == parent.SubH5PID {
 				parent.Children = append(parent.Children, c)
 				subContents = append(subContents, c)
 			}
 		}
-	}
-	if len(subContents) > 0 {
-		m.treeingRemainingStudentViewLessonMaterials(contents, subContents)
+		if len(subContents) > 0 {
+			m.treeingRemainingStudentViewLessonMaterials(contents, subContents)
+		}
 	}
 }
 
