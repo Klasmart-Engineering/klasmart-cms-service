@@ -50,31 +50,39 @@ type AddH5PAssessmentStudyInput struct {
 }
 
 type AssessmentH5PRoom struct {
-	AnyoneAttempted bool
-	Users           []*AssessmentH5PUser
-	UserMap         map[string]*AssessmentH5PUser
+	Users []*AssessmentH5PUser
 }
 
 type AssessmentH5PUser struct {
-	UserID                 string
-	Comment                string
-	Contents               []*AssessmentH5PContentScore
-	ContentsMapByH5PID     map[string][]*AssessmentH5PContentScore
-	ContentMapBySubH5PID   map[string]*AssessmentH5PContentScore
-	ContentsMapByContentID map[string][]*AssessmentH5PContentScore
+	UserID   string
+	Comment  string
+	Contents []*AssessmentH5PContent
 }
 
-type AssessmentH5PContentScore struct {
-	OrderedID        int
-	H5PID            string
-	ContentID        string
-	ContentName      string
-	ContentType      string
-	Answer           string
-	Answers          []string
-	MaxPossibleScore float64
-	AchievedScore    float64
-	Scores           []float64
-	SubH5PID         string // add: 2021.06.24
-	SubContentNumber int    // add: 2021.06.24
+type AssessmentH5PContent struct {
+	OrderedID     int                          `json:"ordered_id"`
+	ParentID      string                       `json:"parent_id"`
+	H5PID         string                       `json:"h5p_id"`
+	SubH5PID      string                       `json:"sub_h5p_id"`
+	ContentID     string                       `json:"content_id"`
+	ContentName   string                       `json:"content_name"`
+	ContentType   string                       `json:"content_type"`
+	Answers       []*AssessmentH5PAnswer       `json:"answers"`
+	TeacherScores []*AssessmentH5PTeacherScore `json:"teacher_scores"`
+	Scores        []float64                    `json:"scores"`
+	Children      []*AssessmentH5PContent      `json:"children"`
+}
+
+type AssessmentH5PAnswer struct {
+	Answer               string  `json:"answer"`
+	Score                float64 `json:"score"`
+	MinimumPossibleScore float64 `json:"minimumPossibleScore"`
+	MaximumPossibleScore float64 `json:"maximumPossibleScore"`
+	Date                 int64   `json:"date"`
+}
+
+type AssessmentH5PTeacherScore struct {
+	TeacherID string  `json:"teacher_id"`
+	Score     float64 `json:"score"`
+	Date      int64   `json:"date"`
 }

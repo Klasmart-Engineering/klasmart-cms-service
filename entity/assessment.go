@@ -1,9 +1,5 @@
 package entity
 
-import (
-	"strings"
-)
-
 const (
 	AssessmentTypeClass        AssessmentType = "class"
 	AssessmentTypeLive         AssessmentType = "live"
@@ -83,35 +79,24 @@ type AssessmentStudentViewH5PItem struct {
 	LessonMaterials []*AssessmentStudentViewH5PLessonMaterial `json:"lesson_materials"`
 }
 
-type AssessmentStudentViewH5PItemsOrder []*AssessmentStudentViewH5PItem
-
-func (h AssessmentStudentViewH5PItemsOrder) Len() int {
-	return len(h)
-}
-
-func (h AssessmentStudentViewH5PItemsOrder) Less(i, j int) bool {
-	return strings.ToLower(h[i].StudentName) < strings.ToLower(h[j].StudentName)
-}
-
-func (h AssessmentStudentViewH5PItemsOrder) Swap(i, j int) {
-	h[i], h[j] = h[j], h[i]
-}
-
 type AssessmentStudentViewH5PLessonMaterial struct {
-	LessonMaterialID     string   `json:"lesson_material_id"`
-	LessonMaterialName   string   `json:"lesson_material_name"`
-	LessonMaterialType   string   `json:"lesson_material_type"`
-	Answer               string   `json:"answer"`
-	MaxScore             float64  `json:"max_score"`
-	AchievedScore        float64  `json:"achieved_score"`
-	Attempted            bool     `json:"attempted"`
-	IsH5P                bool     `json:"is_h5p"`
-	OutcomeNames         []string `json:"outcome_names"`
-	SubContentNumber     int      `json:"sub_content_number"` // add: 2021.06.24
-	Number               string   `json:"number"`             // add: 2021.06.24
-	H5PID                string   `json:"h5p_id"`             // add: 2021.06.24
-	SubH5PID             string   `json:"sub_h5p_id"`         // add: 2021.06.24
-	NotApplicableScoring bool     `json:"not_applicable_scoring"`
+	OrderedID                   int                                       `json:"-"`
+	ParentID                    string                                    `json:"-"`
+	H5PID                       string                                    `json:"h5p_id"`     // add: 2021.06.24
+	SubH5PID                    string                                    `json:"sub_h5p_id"` // add: 2021.06.24
+	Number                      string                                    `json:"number"`
+	LessonMaterialOrderedNumber int                                       `json:"-"`
+	LessonMaterialID            string                                    `json:"lesson_material_id"`
+	LessonMaterialName          string                                    `json:"lesson_material_name"`
+	LessonMaterialType          string                                    `json:"lesson_material_type"`
+	Answer                      string                                    `json:"answer"`
+	MaxScore                    float64                                   `json:"max_score"`
+	AchievedScore               float64                                   `json:"achieved_score"`
+	Attempted                   bool                                      `json:"attempted"`
+	IsH5P                       bool                                      `json:"is_h5p"`
+	OutcomeNames                []string                                  `json:"outcome_names"`
+	NotApplicableScoring        bool                                      `json:"not_applicable_scoring"`
+	Children                    []*AssessmentStudentViewH5PLessonMaterial `json:"-"`
 }
 
 type UpdateAssessmentH5PStudent struct {
