@@ -183,20 +183,6 @@ func (l *learningSummaryReportModel) deduplicationAndSortWeeks(weeks [][2]int64)
 }
 
 func (l *learningSummaryReportModel) QueryRemainingFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryRemainingFilterArgs) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
-	schedules, err := l.findRelatedSchedules(ctx, tx, operator, args.SummaryType, &args.LearningSummaryFilter)
-	if err != nil {
-		log.Error(ctx, "query remaining filter school failed: find related schedules",
-			log.Err(err),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	scheduleIDs := make([]string, 0, len(schedules))
-	for _, s := range schedules {
-		scheduleIDs = append(scheduleIDs, s.ID)
-	}
-	scheduleIDs = utils.SliceDeduplication(scheduleIDs)
 	switch args.FilterType {
 	case entity.LearningSummaryFilterTypeSchool:
 		return l.queryRemainingFilterSchool(ctx, tx, operator)
@@ -207,7 +193,7 @@ func (l *learningSummaryReportModel) QueryRemainingFilter(ctx context.Context, t
 	case entity.LearningSummaryFilterTypeStudent:
 		return l.queryRemainingFilterStudent(ctx, tx, operator, []string{args.ClassID})
 	case entity.LearningSummaryFilterTypeSubject:
-		return l.queryRemainingFilterSubject(ctx, tx, operator, scheduleIDs)
+		return l.queryRemainingFilterSubject(ctx, tx, operator, args)
 	default:
 		log.Error(ctx, "query remaining filter: invalid filter type")
 		return nil, constant.ErrInvalidArgs
@@ -383,7 +369,21 @@ func (l *learningSummaryReportModel) queryRemainingFilterStudent(ctx context.Con
 	return result, nil
 }
 
-func (l *learningSummaryReportModel) queryRemainingFilterSubject(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
+func (l *learningSummaryReportModel) queryRemainingFilterSubject(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryRemainingFilterArgs) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
+	schedules, err := l.findRelatedSchedules(ctx, tx, operator, args.SummaryType, &args.LearningSummaryFilter)
+	if err != nil {
+		log.Error(ctx, "query remaining filter subject failed: find related schedules",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	scheduleIDs := make([]string, 0, len(schedules))
+	for _, s := range schedules {
+		scheduleIDs = append(scheduleIDs, s.ID)
+	}
+	scheduleIDs = utils.SliceDeduplication(scheduleIDs)
 	subjectIDs, err := l.batchGetScheduleRelationIDs(ctx, operator, scheduleIDs, []entity.ScheduleRelationType{entity.ScheduleRelationTypeSubject})
 	if err != nil {
 		log.Error(ctx, "query remaining filter student failed: batch get students relations failed",

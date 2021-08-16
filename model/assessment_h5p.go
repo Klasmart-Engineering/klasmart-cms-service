@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
@@ -451,17 +452,15 @@ func (m *assessmentH5P) sortNumberedStudentViewH5PLessonMaterials(ctx context.Co
 	sort.Slice(lessonMaterials, func(i, j int) bool {
 		a := strings.Split(lessonMaterials[i].Number, "-")
 		b := strings.Split(lessonMaterials[j].Number, "-")
-		if len(a) != len(b) {
-			return len(a) < len(b)
-		}
-		for i := 0; i < len(a); i++ {
+		min := int(math.Min(float64(len(a)), float64(len(b))))
+		for i := 0; i < min; i++ {
 			s1 := fmt.Sprintf("%06s", a[i])
 			s2 := fmt.Sprintf("%06s", b[i])
 			if s1 != s2 {
 				return s1 < s2
 			}
 		}
-		return true
+		return len(a) < len(b)
 	})
 }
 
