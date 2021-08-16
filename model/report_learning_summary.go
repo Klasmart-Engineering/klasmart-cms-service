@@ -58,28 +58,39 @@ func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *db
 	fixedZone := time.FixedZone("time_filter", args.TimeOffset)
 	var result []*entity.LearningSummaryFilterYear
 
-	schedules, err := l.findRelatedSchedules(ctx, tx, operator, entity.LearningSummaryTypeLiveClass, &entity.LearningSummaryFilter{
-		SchoolIDs: args.SchoolIDs,
-		TeacherID: args.TeacherID,
-		StudentID: args.StudentID,
-	})
-	if err != nil {
-		log.Error(ctx, "query time filter: find related schedules failed",
-			log.Err(err),
-			log.Any("args", args),
-		)
-		return nil, err
-	}
-
 	m := make(map[int][][2]int64)
 	switch args.SummaryType {
 	case entity.LearningSummaryTypeLiveClass:
+		schedules, err := l.findRelatedSchedules(ctx, tx, operator, entity.LearningSummaryTypeLiveClass, &entity.LearningSummaryFilter{
+			SchoolIDs: args.SchoolIDs,
+			TeacherID: args.TeacherID,
+			StudentID: args.StudentID,
+		})
+		if err != nil {
+			log.Error(ctx, "query time filter: find related schedules failed",
+				log.Err(err),
+				log.Any("args", args),
+			)
+			return nil, err
+		}
 		for _, s := range schedules {
 			year := time.Unix(s.StartAt, 0).Year()
 			weekStart, weekEnd := utils.FindWeekTimeRangeFromMonday(s.StartAt, fixedZone)
 			m[year] = append(m[year], [2]int64{weekStart, weekEnd})
 		}
 	case entity.LearningSummaryTypeAssignment:
+		schedules, err := l.findRelatedSchedules(ctx, tx, operator, entity.LearningSummaryTypeAssignment, &entity.LearningSummaryFilter{
+			SchoolIDs: args.SchoolIDs,
+			TeacherID: args.TeacherID,
+			StudentID: args.StudentID,
+		})
+		if err != nil {
+			log.Error(ctx, "query time filter: find related schedules failed",
+				log.Err(err),
+				log.Any("args", args),
+			)
+			return nil, err
+		}
 		scheduleIDs := make([]string, 0, len(schedules))
 		for _, s := range schedules {
 			scheduleIDs = append(scheduleIDs, s.ID)
