@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -19,263 +20,114 @@ func getAssessmentH5P() *assessmentH5P {
 	return &assessmentH5P{}
 }
 
-func (m *assessmentH5P) getRoomCompleteRate(ctx context.Context, room *entity.AssessmentH5PRoom, view *entity.AssessmentView) float64 {
-	if room == nil {
-		log.Debug(ctx, "get room complete rate: room is empty",
-			log.Any("view", view),
-		)
-		return 0
-	}
-
-	// calc agg template
-	aggContentsMap := map[string][]*entity.AssessmentH5PContentScore{}
-	aggUserContentOrderedIDsMap := map[string][]int{}
-	for _, u := range room.Users {
-		for id, contents := range u.ContentsMapByContentID {
-			for _, c := range contents {
-				// aggregate user attended contents
-				if u.UserID != "" {
-					aggUserContentOrderedIDsMap[u.UserID] = append(aggUserContentOrderedIDsMap[u.UserID], c.OrderedID)
-				}
-				exists := false
-				for _, c2 := range aggContentsMap[id] {
-					if c2 == c {
-						exists = true
-						break
-					}
-				}
-				// deduplication, only append not exists item
-				if !exists {
-					aggContentsMap[id] = append(aggContentsMap[id], c)
-				}
-			}
-		}
-	}
-	log.Debug(ctx, "get room complete rate: print agg maps",
-		log.Any("agg_contents_map", aggContentsMap),
-		log.Any("agg_user_content_ordered_ids_map", aggUserContentOrderedIDsMap),
-	)
-
-	attempted := 0
-	total := 0
-	for _, s := range view.Students {
-		if !s.Checked {
-			continue
-		}
-		user := room.UserMap[s.ID]
-		uid := ""
-		if user != nil {
-			uid = user.UserID
-		}
-		for _, lm := range view.LessonMaterials {
-			if !(lm.Checked && (lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend)) {
-				continue
-			}
-			aggContents := aggContentsMap[lm.ID]
-			contentMapGroupByKey := map[string][]*entity.AssessmentH5PContentScore{}
-			for _, c := range aggContents {
-				key := fmt.Sprintf("%s:%s", c.ContentID, c.SubH5PID)
-				contentMapGroupByKey[key] = append(contentMapGroupByKey[key], c)
-			}
-			var contents []*entity.AssessmentH5PContentScore
-			attendContentOrderIDs := aggUserContentOrderedIDsMap[uid]
-			for _, keyedContents := range contentMapGroupByKey {
-				if len(keyedContents) == 0 {
-					continue
-				}
-				hit := false
-				for _, c := range keyedContents {
-					if utils.ContainsInt(attendContentOrderIDs, c.OrderedID) {
-						hit = true
-						contents = append(contents, c)
-						break
-					}
-				}
-				if !hit {
-					c := keyedContents[0]
-					newContent := entity.AssessmentH5PContentScore{
-						OrderedID:        c.OrderedID,
-						H5PID:            c.H5PID,
-						ContentID:        c.ContentID,
-						ContentName:      c.ContentName,
-						SubH5PID:         c.SubH5PID,
-						SubContentNumber: c.SubContentNumber,
-					}
-					contents = append(contents, &newContent)
-				}
-			}
-			if len(contents) > 0 {
-				for _, content := range contents {
-					if content == nil {
-						log.Debug(ctx, "get room complete rate: not found content from h5p room",
-							log.String("room_id", view.RoomID),
-							log.Any("not_found_content_id", lm.Source),
-							log.Any("room", room),
-						)
-						continue
-					}
-					if len(contents) > 1 && content.SubH5PID == "" {
-						continue
-					}
-					if len(content.Answers) > 0 || len(content.Scores) > 0 {
-						attempted++
-					}
-					total++
-				}
-				continue
-			}
-			total++
-		}
-	}
-
-	if total > 0 {
-		log.Debug(ctx, "get room complete rate: print attempted and total",
-			log.Int("attempted", attempted),
-			log.Int("total", total),
-			log.String("room_id", view.RoomID),
-		)
-		return float64(attempted) / float64(total)
-	}
-
-	return 0
-}
-
-func (m *assessmentH5P) batchGetRoomScoreMap(ctx context.Context, operator *entity.Operator, roomIDs []string, enableComment bool) (map[string]*entity.AssessmentH5PRoom, error) {
+func (m *assessmentH5P) batchGetRoomMap(ctx context.Context, operator *entity.Operator, roomIDs []string, includeComment bool) (map[string]*entity.AssessmentH5PRoom, error) {
+	// batch get room score map
 	roomScoreMap, err := external.GetH5PRoomScoreServiceProvider().BatchGet(ctx, operator, roomIDs)
 	if err != nil {
-		log.Error(ctx, "batch get room score map: batch get failed",
+		log.Error(ctx, "batch get room map: batch get scores failed",
+			log.Err(err),
 			log.Strings("room_ids", roomIDs),
 			log.Any("operator", operator),
 		)
 		return nil, err
 	}
 
+	// batch get room comment map
 	var roomCommentMap map[string]map[string][]string
-	if enableComment {
+	if includeComment {
 		roomCommentMap, err = m.batchGetRoomCommentMap(ctx, operator, roomIDs)
 		if err != nil {
+			log.Error(ctx, "batch get room map: batch get comments failed",
+				log.Err(err),
+				log.Strings("room_ids", roomIDs),
+				log.Bool("include_comment", includeComment),
+				log.Any("operator", operator),
+			)
 			return nil, err
 		}
 	}
 
+	// mapping
 	result := make(map[string]*entity.AssessmentH5PRoom, len(roomScoreMap))
 	for roomID, users := range roomScoreMap {
+		room := entity.AssessmentH5PRoom{}
+
+		// fill users
 		assessmentUsers := make([]*entity.AssessmentH5PUser, 0, len(users))
-		assessmentUserMap := make(map[string]*entity.AssessmentH5PUser, len(users))
-		attempted, total := 0, 0
 		for _, u := range users {
-			assessmentContents := make([]*entity.AssessmentH5PContentScore, 0, len(u.Scores))
-			assessmentContentsMapByH5PID := make(map[string][]*entity.AssessmentH5PContentScore, len(u.Scores))
-			assessmentContentMapBySubH5PID := make(map[string]*entity.AssessmentH5PContentScore, len(u.Scores))
-			assessmentContentsMapByContentID := make(map[string][]*entity.AssessmentH5PContentScore, len(u.Scores))
-			latestContentID := ""
-			subContentNumber := 0
+			assessmentUser := entity.AssessmentH5PUser{}
 
-			// normalize external contents order
-			scoresIndexMap := make(map[string]int, len(u.Scores))
-			for i, s := range u.Scores {
-				if s.Content != nil {
-					scoresIndexMap[s.Content.ContentID] = i
-				}
-			}
-			sort.Slice(u.Scores, func(i, j int) bool {
-				itemI := u.Scores[i]
-				itemJ := u.Scores[j]
-				if itemI.Content == nil {
-					return true
-				}
-				if itemJ.Content == nil {
-					return false
-				}
-				if itemI.Content.ContentID == itemJ.Content.ContentID {
-					if itemI.Content.SubContentID == "" && itemJ.Content.SubContentID != "" {
-						return true
-					}
-					if itemI.Content.SubContentID != "" && itemJ.Content.SubContentID == "" {
-						return false
-					}
-				}
-				return scoresIndexMap[itemI.Content.ContentID] < scoresIndexMap[itemJ.Content.ContentID]
-			})
-
-			for _, s := range u.Scores {
-				total++
-				assessmentContent := entity.AssessmentH5PContentScore{
-					Scores: s.Score.Scores,
-				}
-				if s.Content != nil {
-					assessmentContent.H5PID = s.Content.H5PID
-					assessmentContent.ContentID = s.Content.ContentID
-					assessmentContent.ContentName = s.Content.Name
-					assessmentContent.ContentType = s.Content.Type
-					assessmentContent.SubH5PID = s.Content.SubContentID
-					if s.Content.SubContentID == "" {
-						subContentNumber = 0
-					} else if s.Content.ContentID != latestContentID {
-						subContentNumber = 1 // 0 for not set
-					} else {
-						subContentNumber++
-					}
-					assessmentContent.SubContentNumber = subContentNumber
-					latestContentID = s.Content.ContentID
-				}
-				if len(s.Score.Answers) > 0 {
-					assessmentContent.MaxPossibleScore = s.Score.Answers[0].MaximumPossibleScore
-				}
-				for _, a := range s.Score.Answers {
-					assessmentContent.Answers = append(assessmentContent.Answers, a.Answer)
-				}
-				attemptedFlag := false
-				if len(assessmentContent.Answers) > 0 {
-					assessmentContent.Answer = assessmentContent.Answers[0]
-					attemptedFlag = true
-				}
-				if len(s.TeacherScores) > 0 {
-					assessmentContent.AchievedScore = s.TeacherScores[len(s.TeacherScores)-1].Score
-					attemptedFlag = true
-				} else if len(s.Score.Scores) > 0 {
-					assessmentContent.AchievedScore = s.Score.Scores[0]
-					attemptedFlag = true
-				}
-				if attemptedFlag {
-					attempted++
-				}
-				assessmentContents = append(assessmentContents, &assessmentContent)
-				assessmentContentsMapByH5PID[assessmentContent.H5PID] = append(assessmentContentsMapByH5PID[assessmentContent.H5PID], &assessmentContent)
-				assessmentContentMapBySubH5PID[assessmentContent.SubH5PID] = &assessmentContent
-				assessmentContentsMapByContentID[assessmentContent.ContentID] = append(assessmentContentsMapByContentID[assessmentContent.ContentID], &assessmentContent)
-			}
-			assessmentUser := entity.AssessmentH5PUser{
-				Contents:               assessmentContents,
-				ContentsMapByH5PID:     assessmentContentsMapByH5PID,
-				ContentMapBySubH5PID:   assessmentContentMapBySubH5PID,
-				ContentsMapByContentID: assessmentContentsMapByContentID,
-			}
+			// fill user id
 			if u.User != nil {
 				assessmentUser.UserID = u.User.UserID
 			}
-			if enableComment &&
-				roomCommentMap != nil &&
-				roomCommentMap[roomID] != nil &&
-				assessmentUser.UserID != "" &&
-				len(roomCommentMap[roomID][assessmentUser.UserID]) > 0 {
+
+			// fill comment
+			if includeComment && roomCommentMap[roomID] != nil && assessmentUser.UserID != "" {
 				comments := roomCommentMap[roomID][assessmentUser.UserID]
-				assessmentUser.Comment = comments[len(comments)-1]
+				if len(comments) > 0 {
+					assessmentUser.Comment = comments[len(comments)-1]
+				}
 			}
+
+			// fill contents
+			assessmentContents := make([]*entity.AssessmentH5PContent, 0, len(u.Scores))
+			for _, s := range u.Scores {
+				assessmentContent := entity.AssessmentH5PContent{}
+				if s.Content != nil {
+					assessmentContent.ParentID = s.Content.ParentID
+					assessmentContent.H5PID = s.Content.H5PID
+					assessmentContent.SubH5PID = s.Content.SubContentID
+					assessmentContent.ContentID = s.Content.ContentID
+					assessmentContent.ContentName = s.Content.Name
+					assessmentContent.ContentType = s.Content.Type
+				}
+				if s.Score != nil {
+					assessmentContent.Scores = s.Score.Scores
+					for _, a := range s.Score.Answers {
+						if a == nil {
+							continue
+						}
+						assessmentContent.Answers = append(assessmentContent.Answers, &entity.AssessmentH5PAnswer{
+							Answer:               a.Answer,
+							Score:                a.Score,
+							MinimumPossibleScore: a.MinimumPossibleScore,
+							MaximumPossibleScore: a.MaximumPossibleScore,
+							Date:                 a.Date,
+						})
+					}
+				}
+				for _, ts := range s.TeacherScores {
+					if ts == nil {
+						continue
+					}
+					item := entity.AssessmentH5PTeacherScore{
+						TeacherID: ts.Teacher.UserID,
+						Score:     ts.Score,
+						Date:      ts.Date,
+					}
+					if ts.Teacher != nil {
+						item.TeacherID = ts.Teacher.UserID
+					}
+					assessmentContent.TeacherScores = append(assessmentContent.TeacherScores, &item)
+				}
+				assessmentContents = append(assessmentContents, &assessmentContent)
+			}
+			assessmentUser.Contents = assessmentContents
+
+			// append user
 			assessmentUsers = append(assessmentUsers, &assessmentUser)
-			assessmentUserMap[assessmentUser.UserID] = &assessmentUser
 		}
-		room := entity.AssessmentH5PRoom{
-			AnyoneAttempted: attempted > 0,
-			Users:           assessmentUsers,
-			UserMap:         assessmentUserMap,
-		}
+		room.Users = assessmentUsers
+
+		// fill room
 		result[roomID] = &room
 	}
 
+	// fill ordered id
 	latestOrderedID := 1
-	for _, item := range result {
-		for _, u := range item.Users {
+	for _, r := range result {
+		for _, u := range r.Users {
 			for _, c := range u.Contents {
 				c.OrderedID = latestOrderedID
 				latestOrderedID++
@@ -283,13 +135,432 @@ func (m *assessmentH5P) batchGetRoomScoreMap(ctx context.Context, operator *enti
 		}
 	}
 
-	log.Debug(ctx, "get room score map",
+	log.Debug(ctx, "batch get room map",
 		log.Strings("room_ids", roomIDs),
 		log.Any("operator", operator),
 		log.Any("result", result),
 	)
 
 	return result, nil
+}
+
+func (m *assessmentH5P) sortContentsByOrderedID(contents []*entity.AssessmentH5PContent) {
+	sort.Slice(contents, func(i, j int) bool {
+		return contents[i].OrderedID < contents[j].OrderedID
+	})
+	for _, c := range contents {
+		if len(c.Children) > 0 {
+			m.sortContentsByOrderedID(c.Children)
+		}
+	}
+}
+
+func (m *assessmentH5P) getAnswer(content *entity.AssessmentH5PContent) string {
+	if len(content.Answers) > 0 {
+		return content.Answers[0].Answer
+	}
+	return ""
+}
+
+func (m *assessmentH5P) getAchievedScore(content *entity.AssessmentH5PContent) float64 {
+	if len(content.TeacherScores) > 0 {
+		return content.TeacherScores[len(content.TeacherScores)-1].Score
+	}
+	if len(content.Scores) > 0 {
+		return content.Scores[0]
+	}
+	return 0
+}
+
+func (m *assessmentH5P) getMaxPossibleScore(content *entity.AssessmentH5PContent) float64 {
+	if len(content.Answers) > 0 {
+		return content.Answers[0].MaximumPossibleScore
+	}
+	return 0
+}
+
+func (m *assessmentH5P) isAnyoneAttempted(room *entity.AssessmentH5PRoom) bool {
+	for _, u := range room.Users {
+		for _, c := range u.Contents {
+			if len(c.Answers) > 0 || len(c.Scores) > 0 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (m *assessmentH5P) getUserMap(room *entity.AssessmentH5PRoom) map[string]*entity.AssessmentH5PUser {
+	if room == nil {
+		return map[string]*entity.AssessmentH5PUser{}
+	}
+	result := make(map[string]*entity.AssessmentH5PUser, len(room.Users))
+	for _, u := range room.Users {
+		if u == nil || u.UserID == "" {
+			continue
+		}
+		result[u.UserID] = u
+	}
+	return result
+}
+
+func (m *assessmentH5P) getContentsMapByContentID(user *entity.AssessmentH5PUser) map[string][]*entity.AssessmentH5PContent {
+	if user == nil {
+		return map[string][]*entity.AssessmentH5PContent{}
+	}
+	result := make(map[string][]*entity.AssessmentH5PContent, len(user.Contents))
+	for _, c := range user.Contents {
+		if c == nil || c.ContentID == "" {
+			continue
+		}
+		result[c.ContentID] = append(result[c.ContentID], c)
+	}
+	return result
+}
+
+func (m *assessmentH5P) getStudentViewItems(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, view *entity.AssessmentView) ([]*entity.AssessmentStudentViewH5PItem, error) {
+	// get room
+	roomMap, err := m.batchGetRoomMap(ctx, operator, []string{view.RoomID}, true)
+	if err != nil {
+		log.Error(ctx, "get student view items: batch get room map failed",
+			log.Err(err),
+			log.String("room_id", view.RoomID),
+			log.Any("view", view),
+		)
+		return nil, err
+	}
+	room := roomMap[view.RoomID]
+	if room == nil {
+		log.Debug(ctx, "get student view items: not found room", log.String("room_id", view.RoomID))
+		return nil, nil
+	}
+
+	// batch get students lesson materials map
+	studentIDs := make([]string, 0, len(view.Students))
+	for _, s := range view.Students {
+		studentIDs = append(studentIDs, s.ID)
+	}
+	studentLessonMaterialsMap, err := m.batchGetStudentViewH5PLessonMaterialsMap(ctx, operator, tx, view.ID, studentIDs, view.LessonMaterials, room)
+
+	// assembly result
+	result := make([]*entity.AssessmentStudentViewH5PItem, 0, len(view.Students))
+	for _, s := range view.Students {
+		newItem := entity.AssessmentStudentViewH5PItem{
+			StudentID:   s.ID,
+			StudentName: s.Name,
+		}
+
+		// fill comment
+		user := getAssessmentH5P().getUserMap(room)[s.ID]
+		if user != nil {
+			newItem.Comment = user.Comment
+		} else {
+			log.Warn(ctx, "get h5p student view items: not found user from h5p room",
+				log.String("room_id", view.RoomID),
+				log.Any("not_found_user_id", s.ID),
+				log.Any("room", room),
+				log.Any("view", view),
+			)
+		}
+
+		// fill lesson materials
+		newItem.LessonMaterials = studentLessonMaterialsMap[s.ID]
+
+		// append item
+		result = append(result, &newItem)
+	}
+
+	// sort result by student name
+	sort.Slice(result, func(i, j int) bool {
+		return strings.ToLower(result[i].StudentName) < strings.ToLower(result[j].StudentName)
+	})
+
+	// sort result lesson materials
+	lmIndexMap := make(map[string]int, len(view.LessonMaterials))
+	for i, lm := range view.LessonMaterials {
+		lmIndexMap[lm.ID] = i
+	}
+	for _, item := range result {
+		if len(item.LessonMaterials) <= 1 {
+			continue
+		}
+		sort.Slice(item.LessonMaterials, func(i, j int) bool {
+			itemI := item.LessonMaterials[i]
+			itemJ := item.LessonMaterials[j]
+			if itemI.LessonMaterialID == itemJ.LessonMaterialID {
+				return itemI.SubH5PID < itemJ.SubH5PID
+			}
+			return lmIndexMap[itemI.LessonMaterialID] < lmIndexMap[itemJ.LessonMaterialID]
+		})
+	}
+
+	return result, nil
+}
+
+func (m *assessmentH5P) getKeyedH5PContentsTemplateMap(room *entity.AssessmentH5PRoom, contentID string) map[string][]*entity.AssessmentH5PContent {
+	keyedH5PContentsMap := map[string][]*entity.AssessmentH5PContent{}
+	for _, u := range room.Users {
+		for _, c := range u.Contents {
+			if c == nil || c.ContentID == "" {
+				continue
+			}
+			if c.ContentID != contentID {
+				continue
+			}
+			key := m.generateH5PContentKey(c.ContentID, c.SubH5PID)
+			keyedH5PContentsMap[key] = append(keyedH5PContentsMap[key], c)
+		}
+	}
+	return keyedH5PContentsMap
+}
+
+func (m *assessmentH5P) generateH5PContentKey(contentID string, subH5PID string) string {
+	return strings.Join([]string{contentID, subH5PID}, ":")
+}
+
+func (m *assessmentH5P) getKeyedUserH5PContentsMap(room *entity.AssessmentH5PRoom) map[string]*entity.AssessmentH5PContent {
+	keyedUserH5PContentsMap := map[string]*entity.AssessmentH5PContent{}
+	for _, u := range room.Users {
+		for _, c := range u.Contents {
+			if c == nil || c.ContentID == "" {
+				continue
+			}
+			key := m.generateUserH5PContentKey(c.ContentID, c.SubH5PID, u.UserID)
+			keyedUserH5PContentsMap[key] = c
+		}
+	}
+	return keyedUserH5PContentsMap
+}
+
+func (m *assessmentH5P) generateUserH5PContentKey(contentID string, subH5PID string, userID string) string {
+	return strings.Join([]string{contentID, subH5PID, userID}, ":")
+}
+
+func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
+	ctx context.Context,
+	operator *entity.Operator,
+	tx *dbo.DBContext,
+	assessmentID string,
+	studentIDs []string,
+	lessonMaterials []*entity.AssessmentLessonMaterial,
+	room *entity.AssessmentH5PRoom,
+) (map[string][]*entity.AssessmentStudentViewH5PLessonMaterial, error) {
+	// get content outcome names map
+	lmIDs := make([]string, 0, len(lessonMaterials))
+	for _, lm := range lessonMaterials {
+		lmIDs = append(lmIDs, lm.ID)
+	}
+	lmOutcomeNamesMap, err := m.getOutcomesMapByContentID(ctx, operator, tx, assessmentID, lmIDs)
+	if err != nil {
+		log.Error(ctx, "batch get student view h5p lesson materials map: get outcomes map failed",
+			log.Err(err),
+		)
+		return nil, err
+	}
+
+	// get keyed user h5p contents map
+	keyedUserH5PContentsMap := m.getKeyedUserH5PContentsMap(room)
+
+	result := map[string][]*entity.AssessmentStudentViewH5PLessonMaterial{}
+	for _, studentID := range studentIDs {
+		for lmIndex, lm := range lessonMaterials {
+			keyedH5PContentsTemplateMap := m.getKeyedH5PContentsTemplateMap(room, lm.ID)
+			var contents []*entity.AssessmentH5PContent
+			for _, keyedContents := range keyedH5PContentsTemplateMap {
+				if len(keyedContents) == 0 {
+					continue
+				}
+				findUserContent := false
+				for _, c := range keyedContents {
+					userContent := keyedUserH5PContentsMap[m.generateUserH5PContentKey(c.ContentID, c.SubH5PID, studentID)]
+					if userContent != nil {
+						findUserContent = true
+						contents = append(contents, userContent)
+						break
+					}
+				}
+				if !findUserContent {
+					c := keyedContents[0]
+					newContent := entity.AssessmentH5PContent{
+						OrderedID:   c.OrderedID,
+						ParentID:    c.ParentID,
+						H5PID:       c.H5PID,
+						SubH5PID:    c.SubH5PID,
+						ContentID:   c.ContentID,
+						ContentName: c.ContentName,
+					}
+					contents = append(contents, &newContent)
+				}
+			}
+			if len(contents) == 0 {
+				newLessMaterial := entity.AssessmentStudentViewH5PLessonMaterial{
+					LessonMaterialOrderedNumber: lmIndex,
+					LessonMaterialID:            lm.ID,
+					LessonMaterialName:          lm.Name,
+					IsH5P:                       lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
+					OutcomeNames:                lmOutcomeNamesMap[lm.ID],
+				}
+				result[studentID] = append(result[studentID], &newLessMaterial)
+				continue
+			}
+			for _, content := range contents {
+				if content == nil {
+					log.Debug(ctx, "batch get student view h5p lesson materials map: content is nil",
+						log.Any("lesson_material", lm),
+						log.Any("room", room),
+					)
+					continue
+				}
+				newLessonMaterial := entity.AssessmentStudentViewH5PLessonMaterial{
+					OrderedID:                   content.OrderedID,
+					ParentID:                    content.ParentID,
+					H5PID:                       content.H5PID,
+					SubH5PID:                    content.SubH5PID,
+					LessonMaterialOrderedNumber: lmIndex,
+					LessonMaterialID:            lm.ID,
+					LessonMaterialName:          lm.Name,
+					LessonMaterialType:          content.ContentType,
+					Answer:                      getAssessmentH5P().getAnswer(content),
+					MaxScore:                    getAssessmentH5P().getMaxPossibleScore(content),
+					AchievedScore:               getAssessmentH5P().getAchievedScore(content),
+					Attempted:                   len(content.Answers) > 0 || len(content.Scores) > 0,
+					IsH5P:                       lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
+					OutcomeNames:                lmOutcomeNamesMap[lm.ID],
+					NotApplicableScoring:        getAssessmentH5P().canScoring(content.ContentType),
+				}
+				result[studentID] = append(result[studentID], &newLessonMaterial)
+			}
+		}
+	}
+
+	// number lesson materials
+	for _, lessonMaterials := range result {
+		m.numberStudentViewH5PLessonMaterials(lessonMaterials)
+	}
+
+	return result, nil
+}
+
+func (m *assessmentH5P) numberStudentViewH5PLessonMaterials(lessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial) {
+	treedLessonMaterials := m.treeingStudentViewLessonMaterials(lessonMaterials)
+	m.sortStudentViewH5PLessonMaterials(treedLessonMaterials)
+	m.doNumberStudentViewH5PLessonMaterials(treedLessonMaterials, "")
+}
+
+func (m *assessmentH5P) doNumberStudentViewH5PLessonMaterials(treedLessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial, prefix string) {
+	for i, lm := range treedLessonMaterials {
+		if len(prefix) > 0 {
+			lm.Number = fmt.Sprintf("%s-%d", prefix, i+1)
+		} else {
+			lm.Number = fmt.Sprintf("%d", i+1)
+		}
+		if len(lm.Children) > 0 {
+			m.doNumberStudentViewH5PLessonMaterials(lm.Children, lm.Number)
+		}
+	}
+}
+
+func (m *assessmentH5P) sortStudentViewH5PLessonMaterials(treedLessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial) {
+	sort.Slice(treedLessonMaterials, func(i, j int) bool {
+		if treedLessonMaterials[i].LessonMaterialOrderedNumber != treedLessonMaterials[j].LessonMaterialOrderedNumber {
+			return treedLessonMaterials[i].LessonMaterialOrderedNumber < treedLessonMaterials[j].LessonMaterialOrderedNumber
+		}
+		return treedLessonMaterials[i].OrderedID < treedLessonMaterials[j].OrderedID
+	})
+	for _, lm := range treedLessonMaterials {
+		if len(lm.Children) > 0 {
+			m.sortStudentViewH5PLessonMaterials(lm.Children)
+		}
+	}
+}
+
+func (m *assessmentH5P) treeingStudentViewLessonMaterials(contents []*entity.AssessmentStudentViewH5PLessonMaterial) []*entity.AssessmentStudentViewH5PLessonMaterial {
+	var rootContents []*entity.AssessmentStudentViewH5PLessonMaterial
+	for _, c := range contents {
+		if c.ParentID == "" {
+			rootContents = append(rootContents, c)
+		}
+	}
+
+	var level2Contents []*entity.AssessmentStudentViewH5PLessonMaterial
+	for _, root := range rootContents {
+		for _, c := range contents {
+			if root.H5PID == c.ParentID {
+				root.Children = append(root.Children, c)
+				level2Contents = append(level2Contents, c)
+			}
+		}
+	}
+
+	m.treeingRemainingStudentViewLessonMaterials(contents, level2Contents)
+
+	return rootContents
+}
+
+//  treeingRemainingStudentViewLessonMaterials only apply to level 2
+func (m *assessmentH5P) treeingRemainingStudentViewLessonMaterials(contents []*entity.AssessmentStudentViewH5PLessonMaterial, parentContents []*entity.AssessmentStudentViewH5PLessonMaterial) {
+	var subContents []*entity.AssessmentStudentViewH5PLessonMaterial
+	for _, parent := range parentContents {
+		for _, c := range contents {
+			if c.SubH5PID == parent.ParentID {
+				parent.Children = append(parent.Children, c)
+				subContents = append(subContents, c)
+			}
+		}
+	}
+	if len(subContents) > 0 {
+		m.treeingRemainingStudentViewLessonMaterials(contents, subContents)
+	}
+}
+
+func (m *assessmentH5P) getOutcomesMapByContentID(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, assessmentID string, lessonMaterialIDs []string) (map[string][]string, error) {
+	// query content outcomes
+	var contentOutcomes []*entity.AssessmentContentOutcome
+	if err := da.GetAssessmentContentOutcomeDA().Query(ctx, &da.QueryAssessmentContentOutcomeConditions{
+		AssessmentIDs: entity.NullStrings{
+			Strings: []string{assessmentID},
+			Valid:   true,
+		},
+		ContentIDs: entity.NullStrings{
+			Strings: lessonMaterialIDs,
+			Valid:   true,
+		},
+	}, &contentOutcomes); err != nil {
+		log.Error(ctx, "get outcomes map by content id: query assessment content outcome failed",
+			log.Err(err),
+			log.String("assessment_id", assessmentID),
+			log.Strings("lesson_material_ids", lessonMaterialIDs),
+		)
+		return nil, err
+	}
+
+	// batch get outcomes
+	outcomeIDs := make([]string, 0, len(contentOutcomes))
+	for _, o := range contentOutcomes {
+		outcomeIDs = append(outcomeIDs, o.OutcomeID)
+	}
+	outcomeIDs = utils.SliceDeduplicationExcludeEmpty(outcomeIDs)
+	outcomes, err := GetOutcomeModel().GetByIDs(ctx, operator, tx, outcomeIDs)
+	if err != nil {
+		log.Error(ctx, "get outcomes map by content id: get outcomes failed by id",
+			log.Err(err),
+			log.String("assessment_id", assessmentID),
+			log.Strings("lesson_materials", lessonMaterialIDs),
+		)
+		return nil, err
+	}
+
+	// mapping
+	outcomeNameMap := make(map[string]string, len(outcomes))
+	for _, o := range outcomes {
+		outcomeNameMap[o.ID] = o.Name
+	}
+	contentOutcomeNamesMap := make(map[string][]string, len(contentOutcomes))
+	for _, o := range contentOutcomes {
+		contentOutcomeNamesMap[o.ContentID] = append(contentOutcomeNamesMap[o.ContentID], outcomeNameMap[o.OutcomeID])
+	}
+
+	return contentOutcomeNamesMap, nil
 }
 
 func (m *assessmentH5P) batchGetRoomCommentMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]map[string][]string, error) {
@@ -370,253 +641,85 @@ func (m *assessmentH5P) batchGetRoomCommentObjectMap(ctx context.Context, operat
 	return result, nil
 }
 
-func (m *assessmentH5P) getH5PStudentViewItems(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, view *entity.AssessmentView) ([]*entity.AssessmentStudentViewH5PItem, error) {
-	roomMap, err := m.batchGetRoomScoreMap(ctx, operator, []string{view.RoomID}, true)
-	if err != nil {
-		log.Error(ctx, "get assessment detail: get room map failed",
-			log.Err(err),
-			log.String("room_id", view.RoomID),
-		)
-		return nil, err
-	}
-	room := roomMap[view.RoomID]
-	if room == nil {
-		log.Debug(ctx, "add h5p assessment detail: not found room", log.String("room_id", view.RoomID))
-		return nil, nil
-	}
-
-	// get outcome names map
-	lessonMaterialIDs := make([]string, 0, len(view.LessonMaterials))
-	for _, lp := range view.LessonMaterials {
-		lessonMaterialIDs = append(lessonMaterialIDs, lp.ID)
-	}
-	var lpOutcomes []*entity.AssessmentContentOutcome
-	if err := da.GetAssessmentContentOutcomeDA().Query(ctx, &da.QueryAssessmentContentOutcomeConditions{
-		AssessmentIDs: entity.NullStrings{
-			Strings: []string{view.ID},
-			Valid:   true,
-		},
-		ContentIDs: entity.NullStrings{
-			Strings: lessonMaterialIDs,
-			Valid:   true,
-		},
-	}, &lpOutcomes); err != nil {
-		log.Error(ctx, "get h5p student view items: query assessment content outcome failed",
-			log.Err(err),
+func (m *assessmentH5P) calcRoomCompleteRate(ctx context.Context, room *entity.AssessmentH5PRoom, view *entity.AssessmentView) float64 {
+	if room == nil || view == nil {
+		log.Debug(ctx, "calc room complete rate: invalid args",
 			log.Any("view", view),
-			log.Strings("lesson_materials", lessonMaterialIDs),
+			log.Any("room", room),
 		)
-		return nil, err
-	}
-	outcomeIDs := make([]string, 0, len(lpOutcomes))
-	for _, o := range lpOutcomes {
-		outcomeIDs = append(outcomeIDs, o.OutcomeID)
-	}
-	outcomeIDs = utils.SliceDeduplicationExcludeEmpty(outcomeIDs)
-	outcomes, err := GetOutcomeModel().GetByIDs(ctx, operator, tx, outcomeIDs)
-	if err != nil {
-		log.Error(ctx, "get h5p student view items: get outcomes failed by id",
-			log.Err(err),
-			log.Any("view", view),
-			log.Strings("lesson_materials", lessonMaterialIDs),
-		)
-		return nil, err
-	}
-	outcomeNameMap := make(map[string]string, len(outcomes))
-	for _, o := range outcomes {
-		outcomeNameMap[o.ID] = o.Name
-	}
-	lpOutcomeNameMap := make(map[string][]string, len(lpOutcomes))
-	for _, o := range lpOutcomes {
-		lpOutcomeNameMap[o.ContentID] = append(lpOutcomeNameMap[o.ContentID], outcomeNameMap[o.OutcomeID])
+		return 0
 	}
 
-	// get lesson materials order map
-	lmIndexMap := make(map[string]int, len(view.LessonMaterials))
-	for i, lm := range view.LessonMaterials {
-		lmIndexMap[lm.ID] = i
-	}
-
-	// calc agg template
-	aggContentsMap := map[string][]*entity.AssessmentH5PContentScore{}
-	aggUserContentOrderedIDsMap := map[string][]int{}
-	for _, u := range room.Users {
-		for id, contents := range u.ContentsMapByContentID {
-			for _, c := range contents {
-				if u.UserID != "" {
-					aggUserContentOrderedIDsMap[u.UserID] = append(aggUserContentOrderedIDsMap[u.UserID], c.OrderedID)
-				}
-				exists := false
-				for _, c2 := range aggContentsMap[id] {
-					if c2 == c {
-						exists = true
-						break
-					}
-				}
-				if !exists {
-					aggContentsMap[id] = append(aggContentsMap[id], c)
-				}
-			}
-		}
-	}
-	log.Debug(ctx, "get h5p student view items: print agg maps",
-		log.Any("agg_contents_map", aggContentsMap),
-		log.Any("agg_user_content_ordered_ids_map", aggUserContentOrderedIDsMap),
-	)
-
-	r := make([]*entity.AssessmentStudentViewH5PItem, 0, len(view.Students))
+	keyedUserH5PContentsMap := m.getKeyedUserH5PContentsMap(room)
+	attempted := 0
+	total := 0
 	for _, s := range view.Students {
-		newItem := entity.AssessmentStudentViewH5PItem{
-			StudentID:   s.ID,
-			StudentName: s.Name,
-		}
-		user := room.UserMap[s.ID]
-		if user != nil {
-			newItem.Comment = user.Comment
-		} else {
-			log.Debug(ctx, "get h5p assessment detail: not found user from h5p room",
-				log.String("room_id", view.RoomID),
-				log.Any("not_found_student_id", s.ID),
-				log.Any("room", room),
-			)
+		if !s.Checked {
+			continue
 		}
 		for _, lm := range view.LessonMaterials {
-			uid := ""
-			if user != nil {
-				uid = user.UserID
+			if !(lm.Checked && (lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend)) {
+				continue
 			}
-			contentMapGroupByKey := map[string][]*entity.AssessmentH5PContentScore{}
-			for _, c := range aggContentsMap[lm.ID] {
-				key := fmt.Sprintf("%s:%s", c.ContentID, c.SubH5PID)
-				contentMapGroupByKey[key] = append(contentMapGroupByKey[key], c)
-			}
-			var contents []*entity.AssessmentH5PContentScore
-			attendContentOrderIDs := aggUserContentOrderedIDsMap[uid]
-			for _, contents2 := range contentMapGroupByKey {
-				if len(contents2) == 0 {
+			var contents []*entity.AssessmentH5PContent
+			for _, keyedContents := range m.getKeyedH5PContentsTemplateMap(room, lm.ID) {
+				if len(keyedContents) == 0 {
 					continue
 				}
-				hit := false
-				for _, c := range contents2 {
-					if utils.ContainsInt(attendContentOrderIDs, c.OrderedID) {
-						hit = true
-						contents = append(contents, c)
+				findUserContent := false
+				for _, c := range keyedContents {
+					userContent := keyedUserH5PContentsMap[m.generateUserH5PContentKey(c.ContentID, c.SubH5PID, s.ID)]
+					if userContent != nil {
+						findUserContent = true
+						contents = append(contents, userContent)
 						break
 					}
 				}
-				if !hit {
-					c := contents2[0]
-					newContent := entity.AssessmentH5PContentScore{
-						OrderedID:        c.OrderedID,
-						H5PID:            c.H5PID,
-						ContentID:        c.ContentID,
-						ContentName:      c.ContentName,
-						SubH5PID:         c.SubH5PID,
-						SubContentNumber: c.SubContentNumber,
+				if !findUserContent {
+					c := keyedContents[0]
+					newContent := entity.AssessmentH5PContent{
+						OrderedID:   c.OrderedID,
+						H5PID:       c.H5PID,
+						ContentID:   c.ContentID,
+						ContentName: c.ContentName,
+						SubH5PID:    c.SubH5PID,
 					}
 					contents = append(contents, &newContent)
 				}
 			}
-			if len(contents) > 0 {
-				for _, content := range contents {
-					if content == nil {
-						log.Debug(ctx, "get h5p assessment detail: not found content from h5p room",
-							log.String("room_id", view.RoomID),
-							log.Any("not_found_content_id", lm.Source),
-							log.Any("room", room),
-						)
-						continue
-					}
-					newLessonMaterial := entity.AssessmentStudentViewH5PLessonMaterial{
-						LessonMaterialID:     lm.ID,
-						LessonMaterialName:   lm.Name,
-						LessonMaterialType:   content.ContentType,
-						Answer:               content.Answer,
-						MaxScore:             content.MaxPossibleScore,
-						AchievedScore:        content.AchievedScore,
-						Attempted:            len(content.Answers) > 0 || len(content.Scores) > 0,
-						IsH5P:                lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
-						OutcomeNames:         lpOutcomeNameMap[lm.ID],
-						SubContentNumber:     content.SubContentNumber,
-						Number:               content.SubH5PID,
-						H5PID:                content.H5PID,
-						SubH5PID:             content.SubH5PID,
-						NotApplicableScoring: getAssessmentH5P().canScoring(content.ContentType),
-					}
-					newItem.LessonMaterials = append(newItem.LessonMaterials, &newLessonMaterial)
-				}
+			if len(contents) == 0 {
+				total++
 				continue
 			}
-			newLessMaterial := entity.AssessmentStudentViewH5PLessonMaterial{
-				LessonMaterialID:   lm.ID,
-				LessonMaterialName: lm.Name,
-				IsH5P:              lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
-				OutcomeNames:       lpOutcomeNameMap[lm.ID],
-			}
-			newItem.LessonMaterials = append(newItem.LessonMaterials, &newLessMaterial)
-		}
-		sort.Slice(newItem.LessonMaterials, func(i, j int) bool {
-			itemI := newItem.LessonMaterials[i]
-			itemJ := newItem.LessonMaterials[j]
-			if itemI.LessonMaterialID == itemJ.LessonMaterialID {
-				return itemI.SubH5PID < itemJ.SubH5PID
-			}
-			return lmIndexMap[itemI.LessonMaterialID] < lmIndexMap[itemJ.LessonMaterialID]
-		})
-		lastLessonMaterialID := ""
-		number := 0
-		subNumber := 0
-		for _, lm := range newItem.LessonMaterials {
-			if lastLessonMaterialID != lm.LessonMaterialID {
-				lastLessonMaterialID = lm.LessonMaterialID
-				number++
-				subNumber = 0
-			}
-			if lm.SubH5PID == "" {
-				subNumber = 0
-			} else {
-				subNumber++
-			}
-			if subNumber > 0 {
-				lm.Number = fmt.Sprintf("%d-%d", number, subNumber)
-			} else {
-				lm.Number = fmt.Sprintf("%d", number)
-			}
-		}
-		if len(newItem.LessonMaterials) == 0 {
-			log.Debug(ctx, "get h5p student view items: empty lesson materials",
-				log.Any("temp_result", r),
-				log.Any("view", view),
-			)
-		}
-		r = append(r, &newItem)
-	}
-
-	// filter parent h5p
-	for _, item := range r {
-		var deletingLMs []*entity.AssessmentStudentViewH5PLessonMaterial
-		lmCountMap := make(map[string]int, len(item.LessonMaterials))
-		for _, lm := range item.LessonMaterials {
-			lmCountMap[lm.LessonMaterialID] = lmCountMap[lm.LessonMaterialID] + 1
-		}
-		for _, lm := range item.LessonMaterials {
-			if lmCountMap[lm.LessonMaterialID] > 1 && lm.SubH5PID == "" {
-				deletingLMs = append(deletingLMs, lm)
-			}
-		}
-		for _, deletingLM := range deletingLMs {
-			for i, lm := range item.LessonMaterials {
-				if deletingLM == lm {
-					item.LessonMaterials = append(item.LessonMaterials[:i], item.LessonMaterials[i+1:]...)
-					break
+			for _, content := range contents {
+				if content == nil {
+					log.Debug(ctx, "calc room complete rate: not found content",
+						log.String("room_id", view.RoomID),
+						log.Any("view", view),
+						log.Any("room", room),
+					)
+					continue
 				}
+				if len(content.Answers) > 0 || len(content.Scores) > 0 {
+					attempted++
+				}
+				total++
 			}
 		}
 	}
 
-	sort.Sort(entity.AssessmentStudentViewH5PItemsOrder(r))
+	log.Debug(ctx, "calc room complete rate",
+		log.Int("attempted", attempted),
+		log.Int("total", total),
+		log.Any("room", room),
+		log.Any("view", view),
+	)
 
-	return r, nil
+	if total > 0 {
+		return float64(attempted) / float64(total)
+	}
+
+	return 0
 }
 
 var canScoringMap = map[string]bool{

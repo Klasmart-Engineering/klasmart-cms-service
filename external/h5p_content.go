@@ -1,6 +1,7 @@
 package external
 
 type H5PContent struct {
+	ParentID     string   `json:"parent_id"` // add: 2021-08-14
 	ContentID    string   `json:"content_id"`
 	Name         string   `json:"name"`
 	Type         string   `json:"type"`

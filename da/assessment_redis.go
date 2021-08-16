@@ -101,7 +101,7 @@ func (da *assessmentRedisDA) CleanAssessment(ctx context.Context, id string) err
 }
 
 func (da *assessmentRedisDA) generateAssessmentCacheKey(id string) string {
-	return strings.Join([]string{RedisKeyPrefixAssessmentItem, id}, ":")
+	return strings.Join([]string{RedisKeyPrefixAssessmentItem, id, constant.GitHash}, ":")
 }
 
 func (da *baseAssessmentRedisDA) getAssessmentCacheExpiration() time.Duration {
@@ -169,13 +169,15 @@ func (da *assessmentRedisDA) CleanQueryLearningSummaryTimeFilterResult(ctx conte
 }
 
 func (da *assessmentRedisDA) generateQueryLearningSummaryTimeFilterResultCacheKey(args *entity.QueryLearningSummaryTimeFilterArgs) string {
-	return strings.Join([]string{RedisKeyPrefixAssessmentQueryLearningSummaryTimeFilter,
+	return strings.Join([]string{
+		RedisKeyPrefixAssessmentQueryLearningSummaryTimeFilter,
 		args.OrgID,
 		string(args.SummaryType),
 		strconv.Itoa(args.TimeOffset),
-		strings.Join(args.SchoolIDs, ","),
+		strings.Join(args.SchoolIDs, "-"),
 		args.TeacherID,
 		args.StudentID,
+		constant.GitHash,
 	}, ":")
 }
 
