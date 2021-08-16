@@ -181,8 +181,8 @@ func (s AmsStudentService) GetByClassIDs(ctx context.Context, operator *entity.O
 	for index, classID := range classIDs {
 		query, found := data[fmt.Sprintf("q%d", index)]
 		if !found || query == nil {
-			log.Error(ctx, "classes not found", log.Strings("classIDs", classIDs), log.String("id", classIDs[index]))
-			return nil, constant.ErrRecordNotFound
+			log.Warn(ctx, "classes not found", log.Strings("classIDs", classIDs), log.String("id", classIDs[index]))
+			continue
 		}
 
 		students[classID] = append(students[classID], query.Students...)

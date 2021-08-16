@@ -403,8 +403,8 @@ func (s AmsClassService) GetBySchoolIDs(ctx context.Context, operator *entity.Op
 		queryAlias = fmt.Sprintf("q%d", indexMapping[index])
 		org, found := data[queryAlias]
 		if !found || org == nil {
-			log.Error(ctx, "classes not found", log.Strings("schoolIDs", schoolIDs), log.String("id", schoolIDs[index]))
-			return nil, constant.ErrRecordNotFound
+			log.Warn(ctx, "classes not found", log.Strings("schoolIDs", schoolIDs), log.String("id", schoolIDs[index]))
+			continue
 		}
 
 		classes[schoolIDs[index]] = make([]*Class, 0, len(org.Classes))
