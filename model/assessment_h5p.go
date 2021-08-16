@@ -475,7 +475,7 @@ func (m *assessmentH5P) treeingStudentViewLessonMaterials(contents []*entity.Ass
 	var level2Contents []*entity.AssessmentStudentViewH5PLessonMaterial
 	for _, root := range rootContents {
 		for _, c := range contents {
-			if root.H5PID == c.ParentID {
+			if c.ParentID == root.H5PID {
 				root.Children = append(root.Children, c)
 				level2Contents = append(level2Contents, c)
 			}
@@ -492,7 +492,7 @@ func (m *assessmentH5P) treeingRemainingStudentViewLessonMaterials(contents []*e
 	var subContents []*entity.AssessmentStudentViewH5PLessonMaterial
 	for _, parent := range parentContents {
 		for _, c := range contents {
-			if c.SubH5PID == parent.ParentID {
+			if c.ParentID == parent.SubH5PID {
 				parent.Children = append(parent.Children, c)
 				subContents = append(subContents, c)
 			}
