@@ -155,7 +155,7 @@ func TestFindWeekTimeRangeFromMonday(t *testing.T) {
 			name: "t1",
 			args: args{
 				ts:  1628841045,
-				loc: time.Local,
+				loc: time.FixedZone("test", 28800),
 			},
 			wantStartDay: 0,
 			wantEndDay:   0,
