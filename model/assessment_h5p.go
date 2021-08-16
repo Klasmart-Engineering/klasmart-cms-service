@@ -409,17 +409,15 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 	}
 
 	// number lesson materials
-	log.Debug(ctx, "batch get student view h5p lesson materials map: number start")
 	for _, lessonMaterials := range result {
-		m.numberStudentViewH5PLessonMaterials(view, lessonMaterials)
-		m.sortNumberedStudentViewH5PLessonMaterials(lessonMaterials)
+		m.numberStudentViewH5PLessonMaterials(ctx, view, lessonMaterials)
+		m.sortNumberedStudentViewH5PLessonMaterials(ctx, lessonMaterials)
 	}
-	log.Debug(ctx, "batch get student view h5p lesson materials map: number end")
 
 	return result, nil
 }
 
-func (m *assessmentH5P) numberStudentViewH5PLessonMaterials(view *entity.AssessmentView, lessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial) {
+func (m *assessmentH5P) numberStudentViewH5PLessonMaterials(ctx context.Context, view *entity.AssessmentView, lessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial) {
 	// sort by cms lesson materials
 	lmIndexMap := make(map[string]int, len(view.LessonMaterials))
 	for i, lm := range view.LessonMaterials {
@@ -440,7 +438,7 @@ func (m *assessmentH5P) numberStudentViewH5PLessonMaterials(view *entity.Assessm
 	m.doNumberStudentViewH5PLessonMaterials(treedLessonMaterials, "")
 }
 
-func (m *assessmentH5P) sortNumberedStudentViewH5PLessonMaterials(lessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial) {
+func (m *assessmentH5P) sortNumberedStudentViewH5PLessonMaterials(ctx context.Context, lessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial) {
 	sort.Slice(lessonMaterials, func(i, j int) bool {
 		a := strings.Split(lessonMaterials[i].Number, "-")
 		b := strings.Split(lessonMaterials[j].Number, "-")
@@ -449,7 +447,7 @@ func (m *assessmentH5P) sortNumberedStudentViewH5PLessonMaterials(lessonMaterial
 		}
 		for i := 0; i < len(a); i++ {
 			s1 := fmt.Sprintf("%06s", a[i])
-			s2 := fmt.Sprintf("%06s", a[j])
+			s2 := fmt.Sprintf("%06s", b[i])
 			if s1 != s2 {
 				return s1 < s2
 			}
