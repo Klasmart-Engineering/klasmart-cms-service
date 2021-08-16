@@ -236,11 +236,7 @@ func (m *assessmentH5P) getStudentViewItems(ctx context.Context, operator *entit
 	}
 
 	// batch get students lesson materials map
-	studentIDs := make([]string, 0, len(view.Students))
-	for _, s := range view.Students {
-		studentIDs = append(studentIDs, s.ID)
-	}
-	studentLessonMaterialsMap, err := m.batchGetStudentViewH5PLessonMaterialsMap(ctx, operator, tx, view.ID, studentIDs, view.LessonMaterials, room)
+	studentLessonMaterialsMap, err := m.batchGetStudentViewH5PLessonMaterialsMap(ctx, operator, tx, view, room)
 
 	// assembly result
 	result := make([]*entity.AssessmentStudentViewH5PItem, 0, len(view.Students))
@@ -274,25 +270,6 @@ func (m *assessmentH5P) getStudentViewItems(ctx context.Context, operator *entit
 	sort.Slice(result, func(i, j int) bool {
 		return strings.ToLower(result[i].StudentName) < strings.ToLower(result[j].StudentName)
 	})
-
-	// sort result lesson materials
-	lmIndexMap := make(map[string]int, len(view.LessonMaterials))
-	for i, lm := range view.LessonMaterials {
-		lmIndexMap[lm.ID] = i
-	}
-	for _, item := range result {
-		if len(item.LessonMaterials) <= 1 {
-			continue
-		}
-		sort.Slice(item.LessonMaterials, func(i, j int) bool {
-			itemI := item.LessonMaterials[i]
-			itemJ := item.LessonMaterials[j]
-			if itemI.LessonMaterialID == itemJ.LessonMaterialID {
-				return itemI.SubH5PID < itemJ.SubH5PID
-			}
-			return lmIndexMap[itemI.LessonMaterialID] < lmIndexMap[itemJ.LessonMaterialID]
-		})
-	}
 
 	return result, nil
 }
@@ -340,17 +317,15 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 	ctx context.Context,
 	operator *entity.Operator,
 	tx *dbo.DBContext,
-	assessmentID string,
-	studentIDs []string,
-	lessonMaterials []*entity.AssessmentLessonMaterial,
+	view *entity.AssessmentView,
 	room *entity.AssessmentH5PRoom,
 ) (map[string][]*entity.AssessmentStudentViewH5PLessonMaterial, error) {
 	// get content outcome names map
-	lmIDs := make([]string, 0, len(lessonMaterials))
-	for _, lm := range lessonMaterials {
+	lmIDs := make([]string, 0, len(view.LessonMaterials))
+	for _, lm := range view.LessonMaterials {
 		lmIDs = append(lmIDs, lm.ID)
 	}
-	lmOutcomeNamesMap, err := m.getOutcomesMapByContentID(ctx, operator, tx, assessmentID, lmIDs)
+	lmOutcomeNamesMap, err := m.getOutcomesMapByContentID(ctx, operator, tx, view.ID, lmIDs)
 	if err != nil {
 		log.Error(ctx, "batch get student view h5p lesson materials map: get outcomes map failed",
 			log.Err(err),
@@ -362,8 +337,8 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 	keyedUserH5PContentsMap := m.getKeyedUserH5PContentsMap(room)
 
 	result := map[string][]*entity.AssessmentStudentViewH5PLessonMaterial{}
-	for _, studentID := range studentIDs {
-		for lmIndex, lm := range lessonMaterials {
+	for _, s := range view.Students {
+		for lmIndex, lm := range view.LessonMaterials {
 			keyedH5PContentsTemplateMap := m.getKeyedH5PContentsTemplateMap(room, lm.ID)
 			var contents []*entity.AssessmentH5PContent
 			for _, keyedContents := range keyedH5PContentsTemplateMap {
@@ -372,7 +347,7 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 				}
 				findUserContent := false
 				for _, c := range keyedContents {
-					userContent := keyedUserH5PContentsMap[m.generateUserH5PContentKey(c.ContentID, c.SubH5PID, studentID)]
+					userContent := keyedUserH5PContentsMap[m.generateUserH5PContentKey(c.ContentID, c.SubH5PID, s.ID)]
 					if userContent != nil {
 						findUserContent = true
 						contents = append(contents, userContent)
@@ -400,7 +375,7 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 					IsH5P:                       lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
 					OutcomeNames:                lmOutcomeNamesMap[lm.ID],
 				}
-				result[studentID] = append(result[studentID], &newLessMaterial)
+				result[s.ID] = append(result[s.ID], &newLessMaterial)
 				continue
 			}
 			for _, content := range contents {
@@ -428,20 +403,35 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 					OutcomeNames:                lmOutcomeNamesMap[lm.ID],
 					NotApplicableScoring:        getAssessmentH5P().canScoring(content.ContentType),
 				}
-				result[studentID] = append(result[studentID], &newLessonMaterial)
+				result[s.ID] = append(result[s.ID], &newLessonMaterial)
 			}
 		}
 	}
 
 	// number lesson materials
 	for _, lessonMaterials := range result {
-		m.numberStudentViewH5PLessonMaterials(lessonMaterials)
+		m.numberStudentViewH5PLessonMaterials(view, lessonMaterials)
 	}
 
 	return result, nil
 }
 
-func (m *assessmentH5P) numberStudentViewH5PLessonMaterials(lessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial) {
+func (m *assessmentH5P) numberStudentViewH5PLessonMaterials(view *entity.AssessmentView, lessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial) {
+	// sort by cms lesson materials
+	lmIndexMap := make(map[string]int, len(view.LessonMaterials))
+	for i, lm := range view.LessonMaterials {
+		lmIndexMap[lm.ID] = i
+	}
+	sort.Slice(lessonMaterials, func(i, j int) bool {
+		itemI := lessonMaterials[i]
+		itemJ := lessonMaterials[j]
+		if itemI.LessonMaterialID != itemJ.LessonMaterialID {
+			return lmIndexMap[itemI.LessonMaterialID] < lmIndexMap[itemJ.LessonMaterialID]
+		}
+		return itemI.OrderedID < itemJ.OrderedID
+	})
+
+	// sort by tree level
 	treedLessonMaterials := m.treeingStudentViewLessonMaterials(lessonMaterials)
 	m.sortStudentViewH5PLessonMaterials(treedLessonMaterials)
 	m.doNumberStudentViewH5PLessonMaterials(treedLessonMaterials, "")
