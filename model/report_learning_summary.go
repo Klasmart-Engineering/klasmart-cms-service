@@ -199,13 +199,13 @@ func (l *learningSummaryReportModel) QueryRemainingFilter(ctx context.Context, t
 	scheduleIDs = utils.SliceDeduplication(scheduleIDs)
 	switch args.FilterType {
 	case entity.LearningSummaryFilterTypeSchool:
-		return l.queryRemainingFilterSchool(ctx, tx, operator, scheduleIDs)
+		return l.queryRemainingFilterSchool(ctx, tx, operator)
 	case entity.LearningSummaryFilterTypeClass:
-		return l.queryRemainingFilterClass(ctx, tx, operator, scheduleIDs)
+		return l.queryRemainingFilterClass(ctx, tx, operator, args.SchoolIDs)
 	case entity.LearningSummaryFilterTypeTeacher:
-		return l.queryRemainingFilterTeacher(ctx, tx, operator, scheduleIDs)
+		return l.queryRemainingFilterTeacher(ctx, tx, operator, []string{args.ClassID})
 	case entity.LearningSummaryFilterTypeStudent:
-		return l.queryRemainingFilterStudent(ctx, tx, operator, scheduleIDs)
+		return l.queryRemainingFilterStudent(ctx, tx, operator, []string{args.ClassID})
 	case entity.LearningSummaryFilterTypeSubject:
 		return l.queryRemainingFilterSubject(ctx, tx, operator, scheduleIDs)
 	default:
@@ -214,14 +214,14 @@ func (l *learningSummaryReportModel) QueryRemainingFilter(ctx context.Context, t
 	}
 }
 
-func (l *learningSummaryReportModel) queryRemainingFilterSchool(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
-	schoolIDs, err := l.batchGetScheduleRelationIDs(ctx, operator, scheduleIDs, []entity.ScheduleRelationType{entity.ScheduleRelationTypeSchool})
+func (l *learningSummaryReportModel) queryRemainingFilterSchool(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
+	schools, err := external.GetSchoolServiceProvider().GetByOrganizationID(ctx, operator, operator.OrgID)
 	if err != nil {
-		log.Error(ctx, "query remaining filter school failed: batch get school relations failed",
-			log.Err(err),
-			log.Any("operator", operator),
-		)
 		return nil, err
+	}
+	schoolIDs := make([]string, 0, len(schools))
+	for _, s := range schools {
+		schoolIDs = append(schoolIDs, s.ID)
 	}
 	schoolIDs = utils.SliceDeduplicationExcludeEmpty(schoolIDs)
 	schoolNameMap, err := external.GetSchoolServiceProvider().BatchGetNameMap(ctx, operator, schoolIDs)
@@ -261,14 +261,20 @@ func (l *learningSummaryReportModel) queryRemainingFilterSchool(ctx context.Cont
 	return result, nil
 }
 
-func (l *learningSummaryReportModel) queryRemainingFilterClass(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
-	classIDs, err := l.batchGetScheduleRelationIDs(ctx, operator, scheduleIDs, []entity.ScheduleRelationType{entity.ScheduleRelationTypeClassRosterClass, entity.ScheduleRelationTypeParticipantClass})
+func (l *learningSummaryReportModel) queryRemainingFilterClass(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, schoolIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
+	classesMap, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, operator, schoolIDs)
 	if err != nil {
-		log.Error(ctx, "query remaining filter class failed: batch get classes relations failed",
+		log.Error(ctx, "query remaining filter class failed: get classes by school ids failed",
 			log.Err(err),
 			log.Any("operator", operator),
 		)
 		return nil, err
+	}
+	var classIDs []string
+	for _, classes := range classesMap {
+		for _, c := range classes {
+			classIDs = append(classIDs, c.ID)
+		}
 	}
 	classIDs = utils.SliceDeduplicationExcludeEmpty(classIDs)
 	classNameMap, err := external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, classIDs)
@@ -308,14 +314,20 @@ func (l *learningSummaryReportModel) queryRemainingFilterClass(ctx context.Conte
 	return result, nil
 }
 
-func (l *learningSummaryReportModel) queryRemainingFilterTeacher(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
-	teacherIDs, err := l.batchGetScheduleRelationIDs(ctx, operator, scheduleIDs, []entity.ScheduleRelationType{entity.ScheduleRelationTypeClassRosterTeacher, entity.ScheduleRelationTypeParticipantTeacher})
+func (l *learningSummaryReportModel) queryRemainingFilterTeacher(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
+	teachersMap, err := external.GetTeacherServiceProvider().GetByClasses(ctx, operator, classIDs)
 	if err != nil {
-		log.Error(ctx, "query remaining filter teacher failed: batch get teachers relations failed",
+		log.Error(ctx, "query remaining filter teacher failed: get teachers by class ids failed",
 			log.Err(err),
 			log.Any("operator", operator),
 		)
 		return nil, err
+	}
+	var teacherIDs []string
+	for _, teachers := range teachersMap {
+		for _, t := range teachers {
+			teacherIDs = append(teacherIDs, t.ID)
+		}
 	}
 	teacherIDs = utils.SliceDeduplicationExcludeEmpty(teacherIDs)
 	teacherNameMap, err := external.GetTeacherServiceProvider().BatchGetNameMap(ctx, operator, teacherIDs)
@@ -340,14 +352,13 @@ func (l *learningSummaryReportModel) queryRemainingFilterTeacher(ctx context.Con
 	return result, nil
 }
 
-func (l *learningSummaryReportModel) queryRemainingFilterStudent(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
-	studentIDs, err := l.batchGetScheduleRelationIDs(ctx, operator, scheduleIDs, []entity.ScheduleRelationType{entity.ScheduleRelationTypeClassRosterStudent, entity.ScheduleRelationTypeParticipantStudent})
-	if err != nil {
-		log.Error(ctx, "query remaining filter student failed: batch get students relations failed",
-			log.Err(err),
-			log.Any("operator", operator),
-		)
-		return nil, err
+func (l *learningSummaryReportModel) queryRemainingFilterStudent(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
+	studentMap, err := external.GetStudentServiceProvider().GetByClassIDs(ctx, operator, classIDs)
+	var studentIDs []string
+	for _, students := range studentMap {
+		for _, s := range students {
+			studentIDs = append(studentIDs, s.ID)
+		}
 	}
 	studentIDs = utils.SliceDeduplicationExcludeEmpty(studentIDs)
 	studentNameMap, err := external.GetStudentServiceProvider().BatchGetNameMap(ctx, operator, studentIDs)
