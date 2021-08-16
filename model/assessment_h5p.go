@@ -441,7 +441,7 @@ func (m *assessmentH5P) numberAndFlagStudentViewH5PLessonMaterials(ctx context.C
 
 func (m *assessmentH5P) flagHasSubItems(treedLessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial) {
 	for _, lm := range treedLessonMaterials {
-		if len(lm.Children) > 0 {
+		if lm.ParentID == "" && len(lm.Children) > 0 {
 			lm.HasSubItems = true
 		}
 	}
