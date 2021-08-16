@@ -25,6 +25,7 @@ func (m *assessmentH5P) batchGetRoomMap(ctx context.Context, operator *entity.Op
 	roomScoreMap, err := external.GetH5PRoomScoreServiceProvider().BatchGet(ctx, operator, roomIDs)
 	if err != nil {
 		log.Error(ctx, "batch get room map: batch get scores failed",
+			log.Err(err),
 			log.Strings("room_ids", roomIDs),
 			log.Any("operator", operator),
 		)
@@ -37,6 +38,7 @@ func (m *assessmentH5P) batchGetRoomMap(ctx context.Context, operator *entity.Op
 		roomCommentMap, err = m.batchGetRoomCommentMap(ctx, operator, roomIDs)
 		if err != nil {
 			log.Error(ctx, "batch get room map: batch get comments failed",
+				log.Err(err),
 				log.Strings("room_ids", roomIDs),
 				log.Bool("include_comment", includeComment),
 				log.Any("operator", operator),
@@ -61,13 +63,11 @@ func (m *assessmentH5P) batchGetRoomMap(ctx context.Context, operator *entity.Op
 			}
 
 			// fill comment
-			if includeComment &&
-				roomCommentMap != nil &&
-				assessmentUser.UserID != "" &&
-				roomCommentMap[roomID] != nil &&
-				len(roomCommentMap[roomID][assessmentUser.UserID]) > 0 {
+			if includeComment && roomCommentMap[roomID] != nil && assessmentUser.UserID != "" {
 				comments := roomCommentMap[roomID][assessmentUser.UserID]
-				assessmentUser.Comment = comments[len(comments)-1]
+				if len(comments) > 0 {
+					assessmentUser.Comment = comments[len(comments)-1]
+				}
 			}
 
 			// fill contents
@@ -180,19 +180,14 @@ func (m *assessmentH5P) getMaxPossibleScore(content *entity.AssessmentH5PContent
 }
 
 func (m *assessmentH5P) isAnyoneAttempted(room *entity.AssessmentH5PRoom) bool {
-	attempted := false
 	for _, u := range room.Users {
 		for _, c := range u.Contents {
 			if len(c.Answers) > 0 || len(c.Scores) > 0 {
-				attempted = true
-				break
+				return true
 			}
 		}
-		if attempted {
-			break
-		}
 	}
-	return attempted
+	return false
 }
 
 func (m *assessmentH5P) getUserMap(room *entity.AssessmentH5PRoom) map[string]*entity.AssessmentH5PUser {
