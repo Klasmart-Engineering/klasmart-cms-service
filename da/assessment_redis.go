@@ -7,6 +7,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"gitlab.badanamu.com.cn/calmisland/ro"
 	"strconv"
 	"strings"
@@ -31,13 +32,16 @@ var (
 
 func GetAssessmentRedisDA() IAssessmentRedisDA {
 	assessmentRedisDAInstanceOnce.Do(func() {
-		assessmentRedisDAInstance = &assessmentRedisDA{}
+		assessmentRedisDAInstance = &assessmentRedisDA{
+			nonce: utils.NewID(),
+		}
 	})
 	return assessmentRedisDAInstance
 }
 
 type assessmentRedisDA struct {
 	baseAssessmentRedisDA
+	nonce string
 }
 
 func (da *assessmentRedisDA) GetAssessment(ctx context.Context, id string) (*entity.Assessment, error) {
@@ -101,7 +105,7 @@ func (da *assessmentRedisDA) CleanAssessment(ctx context.Context, id string) err
 }
 
 func (da *assessmentRedisDA) generateAssessmentCacheKey(id string) string {
-	return strings.Join([]string{RedisKeyPrefixAssessmentItem, id}, ":")
+	return strings.Join([]string{RedisKeyPrefixAssessmentItem, id, da.nonce}, ":")
 }
 
 func (da *baseAssessmentRedisDA) getAssessmentCacheExpiration() time.Duration {
@@ -169,13 +173,15 @@ func (da *assessmentRedisDA) CleanQueryLearningSummaryTimeFilterResult(ctx conte
 }
 
 func (da *assessmentRedisDA) generateQueryLearningSummaryTimeFilterResultCacheKey(args *entity.QueryLearningSummaryTimeFilterArgs) string {
-	return strings.Join([]string{RedisKeyPrefixAssessmentQueryLearningSummaryTimeFilter,
+	return strings.Join([]string{
+		RedisKeyPrefixAssessmentQueryLearningSummaryTimeFilter,
 		args.OrgID,
 		string(args.SummaryType),
 		strconv.Itoa(args.TimeOffset),
-		strings.Join(args.SchoolIDs, ","),
+		strings.Join(args.SchoolIDs, "-"),
 		args.TeacherID,
 		args.StudentID,
+		da.nonce,
 	}, ":")
 }
 
