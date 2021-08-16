@@ -460,7 +460,7 @@ func (m *assessmentH5P) sortNumberedStudentViewH5PLessonMaterials(ctx context.Co
 				return s1 < s2
 			}
 		}
-		return len(a) < len(b)
+		return len(a) > len(b)
 	})
 }
 
