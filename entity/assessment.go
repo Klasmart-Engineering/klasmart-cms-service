@@ -94,7 +94,7 @@ type AssessmentStudentViewH5PLessonMaterial struct {
 	IsH5P                bool     `json:"is_h5p"`
 	OutcomeNames         []string `json:"outcome_names"`
 	NotApplicableScoring bool     `json:"not_applicable_scoring"`
-
+	HasSubItems          bool     `json:"has_sub_items"`
 	// internal
 	LessonMaterialOrderedNumber int                                       `json:"lesson_material_ordered_number"`
 	OrderedID                   int                                       `json:"ordered_id"`
