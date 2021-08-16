@@ -425,10 +425,10 @@ func (m *assessmentH5P) numberStudentViewH5PLessonMaterials(view *entity.Assessm
 	sort.Slice(lessonMaterials, func(i, j int) bool {
 		itemI := lessonMaterials[i]
 		itemJ := lessonMaterials[j]
-		if itemI.LessonMaterialID == itemJ.LessonMaterialID {
-			return itemI.SubH5PID < itemJ.SubH5PID
+		if itemI.LessonMaterialID != itemJ.LessonMaterialID {
+			return lmIndexMap[itemI.LessonMaterialID] < lmIndexMap[itemJ.LessonMaterialID]
 		}
-		return lmIndexMap[itemI.LessonMaterialID] < lmIndexMap[itemJ.LessonMaterialID]
+		return itemI.OrderedID < itemJ.OrderedID
 	})
 
 	// sort by tree level
