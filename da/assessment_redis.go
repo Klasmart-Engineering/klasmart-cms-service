@@ -152,6 +152,11 @@ func (da *assessmentRedisDA) SetQueryLearningSummaryTimeFilterResult(ctx context
 		)
 		return err
 	}
+	log.Debug(ctx, "set query learning summary time filter result: cache success",
+		log.Any("args", args),
+		log.Any("key", key),
+		log.Any("result", result),
+	)
 	return nil
 }
 
