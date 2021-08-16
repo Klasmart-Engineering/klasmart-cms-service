@@ -412,6 +412,7 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 	log.Debug(ctx, "batch get student view h5p lesson materials map: number start")
 	for _, lessonMaterials := range result {
 		m.numberStudentViewH5PLessonMaterials(view, lessonMaterials)
+		m.sortNumberedStudentViewH5PLessonMaterials(lessonMaterials)
 	}
 	log.Debug(ctx, "batch get student view h5p lesson materials map: number end")
 
@@ -435,8 +436,26 @@ func (m *assessmentH5P) numberStudentViewH5PLessonMaterials(view *entity.Assessm
 
 	// sort by tree level
 	treedLessonMaterials := m.treeingStudentViewLessonMaterials(lessonMaterials)
-	m.sortStudentViewH5PLessonMaterials(treedLessonMaterials)
+	m.sortTreedStudentViewH5PLessonMaterials(treedLessonMaterials)
 	m.doNumberStudentViewH5PLessonMaterials(treedLessonMaterials, "")
+}
+
+func (m *assessmentH5P) sortNumberedStudentViewH5PLessonMaterials(lessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial) {
+	sort.Slice(lessonMaterials, func(i, j int) bool {
+		a := strings.Split(lessonMaterials[i].Number, "-")
+		b := strings.Split(lessonMaterials[j].Number, "-")
+		if len(a) != len(b) {
+			return len(a) < len(b)
+		}
+		for i := 0; i < len(a); i++ {
+			s1 := fmt.Sprintf("%06s", a[i])
+			s2 := fmt.Sprintf("%06s", a[j])
+			if s1 != s2 {
+				return s1 < s2
+			}
+		}
+		return true
+	})
 }
 
 func (m *assessmentH5P) doNumberStudentViewH5PLessonMaterials(treedLessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial, prefix string) {
@@ -452,7 +471,7 @@ func (m *assessmentH5P) doNumberStudentViewH5PLessonMaterials(treedLessonMateria
 	}
 }
 
-func (m *assessmentH5P) sortStudentViewH5PLessonMaterials(treedLessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial) {
+func (m *assessmentH5P) sortTreedStudentViewH5PLessonMaterials(treedLessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial) {
 	sort.Slice(treedLessonMaterials, func(i, j int) bool {
 		if treedLessonMaterials[i].LessonMaterialOrderedNumber != treedLessonMaterials[j].LessonMaterialOrderedNumber {
 			return treedLessonMaterials[i].LessonMaterialOrderedNumber < treedLessonMaterials[j].LessonMaterialOrderedNumber
@@ -461,7 +480,7 @@ func (m *assessmentH5P) sortStudentViewH5PLessonMaterials(treedLessonMaterials [
 	})
 	for _, lm := range treedLessonMaterials {
 		if len(lm.Children) > 0 {
-			m.sortStudentViewH5PLessonMaterials(lm.Children)
+			m.sortTreedStudentViewH5PLessonMaterials(lm.Children)
 		}
 	}
 }
