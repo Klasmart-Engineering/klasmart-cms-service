@@ -249,7 +249,7 @@ func (l *learningSummaryReportModel) queryRemainingFilterSchool(ctx context.Cont
 
 func (l *learningSummaryReportModel) queryRemainingFilterClass(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, schoolIDs []string, teacherIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
 	// filter schools
-	if len(schoolIDs) > 0 && schoolIDs[0] == "none" {
+	if len(schoolIDs) > 0 && schoolIDs[0] == constant.LearningSummaryFilterOptionNoneID {
 		log.Debug(ctx, "query remaining filter class: check 'none' option")
 		return nil, nil
 	}
@@ -339,9 +339,13 @@ func (l *learningSummaryReportModel) queryRemainingFilterClass(ctx context.Conte
 }
 
 func (l *learningSummaryReportModel) queryRemainingFilterTeacher(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
+	if len(classIDs) > 0 && classIDs[0] == constant.LearningSummaryFilterOptionNoneID {
+		log.Debug(ctx, "query remaining filter teacher: check 'none' option")
+		return nil, nil
+	}
 	teachersMap, err := external.GetTeacherServiceProvider().GetByClasses(ctx, operator, classIDs)
 	if err != nil {
-		log.Error(ctx, "query remaining filter teacher failed: get teachers by class ids failed",
+		log.Error(ctx, "query remaining filter teacher: get teachers by class ids failed",
 			log.Err(err),
 			log.Any("operator", operator),
 		)
@@ -377,6 +381,10 @@ func (l *learningSummaryReportModel) queryRemainingFilterTeacher(ctx context.Con
 }
 
 func (l *learningSummaryReportModel) queryRemainingFilterStudent(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
+	if len(classIDs) > 0 && classIDs[0] == constant.LearningSummaryFilterOptionNoneID {
+		log.Debug(ctx, "query remaining filter student: check 'none' option")
+		return nil, nil
+	}
 	studentMap, err := external.GetStudentServiceProvider().GetByClassIDs(ctx, operator, classIDs)
 	var studentIDs []string
 	for _, students := range studentMap {
@@ -387,7 +395,7 @@ func (l *learningSummaryReportModel) queryRemainingFilterStudent(ctx context.Con
 	studentIDs = utils.SliceDeduplicationExcludeEmpty(studentIDs)
 	studentNameMap, err := external.GetStudentServiceProvider().BatchGetNameMap(ctx, operator, studentIDs)
 	if err != nil {
-		log.Error(ctx, "query remaining filter student failed: batch get student name map failed",
+		log.Error(ctx, "query remaining filter student: batch get student name map failed",
 			log.Err(err),
 			log.Strings("student_ids", studentIDs),
 			log.Any("operator", operator),
@@ -408,6 +416,16 @@ func (l *learningSummaryReportModel) queryRemainingFilterStudent(ctx context.Con
 }
 
 func (l *learningSummaryReportModel) queryRemainingFilterSubject(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryRemainingFilterArgs) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
+	if args.WeekStart == 0 || args.WeekEnd == 0 ||
+		len(args.SchoolIDs) > 0 && args.SchoolIDs[0] == constant.LearningSummaryFilterOptionNoneID ||
+		args.ClassID == constant.LearningSummaryFilterOptionNoneID ||
+		args.TeacherID == constant.LearningSummaryFilterOptionNoneID ||
+		args.StudentID == constant.LearningSummaryFilterOptionNoneID {
+		log.Debug(ctx, "query remaining filter subject: check 'none' option",
+			log.Any("args", args),
+		)
+		return nil, nil
+	}
 	schedules, err := l.findRelatedSchedules(ctx, tx, operator, args.SummaryType, &args.LearningSummaryFilter)
 	if err != nil {
 		log.Error(ctx, "query remaining filter subject failed: find related schedules",
