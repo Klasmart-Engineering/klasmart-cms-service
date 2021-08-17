@@ -402,7 +402,7 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 					Attempted:                   len(content.Answers) > 0 || len(content.Scores) > 0,
 					IsH5P:                       lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
 					OutcomeNames:                lmOutcomeNamesMap[lm.ID],
-					NotApplicableScoring:        getAssessmentH5P().canScoring(content.ContentType),
+					NotApplicableScoring:        !getAssessmentH5P().canScoring(content.ContentType),
 				}
 				result[s.ID] = append(result[s.ID], &newLessonMaterial)
 			}
@@ -794,5 +794,8 @@ var canScoringMap = map[string]bool{
 }
 
 func (m *assessmentH5P) canScoring(contentType string) bool {
-	return canScoringMap[contentType]
+	if v, ok := canScoringMap[contentType]; ok {
+		return v
+	}
+	return false
 }
