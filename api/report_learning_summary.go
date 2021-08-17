@@ -71,6 +71,9 @@ func (s *Server) queryLearningSummaryTimeFilter(c *gin.Context) {
 	}
 	switch err {
 	case nil:
+		if result == nil {
+			result = []*entity.LearningSummaryFilterYear{}
+		}
 		c.JSON(http.StatusOK, result)
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -141,6 +144,9 @@ func (s *Server) queryLearningSummaryRemainingFilter(c *gin.Context) {
 	}
 	switch err {
 	case nil:
+		if result == nil {
+			result = []*entity.QueryLearningSummaryRemainingFilterResultItem{}
+		}
 		c.JSON(http.StatusOK, result)
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
