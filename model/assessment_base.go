@@ -1007,7 +1007,7 @@ func (m *assessmentBase) batchAddOutcomes(ctx context.Context, tx *dbo.DBContext
 					AssessmentID: a.ID,
 					OutcomeID:    outcomeID,
 					Skip:         false,
-					NoneAchieved: assumed,
+					NoneAchieved: !assumed,
 					Checked:      true,
 				})
 			}

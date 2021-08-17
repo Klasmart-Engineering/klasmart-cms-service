@@ -187,7 +187,7 @@ func (l *learningSummaryReportModel) QueryRemainingFilter(ctx context.Context, t
 	case entity.LearningSummaryFilterTypeSchool:
 		return l.queryRemainingFilterSchool(ctx, tx, operator)
 	case entity.LearningSummaryFilterTypeClass:
-		return l.queryRemainingFilterClass(ctx, tx, operator, args.SchoolIDs)
+		return l.queryRemainingFilterClass(ctx, tx, operator, args.SchoolIDs, []string{args.TeacherID})
 	case entity.LearningSummaryFilterTypeTeacher:
 		return l.queryRemainingFilterTeacher(ctx, tx, operator, []string{args.ClassID})
 	case entity.LearningSummaryFilterTypeStudent:
@@ -247,22 +247,58 @@ func (l *learningSummaryReportModel) queryRemainingFilterSchool(ctx context.Cont
 	return result, nil
 }
 
-func (l *learningSummaryReportModel) queryRemainingFilterClass(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, schoolIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
-	classesMap, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, operator, schoolIDs)
+func (l *learningSummaryReportModel) queryRemainingFilterClass(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, schoolIDs []string, teacherIDs []string) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
+	// filter schools
+	if len(schoolIDs) > 0 && schoolIDs[0] == "none" {
+		log.Debug(ctx, "query remaining filter class: check 'none' option")
+		return nil, nil
+	}
+	schoolClassesMap, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, operator, schoolIDs)
 	if err != nil {
-		log.Error(ctx, "query remaining filter class failed: get classes by school ids failed",
+		log.Error(ctx, "query remaining filter class: get classes by school ids failed",
 			log.Err(err),
 			log.Any("operator", operator),
 		)
 		return nil, err
 	}
 	var classIDs []string
-	for _, classes := range classesMap {
+	for _, classes := range schoolClassesMap {
 		for _, c := range classes {
 			classIDs = append(classIDs, c.ID)
 		}
 	}
 	classIDs = utils.SliceDeduplicationExcludeEmpty(classIDs)
+
+	// filter teachers
+	if len(teacherIDs) > 0 {
+		userClassesMap, err := external.GetClassServiceProvider().GetByUserIDs(ctx, operator, teacherIDs)
+		if err != nil {
+			log.Error(ctx, "query remaining filter class failed: get classes by teacher ids failed",
+				log.Err(err),
+				log.Any("operator", operator),
+			)
+			return nil, err
+		}
+		var userClassIDs []string
+		for _, classes := range userClassesMap {
+			for _, c := range classes {
+				userClassIDs = append(userClassIDs, c.ID)
+			}
+		}
+		userClassIDs = utils.SliceDeduplicationExcludeEmpty(userClassIDs)
+		classIDs = utils.IntersectAndDeduplicateStrSlice(classIDs, userClassIDs)
+	}
+
+	// check empty
+	if len(classIDs) == 0 {
+		log.Debug(ctx, "query remaining filter class: no class ids found",
+			log.Strings("school_ids", schoolIDs),
+			log.Strings("teacher_ids", teacherIDs),
+		)
+		return nil, nil
+	}
+
+	// batch get name
 	classNameMap, err := external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, classIDs)
 	if err != nil {
 		log.Error(ctx, "query remaining filter class failed: batch get class name map failed",
@@ -272,6 +308,8 @@ func (l *learningSummaryReportModel) queryRemainingFilterClass(ctx context.Conte
 		)
 		return nil, err
 	}
+
+	// assembly result
 	result := make([]*entity.QueryLearningSummaryRemainingFilterResultItem, 0, len(classIDs))
 	for _, classID := range classIDs {
 		name := classNameMap[classID]
