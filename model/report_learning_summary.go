@@ -187,11 +187,23 @@ func (l *learningSummaryReportModel) QueryRemainingFilter(ctx context.Context, t
 	case entity.LearningSummaryFilterTypeSchool:
 		return l.queryRemainingFilterSchool(ctx, tx, operator)
 	case entity.LearningSummaryFilterTypeClass:
-		return l.queryRemainingFilterClass(ctx, tx, operator, args.SchoolIDs, []string{args.TeacherID})
+		var teacherIDs []string
+		if len(args.TeacherID) > 0 {
+			teacherIDs = append(teacherIDs, args.TeacherID)
+		}
+		return l.queryRemainingFilterClass(ctx, tx, operator, args.SchoolIDs, teacherIDs)
 	case entity.LearningSummaryFilterTypeTeacher:
-		return l.queryRemainingFilterTeacher(ctx, tx, operator, []string{args.ClassID})
+		var classIDs []string
+		if len(args.ClassID) > 0 {
+			classIDs = append(classIDs, args.ClassID)
+		}
+		return l.queryRemainingFilterTeacher(ctx, tx, operator, classIDs)
 	case entity.LearningSummaryFilterTypeStudent:
-		return l.queryRemainingFilterStudent(ctx, tx, operator, []string{args.ClassID})
+		var classIDs []string
+		if len(args.ClassID) > 0 {
+			classIDs = append(classIDs, args.ClassID)
+		}
+		return l.queryRemainingFilterStudent(ctx, tx, operator, classIDs)
 	case entity.LearningSummaryFilterTypeSubject:
 		return l.queryRemainingFilterSubject(ctx, tx, operator, args)
 	default:
