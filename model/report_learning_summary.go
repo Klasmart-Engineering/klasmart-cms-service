@@ -291,7 +291,10 @@ func (l *learningSummaryReportModel) queryRemainingFilterClass(ctx context.Conte
 
 	// check empty
 	if len(classIDs) == 0 {
-		log.Debug(ctx, "")
+		log.Debug(ctx, "query remaining filter class: no class ids found",
+			log.Strings("school_ids", schoolIDs),
+			log.Strings("teacher_ids", teacherIDs),
+		)
 		return nil, nil
 	}
 

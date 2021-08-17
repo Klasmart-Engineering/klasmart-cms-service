@@ -797,5 +797,5 @@ func (m *assessmentH5P) canScoring(contentType string) bool {
 	if v, ok := canScoringMap[contentType]; ok {
 		return v
 	}
-	return false
+	return true
 }
