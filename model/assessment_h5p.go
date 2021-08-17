@@ -747,7 +747,7 @@ var canScoringMap = map[string]bool{
 	"ArithmeticQuiz":               true,
 	"Audio":                        false,
 	"AudioRecorder":                false,
-	"AudioRecorderBookMaker":       false,
+	"BookMaker":                    false,
 	"BranchingScenario":            true,
 	"Chart":                        false,
 	"Collage":                      false,

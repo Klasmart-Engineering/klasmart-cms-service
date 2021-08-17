@@ -265,21 +265,44 @@ func (l *learningSummaryReportModel) queryRemainingFilterClass(ctx context.Conte
 		log.Debug(ctx, "query remaining filter class: check 'none' option")
 		return nil, nil
 	}
-	schoolClassesMap, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, operator, schoolIDs)
-	if err != nil {
-		log.Error(ctx, "query remaining filter class: get classes by school ids failed",
-			log.Err(err),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
 	var classIDs []string
-	for _, classes := range schoolClassesMap {
-		for _, c := range classes {
-			classIDs = append(classIDs, c.ID)
+
+	if len(schoolIDs) == 0 && len(teacherIDs) > 0 {
+		schoolsMap, err := external.GetSchoolServiceProvider().GetByUsers(ctx, operator, operator.OrgID, teacherIDs)
+		if err != nil {
+			log.Error(ctx, "query remaining filter class: get schools by user ids failed",
+				log.Err(err),
+				log.Strings("teacher_ids", teacherIDs),
+				log.Any("operator", operator),
+			)
+			return nil, err
 		}
+		for _, schools := range schoolsMap {
+			for _, s := range schools {
+				schoolIDs = append(schoolIDs, s.ID)
+			}
+		}
+		schoolIDs = utils.SliceDeduplicationExcludeEmpty(schoolIDs)
 	}
-	classIDs = utils.SliceDeduplicationExcludeEmpty(classIDs)
+
+	if len(schoolIDs) > 0 {
+		schoolClassesMap, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, operator, schoolIDs)
+		if err != nil {
+			log.Error(ctx, "query remaining filter class: get classes by school ids failed",
+				log.Err(err),
+				log.Any("operator", operator),
+			)
+			return nil, err
+		}
+		var schoolClassIDs []string
+		for _, classes := range schoolClassesMap {
+			for _, c := range classes {
+				schoolClassIDs = append(schoolClassIDs, c.ID)
+			}
+		}
+		schoolClassIDs = utils.SliceDeduplicationExcludeEmpty(schoolClassIDs)
+		classIDs = append(classIDs, schoolClassIDs...)
+	}
 
 	// filter teachers
 	if len(teacherIDs) > 0 {
