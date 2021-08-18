@@ -15,7 +15,6 @@ pipelines:
             - go env -w GOPRIVATE=gitlab.badanamu.com.cn
             - go env
             - env
-            - go get gitlab.badanamu.com.cn/calmisland/imq
             - go get
             - go mod tidy
             - go mod vendor
