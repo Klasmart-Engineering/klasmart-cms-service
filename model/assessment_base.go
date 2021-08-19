@@ -162,16 +162,16 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 		}
 		for _, o := range outcomes {
 			newOutcome := entity.AssessmentDetailOutcome{
-				OutcomeID:     o.ID,
-				OutcomeName:   o.Name,
-				Assumed:       o.Assumed,
-				Skip:          assessmentOutcomeMap[o.ID].Skip,
-				NoneAchieved:  assessmentOutcomeMap[o.ID].NoneAchieved,
-				AttendanceIDs: outcomeAttendanceIDsMap[o.ID],
-				Checked:       assessmentOutcomeMap[o.ID].Checked,
+				OutcomeID:             o.ID,
+				OutcomeName:           o.Name,
+				Assumed:               o.Assumed,
+				Skip:                  assessmentOutcomeMap[o.ID].Skip,
+				NoneAchieved:          assessmentOutcomeMap[o.ID].NoneAchieved,
+				AchievedAttendanceIDs: outcomeAttendanceIDsMap[o.ID],
+				Checked:               assessmentOutcomeMap[o.ID].Checked,
 			}
 			if newOutcome.NoneAchieved || newOutcome.Skip {
-				newOutcome.AttendanceIDs = nil
+				newOutcome.AchievedAttendanceIDs = nil
 			}
 			result.Outcomes = append(result.Outcomes, &newOutcome)
 		}
@@ -1131,7 +1131,7 @@ func (m *assessmentBase) update(ctx context.Context, tx *dbo.DBContext, operator
 				log.Error(ctx, "update assessment: check skip and none achieved combination", log.Any("args", args))
 				return constant.ErrInvalidArgs
 			}
-			if (item.Skip || item.NoneAchieved) && len(item.AttendanceIDs) > 0 {
+			if (item.Skip || item.NoneAchieved) && len(item.AchievedAttendanceIDs) > 0 {
 				log.Error(ctx, "update assessment: check skip and none achieved combination with attendance ids", log.Any("args", args))
 				return constant.ErrInvalidArgs
 			}
@@ -1220,7 +1220,7 @@ func (m *assessmentBase) update(ctx context.Context, tx *dbo.DBContext, operator
 				if oa.Skip || oa.NoneAchieved {
 					continue
 				}
-				for _, attendanceID := range oa.AttendanceIDs {
+				for _, attendanceID := range oa.AchievedAttendanceIDs {
 					insertingOutcomeAttendances = append(insertingOutcomeAttendances, &entity.OutcomeAttendance{
 						ID:           utils.NewID(),
 						AssessmentID: args.ID,

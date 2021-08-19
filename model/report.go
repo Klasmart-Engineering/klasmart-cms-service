@@ -101,7 +101,7 @@ func (m *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 		return nil, err
 	}
 
-	assessmentAttendances, err := m.getCheckedAssessmentAttendance(ctx, tx, assessmentIDs)
+	assessmentAttendances, err := m.getAssessmentCheckedStudents(ctx, tx, assessmentIDs)
 	if err != nil {
 		log.Error(ctx, "list student report: get checked assessment attendance failed",
 			log.Err(err),
@@ -270,7 +270,7 @@ func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 		return nil, err
 	}
 
-	assessmentAttendances, err := m.getCheckedAssessmentAttendance(ctx, tx, assessmentIDs)
+	assessmentAttendances, err := m.getAssessmentCheckedStudents(ctx, tx, assessmentIDs)
 	if err != nil {
 		log.Error(ctx, "get student detail report: get checked assessment attendances failed",
 			log.Err(err),
@@ -554,9 +554,9 @@ func (m *reportModel) ListStudentsPerformanceReport(ctx context.Context, tx *dbo
 		return nil, err
 	}
 
-	assessmentAttendances, err := m.getCheckedAssessmentAttendance(ctx, tx, assessmentIDs)
+	assessmentAttendances, err := m.getAssessmentCheckedStudents(ctx, tx, assessmentIDs)
 	if err != nil {
-		log.Error(ctx, "ListStudentsPerformanceReport: call getCheckedAssessmentAttendance failed",
+		log.Error(ctx, "ListStudentsPerformanceReport: call getAssessmentCheckedStudents failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("req", req),
@@ -755,9 +755,9 @@ func (m *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.D
 		return nil, err
 	}
 
-	assessmentAttendances, err := m.getCheckedAssessmentAttendance(ctx, tx, assessmentIDs)
+	assessmentAttendances, err := m.getAssessmentCheckedStudents(ctx, tx, assessmentIDs)
 	if err != nil {
-		log.Error(ctx, "GetStudentPerformanceReport: call getCheckedAssessmentAttendance failed",
+		log.Error(ctx, "GetStudentPerformanceReport: call getAssessmentCheckedStudents failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("req", req),
@@ -952,13 +952,17 @@ func (m *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, ope
 	return result, nil
 }
 
-func (m *reportModel) getCheckedAssessmentAttendance(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentAttendance, error) {
+func (m *reportModel) getAssessmentCheckedStudents(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentAttendance, error) {
 	var result []*entity.AssessmentAttendance
 	if err := da.GetAssessmentAttendanceDA().QueryTx(ctx, tx, &da.QueryAssessmentAttendanceConditions{
 		AssessmentIDs: entity.NullStrings{Strings: assessmentIDs, Valid: true},
 		Checked:       entity.NullBool{Bool: true, Valid: true},
+		Role: entity.NullAssessmentAttendanceRole{
+			Value: entity.AssessmentAttendanceRoleStudent,
+			Valid: true,
+		},
 	}, &result); err != nil {
-		log.Error(ctx, "getCheckedAssessmentAttendance: query assessment attendances failed",
+		log.Error(ctx, "getAssessmentCheckedStudents: query assessment attendances failed",
 			log.Err(err),
 			log.Any("assessment_ids", assessmentIDs),
 		)
