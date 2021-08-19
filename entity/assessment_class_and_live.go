@@ -203,14 +203,13 @@ type AssessmentDetail struct {
 }
 
 type AssessmentDetailOutcome struct {
-	OutcomeID              string   `json:"outcome_id"`
-	OutcomeName            string   `json:"outcome_name"`
-	Assumed                bool     `json:"assumed"`
-	Skip                   bool     `json:"skip"`
-	NoneAchieved           bool     `json:"none_achieved"`
-	AchievedAttendanceIDs  []string `json:"achieved_attendance_ids"`
-	PartiallyAttendanceIDs []string `json:"partially_attendance_ids"` // 2021-08-19
-	Checked                bool     `json:"checked"`
+	OutcomeID     string   `json:"outcome_id"`
+	OutcomeName   string   `json:"outcome_name"`
+	Assumed       bool     `json:"assumed"`
+	Skip          bool     `json:"skip"`
+	NoneAchieved  bool     `json:"none_achieved"`
+	AttendanceIDs []string `json:"attendance_ids"`
+	Checked       bool     `json:"checked"`
 }
 
 type AssessmentDetailContent struct {
@@ -264,11 +263,10 @@ type UpdateAssessmentArgs struct {
 }
 
 type UpdateAssessmentOutcomeArgs struct {
-	OutcomeID              string   `json:"outcome_id"`
-	Skip                   bool     `json:"skip"`
-	NoneAchieved           bool     `json:"none_achieved"`
-	AchievedAttendanceIDs  []string `json:"achieved_attendance_ids"`
-	PartiallyAttendanceIDs []string `json:"partially_attendance_ids"` // 2021-08-19
+	OutcomeID     string   `json:"outcome_id"`
+	Skip          bool     `json:"skip"`
+	NoneAchieved  bool     `json:"none_achieved"`
+	AttendanceIDs []string `json:"attendance_ids"`
 }
 
 type UpdateAssessmentMaterialArgs struct {
