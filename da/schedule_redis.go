@@ -19,159 +19,251 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/ro"
 )
 
-type ScheduleCacheFlag string
+var (
+	ErrRedisDisabled = errors.New("redis disabled")
+)
+
+var (
+	_scheduleRedisDA     IScheduleCacheDA
+	_scheduleRedisDAOnce sync.Once
+)
+
+type IScheduleCacheDA interface {
+	Set(ctx context.Context, orgID string, condition *ScheduleCacheCondition, data interface{}) error
+	GetScheduleListView(ctx context.Context, orgID string, condition *ScheduleCondition) ([]*entity.ScheduleListView, error)
+	GetScheduledDates(ctx context.Context, orgID string, condition *ScheduleCondition) ([]string, error)
+	GetScheduleBasic(ctx context.Context, orgID string, scheduleID string) (*entity.ScheduleBasic, error)
+	GetScheduleDetailView(ctx context.Context, orgID string, userID string, scheduleID string) (*entity.ScheduleDetailsView, error)
+	GetScheduleFilterUndefinedClass(ctx context.Context, orgID string, permissionMap map[external.PermissionName]bool) (bool, error)
+	Clean(ctx context.Context, orgID string) error
+}
+
+type ScheduleCacheDataType string
 
 const (
-	ScheduleFilterUnDefineClass ScheduleCacheFlag = "UnDefineClass"
+	ScheduleListView             ScheduleCacheDataType = "ScheduleListView"
+	ScheduleBasic                ScheduleCacheDataType = "ScheduleBasic"
+	ScheduleDetailView           ScheduleCacheDataType = "ScheduleDetailView"
+	ScheduledDates               ScheduleCacheDataType = "ScheduledDates"
+	ScheduleFilterUndefinedClass ScheduleCacheDataType = "UndefinedClass"
 )
 
 type ScheduleCacheCondition struct {
-	Condition     dbo.Conditions
-	UserID        string
-	ScheduleID    string
-	SchoolID      string
-	CacheFlag     ScheduleCacheFlag
+	Condition  dbo.Conditions
+	UserID     string
+	ScheduleID string
+	SchoolID   string
+	// TODO map is unordered
 	PermissionMap map[external.PermissionName]bool
+	DataType      ScheduleCacheDataType
 }
 
-type IScheduleCacheDA interface {
-	Add(ctx context.Context, orgID string, condition *ScheduleCacheCondition, data interface{}) error
-	SearchToListView(ctx context.Context, orgID string, condition *ScheduleCondition) ([]*entity.ScheduleListView, error)
-	SearchToStrings(ctx context.Context, orgID string, condition *ScheduleCondition) ([]string, error)
-	SearchToBasicData(ctx context.Context, orgID string, scheduleID string) (*entity.ScheduleBasic, error)
-	SearchToScheduleDetails(ctx context.Context, orgID string, userID string, scheduleID string) (*entity.ScheduleDetailsView, error)
-	SearchToBool(ctx context.Context, orgID string, condition *ScheduleCacheCondition) (bool, error)
-	Clean(ctx context.Context, orgID string) error
-
-	SaveScheduleListView(ctx context.Context, orgID string, condition *ScheduleCacheCondition, data []*entity.ScheduleListView) error
-	GetScheduleListView(ctx context.Context, orgID string, condition *ScheduleCacheCondition) ([]*entity.ScheduleListView, error)
+type ScheduleRedisDA struct {
+	expiration time.Duration
 }
 
-func (r *ScheduleRedisDA) Add(ctx context.Context, orgID string, condition *ScheduleCacheCondition, data interface{}) error {
+func GetScheduleRedisDA() IScheduleCacheDA {
+	_scheduleRedisDAOnce.Do(func() {
+		_scheduleRedisDA = &ScheduleRedisDA{
+			expiration: config.Get().Schedule.CacheExpiration,
+		}
+	})
+	return _scheduleRedisDA
+}
+
+func (r *ScheduleRedisDA) Set(ctx context.Context, orgID string, condition *ScheduleCacheCondition, data interface{}) error {
 	if !config.Get().RedisConfig.OpenCache {
-		log.Info(ctx, "redis disabled")
-		return nil
+		log.Warn(ctx, "redis config open_cache is false")
+		return ErrRedisDisabled
 	}
+
 	b, err := json.Marshal(data)
 	if err != nil {
-		log.Error(ctx, "Can't parse schedule list into json",
+		log.Error(ctx, "can't parse data into json",
 			log.Err(err),
 			log.Any("condition", condition),
 			log.Any("data", data),
 		)
 		return err
 	}
-	key := r.getHSetKey(orgID)
-	filed := r.conditionHash(condition)
-	err = ro.MustGetRedis(ctx).Expire(key, r.expiration).Err()
+	key := r.getScheduleConditionKey(orgID)
+	field := r.getScheduleConditionField(condition)
+	redisClient := ro.MustGetRedis(ctx)
+	pipe := redisClient.TxPipeline()
+	exist := pipe.Exists(key)
+	pipe.HSet(key, field, string(b))
+	_, err = pipe.Exec()
 	if err != nil {
-		log.Error(ctx, "set schedule condition key expire error",
+		log.Error(ctx, "failed to exec redis pipeline",
 			log.Err(err),
-			log.Any("condition", condition),
-			log.Any("filed", filed),
-			log.Any("data", data),
+			log.String("key", key),
+			log.String("field", field),
 		)
 		return err
 	}
-	err = ro.MustGetRedis(ctx).HSet(key, filed, string(b)).Err()
-	if err != nil {
-		log.Error(ctx, "Can't save schedule into cache",
-			log.Err(err),
-			log.Any("condition", condition),
-			log.Any("filed", filed),
-			log.Any("data", data),
-		)
-		return err
+
+	// key not exist
+	if exist.Val() == int64(0) {
+		err = redisClient.Expire(key, r.expiration).Err()
+		if err != nil {
+			log.Error(ctx, "failed to set timeout",
+				log.Err(err),
+				log.String("key", key),
+				log.Any("expiration", r.expiration),
+			)
+			return err
+		}
 	}
+
 	return nil
 }
 
-func (r *ScheduleRedisDA) SearchToListView(ctx context.Context, orgID string, condition *ScheduleCondition) ([]*entity.ScheduleListView, error) {
-	res, err := r.search(ctx, orgID, &ScheduleCacheCondition{Condition: condition})
-	if err != nil {
+func (r *ScheduleRedisDA) GetScheduleListView(ctx context.Context, orgID string, condition *ScheduleCondition) ([]*entity.ScheduleListView, error) {
+	cacheCondition := &ScheduleCacheCondition{
+		Condition: condition,
+		DataType:  ScheduleListView,
+	}
+	data, err := r.get(ctx, orgID, cacheCondition)
+	if err == ro.ErrKeyNotExist {
+		log.Info(ctx, "redis cache missed", log.Any("condition", cacheCondition))
+		return nil, err
+	} else if err != nil {
+		log.Error(ctx, "get from redis cache error",
+			log.Err(err),
+			log.Any("condition", cacheCondition),
+		)
 		return nil, err
 	}
+
 	var result []*entity.ScheduleListView
-	err = json.Unmarshal([]byte(res), &result)
+	err = json.Unmarshal([]byte(data), &result)
 	if err != nil {
-		log.Error(ctx, "unmarshal schedule error ",
+		log.Error(ctx, "unmarshal ScheduleListView error ",
 			log.Err(err),
-			log.Any("condition", condition),
-			log.String("scheduleJson", res),
+			log.Any("condition", cacheCondition),
+			log.String("data", data),
 		)
 		return nil, err
 	}
 	return result, nil
 }
 
-func (r *ScheduleRedisDA) SearchToStrings(ctx context.Context, orgID string, condition *ScheduleCondition) ([]string, error) {
-	res, err := r.search(ctx, orgID, &ScheduleCacheCondition{Condition: condition})
-	if err != nil {
+func (r *ScheduleRedisDA) GetScheduledDates(ctx context.Context, orgID string, condition *ScheduleCondition) ([]string, error) {
+	cacheCondition := &ScheduleCacheCondition{
+		Condition: condition,
+		DataType:  ScheduledDates,
+	}
+	data, err := r.get(ctx, orgID, cacheCondition)
+	if err == ro.ErrKeyNotExist {
+		log.Info(ctx, "redis cache missed", log.Any("condition", cacheCondition))
+		return nil, err
+	} else if err != nil {
+		log.Error(ctx, "get from redis cache error",
+			log.Err(err),
+			log.Any("condition", cacheCondition),
+		)
 		return nil, err
 	}
+
 	var result []string
-	err = json.Unmarshal([]byte(res), &result)
+	err = json.Unmarshal([]byte(data), &result)
 	if err != nil {
-		log.Error(ctx, "unmarshal schedule error ",
+		log.Error(ctx, "unmarshal ScheduledDates error ",
 			log.Err(err),
-			log.Any("condition", condition),
-			log.String("scheduleJson", res),
+			log.Any("condition", cacheCondition),
+			log.String("data", data),
 		)
 		return nil, err
 	}
 	return result, nil
 }
 
-func (r *ScheduleRedisDA) SearchToBasicData(ctx context.Context, orgID string, scheduleID string) (*entity.ScheduleBasic, error) {
-	res, err := r.search(ctx, orgID, &ScheduleCacheCondition{ScheduleID: scheduleID})
-	if err != nil {
+func (r *ScheduleRedisDA) GetScheduleBasic(ctx context.Context, orgID string, scheduleID string) (*entity.ScheduleBasic, error) {
+	cacheCondition := &ScheduleCacheCondition{
+		ScheduleID: scheduleID,
+		DataType:   ScheduleBasic,
+	}
+	data, err := r.get(ctx, orgID, cacheCondition)
+	if err == ro.ErrKeyNotExist {
+		log.Info(ctx, "redis cache missed", log.Any("condition", cacheCondition))
+		return nil, err
+	} else if err != nil {
+		log.Error(ctx, "get from redis cache error",
+			log.Err(err),
+			log.Any("condition", cacheCondition),
+		)
 		return nil, err
 	}
+
 	var result *entity.ScheduleBasic
-	err = json.Unmarshal([]byte(res), &result)
+	err = json.Unmarshal([]byte(data), &result)
 	if err != nil {
-		log.Error(ctx, "unmarshal schedule error ",
+		log.Error(ctx, "unmarshal ScheduleBasic error ",
 			log.Err(err),
-			log.String("scheduleID", scheduleID),
-			log.String("scheduleJson", res),
+			log.Any("condition", cacheCondition),
+			log.String("data", data),
 		)
 		return nil, err
 	}
 	return result, nil
 }
 
-func (r *ScheduleRedisDA) SearchToScheduleDetails(ctx context.Context, orgID string, userID string, scheduleID string) (*entity.ScheduleDetailsView, error) {
-	res, err := r.search(ctx, orgID, &ScheduleCacheCondition{ScheduleID: scheduleID, UserID: userID})
-	if err != nil {
+func (r *ScheduleRedisDA) GetScheduleDetailView(ctx context.Context, orgID string, userID string, scheduleID string) (*entity.ScheduleDetailsView, error) {
+	cacheCondition := &ScheduleCacheCondition{
+		UserID:     userID,
+		ScheduleID: scheduleID,
+		DataType:   ScheduleDetailView,
+	}
+	data, err := r.get(ctx, orgID, cacheCondition)
+	if err == ro.ErrKeyNotExist {
+		log.Info(ctx, "redis cache missed", log.Any("condition", cacheCondition))
+		return nil, err
+	} else if err != nil {
+		log.Error(ctx, "get from redis cache error",
+			log.Err(err),
+			log.Any("condition", cacheCondition),
+		)
 		return nil, err
 	}
+
 	var result *entity.ScheduleDetailsView
-	err = json.Unmarshal([]byte(res), &result)
+	err = json.Unmarshal([]byte(data), &result)
 	if err != nil {
-		log.Error(ctx, "unmarshal schedule error ",
+		log.Error(ctx, "unmarshal ScheduleBasic error ",
 			log.Err(err),
-			log.String("userID", userID),
-			log.String("scheduleID", scheduleID),
-			log.String("scheduleJson", res),
+			log.Any("condition", cacheCondition),
+			log.String("data", data),
 		)
 		return nil, err
 	}
+
 	return result, nil
 }
 
-func (r *ScheduleRedisDA) SearchToBool(ctx context.Context, orgID string, condition *ScheduleCacheCondition) (bool, error) {
-	res, err := r.search(ctx, orgID, condition)
-	if err != nil {
+func (r *ScheduleRedisDA) GetScheduleFilterUndefinedClass(ctx context.Context, orgID string, permissionMap map[external.PermissionName]bool) (bool, error) {
+	cacheCondition := &ScheduleCacheCondition{
+		PermissionMap: permissionMap,
+		DataType:      ScheduleFilterUndefinedClass,
+	}
+	data, err := r.get(ctx, orgID, cacheCondition)
+	if err == ro.ErrKeyNotExist {
+		log.Info(ctx, "redis cache missed", log.Any("condition", cacheCondition))
+		return false, err
+	} else if err != nil {
+		log.Error(ctx, "get from redis cache error",
+			log.Err(err),
+			log.Any("condition", cacheCondition),
+		)
 		return false, err
 	}
+
 	var result bool
-	err = json.Unmarshal([]byte(res), &result)
+	err = json.Unmarshal([]byte(data), &result)
 	if err != nil {
-		log.Error(ctx, "unmarshal schedule error ",
+		log.Error(ctx, "unmarshal ScheduleBasic error ",
 			log.Err(err),
-			log.String("orgID", orgID),
-			log.Any("condition", condition),
-			log.String("scheduleJson", res),
+			log.Any("condition", cacheCondition),
+			log.String("data", data),
 		)
 		return false, err
 	}
@@ -180,12 +272,12 @@ func (r *ScheduleRedisDA) SearchToBool(ctx context.Context, orgID string, condit
 
 func (r *ScheduleRedisDA) Clean(ctx context.Context, orgID string) error {
 	if !config.Get().RedisConfig.OpenCache {
-		return nil
+		log.Warn(ctx, "redis config open_cache is false")
+		return ErrRedisDisabled
 	}
-	key := r.getHSetKey(orgID)
-	scheduleListViewKey := r.getScheduleListViewKey(orgID)
 
-	err := ro.MustGetRedis(ctx).Del(key, scheduleListViewKey).Err()
+	key := r.getScheduleConditionKey(orgID)
+	err := ro.MustGetRedis(ctx).Del(key).Err()
 	if err != nil {
 		log.Error(ctx, "redis del keys error",
 			log.Err(err),
@@ -197,217 +289,24 @@ func (r *ScheduleRedisDA) Clean(ctx context.Context, orgID string) error {
 	return nil
 }
 
-func (r *ScheduleRedisDA) SaveScheduleListView(ctx context.Context, orgID string, condition *ScheduleCacheCondition, data []*entity.ScheduleListView) error {
-	if !config.Get().RedisConfig.OpenCache {
-		return nil
-	}
-
-	b, err := json.Marshal(data)
-	if err != nil {
-		log.Error(ctx, "Can't parse ScheduleListView into json",
-			log.Err(err),
-			log.Any("condition", condition),
-			log.Any("data", data),
-		)
-		return err
-	}
-
-	key := r.getScheduleListViewKey(orgID)
-	field := r.conditionHash(condition)
-	exist, err := ro.MustGetRedis(ctx).Exists(key).Result()
-	if err != nil {
-		log.Error(ctx, "Failed to Exists ScheduleListView",
-			log.Err(err),
-			log.Any("key", key),
-		)
-		return err
-	}
-
-	err = ro.MustGetRedis(ctx).HSet(key, field, string(b)).Err()
-	if err != nil {
-		log.Error(ctx, "Failed to HSet ScheduleListView into cache",
-			log.Err(err),
-			log.Any("key", key),
-			log.Any("filed", field),
-			log.Any("data", data),
-		)
-		return err
-	}
-
-	// not exist
-	if exist == int64(0) {
-		err = ro.MustGetRedis(ctx).Expire(key, r.expiration).Err()
-		if err != nil {
-			log.Error(ctx, "Set ScheduleListView expire error",
-				log.Err(err),
-				log.Any("key", key),
-				log.Any("expiration", r.expiration),
-			)
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (r *ScheduleRedisDA) GetScheduleListView(ctx context.Context, orgID string, condition *ScheduleCacheCondition) ([]*entity.ScheduleListView, error) {
-	if !config.Get().RedisConfig.OpenCache {
-		return nil, nil
-	}
-
-	key := r.getScheduleListViewKey(orgID)
-	field := r.conditionHash(condition)
-	data, err := ro.MustGetRedis(ctx).HGet(key, field).Result()
-	if err != nil {
-		log.Error(ctx, "Get ScheduleListView redis error",
-			log.Err(err),
-			log.Any("condition", condition),
-			log.Any("key", key),
-		)
-		return nil, err
-	}
-
-	var result []*entity.ScheduleListView
-	err = json.Unmarshal([]byte(data), &result)
-	if err != nil {
-		log.Error(ctx, "Unmarshal ScheduleListView error ",
-			log.Err(err),
-			log.Any("condition", condition),
-			log.String("scheduleJson", data),
-		)
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func (r *ScheduleRedisDA) getHSetKey(orgID string) string {
+func (r *ScheduleRedisDA) getScheduleConditionKey(orgID string) string {
 	return fmt.Sprintf("%s:%s", RedisKeyPrefixScheduleCondition, orgID)
 }
 
-func (r *ScheduleRedisDA) search(ctx context.Context, orgID string, condition *ScheduleCacheCondition) (string, error) {
-	if !config.Get().RedisConfig.OpenCache {
-		return "", errors.New("not open cache ")
-	}
-	key := r.getHSetKey(orgID)
-	filed := r.conditionHash(condition)
-	res, err := ro.MustGetRedis(ctx).HGet(key, filed).Result()
-	if err != nil {
-		log.Error(ctx, "Can't get schedule condition from cache",
-			log.Err(err),
-			log.Any("condition", condition),
-			log.Any("filed", filed),
-		)
-		return "", err
-	}
-	return res, nil
-}
-
-func (r *ScheduleRedisDA) conditionHash(condition *ScheduleCacheCondition) string {
+func (r *ScheduleRedisDA) getScheduleConditionField(condition *ScheduleCacheCondition) string {
 	h := md5.New()
 	b, _ := json.Marshal(condition)
 	h.Write(b)
-	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
-	return md5Hash
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
-func (r *ScheduleRedisDA) getScheduleListViewKey(orgID string) string {
-	return fmt.Sprintf("%s:%s", RedisKeyPrefixScheduleListView, orgID)
-}
+func (r *ScheduleRedisDA) get(ctx context.Context, orgID string, condition *ScheduleCacheCondition) (string, error) {
+	if !config.Get().RedisConfig.OpenCache {
+		log.Warn(ctx, "redis config open_cache is false")
+		return "", ErrRedisDisabled
+	}
 
-//func (r *ContentRedis) conditionHash(condition dbo.Conditions) string {
-//	h := md5.New()
-//	h.Write([]byte(fmt.Sprintf("%v", condition)))
-//	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
-//	return fmt.Sprintf("%v", md5Hash)
-//}
-//func (r *ContentRedis) contentConditionKey(condition dbo.Conditions) string {
-//	md5Hash := r.conditionHash(condition)
-//	return fmt.Sprintf("%v:%v", RedisKeyPrefixContentCondition, md5Hash)
-//}
-//func (r *ScheduleRedisDA) BatchAdd(ctx context.Context, op *entity.Operator, schedules []*entity.ScheduleDetailsView) error {
-//	if !config.Get().RedisConfig.OpenCache {
-//		log.Info(ctx, "redis disabled")
-//		return nil
-//	}
-//	for _, item := range schedules {
-//		key := r.scheduleKey(fmt.Sprintf("%s_%s", op.UserID, item.ID))
-//		b, err := json.Marshal(item)
-//		if err != nil {
-//			log.Error(ctx, "Can't parse schedule into json",
-//				log.Err(err),
-//				log.Any("schedule", item),
-//			)
-//			return err
-//		}
-//		err = ro.MustGetRedis(ctx).Set(key, string(b), r.expiration).Err()
-//		if err != nil {
-//			log.Error(ctx, "Can't save schedule into cache",
-//				log.Err(err),
-//				log.Any("schedule", item),
-//			)
-//			return err
-//		}
-//	}
-//	return nil
-//}
-
-//func (r *ScheduleRedisDA) GetByIDs(ctx context.Context, op *entity.Operator, ids []string) ([]*entity.ScheduleDetailsView, error) {
-//	if !config.Get().RedisConfig.OpenCache {
-//		return nil, errors.New("not open cache")
-//	}
-//	keys := make([]string, len(ids))
-//	for i, id := range ids {
-//		keys[i] = r.scheduleKey(fmt.Sprintf("%s_%s", op.UserID, id))
-//	}
-//	res, err := ro.MustGetRedis(ctx).MGet(keys...).Result()
-//	if err != nil {
-//		log.Error(ctx, "Can't get schedule list from cache", log.Err(err))
-//		return nil, err
-//	}
-//	schedules := make([]*entity.ScheduleDetailsView, 0, len(res))
-//	for i := range res {
-//		resJSON, ok := res[i].(string)
-//		if !ok {
-//			log.Error(ctx, "Get invalid data from cache", log.Any("data", res[i]))
-//			return nil, errors.New("invalid cache")
-//		}
-//		schedule := new(entity.ScheduleDetailsView)
-//		err = json.Unmarshal([]byte(resJSON), schedule)
-//		if err != nil {
-//			log.Error(ctx, "Can't unmarshal schedule from cache",
-//				log.Err(err),
-//				log.String("JSON", resJSON))
-//			return nil, err
-//		}
-//		schedules = append(schedules, schedule)
-//	}
-//	return schedules, nil
-//}
-
-//func (r *ScheduleRedisDA) scheduleKey(key string) string {
-//	return fmt.Sprintf("%s:%v", RedisKeyPrefixScheduleID, key)
-//}
-
-//func (r *ScheduleRedisDA) scheduleConditionKey(condition *ScheduleCacheCondition) string {
-//	md5Hash := r.conditionHash(condition)
-//	return fmt.Sprintf("%v:%v", RedisKeyPrefixScheduleCondition, md5Hash)
-//}
-
-type ScheduleRedisDA struct {
-	expiration time.Duration
-}
-
-var (
-	_scheduleRedisDA     IScheduleCacheDA
-	_scheduleRedisDAOnce sync.Once
-)
-
-func GetScheduleRedisDA() IScheduleCacheDA {
-	_scheduleRedisDAOnce.Do(func() {
-		_scheduleRedisDA = &ScheduleRedisDA{
-			expiration: config.Get().Schedule.CacheExpiration,
-		}
-	})
-	return _scheduleRedisDA
+	key := r.getScheduleConditionKey(orgID)
+	filed := r.getScheduleConditionField(condition)
+	return ro.MustGetRedis(ctx).HGet(key, filed).Result()
 }

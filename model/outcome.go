@@ -116,7 +116,8 @@ func (ocm OutcomeModel) ShortcodeLength() int {
 func (ocm OutcomeModel) IsShortcodeCached(ctx context.Context, op *entity.Operator, shortcode string) (bool, error) {
 	exists, err := da.GetShortcodeRedis(ctx).IsCached(ctx, op, string(entity.KindOutcome), shortcode)
 	if err != nil {
-		log.Debug(ctx, "IsCached: redis access failed",
+		log.Error(ctx, "IsCached: redis access failed",
+			log.Err(err),
 			log.Any("op", op),
 			log.String("shortcode", shortcode))
 		return false, err

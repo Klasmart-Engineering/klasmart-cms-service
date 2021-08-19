@@ -1083,7 +1083,8 @@ func (m MilestoneModel) IsShortcodeExists(ctx context.Context, op *entity.Operat
 func (m MilestoneModel) IsShortcodeCached(ctx context.Context, op *entity.Operator, shortcode string) (bool, error) {
 	exists, err := da.GetShortcodeRedis(ctx).IsCached(ctx, op, string(entity.KindMileStone), shortcode)
 	if err != nil {
-		log.Debug(ctx, "IsCached: redis access failed",
+		log.Error(ctx, "IsCached: redis access failed",
+			log.Err(err),
 			log.Any("op", op),
 			log.String("shortcode", shortcode))
 		return false, err
@@ -1106,7 +1107,8 @@ func (m MilestoneModel) RemoveShortcode(ctx context.Context, op *entity.Operator
 func (m MilestoneModel) Cache(ctx context.Context, op *entity.Operator, cursor int, shortcode string) error {
 	err := da.GetShortcodeRedis(ctx).Cache(ctx, op, string(entity.KindMileStone), cursor, shortcode)
 	if err != nil {
-		log.Debug(ctx, "Cache: redis access failed",
+		log.Error(ctx, "Cache: redis access failed",
+			log.Err(err),
 			log.Any("op", op),
 			log.Int("cursor", cursor),
 			log.String("shortcode", shortcode))
