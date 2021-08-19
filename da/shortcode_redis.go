@@ -3,12 +3,13 @@ package da
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/go-redis/redis"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/ro"
-	"sync"
-	"time"
 )
 
 type IShortcodeRedis interface {
@@ -26,7 +27,7 @@ func (scr *ShortcodeRedis) Get(ctx context.Context, op *entity.Operator, kind st
 	cursor, err := scr.client.Get(scr.cursorKey(ctx, op, kind)).Int()
 	if err != nil {
 		if err.Error() != "redis: nil" {
-			log.Error(ctx, "Get: redis access failed",
+			log.Info(ctx, "Get: redis access failed",
 				log.Err(err),
 				log.Any("op", op),
 				log.String("kind", string(kind)))

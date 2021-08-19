@@ -37,7 +37,7 @@ require (
 	gitlab.badanamu.com.cn/calmisland/common-log v0.1.4
 	gitlab.badanamu.com.cn/calmisland/dbo v0.1.10
 	gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13
-	gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20200819092854-7b96095e0678
+	gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20210813055601-f0a5d22461a0
 	go.etcd.io/etcd v3.3.25+incompatible // indirect
 	go.mongodb.org/mongo-driver v1.4.0
 	go.uber.org/multierr v1.6.0 // indirect
