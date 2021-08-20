@@ -744,6 +744,7 @@ func (l *learningSummaryReportModel) findRelatedAssessmentOutcomes(ctx context.C
 	for _, o := range assessmentOutcomes {
 		outcomeIDs = append(outcomeIDs, o.OutcomeID)
 	}
+	outcomeIDs = utils.SliceDeduplicationExcludeEmpty(outcomeIDs)
 	outcomes, err := GetOutcomeModel().GetByIDs(ctx, operator, tx, outcomeIDs)
 	if err != nil {
 		log.Error(ctx, "find related assessment outcomes: batch get schedule outcome failed",

@@ -98,7 +98,7 @@ type LiveClassSummaryItem struct {
 type LearningSummaryOutcome struct {
 	ID     string                  `json:"id"`
 	Name   string                  `json:"name"`
-	Status AssessmentOutcomeStatus `json:"status"`
+	Status AssessmentOutcomeStatus `json:"status" enums:"achieved,not_achieved,partially"`
 }
 
 type QueryAssignmentsSummaryResult struct {
