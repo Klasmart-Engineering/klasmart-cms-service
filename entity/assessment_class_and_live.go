@@ -206,7 +206,7 @@ type AssessmentDetail struct {
 type AssessmentDetailOutcome struct {
 	OutcomeID     string                  `json:"outcome_id"`
 	OutcomeName   string                  `json:"outcome_name"`
-	AssignedTo    []AssessmentContentType `json:"assigned_to"`
+	AssignedTo    []AssessmentContentType `json:"assigned_to" enums:"lesson_plan,lesson_material"`
 	Assumed       bool                    `json:"assumed"`
 	Skip          bool                    `json:"skip"`
 	NoneAchieved  bool                    `json:"none_achieved"`
