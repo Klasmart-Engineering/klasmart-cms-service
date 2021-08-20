@@ -382,6 +382,8 @@ gitlab.badanamu.com.cn/calmisland/krypton v1.2.15 h1:eCTuFNNs/ruJZs+3y8ZCHq+5VCw
 gitlab.badanamu.com.cn/calmisland/krypton v1.2.15/go.mod h1:Zm4s/Z+RTUEjW0biT10WALzo22L+K+K6AkACi4xG2iw=
 gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20200819092854-7b96095e0678 h1:pWIK4lbAIwSr0EJgnyP7h0aCWDU4MvfYCdPqjwG5iTc=
 gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20200819092854-7b96095e0678/go.mod h1:ZtNgdOvY8dqIvXbb6fwDofTuzA3ber18L/qK91mFwg4=
+gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20210813055601-f0a5d22461a0 h1:StJhpqemX6OfGIh6Sum/9JdxwtCGHn/p2OGwNPesxig=
+gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20210813055601-f0a5d22461a0/go.mod h1:ZtNgdOvY8dqIvXbb6fwDofTuzA3ber18L/qK91mFwg4=
 go.etcd.io/bbolt v1.3.3 h1:MUGmc65QhB3pIlaQ5bB4LwqSj6GIonVJXpZiaKNyaKk=
 go.etcd.io/bbolt v1.3.3/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
 go.etcd.io/bbolt v1.3.4 h1:hi1bXHMVrlQh6WwxAy+qZCV/SYIlqo+Ushwdpa4tAKg=

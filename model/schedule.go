@@ -1314,7 +1314,7 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 }
 
 func (s *scheduleModel) queryByCache(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleListView, error) {
-	result, err := da.GetScheduleRedisDA().GetScheduleListView(ctx, op.OrgID, &da.ScheduleCacheCondition{Condition: condition})
+	result, err := da.GetScheduleRedisDA().GetScheduleListView(ctx, op.OrgID, condition)
 	if err != nil {
 		log.Info(ctx, "Query from cache error",
 			log.Err(err),
@@ -1472,7 +1472,7 @@ func (s *scheduleModel) QueryByDB(ctx context.Context, op *entity.Operator, cond
 func (s *scheduleModel) QueryByCondition(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error) {
 	cacheData, err := s.queryByCache(ctx, op, condition)
 	if err == nil {
-		log.Debug(ctx, "Query:using cache",
+		log.Info(ctx, "Query:using cache",
 			log.Any("op", op),
 			log.Any("condition", condition),
 		)
@@ -1490,9 +1490,14 @@ func (s *scheduleModel) QueryByCondition(ctx context.Context, op *entity.Operato
 	}
 
 	// cache
-	err = da.GetScheduleRedisDA().SaveScheduleListView(ctx, op.OrgID, &da.ScheduleCacheCondition{Condition: condition}, result)
-	if err != nil {
-		log.Info(ctx, "Save ScheduleListView cache error", log.Err(err))
+	if err = da.GetScheduleRedisDA().Set(ctx, op.OrgID, &da.ScheduleCacheCondition{
+		Condition: condition,
+		DataType:  da.ScheduleListView,
+	}, result); err != nil {
+		log.Warn(ctx, "set cache error",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.Any("data", result))
 	}
 
 	return result, nil
@@ -1505,12 +1510,12 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, op *entity.Operator, i
 	}
 	var other []*entity.ScheduleBasicDataInput
 	for _, item := range input {
-		cacheData, err := da.GetScheduleRedisDA().SearchToBasicData(ctx, op.OrgID, item.ScheduleID)
+		cacheData, err := da.GetScheduleRedisDA().GetScheduleBasic(ctx, op.OrgID, item.ScheduleID)
 		if err != nil {
 			other = append(other, item)
 			continue
 		}
-		log.Debug(ctx, "get basic data:using cache",
+		log.Info(ctx, "get basic data:using cache",
 			log.Err(err),
 			log.Any("op", op),
 			log.Any("item", item),
@@ -1619,7 +1624,15 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, op *entity.Operator, i
 		scheduleBasic.Members = scheduleBasic.MemberTeachers
 		scheduleBasicMap[item.ScheduleID] = scheduleBasic
 
-		da.GetScheduleRedisDA().Add(ctx, op.OrgID, &da.ScheduleCacheCondition{ScheduleID: item.ScheduleID}, scheduleBasic)
+		if err = da.GetScheduleRedisDA().Set(ctx, op.OrgID, &da.ScheduleCacheCondition{
+			ScheduleID: item.ScheduleID,
+			DataType:   da.ScheduleBasic,
+		}, scheduleBasic); err != nil {
+			log.Warn(ctx, "set cache error",
+				log.Err(err),
+				log.String("scheduleID", item.ScheduleID),
+				log.Any("data", scheduleBasic))
+		}
 	}
 
 	return scheduleBasicMap, nil
@@ -2036,7 +2049,7 @@ func (s *scheduleModel) processUsersAccessible(ctx context.Context, operator *en
 }
 
 func (s *scheduleModel) getByIDFormCache(ctx context.Context, operator *entity.Operator, id string) (*entity.ScheduleDetailsView, error) {
-	cacheData, err := da.GetScheduleRedisDA().SearchToScheduleDetails(ctx, operator.OrgID, operator.UserID, id)
+	cacheData, err := da.GetScheduleRedisDA().GetScheduleDetailView(ctx, operator.OrgID, operator.UserID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -2062,7 +2075,7 @@ func (s *scheduleModel) getByIDFormCache(ctx context.Context, operator *entity.O
 func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, id string) (*entity.ScheduleDetailsView, error) {
 	cacheData, err := s.getByIDFormCache(ctx, operator, id)
 	if err == nil {
-		log.Debug(ctx, "GetByID:using cache",
+		log.Info(ctx, "GetByID:using cache",
 			log.Any("op", operator),
 			log.Any("id", id),
 		)
@@ -2084,10 +2097,17 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 		return nil, err
 	}
 
-	da.GetScheduleRedisDA().Add(ctx, operator.OrgID, &da.ScheduleCacheCondition{
+	if err = da.GetScheduleRedisDA().Set(ctx, operator.OrgID, &da.ScheduleCacheCondition{
 		UserID:     operator.UserID,
 		ScheduleID: id,
-	}, result)
+		DataType:   da.ScheduleDetailView,
+	}, result); err != nil {
+		log.Warn(ctx, "set cache error",
+			log.Err(err),
+			log.String("userID", operator.UserID),
+			log.String("scheduleID", id),
+			log.Any("data", result))
+	}
 
 	return result, nil
 }
@@ -2596,9 +2616,9 @@ func (s *scheduleModel) StartScheduleRepeat(ctx context.Context, template *entit
 }
 
 func (s *scheduleModel) QueryScheduledDatesByCondition(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]string, error) {
-	cacheData, err := da.GetScheduleRedisDA().SearchToStrings(ctx, op.OrgID, condition)
+	cacheData, err := da.GetScheduleRedisDA().GetScheduledDates(ctx, op.OrgID, condition)
 	if err == nil && len(cacheData) > 0 {
-		log.Debug(ctx, "Query:using cache",
+		log.Info(ctx, "Query:using cache",
 			log.Any("condition", condition),
 			log.Any("cacheData", cacheData),
 		)
@@ -2620,9 +2640,14 @@ func (s *scheduleModel) QueryScheduledDatesByCondition(ctx context.Context, op *
 	}
 	result := utils.SliceDeduplication(dateList)
 
-	err = da.GetScheduleRedisDA().Add(ctx, op.OrgID, &da.ScheduleCacheCondition{Condition: condition}, result)
-	if err != nil {
-		log.Info(ctx, "QueryScheduledDates:GetScheduleRedisDA.AddDates error", log.Err(err))
+	if err = da.GetScheduleRedisDA().Set(ctx, op.OrgID, &da.ScheduleCacheCondition{
+		Condition: condition,
+		DataType:  da.ScheduledDates,
+	}, result); err != nil {
+		log.Warn(ctx, "set cache error",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.Any("data", result))
 	}
 
 	return result, nil
