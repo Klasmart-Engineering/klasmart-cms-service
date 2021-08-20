@@ -182,34 +182,45 @@ type NullAssessmentStatus struct {
 }
 
 type AssessmentDetail struct {
-	ID               string                          `json:"id"`
-	Title            string                          `json:"title"`
-	Status           AssessmentStatus                `json:"status"`
-	Schedule         *Schedule                       `json:"schedule"`
-	RoomID           string                          `json:"room_id"`
-	Class            AssessmentClass                 `json:"class"`
-	Teachers         []*AssessmentTeacher            `json:"teachers"`
-	Students         []*AssessmentStudent            `json:"students"`
-	Program          AssessmentProgram               `json:"program"`
-	Subjects         []*AssessmentSubject            `json:"subjects"`
-	ClassEndTime     int64                           `json:"class_end_time"`
-	ClassLength      int                             `json:"class_length"`
-	RemainingTime    int64                           `json:"remaining_time"`
-	CompleteTime     int64                           `json:"complete_time"`
-	LessonPlan       AssessmentDetailContent         `json:"lesson_plan"`
-	LessonMaterials  []*AssessmentDetailContent      `json:"lesson_materials"`
-	Outcomes         []*AssessmentDetailOutcome      `json:"outcomes"`
-	StudentViewItems []*AssessmentStudentViewH5PItem `json:"student_view_items"`
+	ID               string                            `json:"id"`
+	Title            string                            `json:"title"`
+	Status           AssessmentStatus                  `json:"status"`
+	Schedule         *Schedule                         `json:"schedule"`
+	RoomID           string                            `json:"room_id"`
+	Class            AssessmentClass                   `json:"class"`
+	Teachers         []*AssessmentTeacher              `json:"teachers"`
+	Students         []*AssessmentStudent              `json:"students"`
+	Program          AssessmentProgram                 `json:"program"`
+	Subjects         []*AssessmentSubject              `json:"subjects"`
+	ClassEndTime     int64                             `json:"class_end_time"`
+	ClassLength      int                               `json:"class_length"`
+	RemainingTime    int64                             `json:"remaining_time"`
+	CompleteTime     int64                             `json:"complete_time"`
+	LessonPlan       AssessmentDetailContent           `json:"lesson_plan"`
+	LessonMaterials  []*AssessmentDetailContent        `json:"lesson_materials"`
+	Outcomes         []*AssessmentDetailOutcome        `json:"outcomes"`
+	ContentOutcomes  []*AssessmentDetailContentOutcome `json:"content_outcomes"`
+	StudentViewItems []*AssessmentStudentViewH5PItem   `json:"student_view_items"`
 }
 
 type AssessmentDetailOutcome struct {
+	OutcomeID     string                  `json:"outcome_id"`
+	OutcomeName   string                  `json:"outcome_name"`
+	AssignedTo    []AssessmentContentType `json:"assigned_to"`
+	Assumed       bool                    `json:"assumed"`
+	Skip          bool                    `json:"skip"`
+	NoneAchieved  bool                    `json:"none_achieved"`
+	AttendanceIDs []string                `json:"attendance_ids"`
+	Checked       bool                    `json:"checked"`
+}
+
+type AssessmentDetailContentOutcome struct {
+	ContentID     string   `json:"content_id"`
 	OutcomeID     string   `json:"outcome_id"`
 	OutcomeName   string   `json:"outcome_name"`
 	Assumed       bool     `json:"assumed"`
 	Skip          bool     `json:"skip"`
-	NoneAchieved  bool     `json:"none_achieved"`
 	AttendanceIDs []string `json:"attendance_ids"`
-	Checked       bool     `json:"checked"`
 }
 
 type AssessmentDetailContent struct {
@@ -254,18 +265,25 @@ type AssessmentsSummary struct {
 }
 
 type UpdateAssessmentArgs struct {
-	ID               string                         `json:"id"`
-	Action           UpdateAssessmentAction         `json:"action" enums:"save,complete"`
-	StudentIDs       []string                       `json:"attendance_ids"`
-	LessonMaterials  []*UpdateAssessmentContentArgs `json:"lesson_materials"`
-	Outcomes         []*UpdateAssessmentOutcomeArgs `json:"outcomes"`
-	StudentViewItems []*UpdateAssessmentH5PStudent  `json:"student_view_items"`
+	ID               string                                `json:"id"`
+	Action           UpdateAssessmentAction                `json:"action" enums:"save,complete"`
+	StudentIDs       []string                              `json:"attendance_ids"`
+	LessonMaterials  []*UpdateAssessmentContentArgs        `json:"lesson_materials"`
+	Outcomes         []*UpdateAssessmentOutcomeArgs        `json:"outcomes"`
+	ContentOutcomes  []*UpdateAssessmentContentOutcomeArgs `json:"content_outcomes"`
+	StudentViewItems []*UpdateAssessmentH5PStudent         `json:"student_view_items"`
 }
 
 type UpdateAssessmentOutcomeArgs struct {
 	OutcomeID     string   `json:"outcome_id"`
 	Skip          bool     `json:"skip"`
 	NoneAchieved  bool     `json:"none_achieved"`
+	AttendanceIDs []string `json:"attendance_ids"`
+}
+
+type UpdateAssessmentContentOutcomeArgs struct {
+	ContentID     string   `json:"content_id"`
+	OutcomeID     string   `json:"outcome_id"`
 	AttendanceIDs []string `json:"attendance_ids"`
 }
 

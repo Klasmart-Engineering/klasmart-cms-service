@@ -246,3 +246,10 @@ type QueryUnifiedAssessmentArgs struct {
 	ScheduleIDs     NullStrings          `json:"schedule_ids"`
 	CompleteBetween NullTimeRange        `json:"complete_between"`
 }
+
+type AssessmentContentType string
+
+const (
+	AssessmentContentTypeLessonPlan     AssessmentContentType = "lesson_plan"
+	AssessmentContentTypeLessonMaterial AssessmentContentType = "lesson_material"
+)
