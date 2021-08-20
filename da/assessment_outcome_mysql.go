@@ -39,14 +39,14 @@ func (*assessmentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, 
 		return nil
 	}
 	var (
-		columns = []string{"id", "assessment_id", "outcome_id", "skip", "none_achieved", "checked"}
+		columns = []string{"id", "assessment_id", "outcome_id", "skip", "checked"}
 		matrix  [][]interface{}
 	)
 	for _, item := range items {
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		matrix = append(matrix, []interface{}{item.ID, item.AssessmentID, item.OutcomeID, item.Skip, item.NoneAchieved, item.Checked})
+		matrix = append(matrix, []interface{}{item.ID, item.AssessmentID, item.OutcomeID, item.Skip, item, item.Checked})
 	}
 	format, values := SQLBatchInsert(entity.AssessmentOutcome{}.TableName(), columns, matrix)
 	if err := tx.Exec(format, values...).Error; err != nil {
@@ -72,9 +72,8 @@ func (*assessmentOutcomeDA) DeleteByAssessmentID(ctx context.Context, tx *dbo.DB
 
 func (*assessmentOutcomeDA) UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item *entity.AssessmentOutcome) error {
 	changes := map[string]interface{}{
-		"skip":          item.Skip,
-		"none_achieved": item.NoneAchieved,
-		"checked":       item.Checked,
+		"skip":    item.Skip,
+		"checked": item.Checked,
 	}
 	if err := tx.
 		Model(entity.AssessmentOutcome{}).

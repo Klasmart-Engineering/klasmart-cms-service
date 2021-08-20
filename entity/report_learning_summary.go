@@ -96,8 +96,9 @@ type LiveClassSummaryItem struct {
 }
 
 type LearningSummaryOutcome struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID     string                  `json:"id"`
+	Name   string                  `json:"name"`
+	Status AssessmentOutcomeStatus `json:"status"`
 }
 
 type QueryAssignmentsSummaryResult struct {
@@ -137,3 +138,11 @@ func (t LearningSummaryType) Valid() bool {
 		return false
 	}
 }
+
+type AssessmentOutcomeStatus string
+
+const (
+	AssessmentOutcomeStatusAchieved    AssessmentOutcomeStatus = "achieved"
+	AssessmentOutcomeStatusNotAchieved AssessmentOutcomeStatus = "not_achieved"
+	AssessmentOutcomeStatusPartially   AssessmentOutcomeStatus = "partially"
+)
