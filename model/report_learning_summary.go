@@ -760,6 +760,17 @@ func (l *learningSummaryReportModel) findRelatedAssessmentOutcomes(ctx context.C
 	}
 	assessmentIDToOutcomesMap := make(map[string][]*entity.Outcome, len(assessmentOutcomes))
 	for _, ao := range assessmentOutcomes {
+		// deduplication
+		exists := false
+		for _, o := range assessmentIDToOutcomesMap[ao.AssessmentID] {
+			if ao.OutcomeID == o.ID {
+				exists = true
+				break
+			}
+		}
+		if exists {
+			continue
+		}
 		o := outcomeMap[ao.OutcomeID]
 		if o == nil {
 			continue
