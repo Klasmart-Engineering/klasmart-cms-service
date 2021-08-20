@@ -46,7 +46,7 @@ func (*assessmentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, 
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		matrix = append(matrix, []interface{}{item.ID, item.AssessmentID, item.OutcomeID, item.Skip, item, item.Checked})
+		matrix = append(matrix, []interface{}{item.ID, item.AssessmentID, item.OutcomeID, item.Skip, item.NoneAchieved, item.Checked})
 	}
 	format, values := SQLBatchInsert(entity.AssessmentOutcome{}.TableName(), columns, matrix)
 	if err := tx.Exec(format, values...).Error; err != nil {
