@@ -1101,7 +1101,9 @@ func (f *FolderModel) folderItemToFolderItemInfoBatch(ctx context.Context, items
 	return ret
 }
 func (f *FolderModel) getParentFolderListByContentIDs(ctx context.Context, tx *dbo.DBContext, ids []string) ([]*entity.FolderItem, error) {
-
+	if len(ids) < 1 {
+		return nil, nil
+	}
 	_, contentList, err := da.GetContentDA().SearchContentInternal(ctx, tx,
 		&da.ContentConditionInternal{
 			IDS: entity.NullStrings{
@@ -1537,23 +1539,29 @@ func (f *FolderModel) batchMoveItem(ctx context.Context,
 			contentIDs = append(contentIDs, folderTypeWithIDList[i].ID)
 		}
 	}
-	err := f.handleMoveFolders(ctx, tx, folderIDs, distFolder, operator)
-	if err != nil {
-		log.Error(ctx, "handleMoveFolders failed",
-			log.Err(err),
-			log.Strings("folderIDs", folderIDs),
-			log.Any("dist", distFolder),
-			log.Any("operator", operator))
-		return err
+
+	if len(folderIDs) > 0 {
+		err := f.handleMoveFolders(ctx, tx, folderIDs, distFolder, operator)
+		if err != nil {
+			log.Error(ctx, "handleMoveFolders failed",
+				log.Err(err),
+				log.Strings("folderIDs", folderIDs),
+				log.Any("dist", distFolder),
+				log.Any("operator", operator))
+			return err
+		}
 	}
-	err = f.handleMoveContentByLink(ctx, tx, ownerType, contentIDs, partition, distFolder, operator)
-	if err != nil {
-		log.Error(ctx, "handleMoveContentByLink failed",
-			log.Err(err),
-			log.Strings("contentIDs", contentIDs),
-			log.Any("dist", distFolder),
-			log.Any("operator", operator))
-		return err
+
+	if len(contentIDs) > 0 {
+		err := f.handleMoveContentByLink(ctx, tx, ownerType, contentIDs, partition, distFolder, operator)
+		if err != nil {
+			log.Error(ctx, "handleMoveContentByLink failed",
+				log.Err(err),
+				log.Strings("contentIDs", contentIDs),
+				log.Any("dist", distFolder),
+				log.Any("operator", operator))
+			return err
+		}
 	}
 
 	return nil
