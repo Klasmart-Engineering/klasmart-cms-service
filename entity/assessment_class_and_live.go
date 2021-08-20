@@ -220,6 +220,7 @@ type AssessmentDetailContentOutcome struct {
 	OutcomeName   string   `json:"outcome_name"`
 	Assumed       bool     `json:"assumed"`
 	Skip          bool     `json:"skip"`
+	NoneAchieved  bool     `json:"none_achieved"`
 	AttendanceIDs []string `json:"attendance_ids"`
 }
 
@@ -284,6 +285,7 @@ type UpdateAssessmentOutcomeArgs struct {
 type UpdateAssessmentContentOutcomeArgs struct {
 	ContentID     string   `json:"content_id"`
 	OutcomeID     string   `json:"outcome_id"`
+	NoneAchieved  bool     `json:"none_achieved"`
 	AttendanceIDs []string `json:"attendance_ids"`
 }
 

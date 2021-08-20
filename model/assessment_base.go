@@ -166,7 +166,7 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 				OutcomeName:   o.Name,
 				Assumed:       o.Assumed,
 				Skip:          assessmentOutcomeMap[o.ID].Skip,
-				NoneAchieved:  len(outcomeAttendanceIDsMap[o.ID]) == 0,
+				NoneAchieved:  assessmentOutcomeMap[o.ID].NoneAchieved,
 				AttendanceIDs: outcomeAttendanceIDsMap[o.ID],
 				Checked:       assessmentOutcomeMap[o.ID].Checked,
 			}
@@ -994,6 +994,11 @@ func (m *assessmentBase) batchAddOutcomes(ctx context.Context, tx *dbo.DBContext
 		for _, a := range newAssessments {
 			outcomeIDs := scheduleIDToOutcomeIDsMap[a.ScheduleID]
 			for _, outcomeID := range outcomeIDs {
+				o := outcomeMap[outcomeID]
+				assumed := false
+				if o != nil {
+					assumed = o.Assumed
+				}
 				if outcomeID == "" {
 					continue
 				}
@@ -1002,6 +1007,7 @@ func (m *assessmentBase) batchAddOutcomes(ctx context.Context, tx *dbo.DBContext
 					AssessmentID: a.ID,
 					OutcomeID:    outcomeID,
 					Skip:         false,
+					NoneAchieved: !assumed,
 					Checked:      true,
 				})
 			}
@@ -1190,6 +1196,7 @@ func (m *assessmentBase) update(ctx context.Context, tx *dbo.DBContext, operator
 					AssessmentID: args.ID,
 					OutcomeID:    oa.OutcomeID,
 					Skip:         oa.Skip,
+					NoneAchieved: oa.NoneAchieved,
 					Checked:      true,
 				}
 				if err := da.GetAssessmentOutcomeDA().UpdateByAssessmentIDAndOutcomeID(ctx, tx, &newAssessmentOutcome); err != nil {
