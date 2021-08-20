@@ -13,4 +13,4 @@ CREATE TABLE IF NOT EXISTS `assessments_contents_outcomes_attendances` (
 ALTER TABLE assessments_contents_outcomes ADD COLUMN skip BOOLEAN NOT NULL DEFAULT false COMMENT 'skip/not attempted (add: 2021-08-20)';
 
 /* DELETE none_achieved column for assessments_outcomes table */
-ALTER TABLE assessments_outcomes `none_achieved` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'none achieved (DELETED: 2021-08-20)',
+ALTER TABLE assessments_outcomes `none_achieved` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'none achieved (DELETED: 2021-08-20)';
