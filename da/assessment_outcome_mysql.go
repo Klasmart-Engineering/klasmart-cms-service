@@ -39,7 +39,7 @@ func (*assessmentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, 
 		return nil
 	}
 	var (
-		columns = []string{"id", "assessment_id", "outcome_id", "skip", "checked"}
+		columns = []string{"id", "assessment_id", "outcome_id", "skip", "none_achieved", "checked"}
 		matrix  [][]interface{}
 	)
 	for _, item := range items {
@@ -72,8 +72,9 @@ func (*assessmentOutcomeDA) DeleteByAssessmentID(ctx context.Context, tx *dbo.DB
 
 func (*assessmentOutcomeDA) UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item *entity.AssessmentOutcome) error {
 	changes := map[string]interface{}{
-		"skip":    item.Skip,
-		"checked": item.Checked,
+		"skip":          item.Skip,
+		"none_achieved": item.NoneAchieved,
+		"checked":       item.Checked,
 	}
 	if err := tx.
 		Model(entity.AssessmentOutcome{}).
