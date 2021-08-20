@@ -252,7 +252,7 @@ func (fda *FolderDA) BatchUpdateFoldersPath(ctx context.Context, tx *dbo.DBConte
 	if len(fids) < 1 {
 		return nil
 	}
-	err := tx.Where("id IN (?)", fids).Updates(entity.FolderItem{DirPath: dirPath, ParentID: dirPath.Parent()}).Error
+	err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(entity.FolderItem{DirPath: dirPath, ParentID: dirPath.Parent()}).Error
 	if err != nil {
 		return err
 	}
@@ -263,7 +263,7 @@ func (fda *FolderDA) BatchDeleteFolders(ctx context.Context, tx *dbo.DBContext, 
 	if len(fids) < 1 {
 		return nil
 	}
-	err := tx.Where("id IN (?)", fids).Updates(entity.FolderItem{DeleteAt: time.Now().Unix()}).Error
+	err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(entity.FolderItem{DeleteAt: time.Now().Unix()}).Error
 	if err != nil {
 		return err
 	}
