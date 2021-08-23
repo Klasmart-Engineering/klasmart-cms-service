@@ -80,21 +80,21 @@ type AssessmentStudentViewH5PItem struct {
 }
 
 type AssessmentStudentViewH5PLessonMaterial struct {
-	ParentID             string   `json:"parent_id"`
-	H5PID                string   `json:"h5p_id"`     // add: 2021.06.24
-	SubH5PID             string   `json:"sub_h5p_id"` // add: 2021.06.24
-	Number               string   `json:"number"`
-	LessonMaterialID     string   `json:"lesson_material_id"`
-	LessonMaterialName   string   `json:"lesson_material_name"`
-	LessonMaterialType   string   `json:"lesson_material_type"`
-	Answer               string   `json:"answer"`
-	MaxScore             float64  `json:"max_score"`
-	AchievedScore        float64  `json:"achieved_score"`
-	Attempted            bool     `json:"attempted"`
-	IsH5P                bool     `json:"is_h5p"`
-	OutcomeNames         []string `json:"outcome_names"`
-	NotApplicableScoring bool     `json:"not_applicable_scoring"`
-	HasSubItems          bool     `json:"has_sub_items"`
+	ParentID             string                  `json:"parent_id"`
+	H5PID                string                  `json:"h5p_id"`     // add: 2021.06.24
+	SubH5PID             string                  `json:"sub_h5p_id"` // add: 2021.06.24
+	Number               string                  `json:"number"`
+	LessonMaterialID     string                  `json:"lesson_material_id"`
+	LessonMaterialName   string                  `json:"lesson_material_name"`
+	LessonMaterialType   string                  `json:"lesson_material_type"`
+	Answer               string                  `json:"answer"`
+	MaxScore             float64                 `json:"max_score"`
+	AchievedScore        float64                 `json:"achieved_score"`
+	Attempted            bool                    `json:"attempted"`
+	IsH5P                bool                    `json:"is_h5p"`
+	Outcomes             []*AssessmentIDNamePair `json:"outcomes"`
+	NotApplicableScoring bool                    `json:"not_applicable_scoring"`
+	HasSubItems          bool                    `json:"has_sub_items"`
 	// internal
 	LessonMaterialOrderedNumber int                                       `json:"lesson_material_ordered_number"`
 	OrderedID                   int                                       `json:"ordered_id"`
@@ -253,3 +253,8 @@ const (
 	AssessmentContentTypeLessonPlan     AssessmentContentType = "lesson_plan"
 	AssessmentContentTypeLessonMaterial AssessmentContentType = "lesson_material"
 )
+
+type AssessmentIDNamePair struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}

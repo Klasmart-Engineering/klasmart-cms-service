@@ -326,7 +326,7 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 	for _, lm := range view.LessonMaterials {
 		lmIDs = append(lmIDs, lm.ID)
 	}
-	lmOutcomeNamesMap, err := m.getOutcomesMapByContentID(ctx, operator, tx, view.ID, lmIDs)
+	lmOutcomesMap, err := m.getOutcomesMapByContentID(ctx, operator, tx, view.ID, lmIDs)
 	if err != nil {
 		log.Error(ctx, "batch get student view h5p lesson materials map: get outcomes map failed",
 			log.Err(err),
@@ -374,7 +374,13 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 					LessonMaterialID:            lm.ID,
 					LessonMaterialName:          lm.Name,
 					IsH5P:                       lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
-					OutcomeNames:                lmOutcomeNamesMap[lm.ID],
+				}
+				outcomes := lmOutcomesMap[lm.ID]
+				for _, o := range outcomes {
+					newLessMaterial.Outcomes = append(newLessMaterial.Outcomes, &entity.AssessmentIDNamePair{
+						ID:   o.ID,
+						Name: o.Name,
+					})
 				}
 				result[s.ID] = append(result[s.ID], &newLessMaterial)
 				continue
@@ -401,7 +407,7 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 					AchievedScore:               getAssessmentH5P().getAchievedScore(content),
 					Attempted:                   len(content.Answers) > 0 || len(content.Scores) > 0,
 					IsH5P:                       lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
-					OutcomeNames:                lmOutcomeNamesMap[lm.ID],
+					OutcomeNames:                lmOutcomesMap[lm.ID],
 					NotApplicableScoring:        !getAssessmentH5P().canScoring(content.ContentType),
 				}
 				result[s.ID] = append(result[s.ID], &newLessonMaterial)
@@ -530,7 +536,7 @@ func (m *assessmentH5P) treeingRemainingStudentViewLessonMaterials(contents []*e
 	}
 }
 
-func (m *assessmentH5P) getOutcomesMapByContentID(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, assessmentID string, lessonMaterialIDs []string) (map[string][]string, error) {
+func (m *assessmentH5P) getOutcomesMapByContentID(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, assessmentID string, lessonMaterialIDs []string) (map[string][]*entity.Outcome, error) {
 	// query content outcomes
 	var contentOutcomes []*entity.AssessmentContentOutcome
 	if err := da.GetAssessmentContentOutcomeDA().Query(ctx, &da.QueryAssessmentContentOutcomeConditions{
@@ -568,16 +574,19 @@ func (m *assessmentH5P) getOutcomesMapByContentID(ctx context.Context, operator 
 	}
 
 	// mapping
-	outcomeNameMap := make(map[string]string, len(outcomes))
+	outcomeMap := make(map[string]*entity.Outcome, len(outcomes))
 	for _, o := range outcomes {
-		outcomeNameMap[o.ID] = o.Name
+		outcomeMap[o.ID] = o
 	}
-	contentOutcomeNamesMap := make(map[string][]string, len(contentOutcomes))
+	contentOutcomesMap := make(map[string][]*entity.Outcome, len(contentOutcomes))
 	for _, o := range contentOutcomes {
-		contentOutcomeNamesMap[o.ContentID] = append(contentOutcomeNamesMap[o.ContentID], outcomeNameMap[o.OutcomeID])
+		externalOutcome := outcomeMap[o.OutcomeID]
+		if externalOutcome != nil {
+			contentOutcomesMap[o.ContentID] = append(contentOutcomesMap[o.ContentID], externalOutcome)
+		}
 	}
 
-	return contentOutcomeNamesMap, nil
+	return contentOutcomesMap, nil
 }
 
 func (m *assessmentH5P) batchGetRoomCommentMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]map[string][]string, error) {
