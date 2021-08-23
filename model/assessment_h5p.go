@@ -369,7 +369,7 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 				}
 			}
 			if len(contents) == 0 {
-				newLessMaterial := entity.AssessmentStudentViewH5PLessonMaterial{
+				newLessonMaterial := entity.AssessmentStudentViewH5PLessonMaterial{
 					LessonMaterialOrderedNumber: lmIndex,
 					LessonMaterialID:            lm.ID,
 					LessonMaterialName:          lm.Name,
@@ -377,12 +377,12 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 				}
 				outcomes := lmOutcomesMap[lm.ID]
 				for _, o := range outcomes {
-					newLessMaterial.Outcomes = append(newLessMaterial.Outcomes, &entity.AssessmentIDNamePair{
+					newLessonMaterial.Outcomes = append(newLessonMaterial.Outcomes, &entity.AssessmentIDNamePair{
 						ID:   o.ID,
 						Name: o.Name,
 					})
 				}
-				result[s.ID] = append(result[s.ID], &newLessMaterial)
+				result[s.ID] = append(result[s.ID], &newLessonMaterial)
 				continue
 			}
 			for _, content := range contents {
@@ -407,8 +407,14 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 					AchievedScore:               getAssessmentH5P().getAchievedScore(content),
 					Attempted:                   len(content.Answers) > 0 || len(content.Scores) > 0,
 					IsH5P:                       lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
-					OutcomeNames:                lmOutcomesMap[lm.ID],
 					NotApplicableScoring:        !getAssessmentH5P().canScoring(content.ContentType),
+				}
+				outcomes := lmOutcomesMap[lm.ID]
+				for _, o := range outcomes {
+					newLessonMaterial.Outcomes = append(newLessonMaterial.Outcomes, &entity.AssessmentIDNamePair{
+						ID:   o.ID,
+						Name: o.Name,
+					})
 				}
 				result[s.ID] = append(result[s.ID], &newLessonMaterial)
 			}
