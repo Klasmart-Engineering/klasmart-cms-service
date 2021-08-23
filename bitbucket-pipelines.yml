@@ -1,6 +1,6 @@
 pipelines:
   branches:
-    dev/global/alpha:
+    '{main,hotfix/**}':
       - step:
           name: "Compile"
           image: golang:alpine
