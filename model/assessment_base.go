@@ -167,7 +167,7 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 				Assumed:       o.Assumed,
 				Skip:          assessmentOutcomeMap[o.ID].Skip,
 				NoneAchieved:  assessmentOutcomeMap[o.ID].NoneAchieved,
-				AttendanceIDs: outcomeAttendanceIDsMap[o.ID],
+				AttendanceIDs: utils.SliceDeduplicationExcludeEmpty(outcomeAttendanceIDsMap[o.ID]),
 				Checked:       assessmentOutcomeMap[o.ID].Checked,
 			}
 			if newOutcome.NoneAchieved || newOutcome.Skip {
@@ -998,7 +998,6 @@ func (m *assessmentBase) batchAddOutcomes(ctx context.Context, tx *dbo.DBContext
 					ID:           utils.NewID(),
 					AssessmentID: a.ID,
 					OutcomeID:    outcomeID,
-					Skip:         false,
 					Checked:      true,
 				})
 			}
