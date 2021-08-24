@@ -339,8 +339,8 @@ func (s Server) version(c *gin.Context) {
 }
 
 func (s Server) jsonInternalServerError(c *gin.Context, err error) {
-	if err == constant.ErrExternalServer {
-		c.Header(constant.ResponseHeaderKeyErrorReason, err.Error())
+	if err == constant.ErrExternalAmsServer && config.Get().AMS.ShowInternalErrorType {
+		c.Header(constant.ResponseHeaderKeyInternalErrorType, "ams")
 	}
 	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 }

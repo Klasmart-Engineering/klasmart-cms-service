@@ -40,7 +40,7 @@ var (
 	ErrHasLocked         = errors.New("has locked")
 	ErrOverflow          = errors.New("over flow")
 	ErrOutOfDate         = errors.New("out of date")
-	ErrExternalServer    = errors.New("external server error")
+	ErrExternalAmsServer = errors.New("external ams server error")
 )
 
 const (
@@ -141,5 +141,5 @@ const (
 )
 
 const (
-	ResponseHeaderKeyErrorReason = "X-Error-Reason"
+	ResponseHeaderKeyInternalErrorType = "X-Internal-Error-Type"
 )

@@ -115,8 +115,9 @@ type AssessmentConfig struct {
 }
 
 type AMSConfig struct {
-	EndPoint       string      `json:"endpoint" yaml:"endpoint"`
-	TokenVerifyKey interface{} `json:"-" yaml:"token_verify_key"`
+	EndPoint              string      `json:"endpoint" yaml:"endpoint"`
+	TokenVerifyKey        interface{} `json:"-" yaml:"token_verify_key"`
+	ShowInternalErrorType bool        `json:"show_internal_error_type"`
 }
 
 type H5PServiceConfig struct {
@@ -397,11 +398,18 @@ func loadAMSConfig(ctx context.Context) {
 	if err != nil {
 		log.Panic(ctx, "loadAMSConfig:load public key failed", log.Err(err), log.String("publicKeyPath", publicKeyPath))
 	}
+
 	key, err := jwt.ParseRSAPublicKeyFromPEM(content)
 	if err != nil {
 		log.Panic(ctx, "loadAMSConfig:ParseRSAPublicKeyFromPEM failed", log.Err(err))
 	}
 	config.AMS.TokenVerifyKey = key
+
+	config.AMS.ShowInternalErrorType = false
+	s := assertGetEnv("show_internal_error_type")
+	if s == "true" {
+		config.AMS.ShowInternalErrorType = true
+	}
 }
 
 func loadH5PServiceConfig(ctx context.Context) {

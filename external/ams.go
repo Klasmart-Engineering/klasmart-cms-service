@@ -57,7 +57,7 @@ func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorin
 			log.Any("statusCode", statusCode),
 			log.Any("resp", resp),
 		)
-		err = constant.ErrExternalServer
+		err = constant.ErrExternalAmsServer
 	}
 
 	if foundStopwatch {
