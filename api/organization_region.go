@@ -28,6 +28,6 @@ func (s *Server) getOrganizationByHeadquarterForDetails(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, OrganizationRegionInfoResponse{Orgs: result})
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }

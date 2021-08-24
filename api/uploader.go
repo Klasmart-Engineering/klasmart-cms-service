@@ -50,7 +50,7 @@ func (s *Server) getUploadPath(c *gin.Context) {
 			ResourceId: name,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -84,7 +84,7 @@ func (s *Server) getContentResourcePath(c *gin.Context) {
 	case nil:
 		c.Redirect(http.StatusFound, path)
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -120,6 +120,6 @@ func (s *Server) getDownloadPath(c *gin.Context) {
 			Path: path,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }

@@ -40,6 +40,7 @@ var (
 	ErrHasLocked         = errors.New("has locked")
 	ErrOverflow          = errors.New("over flow")
 	ErrOutOfDate         = errors.New("out of date")
+	ErrExternalServer    = errors.New("external server error")
 )
 
 const (
@@ -137,4 +138,8 @@ const (
 const (
 	VisibilitySettingsGroupOrg    = "org"
 	VisibilitySettingsGroupSchool = "school"
+)
+
+const (
+	ResponseHeaderKeyErrorReason = "X-Error-Reason"
 )

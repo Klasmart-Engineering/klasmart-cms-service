@@ -40,7 +40,7 @@ func (s *Server) createOutcome(c *gin.Context) {
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.CreateLearningOutcome)
 	if err != nil {
 		log.Warn(ctx, "createOutcome: HasOrganizationPermission failed", log.Any("op", op), log.Any("data", data), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPerm {
@@ -67,7 +67,7 @@ func (s *Server) createOutcome(c *gin.Context) {
 	case constant.ErrConflict:
 		c.JSON(http.StatusConflict, L(AssessMsgExistShortcode))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -111,7 +111,7 @@ func (s *Server) getOutcome(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, views[0])
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -167,7 +167,7 @@ func (s *Server) updateOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -207,7 +207,7 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -251,7 +251,7 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 	if err != nil {
 		log.Error(ctx, "queryOutcomes: HasOrganizationPermission failed", log.Any("op", op),
 			log.String("perm", string(external.ViewPublishedLearningOutcome)), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPerm {
@@ -282,12 +282,12 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 			log.Error(ctx, "queryOutcomes: NewSearchResponse failed",
 				log.Any("op", op),
 				log.Any("outcome", outcomes))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.jsonInternalServerError(c, err)
 			return
 		}
 		c.JSON(http.StatusOK, response)
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -318,7 +318,7 @@ func (s *Server) lockOutcome(c *gin.Context) {
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.EditPublishedLearningOutcome)
 	if err != nil {
 		log.Error(ctx, "lockOutcome: HasOrganizationPermission failed", log.String("outcome_id", outcomeID), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPerm {
@@ -341,7 +341,7 @@ func (s *Server) lockOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, model.OutcomeLockResponse{OutcomeID: newID})
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -383,7 +383,7 @@ func (s *Server) publishOutcome(c *gin.Context) {
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.CreateLearningOutcome)
 	if err != nil {
 		log.Warn(ctx, "publishOutcome: HasOrganizationPermission failed", log.Any("op", op), log.String("outcome_id", outcomeID), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPerm {
@@ -403,7 +403,7 @@ func (s *Server) publishOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -427,7 +427,7 @@ func (s *Server) approveOutcome(c *gin.Context) {
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ApprovePendingLearningOutcome)
 	if err != nil {
 		log.Error(ctx, "approveOutcome: HasOrganizationPermission failed", log.String("id", outcomeID), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPerm {
@@ -448,7 +448,7 @@ func (s *Server) approveOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -480,7 +480,7 @@ func (s *Server) rejectOutcome(c *gin.Context) {
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.RejectPendingLearningOutcome)
 	if err != nil {
 		log.Error(ctx, "rejectOutcome: HasOrganizationPermission failed", log.String("id", outcomeID), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPerm {
@@ -501,7 +501,7 @@ func (s *Server) rejectOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -532,7 +532,7 @@ func (s *Server) bulkApproveOutcome(c *gin.Context) {
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ApprovePendingLearningOutcome)
 	if err != nil {
 		log.Error(ctx, "approveOutcome: HasOrganizationPermission failed", log.Strings("ids", data.OutcomeIDs), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPerm {
@@ -563,7 +563,7 @@ func (s *Server) bulkApproveOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -594,7 +594,7 @@ func (s *Server) bulkRejectOutcome(c *gin.Context) {
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.RejectPendingLearningOutcome)
 	if err != nil {
 		log.Error(ctx, "rejectOutcome: HasOrganizationPermission failed", log.Strings("ids", data.OutcomeIDs), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPerm {
@@ -625,7 +625,7 @@ func (s *Server) bulkRejectOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -676,7 +676,7 @@ func (s *Server) bulkPublishOutcomes(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -719,7 +719,7 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -781,12 +781,12 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 			log.Error(ctx, "queryPrivateOutcomes: NewSearchResponse failed",
 				log.Any("op", op),
 				log.Any("outcome", outcomes))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.jsonInternalServerError(c, err)
 			return
 		}
 		c.JSON(http.StatusOK, response)
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -850,11 +850,11 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 			log.Error(ctx, "queryPendingOutcomes: NewSearchResponse failed",
 				log.Any("op", op),
 				log.Any("outcome", outcomes))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.jsonInternalServerError(c, err)
 			return
 		}
 		c.JSON(http.StatusOK, response)
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }

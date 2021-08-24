@@ -39,7 +39,7 @@ func (s *Server) createMilestone(c *gin.Context) {
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.CreateMilestone)
 	if err != nil {
 		log.Warn(ctx, "createMilestone: HasOrganizationPermission failed", log.Any("op", op), log.Any("data", data), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPerm {
@@ -65,7 +65,7 @@ func (s *Server) createMilestone(c *gin.Context) {
 		if err != nil {
 			log.Error(ctx, "createMilestone: fromMilestones failed",
 				log.Any("milestones", views))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.jsonInternalServerError(c, err)
 			return
 		}
 		c.JSON(http.StatusOK, views[0])
@@ -74,7 +74,7 @@ func (s *Server) createMilestone(c *gin.Context) {
 		c.JSON(http.StatusConflict, L(AssessMsgMilestoneExistShortcode))
 	default:
 		log.Error(ctx, "createMilestone: Create failed", log.Any("op", op), log.Any("req", data))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -111,13 +111,13 @@ func (s *Server) obtainMilestone(c *gin.Context) {
 			log.Error(ctx, "obtainMilestone: fromMilestones failed",
 				log.String("milestone", milestoneID),
 				log.Any("milestones", views))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.jsonInternalServerError(c, err)
 			return
 		}
 		c.JSON(http.StatusOK, views[0])
 	default:
 		log.Error(ctx, "obtainMilestone: Obtain failed", log.String("milestone", milestoneID))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -164,7 +164,7 @@ func (s *Server) updateMilestone(c *gin.Context) {
 	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, permName)
 	if err != nil {
 		log.Error(ctx, "updateMilestone: HasOrganizationPermission failed", log.Any("op", op), log.Any("perm", permName), log.Any("data", data), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	err = model.GetMilestoneModel().Update(ctx, op, perms, milestone, utils.SliceDeduplication(data.OutcomeAncestorIDs))
@@ -196,7 +196,7 @@ func (s *Server) updateMilestone(c *gin.Context) {
 					log.Any("op", op),
 					log.String("req", milestoneID),
 					log.String("locked", lockedByErr.LockedBy.ID))
-				c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+				s.jsonInternalServerError(c, err)
 				return
 			}
 			log.Warn(ctx, "updateMilestone", log.Any("op", op), log.Any("req", data))
@@ -204,7 +204,7 @@ func (s *Server) updateMilestone(c *gin.Context) {
 			return
 		}
 		log.Error(ctx, "updateMilestone: Update failed", log.Any("op", op), log.Any("req", data))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -240,7 +240,7 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 	})
 	if err != nil {
 		log.Error(ctx, "deleteMilestone: HasOrganizationPermission failed", log.Any("op", op), log.Any("data", data), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 
@@ -264,7 +264,7 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 					log.Any("op", op),
 					log.Strings("req", data.IDs),
 					log.String("locked", lockedByErr.LockedBy.ID))
-				c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+				s.jsonInternalServerError(c, err)
 				return
 			}
 			log.Warn(ctx, "deleteMilestone: Delete failed", log.Any("op", op), log.Strings("req", data.IDs))
@@ -276,7 +276,7 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 			return
 		}
 		log.Error(ctx, "deleteMilestone: Delete failed", log.Any("op", op), log.Strings("req", data.IDs))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -323,7 +323,7 @@ func (s *Server) searchMilestone(c *gin.Context) {
 		log.Error(ctx, "searchPrivateMilestone: HasOrganizationPermissions failed",
 			log.Any("op", op),
 			log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 
@@ -358,7 +358,7 @@ func (s *Server) searchMilestone(c *gin.Context) {
 				log.Err(err),
 				log.Any("op", op),
 				log.Any("req", condition))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.jsonInternalServerError(c, err)
 			return
 		}
 		c.JSON(http.StatusOK, model.MilestoneSearchResponse{
@@ -367,7 +367,7 @@ func (s *Server) searchMilestone(c *gin.Context) {
 		})
 	default:
 		log.Error(ctx, "searchMilestone: Search failed", log.Any("op", op), log.Any("req", condition))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -420,7 +420,7 @@ func (s *Server) searchPrivateMilestone(c *gin.Context) {
 		log.Error(ctx, "searchPrivateMilestone: HasOrganizationPermissions failed",
 			log.Any("op", op),
 			log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 
@@ -470,7 +470,7 @@ func (s *Server) searchPrivateMilestone(c *gin.Context) {
 			log.Error(ctx, "searchPrivateMilestone: search failed",
 				log.Any("op", op),
 				log.Any("req", condition))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.jsonInternalServerError(c, err)
 			return
 		}
 		c.JSON(http.StatusOK, model.MilestoneSearchResponse{
@@ -478,7 +478,7 @@ func (s *Server) searchPrivateMilestone(c *gin.Context) {
 			Milestones: views,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -527,7 +527,7 @@ func (s *Server) searchPendingMilestone(c *gin.Context) {
 		log.Error(ctx, "searchPendingMilestone: HasOrganizationPermissions failed",
 			log.Any("op", op),
 			log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 
@@ -576,7 +576,7 @@ func (s *Server) searchPendingMilestone(c *gin.Context) {
 			log.Error(ctx, "searchPendingMilestone: search failed",
 				log.Any("op", op),
 				log.Any("req", condition))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.jsonInternalServerError(c, err)
 			return
 		}
 		c.JSON(http.StatusOK, model.MilestoneSearchResponse{
@@ -584,7 +584,7 @@ func (s *Server) searchPendingMilestone(c *gin.Context) {
 			Milestones: views,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -614,7 +614,7 @@ func (s *Server) occupyMilestone(c *gin.Context) {
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.EditPublishedMilestone)
 	if err != nil {
 		log.Error(ctx, "occupyMilestone: HasOrganizationPermission failed", log.String("milestone", milestoneID), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPerm {
@@ -646,7 +646,7 @@ func (s *Server) occupyMilestone(c *gin.Context) {
 					log.Any("op", op),
 					log.String("req", milestoneID),
 					log.String("locked", lockedByErr.LockedBy.ID))
-				c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+				s.jsonInternalServerError(c, err)
 				return
 			}
 			log.Warn(ctx, "occupyMilestone: Occupy failed", log.Any("op", op), log.String("req", milestoneID))
@@ -657,7 +657,7 @@ func (s *Server) occupyMilestone(c *gin.Context) {
 			log.Err(err),
 			log.Any("op", op),
 			log.String("req", milestoneID))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -691,7 +691,7 @@ func (s *Server) bulkPublishMilestone(c *gin.Context) {
 			log.Any("op", op),
 			log.Any("permissionName", external.CreateMilestone),
 			log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPerm {
@@ -723,7 +723,7 @@ func (s *Server) bulkPublishMilestone(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -754,7 +754,7 @@ func (s *Server) bulkApproveMilestone(c *gin.Context) {
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ApprovePendingMilestone)
 	if err != nil {
 		log.Error(ctx, "bulkApproveMilestone: HasOrganizationPermission failed", log.Strings("ids", data.IDs), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPerm {
@@ -783,7 +783,7 @@ func (s *Server) bulkApproveMilestone(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -816,7 +816,7 @@ func (s *Server) bulkRejectMilestone(c *gin.Context) {
 		log.Error(ctx, "bulkRejectMilestone: HasOrganizationPermission failed",
 			log.Strings("ids", data.MilestoneIDs),
 			log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPerm {
@@ -847,6 +847,6 @@ func (s *Server) bulkRejectMilestone(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }

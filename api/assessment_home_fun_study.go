@@ -2,6 +2,8 @@ package api
 
 import (
 	"database/sql"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -9,7 +11,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"net/http"
 )
 
 // @Summary list home fun studies
@@ -64,7 +65,7 @@ func (s *Server) listHomeFunStudies(c *gin.Context) {
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -106,7 +107,7 @@ func (s *Server) getHomeFunStudy(c *gin.Context) {
 	case constant.ErrRecordNotFound, sql.ErrNoRows:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -160,6 +161,6 @@ func (s *Server) assessHomeFunStudy(c *gin.Context) {
 	case model.ErrHomeFunStudyHasNewFeedback:
 		c.JSON(http.StatusInternalServerError, L(AssessMsgNewVersion))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }

@@ -36,7 +36,7 @@ func (s *Server) getVisibilitySetting(c *gin.Context) {
 	result, err := model.GetVisibilitySettingModel().Query(ctx, contentTypeInt, op)
 	if err != nil {
 		log.Error(ctx, "query error", log.Err(err), log.String("contentType", contentType), log.Int("contentTypeInt", contentTypeInt))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, result)
@@ -64,6 +64,6 @@ func (s *Server) getVisibilitySettingByID(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }

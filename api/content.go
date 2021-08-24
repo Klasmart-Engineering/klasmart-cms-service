@@ -56,7 +56,7 @@ func (s *Server) createContent(c *gin.Context) {
 
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckCreateContentPermission(ctx, data, op)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPermission {
@@ -98,7 +98,7 @@ func (s *Server) createContent(c *gin.Context) {
 			"id": cid,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -135,7 +135,7 @@ func (s *Server) copyContent(c *gin.Context) {
 			"id": cid,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -162,7 +162,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckRepublishContentsPermission(ctx, ids.ID, op)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPermission {
@@ -181,7 +181,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 	case model.ErrPlanHasArchivedMaterials:
 		c.JSON(http.StatusBadRequest, L(LibraryIncludeArchivedMaterials))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -210,7 +210,7 @@ func (s *Server) publishContent(c *gin.Context) {
 	}
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckPublishContentsPermission(ctx, cid, data.Scope, op)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPermission {
@@ -230,7 +230,7 @@ func (s *Server) publishContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -259,7 +259,7 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 	}
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckPublishContentsPermission(ctx, cid, data.Scope, op)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPermission {
@@ -282,7 +282,7 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -311,7 +311,7 @@ func (s *Server) getContent(c *gin.Context) {
 	}
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckGetContentPermission(ctx, cid, op)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPermission {
@@ -326,7 +326,7 @@ func (s *Server) getContent(c *gin.Context) {
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -360,7 +360,7 @@ func (s *Server) updateContent(c *gin.Context) {
 			c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
 			return
 		}
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPermission {
@@ -407,7 +407,7 @@ func (s *Server) updateContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -434,7 +434,7 @@ func (s *Server) lockContent(c *gin.Context) {
 			c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
 			return
 		}
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPermission {
@@ -464,7 +464,7 @@ func (s *Server) lockContent(c *gin.Context) {
 			"id": ncid,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -492,7 +492,7 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckDeleteContentPermission(ctx, ids.ID, op)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPermission {
@@ -513,7 +513,7 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -535,7 +535,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckDeleteContentPermission(ctx, []string{cid}, op)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPermission {
@@ -560,7 +560,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -585,7 +585,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -629,7 +629,7 @@ func (s *Server) queryContent(c *gin.Context) {
 	if condition.PublishedQueryMode != entity.PublishedQueryModeOnlyOwner {
 		hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, &condition, op)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.jsonInternalServerError(c, err)
 			return
 		}
 		if !hasPermission {
@@ -657,7 +657,7 @@ func (s *Server) queryContent(c *gin.Context) {
 	case model.ErrNoPermissionToQuery:
 		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -698,7 +698,7 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 	case model.ErrNoPermissionToQuery:
 		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -743,7 +743,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 	if condition.PublishedQueryMode != entity.PublishedQueryModeOnlyOwner {
 		hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, &condition, op)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.jsonInternalServerError(c, err)
 			return
 		}
 		if !hasPermission {
@@ -773,7 +773,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 	case model.ErrNoPermissionToQuery:
 		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -810,7 +810,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, &condition, op)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPermission {
@@ -832,7 +832,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 	case model.ErrNoPermissionToQuery:
 		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -875,7 +875,7 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 	if condition.PublishedQueryMode != entity.PublishedQueryModeOnlyOwner {
 		hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, &condition, op)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.jsonInternalServerError(c, err)
 			return
 		}
 		if !hasPermission {
@@ -896,7 +896,7 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 	case model.ErrNoPermissionToQuery:
 		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -928,7 +928,7 @@ func (s *Server) filterPendingContent(c *gin.Context, condition *entity.ContentC
 		return true
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return true
 	}
 	return false
@@ -952,7 +952,7 @@ func (s *Server) filterPublishedContent(c *gin.Context, condition *entity.Conten
 		return true
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return true
 	}
 	return false

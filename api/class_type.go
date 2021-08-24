@@ -1,11 +1,12 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 // @Summary getClassType
@@ -21,7 +22,7 @@ func (s *Server) getClassType(c *gin.Context) {
 	ctx := c.Request.Context()
 	result, err := model.GetClassTypeModel().Query(ctx, &da.ClassTypeCondition{})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, result)
@@ -48,6 +49,6 @@ func (s *Server) getClassTypeByID(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }

@@ -337,3 +337,10 @@ func (s Server) version(c *gin.Context) {
 		"latest_migrate":  constant.LatestMigrate,
 	})
 }
+
+func (s Server) jsonInternalServerError(c *gin.Context, err error) {
+	if err == constant.ErrExternalServer {
+		c.Header(constant.ResponseHeaderKeyErrorReason, err.Error())
+	}
+	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+}

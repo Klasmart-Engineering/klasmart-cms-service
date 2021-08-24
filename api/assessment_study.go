@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"database/sql"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -10,7 +12,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"net/http"
 )
 
 // @Summary list study assessments
@@ -73,7 +74,7 @@ func (s *Server) listStudyAssessments(c *gin.Context) {
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -115,7 +116,7 @@ func (s *Server) getStudyAssessmentDetail(c *gin.Context) {
 	case constant.ErrRecordNotFound, sql.ErrNoRows:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }
 
@@ -171,6 +172,6 @@ func (s *Server) updateStudyAssessment(c *gin.Context) {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }

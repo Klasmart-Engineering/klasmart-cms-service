@@ -1,13 +1,14 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 // @Summary classAddMembersEvent
@@ -55,7 +56,7 @@ func (s *Server) classAddMembersEvent(c *gin.Context) {
 			log.Err(err),
 			log.Any("event", event),
 		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 
@@ -106,7 +107,7 @@ func (s *Server) classDeleteMembersEvent(c *gin.Context) {
 			log.Err(err),
 			log.Any("event", event),
 		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 

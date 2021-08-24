@@ -47,7 +47,7 @@ func (s *Server) generateShortcode(c *gin.Context) {
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.CreateLearningOutcome)
 	if err != nil {
 		log.Warn(ctx, "generateShortcode: HasOrganizationPermission failed", log.Any("op", op), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPerm {
@@ -76,6 +76,6 @@ func (s *Server) generateShortcode(c *gin.Context) {
 	case constant.ErrExceededLimit:
 		c.JSON(http.StatusConflict, L(AssessMsgExistShortcode))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }

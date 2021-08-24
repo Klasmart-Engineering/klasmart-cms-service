@@ -59,7 +59,7 @@ func (s *Server) getAssessmentsSummary(c *gin.Context) {
 			log.Err(err),
 			log.Any("args", args),
 		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 }
@@ -105,7 +105,7 @@ func (s *Server) getStudentAssessments(c *gin.Context) {
 			log.Err(err),
 			log.Any("operator", operator),
 		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPermission {
@@ -140,7 +140,7 @@ func (s *Server) getStudentAssessments(c *gin.Context) {
 		log.Error(ctx, "list assessments: list failed",
 			log.Err(err),
 		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 }

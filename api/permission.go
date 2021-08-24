@@ -64,6 +64,6 @@ func (s *Server) hasOrganizationPermissions(c *gin.Context) {
 		log.Error(ctx, "check permission failed",
 			log.Err(err),
 			log.String("permission_name", c.Query("permission_name")))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 	}
 }

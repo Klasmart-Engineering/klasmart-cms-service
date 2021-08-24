@@ -42,7 +42,7 @@ func (s *Server) approveBulk(c *gin.Context) {
 	}
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckReviewContentPermission(ctx, true, req.IDs, op)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPermission {
@@ -62,7 +62,7 @@ func (s *Server) approveBulk(c *gin.Context) {
 		return
 	default:
 		log.Error(ctx, "approve", log.Any("op", op), log.Strings("cids", req.IDs), log.Err(err))
-		c.JSON(http.StatusInternalServerError, "Internal server error")
+		s.jsonInternalServerError(c, err)
 		return
 	}
 }
@@ -90,7 +90,7 @@ func (s *Server) approve(c *gin.Context) {
 	}
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckReviewContentPermission(ctx, true, []string{cid}, op)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPermission {
@@ -110,7 +110,7 @@ func (s *Server) approve(c *gin.Context) {
 	default:
 		log.Error(ctx, "approve", log.Any("op", op), log.String("cid", cid), log.Err(err))
 		// TODO: differentiate error types
-		c.JSON(http.StatusInternalServerError, "Internal server error")
+		s.jsonInternalServerError(c, err)
 		return
 	}
 }
@@ -150,7 +150,7 @@ func (s *Server) reject(c *gin.Context) {
 	}
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckReviewContentPermission(ctx, false, []string{cid}, op)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPermission {
@@ -170,7 +170,7 @@ func (s *Server) reject(c *gin.Context) {
 		return
 	default:
 		log.Error(ctx, "reject", log.Any("op", op), log.String("cid", cid), log.Err(err))
-		c.JSON(http.StatusInternalServerError, "Internal server error")
+		s.jsonInternalServerError(c, err)
 		return
 	}
 }
@@ -205,7 +205,7 @@ func (s *Server) rejectBulk(c *gin.Context) {
 	}
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckReviewContentPermission(ctx, false, req.IDs, op)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.jsonInternalServerError(c, err)
 		return
 	}
 	if !hasPermission {
@@ -225,7 +225,7 @@ func (s *Server) rejectBulk(c *gin.Context) {
 		return
 	default:
 		log.Error(ctx, "reject", log.Any("op", op), log.Strings("cids", req.IDs), log.Err(err))
-		c.JSON(http.StatusInternalServerError, "Internal server error")
+		s.jsonInternalServerError(c, err)
 		return
 	}
 }
