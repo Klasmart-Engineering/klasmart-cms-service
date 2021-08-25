@@ -115,6 +115,7 @@ type IContentModel interface {
 	GetContentsSubContentsMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*SubContentsWithName, error)
 
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, remark, status string) error
+	AddAuthedContentIfFolderAlreadyShared(ctx context.Context, tx *dbo.DBContext, contentIDs []string, operator *entity.Operator) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
 
 	CountUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, error)
@@ -617,6 +618,59 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	da.GetContentRedis().CleanContentCache(ctx, []string{cid, content.SourceID})
+	return nil
+}
+
+func (cm *ContentModel) AddAuthedContentIfFolderAlreadyShared(ctx context.Context, tx *dbo.DBContext, contentIDs []string, operator *entity.Operator) error {
+	contents, err := da.GetContentDA().GetContentByIDList(ctx, tx, contentIDs)
+	//content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
+	if err != nil {
+		log.Error(ctx, "AddAuthedContentIfFolderAlreadyShared can't find content", log.Err(err), log.Strings("content_ids", contentIDs))
+		return err
+	}
+	contentAncestorDirs := make(map[string]map[string]bool)
+	allContentsAncestorDir := make([]string, 0)
+	for i := range contents {
+		if !contents[i].ContentType.IsAsset() {
+			fids := contents[i].DirPath.Parents()
+			ancestorDirs := make(map[string]bool)
+			for j := range fids {
+				ancestorDirs[fids[j]] = true
+			}
+			contentAncestorDirs[contents[i].ID] = ancestorDirs
+			allContentsAncestorDir = append(allContentsAncestorDir, fids...)
+		}
+	}
+	folderSharedRecords, err := GetFolderModel().GetFoldersSharedRecords(ctx, allContentsAncestorDir, operator)
+	if err != nil {
+		log.Error(ctx, "AddAuthedContentIfFolderAlreadyShared get shared folders failed", log.Err(err), log.Any("contents", contents))
+		return err
+	}
+
+	batchAddRequest := make([]*entity.AddAuthedContentRequest, 0)
+	for _, fid := range folderSharedRecords.Data {
+		for k, v := range contentAncestorDirs {
+			if v[fid.FolderID] {
+				for _, org := range fid.Orgs {
+					authedContent := entity.AddAuthedContentRequest{
+						OrgID:        org.ID,
+						FromFolderID: fid.FolderID,
+						ContentID:    k,
+					}
+					batchAddRequest = append(batchAddRequest, &authedContent)
+				}
+			}
+		}
+	}
+
+	err = GetAuthedContentRecordsModel().BatchAddByOrgIDs(ctx, tx, batchAddRequest, operator)
+	if err != nil {
+		log.Error(ctx, "AddAuthedContentIfFolderAlreadyShared batchAddByOrgIDs failed",
+			log.Err(err),
+			log.Any("batchAddRequest", batchAddRequest),
+			log.Any("contents", contents))
+		return err
+	}
 	return nil
 }
 

@@ -93,6 +93,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		c.SourceType = cm.getSourceType(ctx, c, cd)
 	}
 
+	var partition entity.FolderPartition
 	//若为asset，直接发布
 	//if the content is assets, publish immediately
 	if c.ContentType == entity.ContentTypeAssets {
@@ -100,12 +101,24 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		c.SelfStudy = false
 		c.DrawActivity = false
 		c.LessonType = ""
+		partition = entity.FolderPartitionAssets
 	}
 	if c.ContentType == entity.ContentTypePlan {
 		c.LessonType = ""
+		partition = entity.FolderPartitionMaterialAndPlans
 	}
 
-	path := constant.FolderRootPath
+	c.ParentFolder = strings.TrimSpace(c.ParentFolder)
+	if c.ParentFolder == "" {
+		c.ParentFolder = constant.FolderRootPath
+	}
+
+	path, err := GetFolderModel().GetFolderMayRoot(ctx, c.ParentFolder, entity.OwnerTypeOrganization, partition, operator)
+	if err != nil {
+		log.Warn(ctx, "get folder failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
+		return nil, err
+	}
+	//path := constant.FolderRootPath
 	return &entity.Content{
 		//ID:            utils.NewID(),
 		ContentType:   c.ContentType,
@@ -117,7 +130,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Data:          c.Data,
 		Extra:         c.Extra,
 		LessonType:    c.LessonType,
-		DirPath:       entity.NewPath(path),
+		DirPath:       path.ChildrenPath(),
 		SelfStudy:     c.SelfStudy.Int(),
 		DrawActivity:  c.DrawActivity.Int(),
 		Outcomes:      strings.Join(c.Outcomes, constant.StringArraySeparator),
