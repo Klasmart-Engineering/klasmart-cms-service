@@ -9,5 +9,5 @@ type AssessmentContentOutcomeAttendance struct {
 }
 
 func (AssessmentContentOutcomeAttendance) TableName() string {
-	return "assessment_contents_outcomes_attendances"
+	return "contents_outcomes_attendances"
 }
