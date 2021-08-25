@@ -45,7 +45,7 @@ DEPLOY_SWAGGER_Global_JOB:
     - .go-cache
     - .DEPLOY_SWAGGER_GLBOAL
   rules:
-    - if: '$CI_COMMIT_BRANCH == "global/test" && $CI_PIPELINE_SOURCE != "trigger"'
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "trigger"'
       when: on_success
 
 DEPLOY_SWAGGER_CN_JOB:

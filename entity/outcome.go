@@ -96,10 +96,10 @@ type OutcomeCondition struct {
 	OrganizationID string   `json:"organization_id" form:"organization_id"`
 	SetName        string   `json:"set_name" form:"set_name"`
 
-	ProgramIDs     []string `json:"program_ids"`
-	SubjectIDs     []string `json:"subject_ids"`
-	CategoryIDs    []string `json:"category_ids"`
-	SubCategoryIDs []string `json:"sub_category_ids"`
-	AgeIDs         []string `json:"age_ids"`
-	GradeIDs       []string `json:"grade_ids"`
+	ProgramIDs     []string `json:"program_ids" form:"program_ids"`
+	SubjectIDs     []string `json:"subject_ids" form:"subject_ids"`
+	CategoryIDs    []string `json:"category_ids" form:"category_ids"`
+	SubCategoryIDs []string `json:"sub_category_ids" form:"sub_category_ids"`
+	AgeIDs         []string `json:"age_ids" form:"age_ids"`
+	GradeIDs       []string `json:"grade_ids" form:"grade_ids"`
 }
