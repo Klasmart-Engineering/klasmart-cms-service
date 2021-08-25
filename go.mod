@@ -3,7 +3,6 @@ module gitlab.badanamu.com.cn/calmisland/kidsloop2
 go 1.14
 
 require (
-	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/aws/aws-sdk-go v1.35.23
 	github.com/coreos/etcd v3.3.25+incompatible // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
@@ -37,7 +36,7 @@ require (
 	gitlab.badanamu.com.cn/calmisland/common-log v0.1.4
 	gitlab.badanamu.com.cn/calmisland/dbo v0.1.10
 	gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13
-	gitlab.badanamu.com.cn/calmisland/imq v0.2.16 // indirect
+	gitlab.badanamu.com.cn/calmisland/imq v0.2.18
 	gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20210813055601-f0a5d22461a0
 	go.etcd.io/etcd v3.3.25+incompatible // indirect
 	go.mongodb.org/mongo-driver v1.4.0
