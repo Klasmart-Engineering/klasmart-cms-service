@@ -858,3 +858,97 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
+
+// @ID searchPublishedLearningOutcomes
+// @Summary search published learning outcome
+// @Tags learning_outcomes
+// @Description search published learning outcome with outcome sets
+// @Accept json
+// @Produce json
+// @Param outcome_name query string false "search by name"
+// @Param description query string false "search by description"
+// @Param keywords query string false "search by keywords"
+// @Param shortcode query string false "search by shortcode"
+// @Param author_name query string false "search by author_name"
+// @Param set_name query string false "search by set_name"
+// @Param search_key query string false "search by search_key"
+// @Param assumed query integer false "search by assumed: 1 true, 0 false, -1 all"
+// @Param program_ids query []string false "search by program ids"
+// @Param subject_ids query []string false "search by subject ids"
+// @Param category_ids query []string false "search by category ids"
+// @Param sub_category_ids query []string false "search by sub category ids"
+// @Param age_ids query []string false "search by age ids"
+// @Param grade_ids query []string false "search by grade ids"
+// @Param page query integer false "page"
+// @Param page_size query integer false "page size: -1 no page, 0 default page size 20"
+// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
+// @Success 200 {object} model.SearchPublishedOutcomeResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /published_learning_outcomes [get]
+// search published learning outcomes with outcome sets
+func (s *Server) queryPublishedOutcomes(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var condition entity.OutcomeCondition
+	err := c.ShouldBindQuery(&condition)
+	if err != nil {
+		log.Warn(ctx, "queryPublishedOutcomes: ShouldBind failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ViewPublishedLearningOutcome)
+	if err != nil {
+		log.Error(ctx, "queryPublishedOutcomes: HasOrganizationPermission failed",
+			log.Any("op", op),
+			log.String("perm", string(external.ViewPublishedLearningOutcome)),
+			log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "queryPublishedOutcomes: HasOrganizationPermission failed",
+			log.Any("op", op),
+			log.String("perm", string(external.ViewPublishedLearningOutcome)))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
+
+	total, outcomes, err := model.GetOutcomeModel().SearchPublished(ctx, op, &condition)
+	switch err {
+	case model.ErrBadRequest:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidResourceID:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrResourceNotFound:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrRequireContentName:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrRequirePublishScope:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrInvalidContentType:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case constant.ErrOperateNotAllowed:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case nil:
+		response, err := model.NewSearchPublishedOutcomeResponse(ctx, op, total, outcomes)
+		if err != nil {
+			log.Error(ctx, "queryPublishedOutcomes: model.NewSearchPublishedOutcomeResponse failed",
+				log.Any("op", op),
+				log.Any("outcome", outcomes),
+				log.Err(err))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+		c.JSON(http.StatusOK, response)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}

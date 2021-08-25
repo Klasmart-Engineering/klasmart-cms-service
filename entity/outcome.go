@@ -3,6 +3,10 @@ package entity
 import "gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 const (
+	OutcomeTable = "learning_outcomes"
+)
+
+const (
 	OutcomeStatusDraft     = "draft"
 	OutcomeStatusPending   = "pending"
 	OutcomeStatusPublished = "published"
@@ -15,6 +19,7 @@ const (
 )
 
 type OutcomeStatus string
+
 type Outcome struct {
 	ID         string `gorm:"type:varchar(50);column:id" dynamodbav:"outcome_id" json:"outcome_id" dynamoupdate:"-"`
 	Name       string `gorm:"type:varchar(255);NOT NULL;column:name" dynamodbav:"outcome_name" json:"outcome_name" dynamoupdate:":n"`
@@ -61,7 +66,7 @@ type Outcome struct {
 }
 
 func (Outcome) TableName() string {
-	return "learning_outcomes"
+	return OutcomeTable
 }
 
 func (oc Outcome) GetID() interface{} {
@@ -90,4 +95,11 @@ type OutcomeCondition struct {
 	PublishScope   string   `json:"publish_scope" form:"publish_scope"`
 	OrganizationID string   `json:"organization_id" form:"organization_id"`
 	SetName        string   `json:"set_name" form:"set_name"`
+
+	ProgramIDs     []string `json:"program_ids"`
+	SubjectIDs     []string `json:"subject_ids"`
+	CategoryIDs    []string `json:"category_ids"`
+	SubCategoryIDs []string `json:"sub_category_ids"`
+	AgeIDs         []string `json:"age_ids"`
+	GradeIDs       []string `json:"grade_ids"`
 }
