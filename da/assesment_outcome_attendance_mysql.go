@@ -128,7 +128,7 @@ type QueryAssessmentOutcomeAttendanceCondition struct {
 func (c *QueryAssessmentOutcomeAttendanceCondition) GetConditions() ([]string, []interface{}) {
 	t := NewSQLTemplate("")
 	if c.AttendanceIDs.Valid {
-		t.Appendf("attendance_id in (?)", c.AttendanceIDs)
+		t.Appendf("attendance_id in (?)", c.AttendanceIDs.Strings)
 	}
 	if c.AssessmentIDAndOutcomeIDPairs.Valid {
 		temp := NewSQLTemplate("")
