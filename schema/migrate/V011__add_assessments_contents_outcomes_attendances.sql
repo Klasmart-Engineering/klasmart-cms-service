@@ -1,5 +1,5 @@
 /* create table assessments_contents_outcomes_attendances */
-CREATE TABLE IF NOT EXISTS `assessments_contents_outcomes_attendances` (
+CREATE TABLE IF NOT EXISTS `contents_outcomes_attendances` (
   `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'id',
   `assessment_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'assessment id',
   `content_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'content id',
