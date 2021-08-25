@@ -899,6 +899,9 @@ func (s *Server) queryPublishedOutcomes(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+	if condition.OrganizationID == "" {
+		condition.OrganizationID = op.OrgID
+	}
 
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ViewPublishedLearningOutcome)
 	if err != nil {
