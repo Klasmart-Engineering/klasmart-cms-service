@@ -115,7 +115,7 @@ type IDResponse struct {
 
 func (s Server) defaultErrorHandler(c *gin.Context, err error) {
 	eType, ok := err.(entity.TypedError)
-	if ok && config.Get().AMS.ShowInternalErrorType {
+	if ok && config.Get().ShowInternalErrorType {
 		c.Header(constant.ResponseHeaderKeyInternalErrorType, eType.ErrorType())
 	}
 	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
