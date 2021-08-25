@@ -38,7 +38,7 @@ func (s *Server) createFolder(c *gin.Context) {
 	//check permission
 	hasPermission, err := model.GetFolderPermissionModel().CheckFolderOperatorPermission(ctx, op)
 	if err != nil {
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	if !hasPermission {
@@ -55,7 +55,7 @@ func (s *Server) createFolder(c *gin.Context) {
 	case model.ErrDuplicateFolderName:
 		c.JSON(http.StatusConflict, L(LibraryErrDuplicateFolderName))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -77,7 +77,7 @@ func (s *Server) removeFolderItem(c *gin.Context) {
 	//check permission
 	hasPermission, err := model.GetFolderPermissionModel().CheckFolderOperatorPermission(ctx, op)
 	if err != nil {
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	if !hasPermission {
@@ -93,7 +93,7 @@ func (s *Server) removeFolderItem(c *gin.Context) {
 	case model.ErrFolderIsNotEmpty:
 		c.JSON(http.StatusNotAcceptable, L(FolderDeleteNoEmptyFolder))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -122,7 +122,7 @@ func (s *Server) removeFolderItemBulk(c *gin.Context) {
 	//check permission
 	hasPermission, err := model.GetFolderPermissionModel().CheckFolderOperatorPermission(ctx, op)
 	if err != nil {
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	if !hasPermission {
@@ -138,7 +138,7 @@ func (s *Server) removeFolderItemBulk(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -169,7 +169,7 @@ func (s *Server) updateFolderItem(c *gin.Context) {
 	//check permission
 	hasPermission, err := model.GetFolderPermissionModel().CheckFolderOperatorPermission(ctx, op)
 	if err != nil {
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	if !hasPermission {
@@ -185,7 +185,7 @@ func (s *Server) updateFolderItem(c *gin.Context) {
 	case model.ErrDuplicateFolderName:
 		c.JSON(http.StatusConflict, L(LibraryErrDuplicateFolderName))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -215,7 +215,7 @@ func (s *Server) moveFolderItem(c *gin.Context) {
 	//check permission
 	hasPermission, err := model.GetFolderPermissionModel().CheckFolderOperatorPermission(ctx, op)
 	if err != nil {
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	if !hasPermission {
@@ -232,7 +232,7 @@ func (s *Server) moveFolderItem(c *gin.Context) {
 	case model.ErrMoveToChild:
 		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -262,7 +262,7 @@ func (s *Server) moveFolderItemBulk(c *gin.Context) {
 	//check permission
 	hasPermission, err := model.GetFolderPermissionModel().CheckFolderOperatorPermission(ctx, op)
 	if err != nil {
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	if !hasPermission {
@@ -279,7 +279,7 @@ func (s *Server) moveFolderItemBulk(c *gin.Context) {
 	case model.ErrMoveToChild:
 		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -303,7 +303,7 @@ func (s *Server) listFolderItems(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, FolderItemsResponse{Items: items})
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -335,7 +335,7 @@ func (s *Server) searchPrivateFolderItems(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, FolderItemsResponseWithTotal{Items: items, Total: total})
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -367,7 +367,7 @@ func (s *Server) searchOrgFolderItems(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, FolderItemsResponseWithTotal{Items: items, Total: total})
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -392,7 +392,7 @@ func (s *Server) getFolderItemByID(c *gin.Context) {
 	case model.ErrNoFolder:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -414,7 +414,7 @@ func (s *Server) shareFolders(c *gin.Context) {
 	//check permission
 	hasPermission, err := model.GetFolderPermissionModel().CheckShareFolderOperatorPermission(ctx, op)
 	if err != nil {
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	if !hasPermission {
@@ -434,7 +434,7 @@ func (s *Server) shareFolders(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -480,7 +480,7 @@ func (s *Server) getFoldersSharedRecords(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, results)
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 

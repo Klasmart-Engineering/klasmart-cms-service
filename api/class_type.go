@@ -22,7 +22,7 @@ func (s *Server) getClassType(c *gin.Context) {
 	ctx := c.Request.Context()
 	result, err := model.GetClassTypeModel().Query(ctx, &da.ClassTypeCondition{})
 	if err != nil {
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, result)
@@ -49,6 +49,6 @@ func (s *Server) getClassTypeByID(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }

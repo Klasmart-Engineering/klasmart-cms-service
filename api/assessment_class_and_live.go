@@ -91,7 +91,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 			log.Err(err),
 			log.Any("cmd", args),
 		)
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 }
@@ -132,7 +132,7 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 			log.Err(err),
 			log.String("id", id),
 		)
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -184,7 +184,7 @@ func (s *Server) updateAssessment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		log.Info(ctx, "update assessment: update failed")
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -248,7 +248,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 			log.Err(err),
 			log.Any("args", args),
 		)
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -295,6 +295,6 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 			log.Err(err),
 			log.Any("args", args),
 		)
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }

@@ -47,7 +47,7 @@ func (s *Server) addScheduleFeedback(c *gin.Context) {
 	case model.ErrHomeFunStudyHasCompleted:
 		c.JSON(http.StatusBadRequest, L(ScheduleFeedbackCompleted))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -82,6 +82,6 @@ func (s *Server) queryFeedback(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }

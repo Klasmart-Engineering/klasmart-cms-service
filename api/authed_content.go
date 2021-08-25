@@ -38,7 +38,7 @@ func (s *Server) addAuthedContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -69,7 +69,7 @@ func (s *Server) batchAddAuthedContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -103,7 +103,7 @@ func (s *Server) deleteAuthedContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -134,7 +134,7 @@ func (s *Server) batchDeleteAuthedContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -163,7 +163,7 @@ func (s *Server) getOrgAuthedContent(c *gin.Context) {
 			List:  records,
 		})
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -186,7 +186,7 @@ func (s *Server) getContentAuthedOrg(c *gin.Context) {
 		ContentIDs: []string{contentID},
 	}, op)
 	if err != nil {
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 
@@ -196,7 +196,7 @@ func (s *Server) getContentAuthedOrg(c *gin.Context) {
 	}
 	orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, op, oids)
 	if err != nil {
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	list := make([]*entity.OrganizationInfo, len(orgs))
@@ -214,6 +214,6 @@ func (s *Server) getContentAuthedOrg(c *gin.Context) {
 			List:  list,
 		})
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }

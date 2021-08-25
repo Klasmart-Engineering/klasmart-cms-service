@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"sync"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -57,7 +59,10 @@ func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorin
 			log.Any("statusCode", statusCode),
 			log.Any("resp", resp),
 		)
-		err = constant.ErrExternalAmsServer
+		err = &entity.ExternalError{
+			Err:  err,
+			Type: constant.InternalErrorTypeAms,
+		}
 	}
 
 	if foundStopwatch {

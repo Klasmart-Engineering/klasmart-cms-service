@@ -55,7 +55,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 
@@ -142,7 +142,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 			return
 		}
 		if err != nil {
-			s.jsonInternalServerError(c, err)
+			s.defaultErrorHandler(c, err)
 			return
 		}
 	}
@@ -172,7 +172,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, D(IDResponse{ID: newID}))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -199,7 +199,7 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 
@@ -233,7 +233,7 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -283,7 +283,7 @@ func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditVa
 			return constant.ErrForbidden
 		}
 		if err != nil {
-			s.jsonInternalServerError(c, err)
+			s.defaultErrorHandler(c, err)
 			return err
 		}
 	}
@@ -353,7 +353,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 
@@ -408,7 +408,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 			return
 		}
 		if err != nil {
-			s.jsonInternalServerError(c, err)
+			s.defaultErrorHandler(c, err)
 			return
 		}
 	}
@@ -426,7 +426,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, D(IDResponse{ID: id}))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -497,7 +497,7 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 		return
 	}
 	log.Error(ctx, "get schedule by id error", log.Err(err), log.Any("id", id))
-	s.jsonInternalServerError(c, err)
+	s.defaultErrorHandler(c, err)
 }
 
 // @Summary querySchedule
@@ -558,7 +558,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 				log.String("teacherName", teacherName),
 				log.Any("operator", op),
 				log.Any("condition", condition))
-			s.jsonInternalServerError(c, err)
+			s.defaultErrorHandler(c, err)
 			return
 		}
 		if len(teachers) <= 0 {
@@ -591,7 +591,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 	total, result, err := model.GetScheduleModel().Page(ctx, op, condition)
 	if err != nil {
 		log.Error(ctx, "querySchedule:error", log.Any("condition", condition), log.Err(err))
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, entity.SchedulePageView{
@@ -647,7 +647,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 		return
 	}
 	log.Debug(ctx, "getScheduleTimeView error", log.Err(err), log.Any("condition", condition), log.Any("condition", condition), log.String("offsetStr", offsetStr))
-	s.jsonInternalServerError(c, err)
+	s.defaultErrorHandler(c, err)
 }
 
 // @Summary getScheduledDates
@@ -684,7 +684,7 @@ func (s *Server) getScheduledDates(c *gin.Context) {
 	result, err := model.GetScheduleModel().QueryScheduledDatesByCondition(ctx, op, condition, loc)
 	if err != nil {
 		log.Error(ctx, "getScheduledDates:GetScheduleModel.QueryScheduledDates error", log.Err(err), log.Any("condition", condition))
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, result)
@@ -704,7 +704,7 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context, loc *time.Location
 		return nil, constant.ErrForbidden
 	}
 	if err != nil {
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return nil, constant.ErrInternalServer
 	}
 
@@ -783,7 +783,7 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context, loc *time.Location
 				log.Err(err),
 				log.Any("op", op),
 			)
-			s.jsonInternalServerError(c, err)
+			s.defaultErrorHandler(c, err)
 			return nil, constant.ErrInternalServer
 		}
 		for _, item := range userInfo {
@@ -805,7 +805,7 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context, loc *time.Location
 					log.Any("op", op),
 					log.String("permission", external.ScheduleViewSchoolCalendar.String()),
 				)
-				s.jsonInternalServerError(c, err)
+				s.defaultErrorHandler(c, err)
 				return nil, constant.ErrInternalServer
 			}
 			for _, item := range schoolList {
@@ -944,7 +944,7 @@ func (s *Server) updateScheduleStatus(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, IDResponse{ID: id})
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -979,7 +979,7 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -1002,7 +1002,7 @@ func (s Server) getSchoolInScheduleFilter(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -1030,7 +1030,7 @@ func (s Server) getClassesInScheduleFilter(c *gin.Context) {
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -1063,7 +1063,7 @@ func (s *Server) updateScheduleShowOption(c *gin.Context) {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(ScheduleMessageEditOverlap))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -1089,11 +1089,11 @@ func (s *Server) getScheduleNewestFeedbackByOperator(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, result)
 	case model.ErrFeedbackNotGenerateAssessment:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -1117,7 +1117,7 @@ func (s *Server) getProgramsInScheduleFilter(c *gin.Context) {
 	case constant.ErrForbidden:
 		c.JSON(http.StatusOK, []*entity.ScheduleShortInfo{})
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -1143,7 +1143,7 @@ func (s *Server) getSubjectsInScheduleFilter(c *gin.Context) {
 	case constant.ErrForbidden:
 		c.JSON(http.StatusOK, []*entity.ScheduleShortInfo{})
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -1167,7 +1167,7 @@ func (s *Server) getClassTypesInScheduleFilter(c *gin.Context) {
 	case constant.ErrForbidden:
 		c.JSON(http.StatusOK, []string{})
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -1197,7 +1197,7 @@ func (s *Server) getScheduleViewByID(c *gin.Context) {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(ScheduleMessageEditOverlap))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -1236,7 +1236,7 @@ func (s *Server) postScheduleTimeView(c *gin.Context) {
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -1274,6 +1274,6 @@ func (s *Server) postScheduledDates(c *gin.Context) {
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }

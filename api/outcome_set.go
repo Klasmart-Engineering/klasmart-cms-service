@@ -46,7 +46,7 @@ func (s *Server) createOutcomeSet(c *gin.Context) {
 	})
 	if err != nil {
 		log.Warn(ctx, "createOutcomeSet: HasOrganizationPermissions failed", log.Any("op", op), log.Any("data", data), log.Err(err))
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 
@@ -69,7 +69,7 @@ func (s *Server) createOutcomeSet(c *gin.Context) {
 	case constant.ErrDuplicateRecord:
 		c.JSON(http.StatusConflict, L(AssessMsgExistingSet))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -113,7 +113,7 @@ func (s *Server) pullOutcomeSet(c *gin.Context) {
 	})
 	if err != nil {
 		log.Warn(ctx, "pullOutcomeSet: HasOrganizationPermissions failed", log.Any("op", op), log.Err(err), log.Any("req", request))
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 
@@ -145,7 +145,7 @@ func (s *Server) pullOutcomeSet(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, response)
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -191,7 +191,7 @@ func (s *Server) bulkBindOutcomeSet(c *gin.Context) {
 			log.Any("op", op),
 			log.Strings("outcome", request.OutcomeIDs),
 			log.Strings("set", request.SetIDs))
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 
@@ -220,6 +220,6 @@ func (s *Server) bulkBindOutcomeSet(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }

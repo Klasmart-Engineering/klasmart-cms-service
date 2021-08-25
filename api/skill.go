@@ -37,6 +37,6 @@ func (s *Server) getSkill(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, subCategories)
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }

@@ -65,7 +65,7 @@ func (s *Server) listHomeFunStudies(c *gin.Context) {
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -107,7 +107,7 @@ func (s *Server) getHomeFunStudy(c *gin.Context) {
 	case constant.ErrRecordNotFound, sql.ErrNoRows:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -161,6 +161,6 @@ func (s *Server) assessHomeFunStudy(c *gin.Context) {
 	case model.ErrHomeFunStudyHasNewFeedback:
 		c.JSON(http.StatusInternalServerError, L(AssessMsgNewVersion))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }

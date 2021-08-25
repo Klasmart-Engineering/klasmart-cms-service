@@ -81,7 +81,7 @@ func (s *Server) queryLearningSummaryTimeFilter(c *gin.Context) {
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -154,7 +154,7 @@ func (s *Server) queryLearningSummaryRemainingFilter(c *gin.Context) {
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -206,7 +206,7 @@ func (s *Server) queryLiveClassesSummary(c *gin.Context) {
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -258,7 +258,7 @@ func (s *Server) queryAssignmentsSummary(c *gin.Context) {
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 

@@ -260,6 +260,6 @@ func (s *Server) listTeachingLoadReport(c *gin.Context) {
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }

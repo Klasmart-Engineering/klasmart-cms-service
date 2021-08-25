@@ -38,7 +38,7 @@ func (s *Server) setUserSetting(c *gin.Context) {
 			log.Any("op", op),
 			log.Any("data", data),
 		)
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, IDResponse{ID: id})
@@ -67,7 +67,7 @@ func (s *Server) getUserSettingByOperator(c *gin.Context) {
 			log.Err(err),
 			log.Any("op", op),
 		)
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 

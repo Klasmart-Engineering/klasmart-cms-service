@@ -337,10 +337,3 @@ func (s Server) version(c *gin.Context) {
 		"latest_migrate":  constant.LatestMigrate,
 	})
 }
-
-func (s Server) jsonInternalServerError(c *gin.Context, err error) {
-	if err == constant.ErrExternalAmsServer && config.Get().AMS.ShowInternalErrorType {
-		c.Header(constant.ResponseHeaderKeyInternalErrorType, "ams")
-	}
-	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-}

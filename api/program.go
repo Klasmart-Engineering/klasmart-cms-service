@@ -21,7 +21,7 @@ func (s *Server) getProgram(c *gin.Context) {
 	op := s.getOperator(c)
 	result, err := model.GetProgramModel().GetByOrganization(ctx, op)
 	if err != nil {
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, result)

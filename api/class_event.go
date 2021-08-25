@@ -56,7 +56,7 @@ func (s *Server) classAddMembersEvent(c *gin.Context) {
 			log.Err(err),
 			log.Any("event", event),
 		)
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 
@@ -107,7 +107,7 @@ func (s *Server) classDeleteMembersEvent(c *gin.Context) {
 			log.Err(err),
 			log.Any("event", event),
 		)
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 		return
 	}
 

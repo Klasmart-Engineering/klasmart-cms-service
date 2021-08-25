@@ -74,7 +74,7 @@ func (s *Server) listStudyAssessments(c *gin.Context) {
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -116,7 +116,7 @@ func (s *Server) getStudyAssessmentDetail(c *gin.Context) {
 	case constant.ErrRecordNotFound, sql.ErrNoRows:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -172,6 +172,6 @@ func (s *Server) updateStudyAssessment(c *gin.Context) {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	default:
-		s.jsonInternalServerError(c, err)
+		s.defaultErrorHandler(c, err)
 	}
 }

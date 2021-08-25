@@ -405,7 +405,6 @@ func loadAMSConfig(ctx context.Context) {
 	}
 	config.AMS.TokenVerifyKey = key
 
-	config.AMS.ShowInternalErrorType = false
 	s := assertGetEnv("show_internal_error_type")
 	if s == "true" {
 		config.AMS.ShowInternalErrorType = true
