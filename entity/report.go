@@ -115,6 +115,11 @@ type AssessmentOutcomeKey struct {
 	OutcomeID    string `json:"outcome_id"`
 }
 
+type NullAssessmentOutcomeKeys struct {
+	Value []*AssessmentOutcomeKey
+	Valid bool
+}
+
 type SortingStudentReportItems struct {
 	Items  []*StudentAchievementReportItem
 	Status ReportOutcomeStatusOption

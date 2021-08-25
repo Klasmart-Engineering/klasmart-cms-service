@@ -321,15 +321,86 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 	view *entity.AssessmentView,
 	room *entity.AssessmentH5PRoom,
 ) (map[string][]*entity.AssessmentStudentViewH5PLessonMaterial, error) {
-	// get content outcome names map
-	lmIDs := make([]string, 0, len(view.LessonMaterials))
-	for _, lm := range view.LessonMaterials {
-		lmIDs = append(lmIDs, lm.ID)
+	// get assessment outcomes
+	assessmentOutcomes, err := m.getAssessmentOutcomes(ctx, view.ID)
+	if err != nil {
+		log.Error(ctx, "batch get student view h5p lesson materials map: get assessment outcomes map failed",
+			log.Err(err),
+			log.Any("assessment_id", view.ID),
+		)
+		return nil, err
 	}
-	lmOutcomeNamesMap, err := m.getOutcomesMapByContentID(ctx, operator, tx, view.ID, lmIDs)
+
+	// get assessment outcomes map
+	assessmentOutcomeMap := map[string]*entity.AssessmentOutcome{}
+	for _, ao := range assessmentOutcomes {
+		assessmentOutcomeMap[ao.OutcomeID] = ao
+	}
+
+	// get assessment content outcomes
+	assessmentContentOutcomes, err := m.getAssessmentContentOutcomes(ctx, view.ID)
+	if err != nil {
+		log.Error(ctx, "batch get student view h5p lesson materials map: get assessment content outcomes map failed",
+			log.Err(err),
+			log.Any("assessment_id", view.ID),
+		)
+		return nil, err
+	}
+
+	// assessment content outcomes map
+	assessmentContentOutcomesMap := map[string][]*entity.AssessmentContentOutcome{}
+	for _, item := range assessmentContentOutcomes {
+		assessmentContentOutcomesMap[item.ContentID] = append(assessmentContentOutcomesMap[item.ContentID], item)
+	}
+
+	// get outcomes map
+	outcomeIDs := make([]string, 0, len(assessmentOutcomes))
+	for _, ao := range assessmentOutcomes {
+		outcomeIDs = append(outcomeIDs, ao.OutcomeID)
+	}
+	outcomeMap, err := m.getOutcomeMap(ctx, operator, tx, outcomeIDs)
 	if err != nil {
 		log.Error(ctx, "batch get student view h5p lesson materials map: get outcomes map failed",
 			log.Err(err),
+			log.Any("outcome_ids", outcomeIDs),
+		)
+		return nil, err
+	}
+
+	// get attendance ids
+	attendanceIDs := make([]string, len(view.Students))
+	for _, s := range view.Students {
+		attendanceIDs = append(attendanceIDs, s.ID)
+	}
+	attendanceIDs = utils.SliceDeduplicationExcludeEmpty(attendanceIDs)
+
+	// get attendance content outcome exists map
+	contentOutcomeAttendanceExistsMap, err := m.getContentOutcomeAttendanceExistsMap(ctx, view.ID, attendanceIDs, assessmentContentOutcomes)
+	if err != nil {
+		log.Error(ctx, "batch get student view h5p lesson materials map: get outcomes map failed",
+			log.Err(err),
+			log.Strings("attendance_ids", attendanceIDs),
+			log.Any("assessment_content_outcomes", assessmentContentOutcomes),
+		)
+		return nil, err
+	}
+
+	attendanceContentOutcomesMap, err := m.getAttendanceContentOutcomesMap(
+		ctx,
+		attendanceIDs,
+		assessmentContentOutcomes,
+		assessmentOutcomeMap,
+		outcomeMap,
+		contentOutcomeAttendanceExistsMap,
+	)
+	if err != nil {
+		log.Error(ctx, "batch get student view h5p lesson materials map: get outcomes map failed",
+			log.Err(err),
+			log.Strings("attendance_ids", attendanceIDs),
+			log.Any("assessment_content_outcomes", assessmentContentOutcomes),
+			log.Any("assessment_outcomes_map", assessmentOutcomeMap),
+			log.Any("outcome_map", outcomeMap),
+			log.Any("content_outcome_attendance_exists_map", contentOutcomeAttendanceExistsMap),
 		)
 		return nil, err
 	}
@@ -337,6 +408,7 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 	// get keyed user h5p contents map
 	keyedUserH5PContentsMap := m.getKeyedUserH5PContentsMap(room)
 
+	// assembly result
 	result := map[string][]*entity.AssessmentStudentViewH5PLessonMaterial{}
 	for _, s := range view.Students {
 		for lmIndex, lm := range view.LessonMaterials {
@@ -369,14 +441,16 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 				}
 			}
 			if len(contents) == 0 {
-				newLessMaterial := entity.AssessmentStudentViewH5PLessonMaterial{
+				newLessonMaterial := entity.AssessmentStudentViewH5PLessonMaterial{
 					LessonMaterialOrderedNumber: lmIndex,
 					LessonMaterialID:            lm.ID,
 					LessonMaterialName:          lm.Name,
 					IsH5P:                       lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
-					OutcomeNames:                lmOutcomeNamesMap[lm.ID],
 				}
-				result[s.ID] = append(result[s.ID], &newLessMaterial)
+				if attendanceContentOutcomesMap[s.ID] != nil {
+					newLessonMaterial.Outcomes = attendanceContentOutcomesMap[s.ID][lm.ID]
+				}
+				result[s.ID] = append(result[s.ID], &newLessonMaterial)
 				continue
 			}
 			for _, content := range contents {
@@ -401,8 +475,10 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 					AchievedScore:               getAssessmentH5P().getAchievedScore(content),
 					Attempted:                   len(content.Answers) > 0 || len(content.Scores) > 0,
 					IsH5P:                       lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
-					OutcomeNames:                lmOutcomeNamesMap[lm.ID],
 					NotApplicableScoring:        !getAssessmentH5P().canScoring(content.ContentType),
+				}
+				if attendanceContentOutcomesMap[s.ID] != nil {
+					newLessonMaterial.Outcomes = attendanceContentOutcomesMap[s.ID][lm.ID]
 				}
 				result[s.ID] = append(result[s.ID], &newLessonMaterial)
 			}
@@ -416,6 +492,78 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 	}
 
 	return result, nil
+}
+
+func (m *assessmentH5P) getAttendanceContentOutcomesMap(ctx context.Context,
+	attendanceIDs []string,
+	assessmentContentOutcomes []*entity.AssessmentContentOutcome,
+	assessmentOutcomeMap map[string]*entity.AssessmentOutcome,
+	outcomeMap map[string]*entity.Outcome,
+	contentOutcomeAttendanceExistsMap map[[3]string]bool,
+) (map[string]map[string][]*entity.AssessmentDetailContentOutcome, error) {
+	result := map[string]map[string][]*entity.AssessmentDetailContentOutcome{}
+	for _, attendanceID := range attendanceIDs {
+		if result[attendanceID] == nil {
+			result[attendanceID] = map[string][]*entity.AssessmentDetailContentOutcome{}
+		}
+		for _, co := range assessmentContentOutcomes {
+			o := outcomeMap[co.OutcomeID]
+			if o == nil {
+				continue
+			}
+			ao := assessmentOutcomeMap[co.OutcomeID]
+			if ao == nil {
+				continue
+			}
+			result[attendanceID][co.OutcomeID] = append(result[attendanceID][co.OutcomeID], &entity.AssessmentDetailContentOutcome{
+				ContentID:    co.ContentID,
+				OutcomeID:    co.OutcomeID,
+				OutcomeName:  o.Name,
+				Assumed:      o.Assumed,
+				NoneAchieved: co.NoneAchieved,
+				Checked:      contentOutcomeAttendanceExistsMap[[3]string{co.ContentID, co.OutcomeID, attendanceID}],
+			})
+		}
+	}
+	return result, nil
+}
+
+func (m *assessmentH5P) getContentOutcomeAttendanceExistsMap(ctx context.Context, assessmentID string, attendanceIDs []string, assessmentContentOutcomes []*entity.AssessmentContentOutcome) (map[[3]string]bool, error) {
+	keys := make([]*da.ContentIDAndOutcomeIDKey, 0, len(assessmentContentOutcomes))
+	for _, co := range assessmentContentOutcomes {
+		keys = append(keys, &da.ContentIDAndOutcomeIDKey{
+			ContentID: co.ContentID,
+			OutcomeID: co.OutcomeID,
+		})
+	}
+	queryAssessmentContentOutcomeAttendanceCond := da.QueryAssessmentContentOutcomeAttendanceCondition{
+		AssessmentIDs: entity.NullStrings{
+			Strings: []string{assessmentID},
+			Valid:   true,
+		},
+		ContentIDAndOutcomeIDPairs: da.NullContentIDAndOutcomeIDKeys{
+			Value: keys,
+			Valid: true,
+		},
+		AttendanceIDs: entity.NullStrings{
+			Strings: attendanceIDs,
+			Valid:   true,
+		},
+	}
+	var contentOutcomeAttendances []*entity.AssessmentContentOutcomeAttendance
+	if err := da.GetAssessmentContentOutcomeAttendanceDA().Query(ctx, &queryAssessmentContentOutcomeAttendanceCond, &contentOutcomeAttendances); err != nil {
+		log.Error(ctx, "get content outcomes attendance exists map: query assessment content outcome attendance failed",
+			log.Err(err),
+			log.Any("cond", queryAssessmentContentOutcomeAttendanceCond),
+		)
+		return nil, err
+	}
+	contentOutcomeAttendanceExistsMap := map[[3]string]bool{}
+	for _, coa := range contentOutcomeAttendances {
+		key := [3]string{coa.ContentID, coa.OutcomeID, coa.AttendanceID}
+		contentOutcomeAttendanceExistsMap[key] = true
+	}
+	return contentOutcomeAttendanceExistsMap, nil
 }
 
 func (m *assessmentH5P) numberAndFlagStudentViewH5PLessonMaterials(ctx context.Context, view *entity.AssessmentView, lessonMaterials []*entity.AssessmentStudentViewH5PLessonMaterial) {
@@ -530,54 +678,101 @@ func (m *assessmentH5P) treeingRemainingStudentViewLessonMaterials(contents []*e
 	}
 }
 
-func (m *assessmentH5P) getOutcomesMapByContentID(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, assessmentID string, lessonMaterialIDs []string) (map[string][]string, error) {
-	// query content outcomes
+func (m *assessmentH5P) getOutcomeMap(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, error) {
+	outcomeIDs = utils.SliceDeduplicationExcludeEmpty(outcomeIDs)
+	if len(outcomeIDs) == 0 {
+		return map[string]*entity.Outcome{}, nil
+	}
+	outcomes, err := GetOutcomeModel().GetByIDs(ctx, operator, tx, outcomeIDs)
+	if err != nil {
+		log.Error(ctx, "get outcome map: batch get outcomes failed",
+			log.Err(err),
+			log.Strings("outcome_ids", outcomeIDs),
+		)
+		return nil, err
+	}
+	outcomeMap := make(map[string]*entity.Outcome, len(outcomes))
+	for _, outcome := range outcomes {
+		outcomeMap[outcome.ID] = outcome
+	}
+	return outcomeMap, nil
+}
+
+func (m *assessmentH5P) getAssessmentOutcomes(ctx context.Context, assessmentID string) ([]*entity.AssessmentOutcome, error) {
+	cond := da.QueryAssessmentOutcomeConditions{
+		AssessmentIDs: entity.NullStrings{
+			Strings: []string{assessmentID},
+			Valid:   true,
+		},
+	}
+	var assessmentOutcomes []*entity.AssessmentOutcome
+	if err := da.GetAssessmentOutcomeDA().Query(ctx, &cond, &assessmentOutcomes); err != nil {
+		log.Error(ctx, "get assessment outcomes failed",
+			log.String("assessment_id", assessmentID),
+		)
+		return nil, err
+	}
+	return assessmentOutcomes, nil
+}
+
+func (m *assessmentH5P) getAssessmentContentOutcomes(ctx context.Context, assessmentID string) ([]*entity.AssessmentContentOutcome, error) {
+	if assessmentID == "" {
+		return nil, nil
+	}
 	var contentOutcomes []*entity.AssessmentContentOutcome
 	if err := da.GetAssessmentContentOutcomeDA().Query(ctx, &da.QueryAssessmentContentOutcomeConditions{
 		AssessmentIDs: entity.NullStrings{
 			Strings: []string{assessmentID},
 			Valid:   true,
 		},
-		ContentIDs: entity.NullStrings{
-			Strings: lessonMaterialIDs,
+	}, &contentOutcomes); err != nil {
+		log.Error(ctx, "get assessment content outcomes map: query assessment content outcomes failed",
+			log.Err(err),
+			log.String("assessment_id", assessmentID),
+		)
+		return nil, err
+	}
+	return contentOutcomes, nil
+}
+
+func (m *assessmentH5P) getAssessmentContentOutcomesMap(ctx context.Context, assessmentID string) (map[string][]*entity.AssessmentContentOutcome, error) {
+	if assessmentID == "" {
+		return map[string][]*entity.AssessmentContentOutcome{}, nil
+	}
+	var contentOutcomes []*entity.AssessmentContentOutcome
+	if err := da.GetAssessmentContentOutcomeDA().Query(ctx, &da.QueryAssessmentContentOutcomeConditions{
+		AssessmentIDs: entity.NullStrings{
+			Strings: []string{assessmentID},
 			Valid:   true,
 		},
 	}, &contentOutcomes); err != nil {
-		log.Error(ctx, "get outcomes map by content id: query assessment content outcome failed",
+		log.Error(ctx, "get assessment content outcomes map: query assessment content outcomes failed",
 			log.Err(err),
 			log.String("assessment_id", assessmentID),
-			log.Strings("lesson_material_ids", lessonMaterialIDs),
 		)
 		return nil, err
 	}
+	contentOutcomesMap := map[string][]*entity.AssessmentContentOutcome{}
+	for _, co := range contentOutcomes {
+		contentOutcomesMap[co.ContentID] = append(contentOutcomesMap[co.ContentID], co)
+	}
+	return contentOutcomesMap, nil
+}
 
-	// batch get outcomes
-	outcomeIDs := make([]string, 0, len(contentOutcomes))
-	for _, o := range contentOutcomes {
-		outcomeIDs = append(outcomeIDs, o.OutcomeID)
+func (m *assessmentH5P) getContentOutcomesMap(
+	outcomeMap map[string]*entity.Outcome,
+	assessmentContentOutcomesMap map[string][]*entity.AssessmentContentOutcome,
+) (map[string][]*entity.Outcome, error) {
+	result := map[string][]*entity.Outcome{}
+	for contentID, contentOutcomes := range assessmentContentOutcomesMap {
+		for _, co := range contentOutcomes {
+			o := outcomeMap[co.OutcomeID]
+			if o != nil {
+				result[contentID] = append(result[contentID], o)
+			}
+		}
 	}
-	outcomeIDs = utils.SliceDeduplicationExcludeEmpty(outcomeIDs)
-	outcomes, err := GetOutcomeModel().GetByIDs(ctx, operator, tx, outcomeIDs)
-	if err != nil {
-		log.Error(ctx, "get outcomes map by content id: get outcomes failed by id",
-			log.Err(err),
-			log.String("assessment_id", assessmentID),
-			log.Strings("lesson_materials", lessonMaterialIDs),
-		)
-		return nil, err
-	}
-
-	// mapping
-	outcomeNameMap := make(map[string]string, len(outcomes))
-	for _, o := range outcomes {
-		outcomeNameMap[o.ID] = o.Name
-	}
-	contentOutcomeNamesMap := make(map[string][]string, len(contentOutcomes))
-	for _, o := range contentOutcomes {
-		contentOutcomeNamesMap[o.ContentID] = append(contentOutcomeNamesMap[o.ContentID], outcomeNameMap[o.OutcomeID])
-	}
-
-	return contentOutcomeNamesMap, nil
+	return result, nil
 }
 
 func (m *assessmentH5P) batchGetRoomCommentMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]map[string][]string, error) {
