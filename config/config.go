@@ -45,6 +45,7 @@ type Config struct {
 	TencentConfig         TencentConfig         `json:"tencent" yaml:"tencent"`
 	KidsloopCNLoginConfig KidsloopCNLoginConfig `json:"kidsloop_cn" yaml:"kidsloop_cn"`
 	CORS                  CORSConfig            `json:"cors" yaml:"cors"`
+	ShowInternalErrorType bool                  `json:"show_internal_error_type"`
 }
 
 var config *Config
@@ -170,8 +171,25 @@ func LoadEnvConfig() {
 	loadKidsloopCNLoginConfig(ctx)
 	loadAssessmentConfig(ctx)
 	loadCORSConfig(ctx)
+	loadShowInternalErrorTypeConfig(ctx)
 }
 
+func loadShowInternalErrorTypeConfig(ctx context.Context) {
+	var err error
+	s := os.Getenv("show_internal_error_type")
+	if s == "" {
+		return
+	}
+	config.ShowInternalErrorType, err = strconv.ParseBool(s)
+	if err != nil {
+		log.Panic(ctx,
+			"loadShowInternalErrorTypeConfig:load show_internal_error_type failed",
+			log.Err(err),
+			log.String("env_key", "show_internal_error_type"),
+			log.Any("show_internal_error_type", s),
+		)
+	}
+}
 func loadKidsloopCNLoginConfig(ctx context.Context) {
 	config.KidsLoopRegion = os.Getenv("kidsloop_region")
 	if config.KidsLoopRegion != constant.KidsloopCN {
@@ -397,6 +415,7 @@ func loadAMSConfig(ctx context.Context) {
 	if err != nil {
 		log.Panic(ctx, "loadAMSConfig:load public key failed", log.Err(err), log.String("publicKeyPath", publicKeyPath))
 	}
+
 	key, err := jwt.ParseRSAPublicKeyFromPEM(content)
 	if err != nil {
 		log.Panic(ctx, "loadAMSConfig:ParseRSAPublicKeyFromPEM failed", log.Err(err))

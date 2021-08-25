@@ -1,5 +1,15 @@
 package api
 
+import (
+	"net/http"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+
+	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+)
+
 type ResponseLabel string
 
 func (l ResponseLabel) String() string {
@@ -101,4 +111,12 @@ type NotAcceptResponse Response
 
 type IDResponse struct {
 	ID string `json:"id"`
+}
+
+func (s Server) defaultErrorHandler(c *gin.Context, err error) {
+	eType, ok := err.(entity.TypedError)
+	if ok && config.Get().ShowInternalErrorType {
+		c.Header(constant.ResponseHeaderKeyInternalErrorType, eType.ErrorType())
+	}
+	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 }
