@@ -132,6 +132,7 @@ type BatchAddAssessmentSuperArgs struct {
 	OutcomeMap                map[string]*Outcome
 	LessonPlanMap             map[string]*AssessmentExternalLessonPlan
 	ScheduleIDToOutcomeIDsMap map[string][]string
+	ScheduleIDToArgsItemMap   map[string]*AddAssessmentArgs
 }
 
 type StudentAssessmentTeacher struct {
@@ -254,8 +255,3 @@ const (
 	AssessmentContentTypeLessonPlan     AssessmentContentType = "lesson_plan"
 	AssessmentContentTypeLessonMaterial AssessmentContentType = "lesson_material"
 )
-
-type AssessmentIDNamePair struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}

@@ -214,12 +214,12 @@ type AssessmentDetailOutcome struct {
 }
 
 type AssessmentDetailContentOutcome struct {
-	ContentID     string   `json:"content_id"`
-	OutcomeID     string   `json:"outcome_id"`
-	OutcomeName   string   `json:"outcome_name"`
-	Assumed       bool     `json:"assumed"`
-	NoneAchieved  bool     `json:"none_achieved"`
-	AttendanceIDs []string `json:"attendance_ids"`
+	ContentID    string `json:"content_id"`
+	OutcomeID    string `json:"outcome_id"`
+	OutcomeName  string `json:"outcome_name"`
+	Assumed      bool   `json:"assumed"`
+	NoneAchieved bool   `json:"none_achieved"`
+	Checked      bool   `json:"checked"`
 }
 
 type AssessmentDetailContent struct {
