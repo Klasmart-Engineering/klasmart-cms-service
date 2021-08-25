@@ -129,3 +129,25 @@ func TestSearchWithoutRelation(t *testing.T) {
 		t.Log(v)
 	}
 }
+
+func TestSearchPublished(t *testing.T) {
+	setup()
+	ctx := context.TODO()
+	count, outcomes, err := GetOutcomeModel().SearchPublished(ctx, &entity.Operator{}, &entity.OutcomeCondition{
+		ProgramIDs:     []string{"program_test_1"},
+		SubjectIDs:     []string{"subject_test_1"},
+		CategoryIDs:    []string{"category_test_1"},
+		SubCategoryIDs: []string{"subcategory_test_1"},
+		AgeIDs:         []string{"age_test_1"},
+		GradeIDs:       []string{"grade_test_1"},
+		Page:           1,
+		PageSize:       10,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(count)
+	for _, v := range outcomes {
+		t.Log(v)
+	}
+}

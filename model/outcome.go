@@ -35,6 +35,7 @@ type IOutcomeModel interface {
 
 	SearchPrivate(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
 	SearchPending(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
+	SearchPublished(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
 
 	GetByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
 	GetLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
@@ -1040,6 +1041,35 @@ func (ocm OutcomeModel) SearchPending(ctx context.Context, user *entity.Operator
 	return total, outcomes, err
 }
 
+func (ocm OutcomeModel) SearchPublished(ctx context.Context, op *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
+	condition.PublishStatus = entity.OutcomeStatusPublished
+	var outcomes []*entity.Outcome
+	total, err := da.GetOutcomeDA().Page(ctx, da.NewOutcomeCondition(condition), &outcomes)
+	if err != nil {
+		log.Error(ctx, "SearchPublished: da.GetOutcomeDA().Query failed",
+			log.Any("op", op),
+			log.Any("condition", condition),
+			log.Err(err))
+		return 0, nil, err
+	}
+
+	if len(outcomes) == 0 {
+		log.Info(ctx, "SearchPublished: not found",
+			log.Any("op", op),
+			log.Any("condition", condition))
+		return total, outcomes, nil
+	}
+
+	if err = ocm.fillOutcomeRelation(ctx, outcomes); err != nil {
+		log.Error(ctx, "SearchPublished: ocm.fillOutcomeRelation failed",
+			log.Any("outcomes", outcomes),
+			log.Err(err))
+		return 0, nil, err
+	}
+
+	return total, outcomes, err
+}
+
 func (ocm OutcomeModel) Approve(ctx context.Context, operator *entity.Operator, outcomeID string) error {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeReview)
 	if err != nil {
@@ -1226,6 +1256,7 @@ func (ocm OutcomeModel) BulkApprove(ctx context.Context, operator *entity.Operat
 	})
 	return err
 }
+
 func (ocm OutcomeModel) BulkReject(ctx context.Context, operator *entity.Operator, outcomeIDs []string, reason string) error {
 	for _, o := range outcomeIDs {
 		locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeReview, o)
@@ -1804,6 +1835,7 @@ func (ocm OutcomeModel) FillRelation(ctx context.Context, oc *entity.Outcome, re
 		oc.Ages = strings.Split(oc.Age, entity.JoinComma)
 	}
 }
+
 func (ocm OutcomeModel) UpdateOutcome(data *entity.Outcome, oc *entity.Outcome) {
 	if data.Name != "" {
 		oc.Name = data.Name
@@ -1924,4 +1956,49 @@ func (ocm OutcomeModel) allowedToHidden(oc *entity.Outcome) bool {
 		return true
 	}
 	return false
+}
+
+func (ocm OutcomeModel) fillOutcomeRelation(ctx context.Context, outcomes []*entity.Outcome) error {
+	outcomeIDs := make([]string, len(outcomes))
+	for i, v := range outcomes {
+		outcomeIDs[i] = v.ID
+	}
+
+	var outcomeRelation []*entity.OutcomeRelation
+	err := da.GetOutcomeRelationDA().Query(ctx, &da.RelationCondition{
+		MasterIDs:  dbo.NullStrings{Strings: outcomeIDs, Valid: true},
+		MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
+	}, &outcomeRelation)
+	if err != nil {
+		log.Error(ctx, "fillOutcomeRelation: da.GetOutcomeRelationDA().Query failed",
+			log.Any("outcomeIDs", outcomeIDs),
+			log.Err(err))
+		return err
+	}
+
+	outcomeRelationMap := make(map[string][]*entity.OutcomeRelation, len(outcomes))
+	for _, v := range outcomeRelation {
+		outcomeRelationMap[v.MasterID] = append(outcomeRelationMap[v.MasterID], v)
+	}
+
+	for _, v := range outcomes {
+		for _, r := range outcomeRelationMap[v.ID] {
+			switch r.RelationType {
+			case entity.ProgramType:
+				v.Programs = append(v.Programs, r.RelationID)
+			case entity.SubjectType:
+				v.Subjects = append(v.Subjects, r.RelationID)
+			case entity.CategoryType:
+				v.Categories = append(v.Categories, r.RelationID)
+			case entity.SubcategoryType:
+				v.Subcategories = append(v.Subcategories, r.RelationID)
+			case entity.GradeType:
+				v.Grades = append(v.Grades, r.RelationID)
+			case entity.AgeType:
+				v.Ages = append(v.Ages, r.RelationID)
+			}
+		}
+	}
+
+	return nil
 }

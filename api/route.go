@@ -177,6 +177,7 @@ func (s Server) registeRoute() {
 
 		outcomes.GET("/private_learning_outcomes", s.mustLogin, s.queryPrivateOutcomes)
 		outcomes.GET("/pending_learning_outcomes", s.mustLogin, s.queryPendingOutcomes)
+		outcomes.GET("/published_learning_outcomes", s.mustLogin, s.queryPublishedOutcomes)
 	}
 
 	shortcode := s.engine.Group("/v1")
