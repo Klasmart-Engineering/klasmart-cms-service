@@ -1163,7 +1163,7 @@ func (m *assessmentBase) batchAddContentOutcomeAttendances(ctx context.Context, 
 					insertingAssessmentContentOutcomeAttendances = append(insertingAssessmentContentOutcomeAttendances, &entity.AssessmentContentOutcomeAttendance{
 						ID:           utils.NewID(),
 						AssessmentID: a.ID,
-						ContentID:    lp.ID,
+						ContentID:    lm.ID,
 						OutcomeID:    oid,
 						AttendanceID: attendance.RelationID,
 					})
