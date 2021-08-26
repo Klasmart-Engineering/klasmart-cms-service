@@ -4,6 +4,9 @@ import (
 	"context"
 	"sync"
 
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -36,6 +39,20 @@ func (c H5PClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorin
 	}
 
 	statusCode, err := c.Client.Run(ctx, req, resp)
+	if err != nil {
+		log.Error(
+			ctx,
+			"external/H5PClient.Run error",
+			log.Err(err),
+			log.Any("req", req),
+			log.Any("statusCode", statusCode),
+			log.Any("resp", resp),
+		)
+		err = &entity.ExternalError{
+			Err:  err,
+			Type: constant.InternalErrorTypeAssessmentApi,
+		}
+	}
 
 	if foundStopwatch {
 		externalStopwatch.Stop()

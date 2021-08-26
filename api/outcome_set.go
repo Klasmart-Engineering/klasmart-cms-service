@@ -1,9 +1,10 @@
 package api
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"net/http"
 	"strings"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -45,7 +46,7 @@ func (s *Server) createOutcomeSet(c *gin.Context) {
 	})
 	if err != nil {
 		log.Warn(ctx, "createOutcomeSet: HasOrganizationPermissions failed", log.Any("op", op), log.Any("data", data), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 		return
 	}
 
@@ -68,7 +69,7 @@ func (s *Server) createOutcomeSet(c *gin.Context) {
 	case constant.ErrDuplicateRecord:
 		c.JSON(http.StatusConflict, L(AssessMsgExistingSet))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -112,7 +113,7 @@ func (s *Server) pullOutcomeSet(c *gin.Context) {
 	})
 	if err != nil {
 		log.Warn(ctx, "pullOutcomeSet: HasOrganizationPermissions failed", log.Any("op", op), log.Err(err), log.Any("req", request))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 		return
 	}
 
@@ -144,7 +145,7 @@ func (s *Server) pullOutcomeSet(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, response)
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -190,7 +191,7 @@ func (s *Server) bulkBindOutcomeSet(c *gin.Context) {
 			log.Any("op", op),
 			log.Strings("outcome", request.OutcomeIDs),
 			log.Strings("set", request.SetIDs))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 		return
 	}
 
@@ -219,6 +220,6 @@ func (s *Server) bulkBindOutcomeSet(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }

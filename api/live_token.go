@@ -54,7 +54,7 @@ func (s *Server) getScheduleLiveToken(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMessageLessonPlanInvalid))
 	default:
 		log.Error(ctx, "make schedule live token error", log.Err(err), log.String("scheduleID", scheduleID))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -85,6 +85,6 @@ func (s *Server) getContentLiveToken(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMessageLessonPlanInvalid))
 	default:
 		log.Error(ctx, "make content live token error", log.Err(err), log.String("contentID", contentID))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }

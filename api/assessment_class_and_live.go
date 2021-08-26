@@ -2,9 +2,10 @@ package api
 
 import (
 	"database/sql"
+	"net/http"
+
 	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"net/http"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
@@ -90,7 +91,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 			log.Err(err),
 			log.Any("cmd", args),
 		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 		return
 	}
 }
@@ -131,7 +132,7 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 			log.Err(err),
 			log.String("id", id),
 		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -183,7 +184,7 @@ func (s *Server) updateAssessment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		log.Info(ctx, "update assessment: update failed")
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -247,7 +248,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 			log.Err(err),
 			log.Any("args", args),
 		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -294,6 +295,6 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 			log.Err(err),
 			log.Any("args", args),
 		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }

@@ -1,8 +1,9 @@
 package api
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"net/http"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 
@@ -59,7 +60,7 @@ func (s *Server) login(c *gin.Context) {
 	}
 	if err != nil {
 		log.Error(ctx, "login:GetUserByAccount", log.Any("req", req), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	var pass bool
@@ -67,7 +68,7 @@ func (s *Server) login(c *gin.Context) {
 		pass, err = model.VerifyCode(ctx, req.AuthTo, req.AuthCode)
 		if err != nil {
 			log.Error(ctx, "login:GetUserByAccount", log.Any("req", req), log.Err(err))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.defaultErrorHandler(c, err)
 			return
 		}
 	}
@@ -83,7 +84,7 @@ func (s *Server) login(c *gin.Context) {
 	token, err := model.GetTokenFromUser(ctx, user)
 	if err != nil {
 		log.Error(ctx, "login:GetUserByAccount", log.Any("req", req), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 		return
 	}
 
@@ -130,7 +131,7 @@ func (s *Server) register(c *gin.Context) {
 
 	if err != nil {
 		log.Error(ctx, "register:VerifyCode failed", log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	if !pass {
@@ -146,14 +147,14 @@ func (s *Server) register(c *gin.Context) {
 	}
 	if err != nil {
 		log.Error(ctx, "register:RegisterUser failed", log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 		return
 	}
 
 	token, err := model.GetTokenFromUser(ctx, user)
 	if err != nil {
 		log.Error(ctx, "register:Token failed", log.Any("req", req), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 		return
 	}
 
@@ -192,13 +193,13 @@ func (s *Server) sendCode(c *gin.Context) {
 		code, err := model.GetBubbleMachine(req.Mobile).Launch(ctx)
 		if err != nil {
 			log.Error(ctx, "sendCode: launch failed", log.Err(err))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.defaultErrorHandler(c, err)
 			return
 		}
 		err = model.GetSMSSender().SendSms(ctx, []string{req.Mobile}, code)
 		if err != nil {
 			log.Error(ctx, "sendCode: SendSms failed", log.Err(err))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.defaultErrorHandler(c, err)
 			return
 		}
 		c.Status(http.StatusOK)
@@ -209,14 +210,14 @@ func (s *Server) sendCode(c *gin.Context) {
 		code, err := model.GetBubbleMachine(req.Email).Launch(ctx)
 		if err != nil {
 			log.Error(ctx, "sendCode: launch failed", log.Err(err))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.defaultErrorHandler(c, err)
 			return
 		}
 		// TODO: uri
 		err = model.GetEmailModel().SendEmail(ctx, req.Email, "", "", code)
 		if err != nil {
 			log.Error(ctx, "sendCode: SendSms failed", log.Err(err))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.defaultErrorHandler(c, err)
 			return
 		}
 		c.JSON(http.StatusOK, "ok")
@@ -254,7 +255,7 @@ func (s *Server) inviteNotify(c *gin.Context) {
 		err = model.GetSMSSender().SendSms(ctx, []string{req.Mobile}, code)
 		if err != nil {
 			log.Error(ctx, "sendCode: SendSms failed", log.Err(err))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.defaultErrorHandler(c, err)
 			return
 		}
 		c.Status(http.StatusOK)
@@ -268,7 +269,7 @@ func (s *Server) inviteNotify(c *gin.Context) {
 		err = model.GetEmailModel().SendEmail(ctx, req.Email, "", "", code)
 		if err != nil {
 			log.Error(ctx, "sendCode: SendSms failed", log.Err(err))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.defaultErrorHandler(c, err)
 			return
 		}
 		c.Status(http.StatusOK)
@@ -310,7 +311,7 @@ func (s *Server) forgottenPassword(c *gin.Context) {
 	pass, err := model.VerifyCode(ctx, req.AuthTo, req.AuthCode)
 	if err != nil {
 		log.Error(ctx, "forgottenPassword:VerifyCode failed", log.Any("req", req), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	if !pass {
@@ -321,13 +322,13 @@ func (s *Server) forgottenPassword(c *gin.Context) {
 	user, err := model.GetUserModel().UpdateAccountPassword(ctx, req.AuthTo, req.Password)
 	if err != nil {
 		log.Error(ctx, "forgottenPassword:UpdateAccountPassword failed", log.Any("req", req), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	token, err := model.GetTokenFromUser(ctx, user)
 	if err != nil {
 		log.Error(ctx, "forgottenPassword:GetTokenFromUser failed", log.Any("req", req), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 		return
 	}
 
@@ -363,7 +364,7 @@ func (s *Server) resetPassword(c *gin.Context) {
 	err = model.GetUserModel().ResetUserPassword(ctx, op.UserID, req.OldPassword, req.NewPassword)
 	if err != nil {
 		log.Error(ctx, "resetPassword:ResetUserPassword failed", log.Any("req", req), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	c.Status(http.StatusOK)
@@ -407,5 +408,5 @@ func (s *Server) checkAccount(c *gin.Context) {
 	}
 
 	log.Error(ctx, "checkAccount: error", log.String("account", req.Account), log.Err(err))
-	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	s.defaultErrorHandler(c, err)
 }

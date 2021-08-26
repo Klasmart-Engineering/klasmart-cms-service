@@ -437,6 +437,8 @@ type CreateContentRequest struct {
 	//TeacherManual     string `json:"teacher_manual"`
 	//Name string `json:"teacher_manual_name"`
 	TeacherManualBatch []*TeacherManualFile `json:"teacher_manual_batch"`
+
+	ParentFolder string `json:"parent_folder"`
 }
 
 type TeacherManualFile struct {

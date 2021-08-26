@@ -138,3 +138,7 @@ const (
 	VisibilitySettingsGroupOrg    = "org"
 	VisibilitySettingsGroupSchool = "school"
 )
+
+const (
+	ResponseHeaderKeyInternalErrorType = "X-Internal-Error-Type"
+)

@@ -42,6 +42,8 @@ func (s *Server) createAsset(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequireContentName:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidParentFolderId:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequirePublishScope:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrInvalidContentType:
@@ -55,7 +57,7 @@ func (s *Server) createAsset(c *gin.Context) {
 			"id": cid,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }
 func (s *Server) updateAsset(c *gin.Context) {
@@ -110,7 +112,7 @@ func (s *Server) updateAsset(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -134,7 +136,7 @@ func (s *Server) deleteAsset(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -156,7 +158,7 @@ func (s *Server) getAssetByID(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }
 func (s *Server) searchAssets(c *gin.Context) {
@@ -176,7 +178,7 @@ func (s *Server) searchAssets(c *gin.Context) {
 			"list":  results,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }
 

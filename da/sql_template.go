@@ -83,15 +83,3 @@ func SQLBatchInsert(table string, columns []string, matrix [][]interface{}) (str
 	}
 	return t.AppendResult(t2.Join(", ", "", "")).Concat()
 }
-
-func RefInt(i int) *int {
-	return &i
-}
-
-func RefString(s string) *string {
-	return &s
-}
-
-func RefBool(b bool) *bool {
-	return &b
-}

@@ -132,7 +132,7 @@ func (m *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 		return nil, err
 	}
 
-	outcomeAttendances, err := m.getOutcomeAttendances(ctx, tx, assessmentIDs)
+	outcomeAttendances, err := m.getOutcomeAttendancesIncludePartially(ctx, tx, assessmentIDs)
 	if err != nil {
 		log.Error(ctx, "list student report: call getOutcomeAttendances failed",
 			log.Err(err),
@@ -281,7 +281,7 @@ func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 		return nil, err
 	}
 
-	outcomeAttendances, err := m.getOutcomeAttendances(ctx, tx, assessmentIDs)
+	outcomeAttendances, err := m.getOutcomeAttendancesIncludePartially(ctx, tx, assessmentIDs)
 	if err != nil {
 		log.Error(ctx, "get student detail report: call getOutcomeAttendances failed",
 			log.Err(err),
@@ -993,6 +993,55 @@ func (m *reportModel) getOutcomeAttendances(ctx context.Context, tx *dbo.DBConte
 		return nil, err
 	}
 	return result, nil
+}
+
+func (m *reportModel) getOutcomeAttendancesIncludePartially(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.OutcomeAttendance, error) {
+	result, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs)
+	if err != nil {
+		log.Error(ctx, "get outcome attendances include partially: batch get assessment outcome attendance failed",
+			log.Err(err),
+			log.Any("assessment_ids", assessmentIDs),
+		)
+		return nil, err
+	}
+
+	// include partially
+	assessmentContentOutcomeAttendanceCond := da.QueryAssessmentContentOutcomeAttendanceCondition{
+		AssessmentIDs: entity.NullStrings{
+			Strings: assessmentIDs,
+			Valid:   true,
+		},
+	}
+	var assessmentContentOutcomeAttendances []*entity.AssessmentContentOutcomeAttendance
+	if err := da.GetAssessmentContentOutcomeAttendanceDA().Query(ctx, assessmentContentOutcomeAttendanceCond, &assessmentContentOutcomeAttendances); err != nil {
+		log.Error(ctx, "get outcome attendances include partially: query assessment content outcome attendance failed",
+			log.Err(err),
+			log.Err(err),
+			log.Any("assessment_ids", assessmentIDs),
+		)
+		return nil, err
+	}
+	for _, coa := range assessmentContentOutcomeAttendances {
+		result = append(result, &entity.OutcomeAttendance{
+			ID:           "",
+			AssessmentID: coa.AssessmentID,
+			OutcomeID:    coa.OutcomeID,
+			AttendanceID: coa.AttendanceID,
+		})
+	}
+
+	// clean result
+	var cleanResult []*entity.OutcomeAttendance
+	existsMap := map[[3]string]bool{}
+	for _, item := range result {
+		if existsMap[[3]string{item.AssessmentID, item.OutcomeID, item.AttendanceID}] {
+			continue
+		}
+		cleanResult = append(cleanResult, item)
+		existsMap[[3]string{item.AssessmentID, item.OutcomeID, item.AttendanceID}] = true
+	}
+
+	return cleanResult, nil
 }
 
 func (m *reportModel) getOutcomeIDs(assessmentOutcomes []*entity.AssessmentOutcome) []string {
