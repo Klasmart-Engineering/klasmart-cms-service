@@ -873,12 +873,12 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 // @Param set_name query string false "search by set_name"
 // @Param search_key query string false "search by search_key"
 // @Param assumed query integer false "search by assumed: 1 true, 0 false, -1 all"
-// @Param program_ids query []string false "search by program ids"
-// @Param subject_ids query []string false "search by subject ids"
-// @Param category_ids query []string false "search by category ids"
-// @Param sub_category_ids query []string false "search by sub category ids"
-// @Param age_ids query []string false "search by age ids"
-// @Param grade_ids query []string false "search by grade ids"
+// @Param program_ids query string false "search by program ids, split by comma"
+// @Param subject_ids query string false "search by subject ids, split by comma"
+// @Param category_ids query string false "search by category ids, split by comma"
+// @Param sub_category_ids query string false "search by sub category ids, split by comma"
+// @Param age_ids query string false "search by age ids, split by comma"
+// @Param grade_ids query string false "search by grade ids, split by comma"
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size: -1 no page, 0 default page size 20"
 // @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
@@ -902,6 +902,13 @@ func (s *Server) queryPublishedOutcomes(c *gin.Context) {
 	if condition.OrganizationID == "" {
 		condition.OrganizationID = op.OrgID
 	}
+
+	condition.ProgramIDs = utils.StringToStringArray(ctx, c.Query("program_ids"))
+	condition.SubjectIDs = utils.StringToStringArray(ctx, c.Query("subject_ids"))
+	condition.CategoryIDs = utils.StringToStringArray(ctx, c.Query("category_ids"))
+	condition.SubCategoryIDs = utils.StringToStringArray(ctx, c.Query("sub_category_ids"))
+	condition.AgeIDs = utils.StringToStringArray(ctx, c.Query("age_ids"))
+	condition.GradeIDs = utils.StringToStringArray(ctx, c.Query("grade_ids"))
 
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ViewPublishedLearningOutcome)
 	if err != nil {
