@@ -90,6 +90,7 @@ type IFolderModel interface {
 	//查看路径是否存在
 	//check path existing
 	MustGetPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error)
+	GetFolderMayRoot(ctx context.Context, fid string, ownerType entity.OwnerType, partition entity.FolderPartition, operator *entity.Operator) (*entity.FolderItem, error)
 }
 
 type FolderModel struct{}
@@ -2016,6 +2017,11 @@ func (f *FolderModel) getFolder(ctx context.Context, tx *dbo.DBContext, fid stri
 	}
 	return parentFolder, nil
 }
+
+func (f *FolderModel) GetFolderMayRoot(ctx context.Context, fid string, ownerType entity.OwnerType, partition entity.FolderPartition, operator *entity.Operator) (*entity.FolderItem, error) {
+	return f.getFolderMaybeRoot(ctx, dbo.MustGetDB(ctx), fid, ownerType, partition, operator)
+}
+
 func (f *FolderModel) getFolderMaybeRoot(ctx context.Context, tx *dbo.DBContext, fid string, ownerType entity.OwnerType, partition entity.FolderPartition, operator *entity.Operator) (*entity.FolderItem, error) {
 	if fid == constant.FolderRootPath {
 		return f.rootFolder(ctx, ownerType, partition, operator), nil

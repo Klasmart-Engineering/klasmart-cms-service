@@ -51,6 +51,11 @@ func (rv *Reviewer) Approve(ctx context.Context, tx *dbo.DBContext, cid string, 
 		log.Error(ctx, "Approve: Update Status failed: ", log.Err(err))
 		return err
 	}
+	err = cm.AddAuthedContentIfFolderAlreadyShared(ctx, tx, []string{cid}, user)
+	if err != nil {
+		log.Error(ctx, "Approve: AddAuthedContentIfFolderAlreadyShared failed: ", log.Err(err))
+		return err
+	}
 	return nil
 }
 
@@ -95,6 +100,11 @@ func (rv *Reviewer) ApproveBulk(ctx context.Context, tx *dbo.DBContext, cids []s
 			log.Error(ctx, "Approve: Update Status failed: ", log.Err(err))
 			return err
 		}
+	}
+	err = GetContentModel().AddAuthedContentIfFolderAlreadyShared(ctx, tx, cids, user)
+	if err != nil {
+		log.Error(ctx, "ApproveBulk: AddAuthedContentIfFolderAlreadyShared failed: ", log.Err(err))
+		return err
 	}
 	return nil
 }

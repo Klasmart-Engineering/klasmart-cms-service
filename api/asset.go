@@ -42,6 +42,8 @@ func (s *Server) createAsset(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequireContentName:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidParentFolderId:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequirePublishScope:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrInvalidContentType:
