@@ -1393,6 +1393,8 @@ func (l *learningSummaryReportModel) batchGetAssessmentOutcomeStatus(ctx context
 			result[*key] = entity.AssessmentOutcomeStatusAchieved
 		} else if assessmentOutcomePartiallyAttendMap[*key] {
 			result[*key] = entity.AssessmentOutcomeStatusPartially
+		} else {
+			result[*key] = entity.AssessmentOutcomeStatusNotAchieved
 		}
 	}
 
