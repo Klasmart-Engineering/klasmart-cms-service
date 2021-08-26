@@ -515,7 +515,7 @@ func (m *assessmentH5P) getAttendanceContentOutcomesMap(ctx context.Context,
 			if ao == nil {
 				continue
 			}
-			result[attendanceID][co.OutcomeID] = append(result[attendanceID][co.OutcomeID], &entity.AssessmentDetailContentOutcome{
+			result[attendanceID][co.ContentID] = append(result[attendanceID][co.ContentID], &entity.AssessmentDetailContentOutcome{
 				ContentID:    co.ContentID,
 				OutcomeID:    co.OutcomeID,
 				OutcomeName:  o.Name,

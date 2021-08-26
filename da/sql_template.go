@@ -51,7 +51,11 @@ func (b *SQLTemplate) AppendTemplates(others ...*SQLTemplate) *SQLTemplate {
 }
 
 func (b *SQLTemplate) Join(sep string, left, right string) (string, []interface{}) {
-	return left + strings.Join(b.Formats, sep) + right, b.Values
+	content := strings.Join(b.Formats, sep)
+	if content == "" {
+		return "", b.Values
+	}
+	return left + content + right, b.Values
 }
 
 func (b *SQLTemplate) Concat() (string, []interface{}) {
