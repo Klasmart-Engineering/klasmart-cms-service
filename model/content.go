@@ -631,7 +631,7 @@ func (cm *ContentModel) AddAuthedContentIfFolderAlreadyShared(ctx context.Contex
 	contentAncestorDirs := make(map[string]map[string]bool)
 	allContentsAncestorDir := make([]string, 0)
 	for i := range contents {
-		if !contents[i].ContentType.IsAsset() {
+		if contents[i].ContentType == entity.ContentTypeMaterial || contents[i].ContentType == entity.ContentTypePlan {
 			fids := contents[i].DirPath.Parents()
 			ancestorDirs := make(map[string]bool)
 			for j := range fids {
