@@ -525,6 +525,14 @@ func (m *assessmentH5P) getAttendanceContentOutcomesMap(ctx context.Context,
 			})
 		}
 	}
+	log.Debug(ctx, "get attendance content outcomes map result",
+		log.Any("result", result),
+		log.Strings("attendance_ids", attendanceIDs),
+		log.Any("assessment_content_outcomes", assessmentContentOutcomes),
+		log.Any("assessment_outcome_map", assessmentOutcomeMap),
+		log.Any("outcome_map", outcomeMap),
+		log.Any("content_outcome_attendance_exists_map", contentOutcomeAttendanceExistsMap),
+	)
 	return result, nil
 }
 
