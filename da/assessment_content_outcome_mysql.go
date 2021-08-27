@@ -75,7 +75,7 @@ func (c *QueryAssessmentContentOutcomeConditions) GetConditions() ([]string, []i
 	if c.AssessmentIDAndOutcomeIDPairs.Valid {
 		temp := NewSQLTemplate("")
 		for _, pair := range c.AssessmentIDAndOutcomeIDPairs.Value {
-			temp.Appendf("assessment_id = ? and outcome_id = ?", pair.AssessmentID, pair.OutcomeID)
+			temp.Appendf("(assessment_id = ? and outcome_id = ?)", pair.AssessmentID, pair.OutcomeID)
 		}
 		t.AppendResult(temp.Or())
 	}
@@ -97,9 +97,9 @@ func (*assessmentContentOutcomeDA) UpdateNoneAchieved(ctx context.Context, tx *d
 	trueCond := NewSQLTemplate("")
 	for _, item := range items {
 		if item.NoneAchieved {
-			trueCond.Appendf("assessment_id = ? and content_id = ? and outcome_id = ?", item.AssessmentID, item.ContentID, item.OutcomeID)
+			trueCond.Appendf("(assessment_id = ? and content_id = ? and outcome_id = ?)", item.AssessmentID, item.ContentID, item.OutcomeID)
 		} else {
-			falseCond.Appendf("assessment_id = ? and content_id = ? and outcome_id = ?", item.AssessmentID, item.ContentID, item.OutcomeID)
+			falseCond.Appendf("(assessment_id = ? and content_id = ? and outcome_id = ?)", item.AssessmentID, item.ContentID, item.OutcomeID)
 		}
 	}
 

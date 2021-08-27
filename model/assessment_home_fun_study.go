@@ -214,7 +214,7 @@ func (m *homeFunStudyModel) GetDetail(ctx context.Context, operator *entity.Oper
 		} else if ao.NoneAchieved {
 			status = entity.HomeFunStudyOutcomeStatusNotAchieved
 		} else {
-			status = ""
+			status = entity.HomeFunStudyOutcomeStatusNotAchieved
 		}
 		result.Outcomes = append(result.Outcomes, &entity.HomeFunStudyOutcome{
 			OutcomeID:   ao.OutcomeID,
