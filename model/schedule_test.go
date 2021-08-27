@@ -123,8 +123,7 @@ func TestQueryUnsafe(t *testing.T) {
 
 func TestRemoveResourceMetadata(t *testing.T) {
 	ctx := context.TODO()
-	scheduleModel := &scheduleModel{}
-	err := scheduleModel.removeResourceMetadata(ctx, "schedule_attachment-6125d6e648bee33deac23bcc.jpg")
+	err := removeResourceMetadata(ctx, "schedule_attachment-6125d6e648bee33deac23bcc.jpg")
 	if err != nil {
 		t.Fatal(err)
 	}
