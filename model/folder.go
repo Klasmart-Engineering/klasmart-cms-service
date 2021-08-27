@@ -1367,6 +1367,14 @@ func (f *FolderModel) handleMoveFolders(ctx context.Context, tx *dbo.DBContext,
 		return err
 	}
 
+	// fix NKL-1220: sub folder missing after moved
+	for i := range folders {
+		path := distFolder.ChildrenPath()
+		folders[i].DirPath = path
+		folders[i].ParentID = distFolder.ID
+	}
+	// fix NKL-1220: sub folder missing after moved
+
 	//Move sub folders
 	//TODO:Execute one statement per folder, Maybe can Accelerate
 	for i := range folders {
@@ -1967,7 +1975,10 @@ func (f *FolderModel) getDescendantItemsMapByFolders(ctx context.Context, folder
 			}
 		}
 		folderMap[folders[i].ID] = subFolders
-		folderPath[folders[i].ID] = folders[i].ChildrenPath()
+
+		// fix NKL-1220: sub folder missing after moved
+		folderPath[folders[i].ID] = folders[i].DirPath
+		// fix NKL-1220: sub folder missing after moved
 	}
 
 	return &entity.FolderDescendantItemsAndPath{
