@@ -67,6 +67,12 @@ func (b *SQLTemplate) And() (string, []interface{}) {
 }
 
 func (b *SQLTemplate) Or() (string, []interface{}) {
+	for idx, format := range b.Formats {
+		if format == "" {
+			continue
+		}
+		b.Formats[idx] = fmt.Sprintf("(%s)", format)
+	}
 	return b.Join(" or ", "(", ")")
 }
 

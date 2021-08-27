@@ -12,5 +12,5 @@ DELETE FROM `outcomes_attendances` WHERE id IN (
     (
         SELECT MIN(id) FROM outcomes_attendances GROUP BY `assessment_id`,`outcome_id`,`attendance_id` HAVING COUNT(*) > 1
     )
-)
+);
 
