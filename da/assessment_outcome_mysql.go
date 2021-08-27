@@ -122,7 +122,7 @@ func (c *QueryAssessmentOutcomeConditions) GetConditions() ([]string, []interfac
 	if c.Keys.Valid {
 		temp := NewSQLTemplate("")
 		for _, key := range c.Keys.Value {
-			temp.Appendf("assessment_id = ? and outcome_id = ?", key.AssessmentID, key.OutcomeID)
+			temp.Appendf("(assessment_id = ? and outcome_id = ?)", key.AssessmentID, key.OutcomeID)
 		}
 		b.AppendResult(temp.Or())
 	}

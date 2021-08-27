@@ -66,14 +66,14 @@ func (c QueryAssessmentContentOutcomeAttendanceCondition) GetConditions() ([]str
 	if c.ContentIDAndOutcomeIDPairs.Valid {
 		temp := NewSQLTemplate("")
 		for _, key := range c.ContentIDAndOutcomeIDPairs.Value {
-			temp.Appendf("content_id = ? and outcome_id = ?", key.ContentID, key.OutcomeID)
+			temp.Appendf("(content_id = ? and outcome_id = ?)", key.ContentID, key.OutcomeID)
 		}
 		t.AppendResult(temp.Or())
 	}
 	if c.AssessmentIDAndOutcomeIDPairs.Valid {
 		temp := NewSQLTemplate("")
 		for _, pair := range c.AssessmentIDAndOutcomeIDPairs.Value {
-			temp.Appendf("assessment_id = ? and outcome_id = ?", pair.AssessmentID, pair.OutcomeID)
+			temp.Appendf("(assessment_id = ? and outcome_id = ?)", pair.AssessmentID, pair.OutcomeID)
 		}
 		t.AppendResult(temp.Or())
 	}
@@ -128,7 +128,7 @@ func (*assessmentContentOutcomeAttendanceDA) BatchDelete(ctx context.Context, tx
 	}
 	t := NewSQLTemplate("")
 	for _, key := range keys {
-		t.Appendf("assessment_id = ? and content_id = ? and outcome_id = ?", key.AssessmentID, key.ContentID, key.OutcomeID)
+		t.Appendf("(assessment_id = ? and content_id = ? and outcome_id = ?)", key.AssessmentID, key.ContentID, key.OutcomeID)
 	}
 	format, values := t.Or()
 	if err := tx.

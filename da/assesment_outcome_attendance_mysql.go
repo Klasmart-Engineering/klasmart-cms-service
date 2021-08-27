@@ -133,7 +133,7 @@ func (c *QueryAssessmentOutcomeAttendanceCondition) GetConditions() ([]string, [
 	if c.AssessmentIDAndOutcomeIDPairs.Valid {
 		temp := NewSQLTemplate("")
 		for _, pair := range c.AssessmentIDAndOutcomeIDPairs.Value {
-			temp.Appendf("assessment_id = ? and outcome_id = ?", pair.AssessmentID, pair.OutcomeID)
+			temp.Appendf("(assessment_id = ? and outcome_id = ?)", pair.AssessmentID, pair.OutcomeID)
 		}
 		t.AppendResult(temp.Or())
 	}
