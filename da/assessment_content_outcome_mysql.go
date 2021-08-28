@@ -2,10 +2,11 @@ package da
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"sync"
 )
 
 type IAssessmentContentOutcomeDA interface {
@@ -60,6 +61,7 @@ func (*assessmentContentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBCo
 
 type QueryAssessmentContentOutcomeConditions struct {
 	AssessmentIDs                 entity.NullStrings
+	OutocmeIDs                    entity.NullStrings
 	ContentIDs                    entity.NullStrings
 	AssessmentIDAndOutcomeIDPairs entity.NullAssessmentOutcomeKeys
 }
@@ -71,6 +73,9 @@ func (c *QueryAssessmentContentOutcomeConditions) GetConditions() ([]string, []i
 	}
 	if c.ContentIDs.Valid {
 		t.Appendf("content_id in (?)", c.ContentIDs.Strings)
+	}
+	if c.OutocmeIDs.Valid {
+		t.Appendf("outcome_id in (?)", c.OutocmeIDs.Strings)
 	}
 	if c.AssessmentIDAndOutcomeIDPairs.Valid {
 		temp := NewSQLTemplate("")

@@ -2,10 +2,11 @@ package da
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"sync"
 )
 
 type IAssessmentContentOutcomeAttendanceDA interface {
@@ -126,13 +127,13 @@ func (*assessmentContentOutcomeAttendanceDA) BatchDelete(ctx context.Context, tx
 	if len(keys) == 0 {
 		return nil
 	}
-	t := NewSQLTemplate("")
+	t := &SQLTemplate{}
 	for _, key := range keys {
 		t.Appendf("(assessment_id = ? and content_id = ? and outcome_id = ?)", key.AssessmentID, key.ContentID, key.OutcomeID)
 	}
 	format, values := t.Or()
 	if err := tx.
-		Where(format, values).
+		Where(format, values...).
 		Delete(entity.AssessmentContentOutcomeAttendance{}).Error; err != nil {
 		log.Error(ctx, "batch delete assessment content outcome attendances failed",
 			log.Err(err),
