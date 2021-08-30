@@ -537,6 +537,10 @@ func (m *assessmentH5P) getAttendanceContentOutcomesMap(ctx context.Context,
 }
 
 func (m *assessmentH5P) getContentOutcomeAttendanceExistsMap(ctx context.Context, assessmentID string, attendanceIDs []string, assessmentContentOutcomes []*entity.AssessmentContentOutcome) (map[[3]string]bool, error) {
+	if len(assessmentContentOutcomes) == 0 {
+		log.Debug(ctx, "get content outcome attendance exists map: empty assessment content outcomes")
+		return map[[3]string]bool{}, nil
+	}
 	keys := make([]*da.ContentIDAndOutcomeIDKey, 0, len(assessmentContentOutcomes))
 	for _, co := range assessmentContentOutcomes {
 		keys = append(keys, &da.ContentIDAndOutcomeIDKey{
