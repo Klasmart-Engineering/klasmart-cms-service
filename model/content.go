@@ -1431,7 +1431,12 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 		return err
 	}
 
+	log.Debug(ctx, "delete_content_not_update count",
+		log.String("parent", content.DirPath.Parent()),
+		log.Any("content", content))
+
 	if content.DirPath.Parent() != constant.FolderRootPath && content.DirPath.Parent() != "" {
+		log.Debug(ctx, "blt-------------------------------------------")
 		err = GetFolderModel().BatchUpdateFolderItemCount(ctx, tx, []string{content.DirPath.Parent()})
 		if err != nil {
 			log.Error(ctx, "doDeleteContent: BatchUpdateFolderItemCount failed",
