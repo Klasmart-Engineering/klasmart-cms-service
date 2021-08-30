@@ -232,6 +232,15 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 				log.Any("user", user))
 			return err
 		}
+		if content.DirPath.Parent() != constant.FolderRootPath && content.DirPath.Parent() != "" {
+			err = GetFolderModel().BatchUpdateFolderItemCount(ctx, tx, []string{content.DirPath.Parent()})
+			if err != nil {
+				log.Error(ctx, "BatchUpdateFolderItemCount failed",
+					log.Any("content", content),
+					log.Any("user", user))
+				return err
+			}
+		}
 	}
 
 	//If scope changed, refresh visibility settings
@@ -1234,6 +1243,8 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 		log.Error(ctx, "can't read content on delete contentdata", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
 		return err
 	}
+
+	parentIDs := make([]string, 0)
 	for i := range contents {
 		err = cm.doDeleteContent(ctx, tx, contents[i], user)
 		if err != nil {
@@ -1243,6 +1254,18 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 		if contents[i].SourceID != "" {
 			deletedIDs = append(deletedIDs, contents[i].SourceID)
 		}
+
+		if contents[i].DirPath.Parent() != constant.FolderRootPath && contents[i].DirPath.Parent() != "" {
+			parentIDs = append(parentIDs, contents[i].DirPath.Parent())
+		}
+	}
+	err = GetFolderModel().BatchUpdateFolderItemCount(ctx, tx, parentIDs)
+	if err != nil {
+		log.Error(ctx, "DeleteContentBulk: BatchUpdateFolderItemCount",
+			log.Err(err),
+			log.Strings("parentIDs", parentIDs),
+			log.Strings("ids", ids),
+			log.String("uid", user.UserID))
 	}
 	da.GetContentRedis().CleanContentCache(ctx, deletedIDs)
 	return nil
@@ -1406,6 +1429,17 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 	if err != nil {
 		log.Error(ctx, "delete contentdata failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
 		return err
+	}
+
+	if content.DirPath.Parent() != constant.FolderRootPath && content.DirPath.Parent() != "" {
+		err = GetFolderModel().BatchUpdateFolderItemCount(ctx, tx, []string{content.DirPath.Parent()})
+		if err != nil {
+			log.Error(ctx, "doDeleteContent: BatchUpdateFolderItemCount failed",
+				log.Err(err),
+				log.Any("content", content),
+				log.String("uid", user.UserID))
+			return err
+		}
 	}
 
 	//解锁source content
