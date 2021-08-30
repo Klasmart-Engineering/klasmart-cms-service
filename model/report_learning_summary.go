@@ -1299,6 +1299,7 @@ func (l *learningSummaryReportModel) sortAssignmentsSummaryItems(items []*entity
 
 func (l *learningSummaryReportModel) batchGetAssessmentOutcomeStatus(ctx context.Context, attendanceID string, keys []*entity.AssessmentOutcomeKey) (map[entity.AssessmentOutcomeKey]entity.AssessmentOutcomeStatus, error) {
 	if len(keys) == 0 {
+		log.Debug(ctx, "batch get assessment outcome status: empty keys")
 		return map[entity.AssessmentOutcomeKey]entity.AssessmentOutcomeStatus{}, nil
 	}
 
@@ -1369,12 +1370,26 @@ func (l *learningSummaryReportModel) batchGetAssessmentOutcomeStatus(ctx context
 		)
 		return nil, err
 	}
-	assessmentOutcomePartiallyAttendMap := make(map[entity.AssessmentOutcomeKey]bool, len(keys))
-	for _, a := range assessmentContentOutcomeAttendances {
-		assessmentOutcomePartiallyAttendMap[entity.AssessmentOutcomeKey{
-			AssessmentID: a.AssessmentID,
-			OutcomeID:    a.OutcomeID,
+	assessmentContentOutcomeAttendMap := map[entity.AssessmentOutcomeKey]bool{}
+	for _, item := range assessmentContentOutcomeAttendances {
+		assessmentContentOutcomeAttendMap[entity.AssessmentOutcomeKey{
+			AssessmentID: item.AssessmentID,
+			OutcomeID:    item.OutcomeID,
 		}] = true
+	}
+
+	// construct partial status map
+	assessmentOutcomePartiallyAttendMap := make(map[entity.AssessmentOutcomeKey]bool, len(keys))
+	for _, key := range keys {
+		if key == nil {
+			continue
+		}
+		if assessmentOutcomeAttendMap[*key] {
+			continue
+		}
+		if assessmentContentOutcomeAttendMap[*key] {
+			assessmentOutcomePartiallyAttendMap[*key] = true
+		}
 	}
 
 	// aggregate result
@@ -1387,7 +1402,9 @@ func (l *learningSummaryReportModel) batchGetAssessmentOutcomeStatus(ctx context
 		if ao == nil {
 			continue
 		}
-		if ao.Skip || ao.NoneAchieved {
+		if ao.Skip {
+			continue
+		} else if ao.NoneAchieved {
 			result[*key] = entity.AssessmentOutcomeStatusNotAchieved
 		} else if assessmentOutcomeAttendMap[*key] {
 			result[*key] = entity.AssessmentOutcomeStatusAchieved
@@ -1397,6 +1414,12 @@ func (l *learningSummaryReportModel) batchGetAssessmentOutcomeStatus(ctx context
 			result[*key] = entity.AssessmentOutcomeStatusNotAchieved
 		}
 	}
+
+	log.Debug(ctx, "batch get assessment outcome status: print args",
+		log.Any("result", result),
+		log.String("attendance_id", attendanceID),
+		log.Any("keys", keys),
+	)
 
 	return result, nil
 }
