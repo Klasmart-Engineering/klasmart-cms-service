@@ -535,6 +535,9 @@ func (s *Server) deleteContent(c *gin.Context) {
 	op := s.getOperator(c)
 	cid := c.Param("content_id")
 
+	c.JSON(http.StatusFailedDependency, "failed")
+	return
+
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckDeleteContentPermission(ctx, []string{cid}, op)
 	if err != nil {
 		s.defaultErrorHandler(c, err)
