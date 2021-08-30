@@ -32,7 +32,7 @@ type UserRedisDA struct {
 func GetUserRedisDA() IUserRedisDA {
 	_userRedisDAOnce.Do(func() {
 		_userRedisDA = &UserRedisDA{
-			expiration: time.Hour * 24,
+			expiration: config.Get().User.CacheExpiration,
 		}
 	})
 	return _userRedisDA
@@ -93,6 +93,12 @@ func (u *UserRedisDA) GetUsersByOrg(ctx context.Context, orgID string) ([]*User,
 			log.Err(err),
 			log.String("matchPattern", matchPattern),
 		)
+	}
+
+	if len(keys) == 0 {
+		log.Debug(ctx, "record not found in redis",
+			log.String("matchPattern", matchPattern))
+		return nil, nil
 	}
 
 	result, err := redisClient.MGet(keys...).Result()
