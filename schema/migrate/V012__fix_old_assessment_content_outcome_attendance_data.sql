@@ -1,4 +1,38 @@
 /* remove duplicate outcome attendance records */
+create temporary table `temp_deleting_outcomes_attendances`(
+  select
+    id
+  from
+    `outcomes_attendances`
+  where
+    (`assessment_id`, `outcome_id`, `attendance_id`) in (
+      select
+        `assessment_id`,
+        `outcome_id`,
+        `attendance_id`
+      from
+        outcomes_attendances
+      group by
+        `assessment_id`,
+        `outcome_id`,
+        `attendance_id`
+      having
+        count(*) > 1
+    )
+    and id not in (
+      select
+        min(id)
+      from
+        outcomes_attendances
+      group by
+        `assessment_id`,
+        `outcome_id`,
+        `attendance_id`
+      having
+        count(*) > 1
+    )
+);
+
 delete from
   `outcomes_attendances`
 where
@@ -6,35 +40,10 @@ where
     select
       id
     from
-      `outcomes_attendances`
-    where
-      (`assessment_id`, `outcome_id`, `attendance_id`) in (
-        select
-          `assessment_id`,
-          `outcome_id`,
-          `attendance_id`
-        from
-          outcomes_attendances
-        group by
-          `assessment_id`,
-          `outcome_id`,
-          `attendance_id`
-        having
-          count(*) > 1
-      )
-      and id not in (
-        select
-          min(id)
-        from
-          outcomes_attendances
-        group by
-          `assessment_id`,
-          `outcome_id`,
-          `attendance_id`
-        having
-          count(*) > 1
-      )
+      temp_deleting_outcomes_attendances
   );
+
+drop table `temp_deleting_outcomes_attendances`;
 
 /* migrate outcomes_attendances data to contents_outcomes_attendances */
 insert into

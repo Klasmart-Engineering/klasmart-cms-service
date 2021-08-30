@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -1345,11 +1346,12 @@ func (l *learningSummaryReportModel) batchGetAssessmentOutcomeStatus(ctx context
 		)
 		return nil, err
 	}
-	assessmentOutcomeAttendMap := make(map[entity.AssessmentOutcomeKey]bool, len(keys))
+	assessmentOutcomeAttendMap := make(map[entity.AssessmentOutcomeAttendanceKey]bool, len(keys))
 	for _, a := range assessmentOutcomeAttendances {
-		assessmentOutcomeAttendMap[entity.AssessmentOutcomeKey{
+		assessmentOutcomeAttendMap[entity.AssessmentOutcomeAttendanceKey{
 			AssessmentID: a.AssessmentID,
 			OutcomeID:    a.OutcomeID,
+			AttendanceID: a.AttendanceID,
 		}] = true
 	}
 
@@ -1370,25 +1372,31 @@ func (l *learningSummaryReportModel) batchGetAssessmentOutcomeStatus(ctx context
 		)
 		return nil, err
 	}
-	assessmentContentOutcomeAttendMap := map[entity.AssessmentOutcomeKey]bool{}
+	assessmentContentOutcomeAttendMap := map[entity.AssessmentOutcomeAttendanceKey]bool{}
 	for _, item := range assessmentContentOutcomeAttendances {
-		assessmentContentOutcomeAttendMap[entity.AssessmentOutcomeKey{
+		assessmentContentOutcomeAttendMap[entity.AssessmentOutcomeAttendanceKey{
 			AssessmentID: item.AssessmentID,
 			OutcomeID:    item.OutcomeID,
+			AttendanceID: item.AttendanceID,
 		}] = true
 	}
 
 	// construct partial status map
-	assessmentOutcomePartiallyAttendMap := make(map[entity.AssessmentOutcomeKey]bool, len(keys))
+	assessmentOutcomePartiallyAttendMap := make(map[entity.AssessmentOutcomeAttendanceKey]bool, len(keys))
 	for _, key := range keys {
 		if key == nil {
 			continue
 		}
-		if assessmentOutcomeAttendMap[*key] {
+		withAttendanceKey := entity.AssessmentOutcomeAttendanceKey{
+			AssessmentID: key.AssessmentID,
+			OutcomeID:    key.OutcomeID,
+			AttendanceID: attendanceID,
+		}
+		if assessmentOutcomeAttendMap[withAttendanceKey] {
 			continue
 		}
-		if assessmentContentOutcomeAttendMap[*key] {
-			assessmentOutcomePartiallyAttendMap[*key] = true
+		if assessmentContentOutcomeAttendMap[withAttendanceKey] {
+			assessmentOutcomePartiallyAttendMap[withAttendanceKey] = true
 		}
 	}
 
@@ -1398,6 +1406,11 @@ func (l *learningSummaryReportModel) batchGetAssessmentOutcomeStatus(ctx context
 		if key == nil {
 			continue
 		}
+		withAttendanceKey := entity.AssessmentOutcomeAttendanceKey{
+			AssessmentID: key.AssessmentID,
+			OutcomeID:    key.OutcomeID,
+			AttendanceID: attendanceID,
+		}
 		ao := assessmentOutcomesMap[*key]
 		if ao == nil {
 			continue
@@ -1406,9 +1419,9 @@ func (l *learningSummaryReportModel) batchGetAssessmentOutcomeStatus(ctx context
 			continue
 		} else if ao.NoneAchieved {
 			result[*key] = entity.AssessmentOutcomeStatusNotAchieved
-		} else if assessmentOutcomeAttendMap[*key] {
+		} else if assessmentOutcomeAttendMap[withAttendanceKey] {
 			result[*key] = entity.AssessmentOutcomeStatusAchieved
-		} else if assessmentOutcomePartiallyAttendMap[*key] {
+		} else if assessmentOutcomePartiallyAttendMap[withAttendanceKey] {
 			result[*key] = entity.AssessmentOutcomeStatusPartially
 		} else {
 			result[*key] = entity.AssessmentOutcomeStatusNotAchieved
@@ -1416,9 +1429,12 @@ func (l *learningSummaryReportModel) batchGetAssessmentOutcomeStatus(ctx context
 	}
 
 	log.Debug(ctx, "batch get assessment outcome status: print args",
-		log.Any("result", result),
+		log.String("result", fmt.Sprintf("%+v", result)),
 		log.String("attendance_id", attendanceID),
 		log.Any("keys", keys),
+		log.Any("assessment_outcomes", assessmentOutcomes),
+		log.Any("assessment_outcome_attendances", assessmentOutcomeAttendances),
+		log.Any("assessment_content_outcome_attendances", assessmentContentOutcomeAttendances),
 	)
 
 	return result, nil

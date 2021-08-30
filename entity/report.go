@@ -120,6 +120,12 @@ type NullAssessmentOutcomeKeys struct {
 	Valid bool
 }
 
+type AssessmentOutcomeAttendanceKey struct {
+	AssessmentID string `json:"assessment_id"`
+	OutcomeID    string `json:"outcome_id"`
+	AttendanceID string `json:"attendance_id"`
+}
+
 type SortingStudentReportItems struct {
 	Items  []*StudentAchievementReportItem
 	Status ReportOutcomeStatusOption
