@@ -69,7 +69,7 @@ from
       outcomes_attendances.attendance_id
     from
       outcomes_attendances
-      right join assessments_contents_outcomes on outcomes_attendances.assessment_id = assessments_contents_outcomes.assessment_id
+      inner join assessments_contents_outcomes on outcomes_attendances.assessment_id = assessments_contents_outcomes.assessment_id
       and outcomes_attendances.outcome_id = assessments_contents_outcomes.outcome_id
       inner join assessments_outcomes on outcomes_attendances.assessment_id = assessments_outcomes.assessment_id
       and outcomes_attendances.outcome_id = assessments_outcomes.outcome_id
