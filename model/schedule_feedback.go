@@ -4,14 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"sync"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
-	"time"
 )
 
 var (
@@ -241,6 +242,13 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 	if err != nil {
 		log.Warn(ctx, "clean schedule cache error", log.String("orgID", op.OrgID), log.Err(err))
 	}
+
+	go func(ctx context.Context) {
+		for _, v := range input.Assignments {
+			removeResourceMetadata(ctx, v.AttachmentID)
+		}
+	}(ctx)
+
 	return id.(string), nil
 }
 

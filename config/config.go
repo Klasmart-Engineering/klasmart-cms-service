@@ -46,6 +46,7 @@ type Config struct {
 	KidsloopCNLoginConfig KidsloopCNLoginConfig `json:"kidsloop_cn" yaml:"kidsloop_cn"`
 	CORS                  CORSConfig            `json:"cors" yaml:"cors"`
 	ShowInternalErrorType bool                  `json:"show_internal_error_type"`
+	User                  UserConfig            `json:"user" yaml:"user"`
 }
 
 var config *Config
@@ -148,6 +149,10 @@ type TencentSmsConfig struct {
 	OTPPeriod        string `json:"otp_period" yaml:"otp_period"`
 }
 
+type UserConfig struct {
+	CacheExpiration time.Duration `json:"cache_expiration" yaml:"cache_expiration"`
+}
+
 func assertGetEnv(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
@@ -172,6 +177,7 @@ func LoadEnvConfig() {
 	loadAssessmentConfig(ctx)
 	loadCORSConfig(ctx)
 	loadShowInternalErrorTypeConfig(ctx)
+	loadUserConfig(ctx)
 }
 
 func loadShowInternalErrorTypeConfig(ctx context.Context) {
@@ -433,6 +439,15 @@ func loadH5PServiceConfig(ctx context.Context) {
 
 func loadCORSConfig(ctx context.Context) {
 	config.CORS.AllowOrigins = strings.Split(os.Getenv("cors_domain_list"), ",")
+}
+
+func loadUserConfig(ctx context.Context) {
+	cacheExpiration, err := time.ParseDuration(os.Getenv("user_cache_expiration"))
+	if err != nil {
+		config.User.CacheExpiration = 4 * time.Hour
+	} else {
+		config.User.CacheExpiration = cacheExpiration
+	}
 }
 
 func Get() *Config {

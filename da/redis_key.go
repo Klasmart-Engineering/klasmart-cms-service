@@ -29,6 +29,9 @@ const (
 
 	RedisKeyPrefixMilestoneMute        = "milestone:lock"
 	RedisKeyPrefixGeneralMilestoneMute = "milestone:general:lock"
+
+	RedisKeyPrefixUser     = "user"
+	RedisKeyPrefixUserMute = "user:lock"
 )
 
 const (

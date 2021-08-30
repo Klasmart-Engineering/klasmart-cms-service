@@ -849,7 +849,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 		log.Warn(ctx, "clean schedule cache error", log.String("orgID", op.OrgID), log.Err(err))
 	}
 
-	s.removeResourceMetadata(ctx, viewData.Attachment.ID)
+	go removeResourceMetadata(ctx, viewData.Attachment.ID)
 
 	return id.(string), nil
 }
@@ -1093,7 +1093,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		log.Warn(ctx, "clean schedule cache error", log.String("orgID", operator.OrgID), log.Err(err))
 	}
 
-	s.removeResourceMetadata(ctx, viewData.Attachment.ID)
+	go removeResourceMetadata(ctx, viewData.Attachment.ID)
 	return id, nil
 }
 
@@ -3319,7 +3319,11 @@ func (s *scheduleModel) QueryUnsafe(ctx context.Context, condition *entity.Sched
 	return scheduleList, nil
 }
 
-func (s *scheduleModel) removeResourceMetadata(ctx context.Context, resourceID string) error {
+func removeResourceMetadata(ctx context.Context, resourceID string) error {
+	if resourceID == "" {
+		return nil
+	}
+
 	var err error
 	log.Debug(ctx, "start removeFileMetadata", log.String("resourceID", resourceID))
 	defer log.Debug(ctx, "finish removeFileMetadata", log.String("resourceID", resourceID), log.Err(err))

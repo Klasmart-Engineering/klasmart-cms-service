@@ -628,7 +628,9 @@ func (cm *ContentModel) AddAuthedContentIfFolderAlreadyShared(ctx context.Contex
 		log.Error(ctx, "AddAuthedContentIfFolderAlreadyShared can't find content", log.Err(err), log.Strings("content_ids", contentIDs))
 		return err
 	}
+
 	contentAncestorDirs := make(map[string]map[string]bool)
+	allParentIDs := make([]string, 0)
 	allContentsAncestorDir := make([]string, 0)
 	for i := range contents {
 		if contents[i].ContentType == entity.ContentTypeMaterial || contents[i].ContentType == entity.ContentTypePlan {
@@ -639,6 +641,10 @@ func (cm *ContentModel) AddAuthedContentIfFolderAlreadyShared(ctx context.Contex
 			}
 			contentAncestorDirs[contents[i].ID] = ancestorDirs
 			allContentsAncestorDir = append(allContentsAncestorDir, fids...)
+
+			if len(fids) > 0 && fids[len(fids)-1] != constant.FolderRootPath && fids[len(fids)-1] != "" {
+				allParentIDs = append(allParentIDs, fids[len(fids)-1])
+			}
 		}
 	}
 	folderSharedRecords, err := GetFolderModel().GetFoldersSharedRecords(ctx, allContentsAncestorDir, operator)
@@ -668,6 +674,15 @@ func (cm *ContentModel) AddAuthedContentIfFolderAlreadyShared(ctx context.Contex
 		log.Error(ctx, "AddAuthedContentIfFolderAlreadyShared batchAddByOrgIDs failed",
 			log.Err(err),
 			log.Any("batchAddRequest", batchAddRequest),
+			log.Any("contents", contents))
+		return err
+	}
+
+	err = GetFolderModel().BatchUpdateFolderItemCount(ctx, tx, allParentIDs)
+	if err != nil {
+		log.Error(ctx, "AddAuthedContentIfFolderAlreadyShared BatchUpdateFolderItemCount failed",
+			log.Err(err),
+			log.Any("parents", allParentIDs),
 			log.Any("contents", contents))
 		return err
 	}

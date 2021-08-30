@@ -492,10 +492,10 @@ func NewSearchPublishedOutcomeResponse(ctx context.Context, op *entity.Operator,
 			AgeIDs:         v.Ages,
 		}
 
-		for i := range v.Sets {
-			list[i].Sets[i] = &OutcomeSetCreateView{
-				SetID:   v.Sets[i].ID,
-				SetName: v.Sets[i].Name,
+		for j := range v.Sets {
+			list[i].Sets[j] = &OutcomeSetCreateView{
+				SetID:   v.Sets[j].ID,
+				SetName: v.Sets[j].Name,
 			}
 		}
 	}

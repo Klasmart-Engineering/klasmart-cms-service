@@ -144,36 +144,19 @@ func (s *schedulePermissionModel) getClassesWithoutSchool(ctx context.Context, o
 }
 
 func (s *schedulePermissionModel) GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Operator) ([]*external.User, error) {
-	userInfos, err := external.GetUserServiceProvider().GetByOrganization(ctx, op, op.OrgID)
+	users, err := da.GetUserRedisDA().GetUsersByOrg(ctx, op.OrgID)
+	if err == nil && len(users) > 0 {
+		return s.getOnlyUnderOrgUsers(users)
+	}
+
+	users, err = s.getUsersByOrg(ctx, op)
 	if err != nil {
-		log.Error(ctx, "GetUserServiceProvider.GetByOrganization error", log.Any("op", op))
-		return nil, err
+		log.Error(ctx, "s.getUsersByOrg error",
+			log.Any("op", op),
+			log.Err(err))
 	}
-	userIDs := make([]string, len(userInfos))
-	for i, item := range userInfos {
-		userIDs[i] = item.ID
-	}
-	userSchoolMap, err := external.GetSchoolServiceProvider().GetByUsers(ctx, op, op.OrgID, userIDs)
-	if err != nil {
-		log.Error(ctx, "GetSchoolServiceProvider.GetByUsers error", log.Any("op", op), log.Strings("userIDs", userIDs))
-		return nil, err
-	}
-	userClassMap, err := external.GetClassServiceProvider().GetByUserIDs(ctx, op, userIDs)
-	if err != nil {
-		log.Error(ctx, "GetClassServiceProvider.GetByUserIDs error", log.Any("op", op), log.Strings("userIDs", userIDs))
-		return nil, err
-	}
-	result := make([]*external.User, 0)
-	for _, item := range userInfos {
-		if len(userSchoolMap[item.ID]) > 0 {
-			continue
-		}
-		if len(userClassMap[item.ID]) > 0 {
-			continue
-		}
-		result = append(result, item)
-	}
-	return result, nil
+
+	return s.getOnlyUnderOrgUsers(users)
 }
 
 func (s *schedulePermissionModel) GetOnlyUnderOrgClasses(ctx context.Context, op *entity.Operator, permissionMap map[external.PermissionName]bool) ([]*entity.ScheduleFilterClass, error) {
@@ -722,6 +705,64 @@ func (s *schedulePermissionModel) HasScheduleOrgPermissions(ctx context.Context,
 		log.Any("permissionMap", permissionMap),
 	)
 	return permissionMap, nil
+}
+
+func (s *schedulePermissionModel) getUsersByOrg(ctx context.Context, op *entity.Operator) ([]*da.User, error) {
+	userInfos, err := external.GetUserServiceProvider().GetByOrganization(ctx, op, op.OrgID)
+	if err != nil {
+		log.Error(ctx, "GetUserServiceProvider.GetByOrganization error",
+			log.Any("op", op),
+			log.Err(err))
+		return nil, err
+	}
+
+	userIDs := make([]string, len(userInfos))
+	for i, item := range userInfos {
+		userIDs[i] = item.ID
+	}
+
+	userSchoolMap, err := external.GetSchoolServiceProvider().GetByUsers(ctx, op, op.OrgID, userIDs)
+	if err != nil {
+		log.Error(ctx, "GetSchoolServiceProvider.GetByUsers error",
+			log.Any("op", op),
+			log.Strings("userIDs", userIDs),
+			log.Err(err))
+		return nil, err
+	}
+
+	userClassMap, err := external.GetClassServiceProvider().GetByUserIDs(ctx, op, userIDs)
+	if err != nil {
+		log.Error(ctx, "GetClassServiceProvider.GetByUserIDs error",
+			log.Any("op", op),
+			log.Strings("userIDs", userIDs),
+			log.Err(err))
+		return nil, err
+	}
+
+	users := make([]*da.User, len(userInfos))
+	for i, item := range userInfos {
+		users[i] = &da.User{
+			User:    *item,
+			Schools: userSchoolMap[item.ID],
+			Classes: userClassMap[item.ID],
+		}
+	}
+
+	go da.GetUserRedisDA().SetUsers(ctx, op.OrgID, users)
+
+	return users, nil
+}
+
+func (s *schedulePermissionModel) getOnlyUnderOrgUsers(users []*da.User) ([]*external.User, error) {
+	result := make([]*external.User, 0)
+	for _, user := range users {
+		if len(user.Schools) > 0 || len(user.Classes) > 0 {
+			continue
+		}
+		result = append(result, &user.User)
+	}
+
+	return result, nil
 }
 
 var (

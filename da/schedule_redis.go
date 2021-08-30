@@ -102,6 +102,12 @@ func (r *ScheduleRedisDA) Set(ctx context.Context, orgID string, condition *Sche
 		return err
 	}
 
+	log.Debug(ctx, "HSet in redis",
+		log.String("key", key),
+		log.String("field", field),
+		log.Any("exist", exist),
+		log.Duration("expiration", r.expiration))
+
 	// key not exist
 	if exist.Val() == int64(0) {
 		err = redisClient.Expire(key, r.expiration).Err()
@@ -307,6 +313,10 @@ func (r *ScheduleRedisDA) get(ctx context.Context, orgID string, condition *Sche
 	}
 
 	key := r.getScheduleConditionKey(orgID)
-	filed := r.getScheduleConditionField(condition)
-	return ro.MustGetRedis(ctx).HGet(key, filed).Result()
+	field := r.getScheduleConditionField(condition)
+	log.Debug(ctx, "HGet in redis",
+		log.String("key", key),
+		log.String("field", field))
+
+	return ro.MustGetRedis(ctx).HGet(key, field).Result()
 }
