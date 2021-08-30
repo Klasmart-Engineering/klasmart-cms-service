@@ -1067,6 +1067,13 @@ func (ocm OutcomeModel) SearchPublished(ctx context.Context, op *entity.Operator
 		return 0, nil, err
 	}
 
+	if err = ocm.fillOutcomeSets(ctx, outcomes); err != nil {
+		log.Error(ctx, "SearchPublished: ocm.fillOutcomeSets failed",
+			log.Any("outcomes", outcomes),
+			log.Err(err))
+		return 0, nil, err
+	}
+
 	return total, outcomes, err
 }
 
@@ -1997,6 +2004,29 @@ func (ocm OutcomeModel) fillOutcomeRelation(ctx context.Context, outcomes []*ent
 			case entity.AgeType:
 				v.Ages = append(v.Ages, r.RelationID)
 			}
+		}
+	}
+
+	return nil
+}
+
+func (ocm OutcomeModel) fillOutcomeSets(ctx context.Context, outcomes []*entity.Outcome) error {
+	outcomeIDs := make([]string, len(outcomes))
+	for i, v := range outcomes {
+		outcomeIDs[i] = v.ID
+	}
+
+	if len(outcomeIDs) > 0 {
+		outcomeSets, err := da.GetOutcomeSetDA().SearchSetsByOutcome(ctx, dbo.MustGetDB(ctx), outcomeIDs)
+		if err != nil {
+			log.Error(ctx, "da.GetOutcomeSetDA().SearchSetsByOutcome error",
+				log.Err(err),
+				log.Strings("outcomeIDs", outcomeIDs))
+			return err
+		}
+
+		for i := range outcomes {
+			outcomes[i].Sets = outcomeSets[outcomes[i].ID]
 		}
 	}
 
