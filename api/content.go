@@ -545,6 +545,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 		return
 	}
 
+	log.Debug(ctx, "blt-router-enter")
 	err = model.GetContentModel().DeleteContentTx(ctx, cid, op)
 
 	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
