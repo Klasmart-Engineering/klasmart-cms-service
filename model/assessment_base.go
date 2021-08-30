@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"sort"
 	"strings"
 	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -160,6 +161,19 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 		for _, item := range outcomeAttendances {
 			outcomeAttendanceIDsMap[item.OutcomeID] = append(outcomeAttendanceIDsMap[item.OutcomeID], item.AttendanceID)
 		}
+
+		// batch get outcome content types map
+		outcomeContentTypesMap, err := m.batchGetOutcomeContentTypesMap(ctx, tx, id, outcomeIDs)
+		if err != nil {
+			log.Error(ctx, "get assessment detail: batch get outcome content types map",
+				log.Err(err),
+				log.Strings("outcome_ids", outcomeIDs),
+				log.String("assessment_id", id),
+				log.Any("operator", operator),
+			)
+			return nil, err
+		}
+
 		for _, o := range outcomes {
 			newOutcome := entity.AssessmentDetailOutcome{
 				OutcomeID:     o.ID,
@@ -169,6 +183,7 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 				NoneAchieved:  assessmentOutcomeMap[o.ID].NoneAchieved,
 				AttendanceIDs: utils.SliceDeduplicationExcludeEmpty(outcomeAttendanceIDsMap[o.ID]),
 				Checked:       assessmentOutcomeMap[o.ID].Checked,
+				AssignedTo:    outcomeContentTypesMap[o.ID],
 			}
 			if newOutcome.NoneAchieved || newOutcome.Skip {
 				newOutcome.AttendanceIDs = nil
@@ -1312,17 +1327,6 @@ func (m *assessmentBase) update(ctx context.Context, tx *dbo.DBContext, operator
 			}
 		}
 
-		// update assessment content outcomes
-		if args.ContentOutcomes != nil {
-			if err := m.updateAssessmentContentOutcomeAttendances(ctx, tx, operator, args.ID, args.ContentOutcomes); err != nil {
-				log.Error(ctx, "update assessment: update assessment content outcome attendances failed",
-					log.Err(err),
-					log.Any("args", args),
-				)
-				return err
-			}
-		}
-
 		// update assessment contents
 		for _, ma := range args.LessonMaterials {
 			updateArgs := da.UpdatePartialAssessmentContentArgs{
@@ -1387,24 +1391,25 @@ func (m *assessmentBase) update(ctx context.Context, tx *dbo.DBContext, operator
 			}
 		}
 
-		// update assessment content outcome attendance
-		if err := m.updateAssessmentContentOutcomeAttendances(ctx, tx, operator, args.ID, args.ContentOutcomes); err != nil {
-			log.Error(ctx, "update assessment: update assessment content outcome attendances failed",
-				log.Err(err),
-				log.Any("args", args),
-				log.Any("operator", operator),
-			)
-			return err
-		}
-
-		// update assessment content outcome
-		if err := m.updateAssessmentContentOutcome(ctx, tx, args.ID, args.ContentOutcomes); err != nil {
-			log.Error(ctx, "update assessment: update assessment content outcome failed",
-				log.Err(err),
-				log.Any("args", args),
-				log.Any("operator", operator),
-			)
-			return err
+		if len(args.ContentOutcomes) > 0 {
+			// update assessment content outcome attendance
+			if err := m.updateAssessmentContentOutcomeAttendances(ctx, tx, operator, args.ID, args.ContentOutcomes); err != nil {
+				log.Error(ctx, "update assessment: update assessment content outcome attendances failed",
+					log.Err(err),
+					log.Any("args", args),
+					log.Any("operator", operator),
+				)
+				return err
+			}
+			// update assessment content outcome
+			if err := m.updateAssessmentContentOutcome(ctx, tx, args.ID, args.ContentOutcomes); err != nil {
+				log.Error(ctx, "update assessment: update assessment content outcome failed",
+					log.Err(err),
+					log.Any("args", args),
+					log.Any("operator", operator),
+				)
+				return err
+			}
 		}
 
 		return nil
@@ -1421,6 +1426,11 @@ func (m *assessmentBase) update(ctx context.Context, tx *dbo.DBContext, operator
 }
 
 func (m *assessmentBase) updateAssessmentContentOutcomeAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, items []*entity.UpdateAssessmentContentOutcomeArgs) error {
+	log.Debug(ctx, "update assessment content outcome attendances",
+		log.Any("assessment_id", assessmentID),
+		log.Any("items", items),
+	)
+
 	// clean all related
 	var deletingKeys []*da.DeleteAssessmentContentOutcomeAttendanceKey
 	for _, item := range items {
@@ -1467,6 +1477,11 @@ func (m *assessmentBase) updateAssessmentContentOutcomeAttendances(ctx context.C
 }
 
 func (m *assessmentBase) updateAssessmentContentOutcome(ctx context.Context, tx *dbo.DBContext, assessmentID string, items []*entity.UpdateAssessmentContentOutcomeArgs) error {
+	log.Debug(ctx, "update assessment assessment content outcome: print args",
+		log.String("assessment_id", assessmentID),
+		log.Any("items", items),
+	)
+
 	updatingItems := make([]*entity.AssessmentContentOutcome, 0, len(items))
 	for _, item := range items {
 		updatingItems = append(updatingItems, &entity.AssessmentContentOutcome{
@@ -1707,6 +1722,90 @@ func (m *assessmentBase) queryUnifiedAssessments(ctx context.Context, tx *dbo.DB
 			UpdateAt:     a.UpdateAt,
 			DeleteAt:     a.DeleteAt,
 		})
+	}
+
+	return result, nil
+}
+
+func (m *assessmentBase) batchGetOutcomeContentTypesMap(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) (map[string][]entity.AssessmentContentType, error) {
+	if len(outcomeIDs) == 0 {
+		log.Debug(ctx, "batch get outcome content map: empty content ids", log.String("assessment_id", assessmentID))
+		return nil, nil
+	}
+
+	// query content outcome map
+	queryAssessmentContentOutcomeCond := da.QueryAssessmentContentOutcomeConditions{
+		AssessmentIDs: entity.NullStrings{
+			Strings: []string{assessmentID},
+			Valid:   true,
+		},
+		OutocmeIDs: entity.NullStrings{
+			Strings: outcomeIDs,
+			Valid:   true,
+		},
+	}
+	var assessmentContentOutcomes []*entity.AssessmentContentOutcome
+	if err := da.GetAssessmentContentOutcomeDA().Query(ctx, &queryAssessmentContentOutcomeCond, &assessmentContentOutcomes); err != nil {
+		log.Error(ctx, "batch get outcome content map: query assessment content outcomes failed",
+			log.Any("cond", queryAssessmentContentOutcomeCond),
+			log.String("assessment_id", assessmentID),
+			log.Strings("outcome_ids", outcomeIDs),
+		)
+		return nil, err
+	}
+	outcomeContentsMap := map[string][]string{}
+	for _, item := range assessmentContentOutcomes {
+		outcomeContentsMap[item.OutcomeID] = append(outcomeContentsMap[item.OutcomeID], item.ContentID)
+	}
+
+	// query content map
+	contentIDs := make([]string, 0, len(assessmentContentOutcomes))
+	for _, item := range assessmentContentOutcomes {
+		contentIDs = append(contentIDs, item.ContentID)
+	}
+	contentIDs = utils.SliceDeduplicationExcludeEmpty(contentIDs)
+	contents, err := GetContentModel().GetRawContentByIDList(ctx, tx, contentIDs)
+	if err != nil {
+		log.Error(ctx, "batch get outcome content map: get raw content by id list",
+			log.Any("content_ids", contentIDs),
+			log.String("assessment_id", assessmentID),
+			log.Strings("outcome_ids", outcomeIDs),
+		)
+		return nil, err
+	}
+	contentMap := make(map[string]*entity.Content, len(contents))
+	for _, c := range contents {
+		contentMap[c.ID] = c
+	}
+
+	// assembly result
+	result := map[string][]entity.AssessmentContentType{}
+	for outcomeID, contentIDs := range outcomeContentsMap {
+		for _, contentID := range contentIDs {
+			c := contentMap[contentID]
+			if c == nil {
+				continue
+			}
+			switch c.ContentType {
+			case entity.ContentTypePlan:
+				result[outcomeID] = append(result[outcomeID], entity.AssessmentContentTypeLessonPlan)
+			case entity.ContentTypeMaterial:
+				result[outcomeID] = append(result[outcomeID], entity.AssessmentContentTypeLessonMaterial)
+			}
+		}
+		// remove repeat
+		if len(result[outcomeID]) > 1 {
+			finalContentTypes := make([]entity.AssessmentContentType, 0, 2)
+			exsitsContentType := make(map[entity.AssessmentContentType]bool, 2)
+			for _, contentType := range result[outcomeID] {
+				if exsitsContentType[contentType] {
+					continue
+				}
+				finalContentTypes = append(finalContentTypes, contentType)
+				exsitsContentType[contentType] = true
+			}
+			result[outcomeID] = finalContentTypes
+		}
 	}
 
 	return result, nil
