@@ -222,6 +222,10 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 		if err != nil && err == ErrResourceNotFound {
 			content.DirPath = constant.FolderRootPath
 		}
+		if err != nil && err != ErrResourceNotFound {
+			log.Error(ctx, "doPublishContent: check parent failed", log.Err(err), log.Any("content", content), log.String("uid", user.UserID))
+			return err
+		}
 	}
 
 	err = da.GetContentDA().UpdateContent(ctx, tx, content.ID, *content)
