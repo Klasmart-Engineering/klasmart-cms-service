@@ -217,6 +217,17 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 		return err
 	}
 
+	if content.DirPath.Parent() != constant.FolderRootPath && content.DirPath.Parent() != "" {
+		_, err := GetFolderModel().GetFolderByIDTx(ctx, tx, content.DirPath.Parent(), user)
+		if err != nil && err == ErrResourceNotFound {
+			content.DirPath = constant.FolderRootPath
+		}
+		if err != nil && err != ErrResourceNotFound {
+			log.Error(ctx, "doPublishContent: check parent failed", log.Err(err), log.Any("content", content), log.String("uid", user.UserID))
+			return err
+		}
+	}
+
 	err = da.GetContentDA().UpdateContent(ctx, tx, content.ID, *content)
 	if err != nil {
 		log.Error(ctx, "update lesson plan failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
