@@ -79,6 +79,7 @@ type IFolderModel interface {
 	//获取Folder
 	//Get Folder
 	GetFolderByID(ctx context.Context, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error)
+	GetFolderByIDTx(ctx context.Context, tx *dbo.DBContext, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error)
 
 	//Share folder
 	ShareFolders(ctx context.Context, req entity.ShareFoldersRequest, operator *entity.Operator) error
@@ -738,8 +739,13 @@ func (f *FolderModel) MustGetPath(ctx context.Context, tx *dbo.DBContext, ownerT
 	return folders[0].ChildrenPath().AsParentPath(), nil
 }
 
-func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error) {
-	folderItem, err := da.GetFolderDA().GetFolderByID(ctx, dbo.MustGetDB(ctx), folderID)
+func (f *FolderModel) GetFolderByIDTx(ctx context.Context, tx *dbo.DBContext, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error) {
+	folderItem, err := da.GetFolderDA().GetFolderByID(ctx, tx, folderID)
+
+	if err == dbo.ErrRecordNotFound {
+		return nil, ErrResourceNotFound
+	}
+
 	if err != nil {
 		log.Error(ctx, "get folder by id failed", log.Err(err), log.String("folderID", folderID))
 		return nil, ErrNoFolder
@@ -796,6 +802,10 @@ func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operat
 		result.Items = folderItems
 	}
 	return result, nil
+}
+
+func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error) {
+	return f.GetFolderByIDTx(ctx, dbo.MustGetDB(ctx), folderID, operator)
 }
 
 func (f *FolderModel) checkMoveFolder(ctx context.Context, folder *entity.FolderItem, distFolder *entity.FolderItem) error {
