@@ -314,9 +314,9 @@ func (s Server) registeRoute() {
 		organizationPermissions.POST("", s.mustLogin, s.hasOrganizationPermissions)
 	}
 
-	statistics := s.engine.Group("/v1/statistics")
+	studentUsageReport := s.engine.Group("/v1/student_usage_record")
 	{
-		statistics.POST("/student_usage_record", s.mustLogin, s.studentUsageRecord)
+		studentUsageReport.POST("/event", s.mustLogin, s.studentUsageRecordEvent)
 	}
 }
 
