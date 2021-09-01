@@ -313,6 +313,11 @@ func (s Server) registeRoute() {
 	{
 		organizationPermissions.POST("", s.mustLogin, s.hasOrganizationPermissions)
 	}
+
+	statistics := s.engine.Group("/v1/statistics")
+	{
+		statistics.POST("/student_usage_record", s.mustLogin, s.studentUsageRecord)
+	}
 }
 
 // Ping godoc
