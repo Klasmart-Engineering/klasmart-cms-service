@@ -3,6 +3,11 @@ package model
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"sort"
+	"sync"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -10,9 +15,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sort"
-	"sync"
-	"time"
 )
 
 type ILearningSummaryReportModel interface {
@@ -1259,9 +1261,17 @@ func (l *learningSummaryReportModel) assemblyAssignmentsSummaryResult(
 			}
 			if outcomes := assessmentIDToOutcomesMap[assessment.ID]; len(outcomes) > 0 {
 				for _, o := range outcomes {
+					status, ok := outcomeStatusMap[entity.AssessmentOutcomeKey{
+						AssessmentID: assessment.ID,
+						OutcomeID:    o.ID,
+					}]
+					if !ok {
+						continue
+					}
 					item.Outcomes = append(item.Outcomes, &entity.LearningSummaryOutcome{
-						ID:   o.ID,
-						Name: o.Name,
+						ID:     o.ID,
+						Name:   o.Name,
+						Status: status,
 					})
 				}
 			}
@@ -1420,14 +1430,14 @@ func (l *learningSummaryReportModel) batchGetAssessmentOutcomeStatus(ctx context
 		if key == nil {
 			continue
 		}
+		ao := assessmentOutcomesMap[*key]
+		if ao == nil {
+			continue
+		}
 		withAttendanceKey := entity.AssessmentOutcomeAttendanceKey{
 			AssessmentID: key.AssessmentID,
 			OutcomeID:    key.OutcomeID,
 			AttendanceID: attendanceID,
-		}
-		ao := assessmentOutcomesMap[*key]
-		if ao == nil {
-			continue
 		}
 		if ao.Skip {
 			continue
@@ -1445,7 +1455,7 @@ func (l *learningSummaryReportModel) batchGetAssessmentOutcomeStatus(ctx context
 	log.Debug(ctx, "batch get assessment outcome status: print args",
 		log.String("attendance_id", attendanceID),
 		log.Any("keys", keys),
-		log.Any("result", result),
+		log.String("result", fmt.Sprintf("%+v", result)),
 		log.Any("assessment_outcomes", assessmentOutcomes),
 		log.Any("assessment_outcome_attendances", assessmentOutcomeAttendances),
 		log.Any("assessment_content_outcome_attendances", assessmentContentOutcomeAttendances),
