@@ -21,7 +21,7 @@ const operatorID = "150de04b-6777-4cab-a381-5f36a9b750ef"
 func TestContentModel_CreateContent(t *testing.T) {
 	ctx := context.Background()
 	req := entity.CreateContentRequest{
-		ContentType: entity.ContentTypeMaterial, // ContentType
+		ContentType: entity.ContentTypeAssets, // ContentType
 		//SourceType:  //string      `json:"source_type"`
 		Name:        "test",                                           //string      `json:"name"`
 		Program:     "7565ae11-8130-4b7d-ac24-1d9dd6f792f2",           //string      `json:"program"`
