@@ -58,6 +58,7 @@ func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *db
 	fixedZone := time.FixedZone("time_filter", args.TimeOffset)
 	var result []*entity.LearningSummaryFilterYear
 
+	now := time.Now()
 	m := make(map[int][][2]int64)
 	switch args.SummaryType {
 	case entity.LearningSummaryTypeLiveClass:
@@ -74,6 +75,9 @@ func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *db
 			return nil, err
 		}
 		for _, s := range schedules {
+			if time.Unix(s.StartAt, 0).After(now) {
+				continue
+			}
 			year := time.Unix(s.StartAt, 0).Year()
 			weekStart, weekEnd := utils.FindWeekTimeRangeFromMonday(s.StartAt, fixedZone)
 			m[year] = append(m[year], [2]int64{weekStart, weekEnd})
@@ -122,6 +126,9 @@ func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *db
 			return nil, err
 		}
 		for _, a := range assessments {
+			if time.Unix(a.CompleteTime, 0).After(now) {
+				continue
+			}
 			year := time.Unix(a.CompleteTime, 0).Year()
 			weekStart, weekEnd := utils.FindWeekTimeRangeFromMonday(a.CompleteTime, fixedZone)
 			m[year] = append(m[year], [2]int64{weekStart, weekEnd})
