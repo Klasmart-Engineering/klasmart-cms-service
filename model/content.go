@@ -489,7 +489,10 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 		return "", err
 	}
 
-	if obj.ContentType.IsAsset() && obj.DirPath.Parent() != constant.FolderRootPath && obj.DirPath.Parent() != "" {
+	if obj.ContentType.IsAsset() &&
+		obj.PublishStatus == entity.NewContentPublishStatus(entity.ContentStatusPublished) &&
+		obj.DirPath.Parent() != constant.FolderRootPath &&
+		obj.DirPath.Parent() != "" {
 		err = GetFolderModel().BatchUpdateFolderItemCount(ctx, tx, []string{obj.DirPath.Parent()})
 		if err != nil {
 			log.Error(ctx, "CreateContent: BatchUpdateFolderItemCount failed",
