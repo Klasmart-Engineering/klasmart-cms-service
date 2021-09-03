@@ -131,6 +131,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Extra:         c.Extra,
 		LessonType:    c.LessonType,
 		DirPath:       path.ChildrenPath(),
+		ParentFolder:  path.ChildrenPath().Parent(),
 		SelfStudy:     c.SelfStudy.Int(),
 		DrawActivity:  c.DrawActivity.Int(),
 		Outcomes:      strings.Join(c.Outcomes, constant.StringArraySeparator),
@@ -299,6 +300,7 @@ func (cm *ContentModel) getContentPath(ctx context.Context, tx *dbo.DBContext, c
 			return err
 		}
 		content.DirPath = sourceContent.DirPath
+		content.ParentFolder = content.DirPath.Parent()
 		return nil
 	}
 
@@ -311,6 +313,7 @@ func (cm *ContentModel) getContentPath(ctx context.Context, tx *dbo.DBContext, c
 	//若路径不存在，则放到根目录
 	//if dir path is not exists, put it into root path
 	content.DirPath = entity.NewPath(contentPath)
+	content.ParentFolder = content.DirPath.Parent()
 	return nil
 }
 
