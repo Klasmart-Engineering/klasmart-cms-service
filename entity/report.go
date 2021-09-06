@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/dgrijalva/jwt-go"
-
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 )
 
@@ -439,77 +437,3 @@ const (
 	ListTeachingLoadReportOptionAll        ListTeachingLoadReportOption = "all"
 	ListTeachingLoadReportOptionNoAssigned ListTeachingLoadReportOption = "no_assigned"
 )
-
-type StudentUsageRecord struct {
-	ClassType         string    `json:"class_type"`
-	RoomID            string    `json:"room_id"`
-	LessonMaterialUrl string    `json:"lesson_material_url"`
-	ContentType       string    `json:"content_type" enums:"h5p, audio, video, image, document"`
-	ActionType        string    `json:"action_type" enums:"view"`
-	Timestamp         int64     `json:"timestamp"`
-	Students          []Student `json:"students"`
-}
-
-type Student struct {
-	UserID string `json:"user_id"`
-	Email  string `json:"email"`
-	Name   string `json:"name"`
-}
-type StudentUsageRecordInJwt struct {
-	StudentUsageRecord
-	*jwt.StandardClaims
-}
-type JwtToken struct {
-	Token string `json:"token"`
-}
-
-type StudentUsageMaterialReportRequest struct {
-	Page        int      `json:"page"`
-	PageSize    int      `json:"page_size"`
-	StartAt     int64    `json:"start_at"`
-	EndAt       int64    `json:"end_at"`
-	ClassIDList []string `json:"class_id_list"`
-}
-
-type StudentUsageMaterialReportResponse struct {
-	Request        StudentUsageMaterialReportRequest `json:"request"`
-	ClassUsageList []ClassUsage                      `json:"class_usage_list"`
-}
-type ClassUsage struct {
-	ID               string         `json:"id"`
-	Name             string         `json:"name"`
-	ContentUsageList []ContentUsage `json:"content_usage_list"`
-}
-
-type ContentUsage struct {
-	Type  string `json:"type"`
-	Count int    `json:"count"`
-}
-
-type ClassesAssignmentCount struct {
-	Type  string `json:"type"`
-	Count int    `json:"count"`
-}
-type ClassesAssignmentsOverView []ClassesAssignmentCount
-
-type ClassesAssignmentsDurationRatio struct {
-	Key   string  `json:"key"`
-	Ratio float32 `json:"ratio"`
-}
-type ClassesAssignmentDetail struct {
-	ClassID        string                            `json:"class_id"`
-	Total          int                               `json:"total"`
-	DurationsRatio []ClassesAssignmentsDurationRatio `json:"durations_ratio"`
-}
-
-type ClassesAssignmentsUnattended struct {
-	StudentID string `json:"student_id"`
-	Schedule  struct {
-		ScheduleID   string `json:"schedule_id"`
-		ScheduleName string `json:"schedule_name"`
-		Type         string `json:"type"`
-	} `json:"schedule"`
-	Time int64 `json:"time"`
-}
-
-type ClassesAssignmentsUnattendedStudentsView []ClassesAssignmentsUnattended

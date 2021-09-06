@@ -31,7 +31,7 @@ func (s *Server) getClassesAssignmentsOverview(c *gin.Context) {
 // @Param page_size query integer false "page size"
 // @Param class_ids query []string false "class id list"
 // @Param durations query []string false "time durations, for example: [startTime1-endTime1, startTime2-endTime2]"
-// @Success 200 {object} entity.ClassesAssignmentDetail
+// @Success 200 {object} []entity.ClassesAssignmentDetailView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -49,7 +49,7 @@ func (s *Server) getClassesAssignments(c *gin.Context) {
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param durations query []string false "time durations, for example: [startTime1-endTime1, startTime2-endTime2]"
-// @Success 200 {object} entity.ClassesAssignmentsUnattendedStudentsView
+// @Success 200 {object} []entity.ClassesAssignmentsUnattendedStudentsView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse

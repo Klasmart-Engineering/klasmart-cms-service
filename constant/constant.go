@@ -19,6 +19,8 @@ const (
 	TableNameProgramGroup = "programs_groups"
 
 	TableNameOrganizationProperty = "organizations_properties"
+
+	TableNameStudentUsageRecord = "student_usage_records"
 )
 
 const (
