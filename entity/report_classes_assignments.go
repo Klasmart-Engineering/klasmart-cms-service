@@ -1,16 +1,16 @@
 package entity
 
-type ClassesAssignmentCount struct {
+type ClassesAssignmentOverView struct {
 	Type  string `json:"type"`
 	Count int    `json:"count"`
 }
-type ClassesAssignmentsOverView []ClassesAssignmentCount
 
 type ClassesAssignmentsDurationRatio struct {
 	Key   string  `json:"key"`
 	Ratio float32 `json:"ratio"`
 }
-type ClassesAssignmentDetailView struct {
+
+type ClassesAssignmentsView struct {
 	ClassID        string                            `json:"class_id"`
 	Total          int                               `json:"total"`
 	DurationsRatio []ClassesAssignmentsDurationRatio `json:"durations_ratio"`

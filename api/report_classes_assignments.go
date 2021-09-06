@@ -12,7 +12,7 @@ import (
 // @Produce json
 // @Param class_ids query []string false "class id list"
 // @Param durations query []string false "time durations, for example: [startTime1-endTime1, startTime2-endTime2]"
-// @Success 200 {object} entity.ClassesAssignmentsOverView
+// @Success 200 {object} []entity.ClassesAssignmentOverView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -31,7 +31,7 @@ func (s *Server) getClassesAssignmentsOverview(c *gin.Context) {
 // @Param page_size query integer false "page size"
 // @Param class_ids query []string false "class id list"
 // @Param durations query []string false "time durations, for example: [startTime1-endTime1, startTime2-endTime2]"
-// @Success 200 {object} []entity.ClassesAssignmentDetailView
+// @Success 200 {object} []entity.ClassesAssignmentsView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
