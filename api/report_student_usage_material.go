@@ -16,11 +16,11 @@ import (
 // @Param start_at query integer false "week start timestamp(unit: second)"
 // @Param end_at query integer false "week end timestamp(unit: second)"
 // @Param class_id_list query string false "class id list"
-// @Success 200 {object} entity.QueryAssignmentsSummaryResult
+// @Success 200 {object} entity.StudentUsageMaterialReportResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/student_usage/material [get]
 func (s *Server) getStudentUsageMaterialReport(c *gin.Context) {
-	_ = entity.StudentUsageReportRequest{}
+	_ = entity.StudentUsageMaterialReportRequest{}
 }

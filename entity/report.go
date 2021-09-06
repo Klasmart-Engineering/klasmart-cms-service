@@ -463,7 +463,7 @@ type JwtToken struct {
 	Token string `json:"token"`
 }
 
-type StudentUsageReportRequest struct {
+type StudentUsageMaterialReportRequest struct {
 	Page        int      `json:"page"`
 	PageSize    int      `json:"page_size"`
 	StartAt     int64    `json:"start_at"`
@@ -471,9 +471,9 @@ type StudentUsageReportRequest struct {
 	ClassIDList []string `json:"class_id_list"`
 }
 
-type StudentUsageReportResponse struct {
-	Request        StudentUsageReportRequest `json:"request"`
-	ClassUsageList []ClassUsage              `json:"class_usage_list"`
+type StudentUsageMaterialReportResponse struct {
+	Request        StudentUsageMaterialReportRequest `json:"request"`
+	ClassUsageList []ClassUsage                      `json:"class_usage_list"`
 }
 type ClassUsage struct {
 	ID               string         `json:"id"`
