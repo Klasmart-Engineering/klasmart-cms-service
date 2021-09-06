@@ -83,18 +83,19 @@ type StudentUsageMaterialReportResponse struct {
 }
 type ClassUsage struct {
 	ID               string         `json:"id"`
-	Name             string         `json:"name"`
 	ContentUsageList []ContentUsage `json:"content_usage_list"`
 }
 
 type ContentUsage struct {
-	Type  string `json:"type"`
-	Count int    `json:"count"`
+	TimeRange TimeRange `json:"time_range"`
+	Type      string    `json:"type"`
+	Count     int       `json:"count"`
 }
 
 type StudentUsageMaterialViewCountReportRequest struct {
-	ClassIDList     []string `json:"class_id_list"`
-	ContentTypeList []string `json:"content_type_list"`
+	TimeRangeList   []TimeRange `json:"time_range_list"`
+	ClassIDList     []string    `json:"class_id_list"`
+	ContentTypeList []string    `json:"content_type_list"`
 }
 
 type StudentUsageMaterialViewCountReportResponse struct {

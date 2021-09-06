@@ -29,6 +29,7 @@ func (s *Server) getStudentUsageMaterialReport(c *gin.Context) {
 // @ID getStudentUsageReport
 // @Accept json
 // @Produce json
+// @Param time_range_list query []string false "time range list"
 // @Param class_id_list query []string false "class id list"
 // @Param content_type_list query []string false "content type list"
 // @Success 200 {object} entity.StudentUsageMaterialViewCountReportResponse
@@ -37,5 +38,5 @@ func (s *Server) getStudentUsageMaterialReport(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/student_usage/material [get]
 func (s *Server) getStudentUsageMaterialViewCountReport(c *gin.Context) {
-	_ = entity.StudentUsageMaterialReportRequest{}
+	_ = entity.StudentUsageMaterialViewCountReportRequest{}
 }
