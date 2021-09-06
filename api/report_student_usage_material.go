@@ -31,7 +31,7 @@ func (s *Server) getStudentUsageMaterialReport(c *gin.Context) {
 // @Produce json
 // @Param class_id_list query []string false "class id list"
 // @Param content_type_list query []string false "content type list"
-// @Success 200 {object} entity.StudentUsageMaterialReportResponse
+// @Success 200 {object} entity.StudentUsageMaterialViewCountReportResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
