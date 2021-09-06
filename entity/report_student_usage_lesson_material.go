@@ -72,11 +72,9 @@ type JwtToken struct {
 }
 
 type StudentUsageMaterialReportRequest struct {
-	Page        int      `json:"page"`
-	PageSize    int      `json:"page_size"`
-	StartAt     int64    `json:"start_at"`
-	EndAt       int64    `json:"end_at"`
-	ClassIDList []string `json:"class_id_list"`
+	ClassIDList     []string    `json:"class_id_list"`
+	ContentTypeList []string    `json:"content_type_list"`
+	TimeRangeList   []TimeRange `json:"time_range_list"`
 }
 
 type StudentUsageMaterialReportResponse struct {
@@ -85,11 +83,22 @@ type StudentUsageMaterialReportResponse struct {
 }
 type ClassUsage struct {
 	ID               string         `json:"id"`
-	Name             string         `json:"name"`
 	ContentUsageList []ContentUsage `json:"content_usage_list"`
 }
 
 type ContentUsage struct {
-	Type  string `json:"type"`
-	Count int    `json:"count"`
+	TimeRange TimeRange `json:"time_range"`
+	Type      string    `json:"type"`
+	Count     int       `json:"count"`
+}
+
+type StudentUsageMaterialViewCountReportRequest struct {
+	TimeRangeList   []TimeRange `json:"time_range_list"`
+	ClassIDList     []string    `json:"class_id_list"`
+	ContentTypeList []string    `json:"content_type_list"`
+}
+
+type StudentUsageMaterialViewCountReportResponse struct {
+	Request          StudentUsageMaterialViewCountReportRequest `json:"request"`
+	ContentUsageList []ContentUsage                             `json:"content_usage_list"`
 }
