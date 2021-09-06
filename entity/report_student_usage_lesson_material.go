@@ -72,11 +72,12 @@ type JwtToken struct {
 }
 
 type StudentUsageMaterialReportRequest struct {
-	Page        int      `json:"page"`
-	PageSize    int      `json:"page_size"`
-	StartAt     int64    `json:"start_at"`
-	EndAt       int64    `json:"end_at"`
-	ClassIDList []string `json:"class_id_list"`
+	Page            int      `json:"page"`
+	PageSize        int      `json:"page_size"`
+	StartAt         int64    `json:"start_at"`
+	EndAt           int64    `json:"end_at"`
+	ClassIDList     []string `json:"class_id_list"`
+	ContentTypeList []string `json:"content_type_list"`
 }
 
 type StudentUsageMaterialReportResponse struct {
