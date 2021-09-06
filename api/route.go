@@ -154,6 +154,8 @@ func (s Server) registeRoute() {
 		reports.GET("/reports/learning_summary/remaining_filter", s.mustLogin, s.queryLearningSummaryRemainingFilter)
 		reports.GET("/reports/learning_summary/live_classes", s.mustLogin, s.queryLiveClassesSummary)
 		reports.GET("/reports/learning_summary/assignments", s.mustLogin, s.queryAssignmentsSummary)
+
+		reports.GET("/reports/student_usage/material", s.mustLogin, s.getStudentUsageMaterialReport)
 	}
 
 	outcomes := s.engine.Group("/v1")
@@ -316,7 +318,7 @@ func (s Server) registeRoute() {
 
 	studentUsageReport := s.engine.Group("/v1/student_usage_record")
 	{
-		studentUsageReport.POST("/event", s.mustLogin, s.studentUsageRecordEvent)
+		studentUsageReport.POST("/event", s.addStudentUsageRecordEvent)
 	}
 }
 

@@ -2,8 +2,9 @@ package entity
 
 import (
 	"encoding/json"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"strings"
+
+	"gitlab.badanamu.com.cn/calmisland/dbo"
 )
 
 type StudentsAchievementReportResponse struct {

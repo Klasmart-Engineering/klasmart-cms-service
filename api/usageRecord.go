@@ -1,17 +1,20 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
-)
+	"net/http"
 
-type StudentUsageRecord struct {
-	ClassType         string `json:"class_type"`
-	RoomID            string `json:"room_id"`
-	LessonMaterialUrl string `json:"lesson_material_url"`
-	ContentType       string `json:"content_type" enums:"h5p, audio, video, image, document"`
-	ActionType        string `json:"action_type" enums:"view"`
-	Timestamp         int64  `json:"timestamp"`
-}
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+
+	"github.com/dgrijalva/jwt-go"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+
+	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+)
 
 // @Summary student usage record
 // @Description student usage record
@@ -19,13 +22,43 @@ type StudentUsageRecord struct {
 // @ID studentUsageRecord
 // @Accept json
 // @Produce json
-// @Param milestone body StudentUsageRecord true "record usage"
+// @Param milestone body entity.JwtToken true "record usage"
 // @Success 200 {object} string
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /student_usage_record/event [post]
-func (s *Server) studentUsageRecordEvent(ctx *gin.Context) {
-	// TODO:
-	panic("wait for implement")
+func (s *Server) addStudentUsageRecordEvent(c *gin.Context) {
+	ctx := c.Request.Context()
+	var err error
+	defer func() {
+		if err == nil {
+			return
+		}
+		switch err {
+		case constant.ErrInvalidArgs:
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		default:
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		}
+	}()
+	op := s.getOperator(c)
+	jwtToken := entity.JwtToken{}
+	err = c.ShouldBindJSON(&jwtToken)
+	if err != nil {
+		log.Error(ctx, "invalid params", log.Err(err))
+		err = constant.ErrInvalidArgs
+		return
+	}
+	req := entity.StudentUsageRecordInJwt{}
+	_, err = jwt.ParseWithClaims(jwtToken.Token, &req, func(t *jwt.Token) (interface{}, error) {
+		// TODO 添加验签 public key
+		return config.Get().Assessment.AddAssessmentSecret, nil
+	})
+
+	err = model.GetReportModel().AddStudentUsageRecordTx(ctx, dbo.MustGetDB(ctx), op, &req.StudentUsageRecord)
+	if err != nil {
+		return
+	}
+	return
 }

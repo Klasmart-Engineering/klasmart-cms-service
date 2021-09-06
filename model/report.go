@@ -24,6 +24,8 @@ type IReportModel interface {
 	ListStudentsPerformanceReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsPerformanceReportRequest) (*entity.ListStudentsPerformanceReportResponse, error)
 	// DEPRECATED
 	GetStudentPerformanceReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.GetStudentPerformanceReportRequest) (*entity.GetStudentPerformanceReportResponse, error)
+
+	AddStudentUsageRecordTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, record *entity.StudentUsageRecord) (err error)
 }
 
 var (
