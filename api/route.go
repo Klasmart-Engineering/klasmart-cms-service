@@ -155,6 +155,7 @@ func (s Server) registeRoute() {
 		reports.GET("/reports/learning_summary/live_classes", s.mustLogin, s.queryLiveClassesSummary)
 		reports.GET("/reports/learning_summary/assignments", s.mustLogin, s.queryAssignmentsSummary)
 
+		reports.GET("/reports/student_usage/material_view_count", s.mustLogin, s.getStudentUsageMaterialViewCountReport)
 		reports.GET("/reports/student_usage/material", s.mustLogin, s.getStudentUsageMaterialReport)
 	}
 

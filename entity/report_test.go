@@ -44,3 +44,7 @@ func TestStudentUsageRecordInJwt(t *testing.T) {
 	})
 	fmt.Println(string(bf))
 }
+
+func TestTimeNow(t *testing.T) {
+	fmt.Println(time.Now().Unix())
+}
