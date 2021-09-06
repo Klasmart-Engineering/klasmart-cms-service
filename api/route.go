@@ -154,6 +154,14 @@ func (s Server) registeRoute() {
 		reports.GET("/reports/learning_summary/remaining_filter", s.mustLogin, s.queryLearningSummaryRemainingFilter)
 		reports.GET("/reports/learning_summary/live_classes", s.mustLogin, s.queryLiveClassesSummary)
 		reports.GET("/reports/learning_summary/assignments", s.mustLogin, s.queryAssignmentsSummary)
+
+		reports.GET("/reports/student_usage/organization_registration", s.mustLogin, s.getStudentUsageOrganizationRegistration)
+		reports.GET("/reports/student_usage/class_registration", s.mustLogin, s.getStudentUsageClassRegistration)
+		reports.GET("/reports/student_usage/material_view_count", s.mustLogin, s.getStudentUsageMaterialViewCountReport)
+		reports.GET("/reports/student_usage/material", s.mustLogin, s.getStudentUsageMaterialReport)
+		reports.GET("/reports/student_usage/classes_assignments_overview", s.mustLogin, s.getClassesAssignmentsOverview)
+		reports.GET("/reports/student_usage/classes_assignments", s.mustLogin, s.getClassesAssignments)
+		reports.GET("/reports/student_usage/classes_assignments/:class_id/unattended", s.mustLogin, s.getClassesAssignmentsUnattended)
 	}
 
 	outcomes := s.engine.Group("/v1")
@@ -316,7 +324,7 @@ func (s Server) registeRoute() {
 
 	studentUsageReport := s.engine.Group("/v1/student_usage_record")
 	{
-		studentUsageReport.POST("/event", s.mustLogin, s.studentUsageRecordEvent)
+		studentUsageReport.POST("/event", s.addStudentUsageRecordEvent)
 	}
 }
 
