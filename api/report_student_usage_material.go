@@ -36,7 +36,7 @@ func (s *Server) getStudentUsageMaterialReport(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/student_usage/material [get]
+// @Router /reports/student_usage/material_view_count [get]
 func (s *Server) getStudentUsageMaterialViewCountReport(c *gin.Context) {
 	_ = entity.StudentUsageMaterialViewCountReportRequest{}
 }
