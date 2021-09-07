@@ -8,7 +8,7 @@ import (
 // @Summary get student usage of material report
 // @Description get student usage of material report
 // @Tags reports/studentUsage
-// @ID getStudentUsageReport
+// @ID getStudentUsageMaterialReport
 // @Accept json
 // @Produce json
 // @Param class_id_list query []string false "class id list"
@@ -26,7 +26,7 @@ func (s *Server) getStudentUsageMaterialReport(c *gin.Context) {
 // @Summary get student usage of material report
 // @Description get student usage of material report
 // @Tags reports/studentUsage
-// @ID getStudentUsageReport
+// @ID getStudentUsageMaterialViewCountReport
 // @Accept json
 // @Produce json
 // @Param time_range_list query []string false "time range list"
@@ -36,7 +36,7 @@ func (s *Server) getStudentUsageMaterialReport(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/student_usage/material [get]
+// @Router /reports/student_usage/material_view_count [get]
 func (s *Server) getStudentUsageMaterialViewCountReport(c *gin.Context) {
 	_ = entity.StudentUsageMaterialViewCountReportRequest{}
 }
