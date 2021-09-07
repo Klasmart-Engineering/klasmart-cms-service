@@ -1,7 +1,14 @@
 package api
 
 import (
+	"net/http"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
@@ -20,7 +27,32 @@ import (
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/student_usage/material [get]
 func (s *Server) getStudentUsageMaterialReport(c *gin.Context) {
-	_ = entity.StudentUsageMaterialReportRequest{}
+	ctx := c.Request.Context()
+	var err error
+	defer func() {
+		if err == nil {
+			return
+		}
+		switch err {
+		case constant.ErrInvalidArgs:
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		default:
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		}
+	}()
+	op := s.getOperator(c)
+	req := entity.StudentUsageMaterialViewCountReportRequest{}
+	err = c.ShouldBindQuery(&req)
+	if err != nil {
+		log.Error(ctx, "invalid request", log.Err(err))
+		err = constant.ErrInvalidArgs
+		return
+	}
+	res, err := model.GetReportModel().GetStudentUsageMaterialViewCount(ctx, op, &req)
+	if err != nil {
+		return
+	}
+	c.JSON(http.StatusOK, res)
 }
 
 // @Summary get student usage of material report
@@ -38,5 +70,30 @@ func (s *Server) getStudentUsageMaterialReport(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/student_usage/material_view_count [get]
 func (s *Server) getStudentUsageMaterialViewCountReport(c *gin.Context) {
-	_ = entity.StudentUsageMaterialViewCountReportRequest{}
+	ctx := c.Request.Context()
+	var err error
+	defer func() {
+		if err == nil {
+			return
+		}
+		switch err {
+		case constant.ErrInvalidArgs:
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		default:
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		}
+	}()
+	op := s.getOperator(c)
+	req := entity.StudentUsageMaterialViewCountReportRequest{}
+	err = c.ShouldBindQuery(&req)
+	if err != nil {
+		log.Error(ctx, "invalid request", log.Err(err))
+		err = constant.ErrInvalidArgs
+		return
+	}
+	res, err := model.GetReportModel().GetStudentUsageMaterialViewCount(ctx, op, &req)
+	if err != nil {
+		return
+	}
+	c.JSON(http.StatusOK, res)
 }

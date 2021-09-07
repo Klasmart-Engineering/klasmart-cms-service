@@ -15,10 +15,14 @@ type StudentUsageRecord struct {
 	Timestamp         int64     `json:"timestamp"  gorm:"column:timestamp"  `
 	Students          []Student `json:"students"  gorm:"-"  `
 
+	// below fields not from api
+	ScheduleStartAt  int64  `json:"schedule_start_at" gorm:"column:schedule_start_at" `
+	LessonPlanID     string `json:"lesson_plan_id" gorm:"column:lesson_plan_id" `
 	StudentUserID    string `json:"student_user_id" gorm:"column:student_user_id" `
 	StudentEmail     string `json:"student_email" gorm:"column:student_email" `
 	StudentName      string `json:"student_name" gorm:"column:student_name" `
 	LessonMaterialID string `json:"lesson_material_id" gorm:"column:lesson_material_id" `
+	ClassID          string `json:"class_id" gorm:"column:class_id" `
 }
 
 func (StudentUsageRecord) TableName() string {
@@ -55,6 +59,15 @@ func (r *StudentUsageRecord) GetBatchInsertColsAndValues() (cols []string, value
 	cols = append(cols, "lesson_material_id")
 	values = append(values, r.LessonMaterialID)
 
+	cols = append(cols, "lesson_plan_id")
+	values = append(values, r.LessonPlanID)
+
+	cols = append(cols, "schedule_start_at")
+	values = append(values, r.ScheduleStartAt)
+
+	cols = append(cols, "class_id")
+	values = append(values, r.ClassID)
+
 	return
 }
 
@@ -72,9 +85,15 @@ type JwtToken struct {
 }
 
 type StudentUsageMaterialReportRequest struct {
-	ClassIDList     []string    `json:"class_id_list"`
-	ContentTypeList []string    `json:"content_type_list"`
-	TimeRangeList   []TimeRange `json:"time_range_list"`
+	TimeRangeList   []TimeRange `json:"time_range_list" form:"time_range_list"`
+	ClassIDList     []string    `json:"class_id_list" form:"class_id_list"`
+	ContentTypeList []string    `json:"content_type_list" form:"content_type_list"`
+}
+
+type MaterialUsage struct {
+	ClassID     string `json:"class_id" gorm:"column:class_id" `
+	ContentType string `json:"content_type" gorm:"column:content_type" `
+	UsedCount   int64  `json:"used_count" gorm:"column:used_count" `
 }
 
 type StudentUsageMaterialReportResponse struct {
@@ -89,16 +108,16 @@ type ClassUsage struct {
 type ContentUsage struct {
 	TimeRange TimeRange `json:"time_range"`
 	Type      string    `json:"type"`
-	Count     int       `json:"count"`
+	Count     int64     `json:"count"`
 }
 
 type StudentUsageMaterialViewCountReportRequest struct {
-	TimeRangeList   []TimeRange `json:"time_range_list"`
-	ClassIDList     []string    `json:"class_id_list"`
-	ContentTypeList []string    `json:"content_type_list"`
+	TimeRangeList   []TimeRange `json:"time_range_list" form:"time_range_list"`
+	ClassIDList     []string    `json:"class_id_list" form:"class_id_list"`
+	ContentTypeList []string    `json:"content_type_list" form:"content_type_list"`
 }
 
 type StudentUsageMaterialViewCountReportResponse struct {
-	Request          StudentUsageMaterialViewCountReportRequest `json:"request"`
-	ContentUsageList []ContentUsage                             `json:"content_usage_list"`
+	Request          *StudentUsageMaterialViewCountReportRequest `json:"request"`
+	ContentUsageList []*ContentUsage                             `json:"content_usage_list"`
 }
