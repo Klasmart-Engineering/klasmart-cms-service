@@ -865,35 +865,35 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 // @Description search published learning outcome with outcome sets
 // @Accept json
 // @Produce json
-// @Param outcome_name query string false "search by name"
-// @Param description query string false "search by description"
-// @Param keywords query string false "search by keywords"
-// @Param shortcode query string false "search by shortcode"
-// @Param author_name query string false "search by author_name"
-// @Param set_name query string false "search by set_name"
-// @Param search_key query string false "search by search_key"
-// @Param assumed query integer false "search by assumed: 1 true, 0 false, -1 all"
-// @Param program_ids query string false "search by program ids, split by comma"
-// @Param subject_ids query string false "search by subject ids, split by comma"
-// @Param category_ids query string false "search by category ids, split by comma"
-// @Param sub_category_ids query string false "search by sub category ids, split by comma"
-// @Param age_ids query string false "search by age ids, split by comma"
-// @Param grade_ids query string false "search by grade ids, split by comma"
-// @Param page query integer false "page"
-// @Param page_size query integer false "page size: -1 no page, 0 default page size 20"
-// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
+// @Param outcome_name body string false "search by name"
+// @Param description body string false "search by description"
+// @Param keywords body string false "search by keywords"
+// @Param shortcode body string false "search by shortcode"
+// @Param author_name body string false "search by author_name"
+// @Param set_name body string false "search by set_name"
+// @Param search_key body string false "search by search_key"
+// @Param assumed body integer false "search by assumed: 1 true, 0 false, -1 all"
+// @Param program_ids body []string false "search by program ids"
+// @Param subject_ids body []string false "search by subject ids"
+// @Param category_ids body []string false "search by category ids"
+// @Param sub_category_ids body []string false "search by sub category ids"
+// @Param age_ids body []string false "search by age ids"
+// @Param grade_ids body []string false "search by grade ids"
+// @Param page body integer false "page"
+// @Param page_size body integer false "page size: -1 no page, 0 default page size 20"
+// @Param order_by body string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
 // @Success 200 {object} model.SearchPublishedOutcomeResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /published_learning_outcomes [get]
+// @Router /published_learning_outcomes [post]
 // search published learning outcomes with outcome sets
 func (s *Server) queryPublishedOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	var condition entity.OutcomeCondition
-	err := c.ShouldBindQuery(&condition)
+	err := c.ShouldBindJSON(&condition)
 	if err != nil {
 		log.Warn(ctx, "queryPublishedOutcomes: ShouldBind failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -902,13 +902,6 @@ func (s *Server) queryPublishedOutcomes(c *gin.Context) {
 	if condition.OrganizationID == "" {
 		condition.OrganizationID = op.OrgID
 	}
-
-	condition.ProgramIDs = utils.StringToStringArray(ctx, c.Query("program_ids"))
-	condition.SubjectIDs = utils.StringToStringArray(ctx, c.Query("subject_ids"))
-	condition.CategoryIDs = utils.StringToStringArray(ctx, c.Query("category_ids"))
-	condition.SubCategoryIDs = utils.StringToStringArray(ctx, c.Query("sub_category_ids"))
-	condition.AgeIDs = utils.StringToStringArray(ctx, c.Query("age_ids"))
-	condition.GradeIDs = utils.StringToStringArray(ctx, c.Query("grade_ids"))
 
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ViewPublishedLearningOutcome)
 	if err != nil {
