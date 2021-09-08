@@ -41,14 +41,14 @@ func (s *Server) getStudentUsageMaterialReport(c *gin.Context) {
 		}
 	}()
 	op := s.getOperator(c)
-	req := entity.StudentUsageMaterialViewCountReportRequest{}
+	req := entity.StudentUsageMaterialReportRequest{}
 	err = c.ShouldBindQuery(&req)
 	if err != nil {
 		log.Error(ctx, "invalid request", log.Err(err))
 		err = constant.ErrInvalidArgs
 		return
 	}
-	res, err := model.GetReportModel().GetStudentUsageMaterialViewCount(ctx, op, &req)
+	res, err := model.GetReportModel().GetStudentUsageMaterial(ctx, op, &req)
 	if err != nil {
 		return
 	}

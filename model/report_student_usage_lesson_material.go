@@ -14,7 +14,7 @@ func (m *reportModel) GetStudentUsageMaterialViewCount(ctx context.Context, op *
 	res = &entity.StudentUsageMaterialViewCountReportResponse{
 		Request: req,
 	}
-	usages, err := da.GetStudentUsageDA().GetMaterialUsages(ctx, req)
+	usages, err := da.GetStudentUsageDA().GetMaterialViewCountUsages(ctx, req)
 	if err != nil {
 		return
 	}
@@ -31,6 +31,31 @@ func (m *reportModel) GetStudentUsageMaterialViewCount(ctx context.Context, op *
 }
 
 func (m *reportModel) GetStudentUsageMaterial(ctx context.Context, op *entity.Operator, req *entity.StudentUsageMaterialReportRequest) (res *entity.StudentUsageMaterialReportResponse, err error) {
+	res = &entity.StudentUsageMaterialReportResponse{
+		Request: req,
+	}
+	usages, err := da.GetStudentUsageDA().GetMaterialUsages(ctx, req)
+	if err != nil {
+		return
+	}
+
+	mClassUsage := map[string]*entity.ClassUsage{}
+	for _, usage := range usages {
+		u, ok := mClassUsage[usage.ClassID]
+		if !ok {
+			u = &entity.ClassUsage{}
+			mClassUsage[usage.ClassID] = u
+		}
+		u.ContentUsageList = append(u.ContentUsageList, &entity.ContentUsage{
+			TimeRange: usage.TimeRange,
+			Type:      usage.ContentType,
+			Count:     usage.UsedCount,
+		})
+	}
+
+	for _, classUsage := range mClassUsage {
+		res.ClassUsageList = append(res.ClassUsageList, classUsage)
+	}
 
 	return
 }

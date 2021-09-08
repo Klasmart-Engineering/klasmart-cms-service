@@ -91,18 +91,19 @@ type StudentUsageMaterialReportRequest struct {
 }
 
 type MaterialUsage struct {
-	ClassID     string `json:"class_id" gorm:"column:class_id" `
-	ContentType string `json:"content_type" gorm:"column:content_type" `
-	UsedCount   int64  `json:"used_count" gorm:"column:used_count" `
+	TimeRange   TimeRange `json:"time_range" gorm:"column:time_range" `
+	ClassID     string    `json:"class_id" gorm:"column:class_id" `
+	ContentType string    `json:"content_type" gorm:"column:content_type" `
+	UsedCount   int64     `json:"used_count" gorm:"column:used_count" `
 }
 
 type StudentUsageMaterialReportResponse struct {
-	Request        StudentUsageMaterialReportRequest `json:"request"`
-	ClassUsageList []ClassUsage                      `json:"class_usage_list"`
+	Request        *StudentUsageMaterialReportRequest `json:"request"`
+	ClassUsageList []*ClassUsage                      `json:"class_usage_list"`
 }
 type ClassUsage struct {
-	ID               string         `json:"id"`
-	ContentUsageList []ContentUsage `json:"content_usage_list"`
+	ID               string          `json:"id"`
+	ContentUsageList []*ContentUsage `json:"content_usage_list"`
 }
 
 type ContentUsage struct {
