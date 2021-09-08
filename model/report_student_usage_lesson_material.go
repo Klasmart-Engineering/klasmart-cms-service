@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -94,6 +96,7 @@ func (m *reportModel) AddStudentUsageRecordTx(ctx context.Context, tx *dbo.DBCon
 	var models []entity.BatchInsertModeler
 	for _, student := range record.Students {
 		usageRecord := *record
+		usageRecord.ID = utils.NewID()
 		usageRecord.StudentUserID = student.UserID
 		usageRecord.StudentName = student.Name
 		usageRecord.StudentEmail = student.Email
