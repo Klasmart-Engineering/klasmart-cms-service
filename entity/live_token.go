@@ -56,6 +56,7 @@ type LiveTokenInfo struct {
 }
 
 type LiveMaterial struct {
+	ID       string       `json:"-"`
 	Name     string       `json:"name"`
 	URL      string       `json:"url,omitempty"`
 	TypeName MaterialType `json:"__typename"`
