@@ -3,6 +3,7 @@ package da
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -21,6 +22,21 @@ func (c ClassesAssignmentsSQLDA) BatchInsertTx(ctx context.Context, tx *dbo.DBCo
 	if err != nil {
 		log.Error(ctx, "BatchInsertTx: classes_assignments failed",
 			log.Any("record", records))
+		return err
+	}
+	return nil
+}
+
+func (c ClassesAssignmentsSQLDA) BatchUpdateFinishAndEnd(ctx context.Context, tx *dbo.DBContext, scheduleID string, attendedIDs []string, endTime int64) error {
+	if len(attendedIDs) > 0 {
+		sql := fmt.Sprintf("update %s set finish_counts=finish_counts+1, last_end_at=? where schedule_id=? and attendance_id in (?)", entity.ClassesAssignmentsRecords{}.TableName())
+		err := tx.Exec(sql, endTime,  scheduleID, attendedIDs).Error
+		if err != nil {
+			log.Error(ctx, "BatchUpdateFinish: update failed",
+				log.String("sql", sql),
+				log.String("schedule_id", scheduleID),
+				log.Strings("attend_ids", attendedIDs))
+		}
 		return err
 	}
 	return nil
@@ -68,6 +84,11 @@ func (c *ClassesAssignmentsCondition) GetConditions() ([]string, []interface{}) 
 	if c.ClassIDs.Valid {
 		wheres = append(wheres, "class_id in (?)")
 		params = append(params, c.ClassIDs.Strings)
+	}
+
+	if c.ScheduleID.Valid {
+		wheres = append(wheres, "schedule_id = ?")
+		params = append(params, c.ScheduleID.String)
 	}
 
 	if c.ScheduleIDs.Valid {

@@ -42,32 +42,68 @@ func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Op
 		log.Info(ctx, "CreateRecord: schedule doesn't belong any class", log.Any("data", data))
 		return "", nil
 	}
-	users, err := GetScheduleRelationModel().GetUsers(ctx, op, schedule.ID)
+	shouldAttendances, err := GetScheduleRelationModel().Query(ctx, op, &da.ScheduleRelationCondition{
+		ScheduleID: sql.NullString{String: schedule.ID, Valid: true},
+		RelationType: sql.NullString{String: string(entity.ScheduleRelationTypeClassRosterStudent), Valid: true},
+	})
 	if err != nil {
-		log.Error(ctx, "CreateRecord: GetClassRosterID failed", log.Err(err), log.Any("data", data))
+		log.Error(ctx, "CreateRecord: shouldAttendances failed", log.Err(err), log.Any("data", data))
 		return "", err
 	}
-	shoulderAttendances := users.Students
 
-	log.Info(ctx, "", log.Any("attend", shoulderAttendances))
-	attendances := utils.SliceDeduplicationExcludeEmpty(data.AttendanceIDs)
-	records := make([]*entity.ClassesAssignmentsRecords, 0, len(attendances))
-
-	for i := range attendances {
-		record := entity.ClassesAssignmentsRecords{
-			ID:              utils.NewID(),
-			ClassID:         classID,
-			ScheduleID:      schedule.ID,
-			AttendanceID:    attendances[i],
-			ScheduleType:    entity.NewScheduleInReportType(schedule.ClassType, schedule.IsHomeFun),
-			ScheduleStartAt: schedule.StartAt,
-			LastEndAt:       data.ClassEndTime,
-			CreateAt:        time.Now().Unix(),
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		existAttendances, err := da.GetClassesAssignmentsDA().QueryTx(ctx, tx, &da.ClassesAssignmentsCondition{
+			ClassID: sql.NullString{String: classID, Valid: true},
+			ScheduleID: sql.NullString{String: schedule.ID, Valid: true},
+		})
+		if err != nil {
+			log.Error(ctx, "CreateRecord: get exists failed",
+				log.Err(err),
+				log.Any("data", data),
+				log.Any("should", shouldAttendances))
+			return err
 		}
-		records = append(records, &record)
-	}
 
-	panic("implement da")
+		insertRecords := make([]*entity.ClassesAssignmentsRecords, 0)
+		for i := range shouldAttendances {
+			exist := false
+			for j := range existAttendances {
+				if shouldAttendances[i].RelationID == existAttendances[j].AttendanceID {
+					exist = true
+					break
+				}
+			}
+			if !exist {
+				insertRecords = append(insertRecords, &entity.ClassesAssignmentsRecords{
+					ID:              utils.NewID(),
+					ClassID:         classID,
+					ScheduleID:      schedule.ID,
+					AttendanceID:    shouldAttendances[i].RelationID,
+					ScheduleType:    entity.NewScheduleInReportType(schedule.ClassType, schedule.IsHomeFun),
+					ScheduleStartAt: schedule.StartAt,
+					CreateAt:        time.Now().Unix(),
+				})
+			}
+		}
+		err = da.GetClassesAssignmentsDA().BatchInsertTx(ctx, tx, insertRecords)
+		if err != nil {
+			log.Error(ctx, "CreateRecord: BatchInsertTx failed",
+				log.Err(err),
+				log.Any("data", insertRecords),
+				log.Any("should", shouldAttendances))
+			return err
+		}
+
+		err = da.GetClassesAssignmentsDA().BatchUpdateFinishAndEnd(ctx, tx, schedule.ID, data.AttendanceIDs, data.ClassEndTime)
+		if err != nil {
+			log.Error(ctx, "CreateRecord: BatchUpdateFinish failed",
+				log.Err(err),
+				log.Any("data", data))
+			return err
+		}
+		return nil
+	})
+	return "", err
 }
 
 func (c ClassesAssignmentsModel) GetOverview(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentOverViewRequest) ([]*entity.ClassesAssignmentOverView, error) {

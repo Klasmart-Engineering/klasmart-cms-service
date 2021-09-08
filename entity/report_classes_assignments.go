@@ -72,15 +72,15 @@ func NewScheduleInReportType(classType ScheduleClassType, isFun bool) ScheduleIn
 }
 
 type ClassesAssignmentsRecords struct {
-	ID              string               `json:"id"`
-	ClassID         string               `json:"class_id"`
-	ScheduleID      string               `json:"schedule_id"`
-	AttendanceID    string               `json:"attendance_id"`
-	ScheduleType    ScheduleInReportType `json:"schedule_type"`
-	ScheduleStartAt int64                `json:"schedule_start_at"`
-	FinishCount     int64                `json:"finish_count"`
-	LastEndAt       int64                `json:"last_end_at"`
-	CreateAt        int64                `json:"create_at"`
+	ID              string               `gorm:"column:id;primary_key" json:"id"`
+	ClassID         string               `gorm:"column:class_id" json:"class_id"`
+	ScheduleID      string               `gorm:"column:schedule_id" json:"schedule_id"`
+	AttendanceID    string               `gorm:"column:attendance_id" json:"attendance_id"`
+	ScheduleType    ScheduleInReportType `gorm:"column:schedule_type" json:"schedule_type"`
+	ScheduleStartAt int64                `gorm:"column:schedule_start_at" json:"schedule_start_at"`
+	FinishCount     int64                `gorm:"column:finish_counts" json:"finish_counts"`
+	LastEndAt       int64                `gorm:"column:last_end_at" json:"last_end_at"`
+	CreateAt        int64                `gorm:"column:create_at" json:"create_at"`
 }
 
 func (ClassesAssignmentsRecords) TableName() string {
@@ -100,7 +100,7 @@ func (c ClassesAssignmentsRecords) GetBatchInsertColsAndValues() (cols []string,
 	cols = append(cols, "attendance_id")
 	values = append(values, c.AttendanceID)
 
-	cols = append(cols, "finish_count")
+	cols = append(cols, "finish_counts")
 	values = append(values, c.FinishCount)
 
 	cols = append(cols, "schedule_type")
