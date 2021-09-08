@@ -229,14 +229,13 @@ func (s *Server) addAssessment(c *gin.Context) {
 	log.Debug(ctx, "add assessment jwt: fill args", log.Any("args", args), log.String("token", body.Token))
 
 	operator := s.getOperator(c)
-	newID, err := model.GetClassAndLiveAssessmentModel().Add(ctx, operator, &args)
+	err := model.GetLiveRoomEventBusModel().PubEndClass(ctx, operator, &args)
 	switch err {
 	case nil:
 		log.Debug(ctx, "add assessment jwt: add success",
 			log.Any("args", args),
-			log.String("new_id", newID),
 		)
-		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
+		c.JSON(http.StatusOK, nil)
 	case constant.ErrInvalidArgs:
 		log.Error(ctx, "add assessment jwt: add failed",
 			log.Err(err),
