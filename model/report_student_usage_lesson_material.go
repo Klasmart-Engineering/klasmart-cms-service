@@ -130,5 +130,5 @@ func (lms LiveMaterialSlice) FindByUrl(ctx context.Context, url string) (materia
 }
 
 func (m *reportModel) getMaterials(ctx context.Context, op *entity.Operator, input *entity.MaterialInput) (materials LiveMaterialSlice, err error) {
-	return GetLiveTokenModel().GetMaterials(ctx, op, input)
+	return GetLiveTokenModel().GetMaterials(ctx, op, input, true)
 }
