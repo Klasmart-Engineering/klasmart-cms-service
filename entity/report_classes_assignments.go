@@ -13,6 +13,7 @@ type ClassesAssignmentOverView struct {
 type ClassesAssignmentsViewRequest struct {
 	ClassIDs  []string    `json:"class_ids" form:"class_ids"`
 	Durations []TimeRange `json:"durations" form:"durations"`
+	Type      string      `json:"type"`
 }
 
 type ClassesAssignmentsDurationRatio struct {
@@ -26,30 +27,59 @@ type ClassesAssignmentsView struct {
 	DurationsRatio []ClassesAssignmentsDurationRatio `json:"durations_ratio"`
 }
 
-type ClassesAssignmentsUnattendedStudentsViewRequest struct {
+type ClassesAssignmentsUnattendedViewRequest struct {
 	ClassID   string
 	Page      int         `json:"page" form:"page"`
 	PageSize  int         `json:"page_size" form:"page_size"`
 	Durations []TimeRange `json:"durations" form:"durations"`
+	Type      string      `json:"type"`
 }
 
+type ScheduleView struct {
+	ScheduleID   string `json:"schedule_id"`
+	ScheduleName string `json:"schedule_name"`
+	Type         string `json:"type"`
+}
 type ClassesAssignmentsUnattendedStudentsView struct {
-	StudentID string `json:"student_id"`
-	Schedule  struct {
-		ScheduleID   string `json:"schedule_id"`
-		ScheduleName string `json:"schedule_name"`
-		Type         string `json:"type"`
-	} `json:"schedule"`
-	Time int64 `json:"time"`
+	StudentID   string       `json:"student_id"`
+	StudentName string       `json:"student_name"`
+	Schedule    ScheduleView `json:"schedule"`
+	Time        int64        `json:"time"`
+}
+
+type ScheduleInReportType string
+
+const (
+	UnknownType ScheduleInReportType = "Unknown"
+	LiveType    ScheduleInReportType = "Live"
+	StudyType   ScheduleInReportType = "Study"
+	HomeFunType ScheduleInReportType = "HomeFun"
+)
+
+func NewScheduleInReportType(classType ScheduleClassType, isFun bool) ScheduleInReportType {
+	if classType == ScheduleClassTypeOnlineClass {
+		return LiveType
+	}
+
+	if classType == ScheduleClassTypeHomework && !isFun {
+		return StudyType
+	}
+
+	if classType == ScheduleClassTypeHomework && isFun {
+		return HomeFunType
+	}
+	return UnknownType
 }
 
 type ClassesAssignmentsRecords struct {
-	ID              string `json:"id"`
-	ClassID         string `json:"class_id"`
-	ScheduleID      string `json:"schedule_id"`
-	AttendanceID    string `json:"attendance_id"`
-	ScheduleType    string `json:"schedule_type"`
-	ScheduleStartAt int64  `json:"schedule_start_at"`
+	ID              string               `json:"id"`
+	ClassID         string               `json:"class_id"`
+	ScheduleID      string               `json:"schedule_id"`
+	AttendanceID    string               `json:"attendance_id"`
+	ScheduleType    ScheduleInReportType `json:"schedule_type"`
+	ScheduleStartAt int64                `json:"schedule_start_at"`
+	ScheduleEndAt   int64                `json:"schedule_end_at"`
+	CreateAt        int64                `json:"create_at"`
 }
 
 func (ClassesAssignmentsRecords) TableName() string {
