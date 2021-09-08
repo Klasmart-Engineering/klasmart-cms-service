@@ -13,7 +13,7 @@ import (
 )
 
 type IClassesAssignments interface {
-	CreateRecord(ctx context.Context, op *entity.Operator, record *entity.AddClassAndLiveAssessmentArgs) error
+	CreateRecord(ctx context.Context, op *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) (string, error)
 	GetOverview(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentOverViewRequest) ([]*entity.ClassesAssignmentOverView, error)
 	GetStatistic(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentsViewRequest) ([]*entity.ClassesAssignmentsView, error)
 	GetUnattended(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentsUnattendedViewRequest) ([]*entity.ClassesAssignmentsUnattendedStudentsView, error)
@@ -27,22 +27,29 @@ var (
 type ClassesAssignmentsModel struct {
 }
 
-func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Operator, data *entity.AddClassAndLiveAssessmentArgs) error {
+func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Operator, data *entity.AddClassAndLiveAssessmentArgs) (string, error) {
 	schedule, err := GetScheduleModel().GetPlainByID(ctx, data.ScheduleID)
 	if err != nil {
 		log.Error(ctx, "CreateRecord: GetPlainByID failed", log.Err(err), log.Any("data", data))
-		return err
+		return "", err
 	}
 	classID, err := GetScheduleRelationModel().GetClassRosterID(ctx, op, schedule.ID)
 	if err != nil {
 		log.Error(ctx, "CreateRecord: GetClassRosterID failed", log.Err(err), log.Any("data", data))
-		return err
+		return "", err
 	}
 	if classID == "" {
 		log.Info(ctx, "CreateRecord: schedule doesn't belong any class", log.Any("data", data))
-		return nil
+		return "", nil
 	}
+	users, err := GetScheduleRelationModel().GetUsers(ctx, op, schedule.ID)
+	if err != nil {
+		log.Error(ctx, "CreateRecord: GetClassRosterID failed", log.Err(err), log.Any("data", data))
+		return "", err
+	}
+	shoulderAttendances := users.Students
 
+	log.Info(ctx, "", log.Any("attend", shoulderAttendances))
 	attendances := utils.SliceDeduplicationExcludeEmpty(data.AttendanceIDs)
 	records := make([]*entity.ClassesAssignmentsRecords, 0, len(attendances))
 
@@ -54,7 +61,7 @@ func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Op
 			AttendanceID:    attendances[i],
 			ScheduleType:    entity.NewScheduleInReportType(schedule.ClassType, schedule.IsHomeFun),
 			ScheduleStartAt: schedule.StartAt,
-			ScheduleEndAt:   data.ClassEndTime,
+			LastEndAt:       data.ClassEndTime,
 			CreateAt:        time.Now().Unix(),
 		}
 		records = append(records, &record)
@@ -259,12 +266,15 @@ func (c ClassesAssignmentsModel) GetUnattended(ctx context.Context, op *entity.O
 	for _, v := range rangeSchedule {
 		scheduleIDs = append(scheduleIDs, v...)
 	}
-	unattended, err := da.GetClassesAssignmentsDA().QueryTx(ctx, dbo.MustGetDB(ctx))
+	unattended, err := da.GetClassesAssignmentsDA().QueryTx(ctx, dbo.MustGetDB(ctx), &da.ClassesAssignmentsCondition{
+		ScheduleIDs:     entity.NullStrings{Strings: scheduleIDs, Valid: true},
+		FinishCountsLTE: sql.NullInt64{Int64: 0, Valid: true},
+	})
 	if err != nil {
 		log.Error(ctx, "GetUnattended: extract time duration failed", log.Err(err), log.Any("request", request))
 		return nil, err
 	}
-	unattendMap, err := c.getUnattendedMap(ctx, unattended)
+	unattendedMap, err := c.getUnattendedMap(ctx, unattended)
 	if err != nil {
 		log.Error(ctx, "GetUnattended: extract time duration failed", log.Err(err), log.Any("request", request))
 		return nil, err
@@ -277,7 +287,7 @@ func (c ClassesAssignmentsModel) GetUnattended(ctx context.Context, op *entity.O
 	}, 0)
 	result := make([]*entity.ClassesAssignmentsUnattendedStudentsView, 0)
 	for i := range students {
-		scheduleIDMap := unattendMap[students[i].ID]
+		scheduleIDMap := unattendedMap[students[i].ID]
 		for j := range scheduleIDs {
 			view := &entity.ClassesAssignmentsUnattendedStudentsView{
 				StudentID:   students[i].ID,

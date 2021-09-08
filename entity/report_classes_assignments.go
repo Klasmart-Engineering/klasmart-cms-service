@@ -78,10 +78,42 @@ type ClassesAssignmentsRecords struct {
 	AttendanceID    string               `json:"attendance_id"`
 	ScheduleType    ScheduleInReportType `json:"schedule_type"`
 	ScheduleStartAt int64                `json:"schedule_start_at"`
-	ScheduleEndAt   int64                `json:"schedule_end_at"`
+	FinishCount     int64                `json:"finish_count"`
+	LastEndAt       int64                `json:"last_end_at"`
 	CreateAt        int64                `json:"create_at"`
 }
 
 func (ClassesAssignmentsRecords) TableName() string {
 	return "classes_assignments_records"
+}
+
+func (c ClassesAssignmentsRecords) GetBatchInsertColsAndValues() (cols []string, values []interface{}) {
+	cols = append(cols, "id")
+	values = append(values, c.ID)
+
+	cols = append(cols, "class_id")
+	values = append(values, c.ClassID)
+
+	cols = append(cols, "schedule_id")
+	values = append(values, c.ScheduleID)
+
+	cols = append(cols, "attendance_id")
+	values = append(values, c.AttendanceID)
+
+	cols = append(cols, "finish_count")
+	values = append(values, c.FinishCount)
+
+	cols = append(cols, "schedule_type")
+	values = append(values, c.ScheduleType)
+
+	cols = append(cols, "schedule_start_at")
+	values = append(values, c.ScheduleStartAt)
+
+	cols = append(cols, "last_end_at")
+	values = append(values, c.LastEndAt)
+
+	cols = append(cols, "create_at")
+	values = append(values, c.CreateAt)
+
+	return
 }

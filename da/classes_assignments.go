@@ -8,8 +8,8 @@ import (
 )
 
 type IClassesAssignmentsDA interface {
-	BatchInsertTx(ctx context.Context, tx *dbo.DBContext)
-	QueryTx(ctx context.Context, tx *dbo.DBContext) ([]*entity.ClassesAssignmentsRecords, error)
+	BatchInsertTx(ctx context.Context, tx *dbo.DBContext, record []*entity.ClassesAssignmentsRecords) error
+	QueryTx(ctx context.Context, tx *dbo.DBContext, condition *ClassesAssignmentsCondition) ([]*entity.ClassesAssignmentsRecords, error)
 	CountAttendedTx(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string, attendanceType string) (map[string]int, error)
 }
 
