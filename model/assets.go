@@ -91,7 +91,7 @@ func (h *AssetsData) PrepareVersion(ctx context.Context) error {
 	return nil
 }
 
-func (h *AssetsData) PrepareResult(ctx context.Context, tx *dbo.DBContext, content *entity.ContentInfo, operator *entity.Operator) error {
+func (h *AssetsData) PrepareResult(ctx context.Context, tx *dbo.DBContext, content *entity.ContentInfo, operator *entity.Operator, ignorePermissionFilter bool) error {
 	return nil
 }
 func (l *AssetsData) ReplaceContentIDs(ctx context.Context, IDMap map[string]string) {
