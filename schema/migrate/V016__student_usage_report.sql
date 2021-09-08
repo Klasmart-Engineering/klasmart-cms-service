@@ -29,5 +29,5 @@ CREATE TABLE IF NOT EXISTS `student_usage_records` (
     `schedule_start_at` bigint COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 0 ,
     `class_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' ,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `unique_student_lesson_plan_lesson_material_class_content_type` (`student_user_id`,`lesson_plan_id`,`lesson_material_id`,`class_id`,`content_type`)
+    KEY `index_student_lesson_plan_lesson_material_class_content_type` (`student_user_id`,`lesson_plan_id`,`lesson_material_id`,`class_id`,`content_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

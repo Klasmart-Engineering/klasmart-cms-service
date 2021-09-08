@@ -6,16 +6,16 @@ import (
 )
 
 type StudentUsageRecord struct {
-	ID                string    `json:"id" gorm:"column:id" `
-	ClassType         string    `json:"class_type"  gorm:"column:class_type"  enums:"live,class,study,home fun,task" `
-	RoomID            string    `json:"room_id" gorm:"column:room_id" `
-	LessonMaterialUrl string    `json:"lesson_material_url"  gorm:"column:lesson_material_url"  `
-	ContentType       string    `json:"content_type"  gorm:"column:content_type"   enums:"h5p, audio, video, image, document"`
-	ActionType        string    `json:"action_type"  gorm:"column:action_type"   enums:"view"`
-	Timestamp         int64     `json:"timestamp"  gorm:"column:timestamp"  `
-	Students          []Student `json:"students"  gorm:"-"  `
+	ClassType         string     `json:"class_type"  gorm:"column:class_type"  enums:"live,class,study,home fun,task" `
+	RoomID            string     `json:"room_id" gorm:"column:room_id" `
+	LessonMaterialUrl string     `json:"lesson_material_url"  gorm:"column:lesson_material_url"  `
+	ContentType       string     `json:"content_type"  gorm:"column:content_type"   enums:"h5p, audio, video, image, document"`
+	ActionType        string     `json:"action_type"  gorm:"column:action_type"   enums:"view"`
+	Timestamp         int64      `json:"timestamp"  gorm:"column:timestamp"  `
+	Students          []*Student `json:"students"  gorm:"-"  `
 
 	// below fields not from api
+	ID               string `json:"id" gorm:"column:id" `
 	ScheduleStartAt  int64  `json:"schedule_start_at" gorm:"column:schedule_start_at" `
 	LessonPlanID     string `json:"lesson_plan_id" gorm:"column:lesson_plan_id" `
 	StudentUserID    string `json:"student_user_id" gorm:"column:student_user_id" `

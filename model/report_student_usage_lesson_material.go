@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -84,9 +86,10 @@ func (m *reportModel) AddStudentUsageRecordTx(ctx context.Context, tx *dbo.DBCon
 	if err != nil {
 		return
 	}
-	material, _ := materials.FindByUrl(record.LessonMaterialUrl)
-	// TODO record.LessonMaterialID = material.ID
-	record.LessonMaterialID = material.Name
+	material, found := materials.FindByUrl(ctx, record.LessonMaterialUrl)
+	if found {
+		record.LessonMaterialID = material.ID
+	}
 
 	var models []entity.BatchInsertModeler
 	for _, student := range record.Students {
@@ -105,7 +108,17 @@ func (m *reportModel) AddStudentUsageRecordTx(ctx context.Context, tx *dbo.DBCon
 
 type LiveMaterialSlice []*entity.LiveMaterial
 
-func (lms LiveMaterialSlice) FindByUrl(url string) (material *entity.LiveMaterial, found bool) {
+func (lms LiveMaterialSlice) FindByUrl(ctx context.Context, url string) (material *entity.LiveMaterial, found bool) {
+	defer func() {
+		log.Info(
+			ctx,
+			"find material by url",
+			log.Any("materials", lms),
+			log.Any("url", url),
+			log.Any("material", material),
+			log.Any("found", found),
+		)
+	}()
 	for _, lm := range lms {
 		if strings.TrimSpace(lm.URL) == strings.TrimSpace(url) {
 			material = lm
@@ -117,7 +130,5 @@ func (lms LiveMaterialSlice) FindByUrl(url string) (material *entity.LiveMateria
 }
 
 func (m *reportModel) getMaterials(ctx context.Context, op *entity.Operator, input *entity.MaterialInput) (materials LiveMaterialSlice, err error) {
-	// TODO
-	//return GetLiveTokenModel().GetMaterials(ctx, op, input)
-	return
+	return GetLiveTokenModel().GetMaterials(ctx, op, input)
 }

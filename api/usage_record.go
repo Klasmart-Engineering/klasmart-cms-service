@@ -52,8 +52,7 @@ func (s *Server) addStudentUsageRecordEvent(c *gin.Context) {
 	}
 	req := entity.StudentUsageRecordInJwt{}
 	_, err = jwt.ParseWithClaims(jwtToken.Token, &req, func(t *jwt.Token) (interface{}, error) {
-		// TODO 添加验签 public key
-		return config.Get().Assessment.AddAssessmentSecret, nil
+		return config.Get().Report.PublicKey, nil
 	})
 
 	err = model.GetReportModel().AddStudentUsageRecordTx(ctx, dbo.MustGetDB(ctx), op, &req.StudentUsageRecord)
