@@ -20,7 +20,7 @@ import (
 // @Description Create learning outcomes
 // @Accept json
 // @Produce json
-// @Param outcome body model.OutcomeCreateView true "create outcome"
+// @Param outcome body model.OutcomeCreateView true "outcome condition"
 // @Success 200 {object} model.OutcomeCreateResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -865,21 +865,7 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 // @Description search published learning outcome with outcome sets
 // @Accept json
 // @Produce json
-// @Param outcome_name body string false "search by name"
-// @Param description body string false "search by description"
-// @Param keywords body string false "search by keywords"
-// @Param shortcode body string false "search by shortcode"
-// @Param author_name body string false "search by author_name"
-// @Param set_name body string false "search by set_name"
-// @Param search_key body string false "search by search_key"
-// @Param assumed body integer false "search by assumed: 1 true, 0 false, -1 all"
-// @Param program_ids body []string false "search by program ids"
-// @Param subject_ids body []string false "search by subject ids"
-// @Param category_ids body []string false "search by category ids"
-// @Param sub_category_ids body []string false "search by sub category ids"
-// @Param age_ids body []string false "search by age ids"
-// @Param grade_ids body []string false "search by grade ids"
-// @Param page body integer false "page"
+// @Param outcome body entity.OutcomeCondition true "create outcome"
 // @Param page_size body integer false "page size: -1 no page, 0 default page size 20"
 // @Param order_by body string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
 // @Success 200 {object} model.SearchPublishedOutcomeResponse
