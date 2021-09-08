@@ -1683,7 +1683,7 @@ func (s *scheduleModel) getLessonPlanWithMaterial(ctx context.Context, op *entit
 		}
 		result.IsAuth = isAuth
 
-		contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), lessonPlanID, op)
+		contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), lessonPlanID, op, false)
 		if err == dbo.ErrRecordNotFound {
 			log.Error(ctx, "getMaterials:get content sub by id not found",
 				log.Err(err),

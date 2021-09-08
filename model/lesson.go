@@ -238,7 +238,7 @@ func (l *LessonData) isOrganizationHeadquarters(ctx context.Context, orgID strin
 	return true, nil
 }
 
-func (l *LessonData) PrepareResult(ctx context.Context, tx *dbo.DBContext, content *entity.ContentInfo, operator *entity.Operator) error {
+func (l *LessonData) PrepareResult(ctx context.Context, tx *dbo.DBContext, content *entity.ContentInfo, operator *entity.Operator, ignorePermissionFilter bool) error {
 	materialList := make([]string, 0)
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		materialList = append(materialList, l.MaterialId)
@@ -262,10 +262,12 @@ func (l *LessonData) PrepareResult(ctx context.Context, tx *dbo.DBContext, conte
 		return err
 	}
 	if !isHeadQuarter {
-		//if is not head quarter, filter unauthed materials
-		contentList, err = l.filterMaterialsByPermission(ctx, contentList, operator)
-		if err != nil {
-			return err
+		if !ignorePermissionFilter {
+			//if is not head quarter, filter unauthed materials
+			contentList, err = l.filterMaterialsByPermission(ctx, contentList, operator)
+			if err != nil {
+				return err
+			}
 		}
 	} else {
 		//if is head quarter, remove unpublished materials

@@ -111,7 +111,7 @@ type IContentModel interface {
 
 	GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentName, error)
 	GetContentNameByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
-	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*SubContentsWithName, error)
+	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator, ignorePermissionFilter bool) ([]*SubContentsWithName, error)
 	GetContentsSubContentsMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*SubContentsWithName, error)
 
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, remark, status string) error
@@ -1633,7 +1633,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 				log.Error(ctx, "can't prepare version for sub contents", log.Err(err), log.Any("content", content))
 				return nil, err
 			}
-			err = v.PrepareResult(ctx, tx, content, user)
+			err = v.PrepareResult(ctx, tx, content, user, false)
 			if err != nil {
 				log.Error(ctx, "can't get sub contents", log.Err(err), log.Any("content", content))
 				return nil, err
@@ -1685,7 +1685,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 	return contentInfoMap, nil
 }
 
-func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*SubContentsWithName, error) {
+func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator, ignorePermissionFilter bool) ([]*SubContentsWithName, error) {
 	obj, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't read content", log.Err(err), log.String("cid", cid))
@@ -1721,7 +1721,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 			log.Error(ctx, "can't prepare version for sub contents", log.Err(err), log.Any("content", content))
 			return nil, err
 		}
-		err = v.PrepareResult(ctx, tx, content, user)
+		err = v.PrepareResult(ctx, tx, content, user, ignorePermissionFilter)
 		if err != nil {
 			log.Error(ctx, "can't get sub contents", log.Err(err), log.Any("content", content))
 			return nil, err
@@ -1861,7 +1861,7 @@ func (cm *ContentModel) fillContentDetails(ctx context.Context, tx *dbo.DBContex
 		log.Error(ctx, "can't update contentdata version for details", log.Err(err))
 		return nil, ErrParseContentDataDetailsFailed
 	}
-	err = contentData.PrepareResult(ctx, tx, content, user)
+	err = contentData.PrepareResult(ctx, tx, content, user, false)
 	if err != nil {
 		log.Error(ctx, "can't get contentdata for details", log.Err(err))
 		return nil, ErrParseContentDataDetailsFailed
