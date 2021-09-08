@@ -27,6 +27,7 @@ var (
 type ILiveTokenModel interface {
 	MakeScheduleLiveToken(ctx context.Context, op *entity.Operator, scheduleID string, tokenType entity.LiveTokenType) (string, error)
 	MakeContentLiveToken(ctx context.Context, op *entity.Operator, contentID string) (string, error)
+	GetMaterials(ctx context.Context, op *entity.Operator, input *entity.MaterialInput, ignorePermissionFilter bool) ([]*entity.LiveMaterial, error)
 }
 
 func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.Operator, scheduleID string, tokenType entity.LiveTokenType) (string, error) {
@@ -116,7 +117,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 			TokenType:  tokenType,
 			ContentID:  schedule.LessonPlanID,
 		}
-		liveTokenInfo.Materials, err = s.getMaterials(ctx, op, materialInput)
+		liveTokenInfo.Materials, err = s.GetMaterials(ctx, op, materialInput, false)
 		if err != nil {
 			log.Error(ctx, "MakeScheduleLiveToken:get material error",
 				log.Err(err),
@@ -185,7 +186,7 @@ func (s *liveTokenModel) MakeContentLiveToken(ctx context.Context, op *entity.Op
 		ContentID: contentID,
 		TokenType: entity.LiveTokenTypePreview,
 	}
-	liveTokenInfo.Materials, err = s.getMaterials(ctx, op, materialInput)
+	liveTokenInfo.Materials, err = s.GetMaterials(ctx, op, materialInput, false)
 	if err != nil {
 		log.Error(ctx, "MakeLivePreviewToken:get material error",
 			log.Err(err),
@@ -285,8 +286,8 @@ func (s *liveTokenModel) isTeacherByPermission(ctx context.Context, op *entity.O
 	return false, nil
 }
 
-func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, input *entity.MaterialInput) ([]*entity.LiveMaterial, error) {
-	contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), input.ContentID, op)
+func (s *liveTokenModel) GetMaterials(ctx context.Context, op *entity.Operator, input *entity.MaterialInput, ignorePermissionFilter bool) ([]*entity.LiveMaterial, error) {
+	contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), input.ContentID, op, ignorePermissionFilter)
 	log.Debug(ctx, "content data", log.Any("contentList", contentList))
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "getMaterials:get content sub by id not found",
@@ -308,6 +309,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 		}
 
 		materialItem := &entity.LiveMaterial{
+			ID:   item.ID,
 			Name: item.Name,
 		}
 		mData, ok := item.Data.(*MaterialData)
