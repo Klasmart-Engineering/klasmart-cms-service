@@ -39,7 +39,7 @@ func (s studentUsageDA) appendStringSlice(args []interface{}, slice []string) []
 }
 func (s studentUsageDA) GetMaterialUsages(ctx context.Context, req *entity.StudentUsageMaterialReportRequest) (usages []*entity.MaterialUsage, err error) {
 	usages = make([]*entity.MaterialUsage, 0)
-	if len(req.TimeRangeList) < 1 {
+	if len(req.TimeRangeList.TimeRangeSlice()) < 1 {
 		return
 	}
 
@@ -84,7 +84,7 @@ where
 }
 func (s studentUsageDA) GetMaterialViewCountUsages(ctx context.Context, req *entity.StudentUsageMaterialViewCountReportRequest) (usages []*entity.MaterialUsage, err error) {
 	usages = make([]*entity.MaterialUsage, 0)
-	if len(req.TimeRangeList) < 1 {
+	if len(req.TimeRangeList.TimeRangeSlice()) < 1 {
 		return
 	}
 
