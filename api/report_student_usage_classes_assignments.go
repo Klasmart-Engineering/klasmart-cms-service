@@ -1,11 +1,12 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 // @Summary get Classes&Assignments Report
@@ -36,6 +37,8 @@ func (s *Server) getClassesAssignmentsOverview(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
+	default:
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -69,6 +72,8 @@ func (s *Server) getClassesAssignments(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
+	default:
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -101,5 +106,7 @@ func (s *Server) getClassesAssignmentsUnattended(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
+	default:
+		s.defaultErrorHandler(c, err)
 	}
 }
