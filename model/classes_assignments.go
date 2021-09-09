@@ -195,7 +195,7 @@ func (c ClassesAssignmentsModel) GetOverview(ctx context.Context, op *entity.Ope
 	return overviews, nil
 }
 
-func (c ClassesAssignmentsModel) getScheduleIDMapByTimeRange(ctx context.Context, relations []*entity.ScheduleRelation, durations []entity.TimeRange, kind string) (map[entity.TimeRange][]string, error) {
+func (c ClassesAssignmentsModel) getScheduleIDMapByTimeRange(ctx context.Context, relations []*entity.ScheduleRelation, durations []entity.TimeRange, kind string) ([]*entity.Schedule, map[entity.TimeRange][]string, error) {
 	ids := make([]string, len(relations))
 	for i := range relations {
 		ids[i] = relations[i].ScheduleID
@@ -203,7 +203,7 @@ func (c ClassesAssignmentsModel) getScheduleIDMapByTimeRange(ctx context.Context
 	min, max, err := c.getMinAndMax(ctx, durations)
 	if err != nil {
 		log.Error(ctx, "getScheduleIDMapByTimeRange: extract time duration failed", log.Err(err))
-		return nil, err
+		return nil, nil, err
 	}
 
 	condition := &entity.ScheduleQueryCondition{IDs: entity.NullStrings{Strings: ids, Valid: true}}
@@ -230,18 +230,20 @@ func (c ClassesAssignmentsModel) getScheduleIDMapByTimeRange(ctx context.Context
 	schedules, err := GetScheduleModel().QueryUnsafe(ctx, condition)
 	if err != nil {
 		log.Error(ctx, "getScheduleIDMapByTimeRange: get class's duration schedules failed", log.Err(err))
-		return nil, err
+		return nil, nil, err
 	}
 
 	scheduleMap := make(map[entity.TimeRange][]string)
+	filterSchedules := make([]*entity.Schedule, 0)
 	for i := range schedules {
 		for j := range durations {
 			if durations[j].MustContain(ctx, schedules[i].StartAt) {
 				scheduleMap[durations[j]] = append(scheduleMap[durations[j]], schedules[i].ID)
+				filterSchedules = append(filterSchedules, schedules[i])
 			}
 		}
 	}
-	return scheduleMap, nil
+	return filterSchedules, scheduleMap, nil
 }
 
 func (c ClassesAssignmentsModel) getScheduleRatios(ctx context.Context, scheduleIDs []string) (map[string][]int, error) {
@@ -280,17 +282,15 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 		}
 	}
 
-	scheduleIDRangeIDMap, err := c.getScheduleIDMapByTimeRange(ctx, relations, request.Durations, request.Type)
+	filterSchedules, scheduleIDRangeIDMap, err := c.getScheduleIDMapByTimeRange(ctx, relations, request.Durations, request.Type)
 	if err != nil {
 		log.Error(ctx, "GetStatistic: extract time duration failed", log.Err(err), log.Any("request", request))
 		return nil, err
 	}
 
-	scheduleIDs := make([]string, 0)
-	for _, v := range scheduleIDRangeIDMap {
-		for i := range v {
-			scheduleIDs = append(scheduleIDs, v[i])
-		}
+	scheduleIDs := make([]string, len(filterSchedules))
+	for i := range filterSchedules {
+		scheduleIDs[i] = filterSchedules[i].ID
 	}
 
 	scheduleShouldActualMap, err := c.getScheduleRatios(ctx, scheduleIDs)
@@ -349,15 +349,18 @@ func (c ClassesAssignmentsModel) GetUnattended(ctx context.Context, op *entity.O
 		}
 	}
 
-	rangeSchedule, err := c.getScheduleIDMapByTimeRange(ctx, relations, request.Durations, request.Type)
+	filterSchedules, _, err := c.getScheduleIDMapByTimeRange(ctx, relations, request.Durations, request.Type)
 	if err != nil {
 		log.Error(ctx, "GetUnattended: extract time duration failed", log.Err(err), log.Any("request", request))
 		return nil, err
 	}
-	scheduleIDs := make([]string, 0)
-	for _, v := range rangeSchedule {
-		scheduleIDs = append(scheduleIDs, v...)
+	scheduleIDs := make([]string, len(filterSchedules))
+	scheduleIDNameMap := make(map[string]string)
+	for i := range filterSchedules {
+		scheduleIDs[i] = filterSchedules[i].ID
+		scheduleIDNameMap[filterSchedules[i].ID] = filterSchedules[i].Title
 	}
+
 	unattended, err := da.GetClassesAssignmentsDA().QueryTx(ctx, dbo.MustGetDB(ctx), &da.ClassesAssignmentsCondition{
 		ScheduleIDs:     entity.NullStrings{Strings: scheduleIDs, Valid: true},
 		FinishCountsLTE: sql.NullInt64{Int64: 0, Valid: true},
@@ -373,10 +376,17 @@ func (c ClassesAssignmentsModel) GetUnattended(ctx context.Context, op *entity.O
 	}
 
 	// TODO: get one-page students order by student name
-	students := make([]struct {
+	// Now, give all unattendedMap
+	type studentType struct {
 		ID   string
 		Name string
-	}, 0)
+	}
+	students := make([]*studentType, len(unattendedMap))
+	index := 0
+	for k, _ := range unattendedMap {
+		students[index] = &studentType{ID: k}
+		index++
+	}
 
 	result := make([]*entity.ClassesAssignmentsUnattendedStudentsView, 0)
 	for i := range students {
@@ -389,7 +399,7 @@ func (c ClassesAssignmentsModel) GetUnattended(ctx context.Context, op *entity.O
 			if scheduleIDMap != nil && scheduleIDMap[scheduleIDs[j]] {
 				scheduleView := entity.ScheduleView{
 					ScheduleID:   scheduleIDs[j],
-					ScheduleName: "",
+					ScheduleName: scheduleIDNameMap[scheduleIDs[j]],
 					Type:         request.Type,
 				}
 				view.Schedule = scheduleView
