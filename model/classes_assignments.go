@@ -329,6 +329,7 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 		result[i] = view
 	}
 
+	log.Debug(ctx, "GetStatistic successfully", log.Any("result", result))
 	return result, nil
 }
 
