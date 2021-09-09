@@ -512,7 +512,9 @@ type ScheduleCondition struct {
 	OrderBy ScheduleOrderBy
 	Pager   dbo.Pager
 
-	DeleteAt sql.NullInt64
+	DeleteAt   sql.NullInt64
+	CreateAtGe sql.NullInt64
+	CreateAtLt sql.NullInt64
 }
 
 func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
@@ -523,10 +525,12 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		wheres = append(wheres, "id in (?)")
 		params = append(params, c.IDs.Strings)
 	}
+
 	if c.StartAtGe.Valid {
 		wheres = append(wheres, "start_at >= ?")
 		params = append(params, c.StartAtGe.Int64)
 	}
+
 	if c.StartAtAndDueAtGe.Valid {
 		wheres = append(wheres, "(start_at >= ? or due_at >= ?)")
 		params = append(params, c.StartAtAndDueAtGe.Int64, c.StartAtAndDueAtGe.Int64)
@@ -560,9 +564,19 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		wheres = append(wheres, "end_at >= ?")
 		params = append(params, c.EndAtGe.Int64)
 	}
+
 	if c.StartAtLt.Valid {
 		wheres = append(wheres, "start_at < ?")
 		params = append(params, c.StartAtLt.Int64)
+	}
+
+	if c.CreateAtGe.Valid {
+		wheres = append(wheres, "created_at >= ?")
+		params = append(params, c.CreateAtGe.Int64)
+	}
+	if c.CreateAtLt.Valid {
+		wheres = append(wheres, "created_at < ?")
+		params = append(params, c.CreateAtLt.Int64)
 	}
 
 	if c.LessonPlanID.Valid {

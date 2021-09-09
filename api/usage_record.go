@@ -30,6 +30,9 @@ import (
 // @Router /student_usage_record/event [post]
 func (s *Server) addStudentUsageRecordEvent(c *gin.Context) {
 	ctx := c.Request.Context()
+
+	log.Debug(ctx, "add student usage record")
+
 	var err error
 	defer func() {
 		if err == nil {
@@ -50,9 +53,17 @@ func (s *Server) addStudentUsageRecordEvent(c *gin.Context) {
 		err = constant.ErrInvalidArgs
 		return
 	}
+
+	log.Info(ctx, "get event token",
+		log.String("log type", "report"),
+		log.String("token", jwtToken.Token),
+		log.String("step", "REPORT step1"))
+
 	req := entity.StudentUsageRecordInJwt{}
 	_, err = jwt.ParseWithClaims(jwtToken.Token, &req, func(t *jwt.Token) (interface{}, error) {
-		// TODO 添加验签 public key
+		// return config.Get().Report.PublicKey, nil
+
+		// temp solution, ops is offline
 		return config.Get().Assessment.AddAssessmentSecret, nil
 	})
 

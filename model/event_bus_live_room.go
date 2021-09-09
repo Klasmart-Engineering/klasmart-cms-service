@@ -44,6 +44,7 @@ func GetLiveRoomEventBusModel() ILiveRoomEventBus {
 		}
 
 		bus.SubEndClass(GetClassAndLiveAssessmentModel().Add)
+		bus.SubEndClass(GetClassesAssignmentsModel().CreateRecord)
 
 		_liveRoomBusModel = bus
 	})

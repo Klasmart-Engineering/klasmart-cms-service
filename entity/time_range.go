@@ -35,5 +35,19 @@ func (tr TimeRange) Value(ctx context.Context) (startAt, endAt int64, err error)
 		err = constant.ErrInvalidArgs
 		return
 	}
+
+	if startAt > endAt {
+		log.Error(ctx, "invalid start_at and end_at for TimeRange", log.Err(err), log.Any("time_range", tr))
+		err = constant.ErrInvalidArgs
+		return
+	}
 	return
+}
+
+func (tr TimeRange) MustContain(ctx context.Context, value int64) bool {
+	start, end, err := tr.Value(ctx)
+	if err != nil {
+		log.Panic(ctx, "MustBetween panic", log.Any("tr", tr), log.Int64("value", value))
+	}
+	return value >= start && value < end
 }

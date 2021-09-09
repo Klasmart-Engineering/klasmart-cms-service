@@ -47,6 +47,7 @@ type Config struct {
 	CORS                  CORSConfig            `json:"cors" yaml:"cors"`
 	ShowInternalErrorType bool                  `json:"show_internal_error_type"`
 	User                  UserConfig            `json:"user" yaml:"user"`
+	Report                ReportConfig          `json:"report" yaml:"report"`
 }
 
 var config *Config
@@ -153,6 +154,10 @@ type UserConfig struct {
 	CacheExpiration time.Duration `json:"cache_expiration" yaml:"cache_expiration"`
 }
 
+type ReportConfig struct {
+	PublicKey string `json:"report_public_key" yaml:"report_public_key"`
+}
+
 func assertGetEnv(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
@@ -178,6 +183,7 @@ func LoadEnvConfig() {
 	loadCORSConfig(ctx)
 	loadShowInternalErrorTypeConfig(ctx)
 	loadUserConfig(ctx)
+	loadReportConfig(ctx)
 }
 
 func loadShowInternalErrorTypeConfig(ctx context.Context) {
@@ -448,6 +454,10 @@ func loadUserConfig(ctx context.Context) {
 	} else {
 		config.User.CacheExpiration = cacheExpiration
 	}
+}
+
+func loadReportConfig(ctx context.Context) {
+	// config.Report.PublicKey = assertGetEnv("report_public_key")
 }
 
 func Get() *Config {
