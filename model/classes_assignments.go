@@ -304,9 +304,9 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 		return nil, err
 	}
 	result := make([]*entity.ClassesAssignmentsView, len(request.ClassIDs))
-	for i := range request.ClassIDs {
+	for i, classID := range request.ClassIDs.Slice() {
 		view := &entity.ClassesAssignmentsView{
-			ClassID:        request.ClassIDs.Slice()[i],
+			ClassID:        classID,
 			DurationsRatio: make([]entity.ClassesAssignmentsDurationRatio, len(request.Durations)),
 		}
 		ids := make([]string, 0)
