@@ -303,6 +303,9 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 		log.Error(ctx, "GetStatistic: getScheduleRatios failed", log.Err(err), log.Any("request", request))
 		return nil, err
 	}
+
+	log.Debug(ctx, "get schedule ratios successfully", log.Any("ratio", scheduleShouldActualMap))
+
 	result := make([]*entity.ClassesAssignmentsView, len(request.ClassIDs.Slice()))
 	for i, classID := range request.ClassIDs.Slice() {
 		view := &entity.ClassesAssignmentsView{
@@ -316,14 +319,17 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 			for _, id := range scheduleIDRangeIDMap[duration] {
 				if scheduleClassMap[id] == view.ClassID {
 					ids = append(ids, id)
-					if scheduleShouldActualMap[id] != nil {
+					if scheduleShouldActualMap[id] != nil && scheduleShouldActualMap[id][0] != 0 {
 						rationSum += float32(scheduleShouldActualMap[id][1]) / float32(scheduleShouldActualMap[id][0])
 					}
 					count++
 				}
 			}
 			view.DurationsRatio[j].Key = string(duration)
-			view.DurationsRatio[j].Ratio = rationSum / float32(count)
+			if count != 0 {
+				view.DurationsRatio[j].Ratio = rationSum / float32(count)
+			}
+
 		}
 		view.Total = len(utils.SliceDeduplication(ids))
 		result[i] = view
