@@ -46,7 +46,7 @@ func (s studentUsageDA) GetMaterialUsages(ctx context.Context, req *entity.Stude
 	var sqlArr []string
 	var args []interface{}
 
-	for _, timeRange := range req.TimeRangeList {
+	for _, timeRange := range req.TimeRangeList.Slice() {
 		var min, max int64
 		min, max, err = timeRange.Value(ctx)
 		if err != nil {
@@ -93,7 +93,7 @@ func (s studentUsageDA) GetMaterialViewCountUsages(ctx context.Context, req *ent
 	args = s.appendStringSlice(args, req.ContentTypeList)
 
 	var pls []string
-	for _, timeRange := range req.TimeRangeList {
+	for _, timeRange := range req.TimeRangeList.Slice() {
 		var min, max int64
 		min, max, err = timeRange.Value(ctx)
 		if err != nil {
