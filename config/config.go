@@ -457,7 +457,7 @@ func loadUserConfig(ctx context.Context) {
 }
 
 func loadReportConfig(ctx context.Context) {
-	config.Report.PublicKey = assertGetEnv("report_public_key")
+	// config.Report.PublicKey = assertGetEnv("report_public_key")
 }
 
 func Get() *Config {
