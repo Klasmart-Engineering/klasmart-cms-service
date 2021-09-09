@@ -85,9 +85,9 @@ type JwtToken struct {
 }
 
 type StudentUsageMaterialReportRequest struct {
-	TimeRangeList   []TimeRange `json:"time_range_list" form:"time_range_list"`
-	ClassIDList     []string    `json:"class_id_list" form:"class_id_list"`
-	ContentTypeList []string    `json:"content_type_list" form:"content_type_list"`
+	TimeRangeList   QueryStringSlice `json:"time_range_list" form:"time_range_list"`
+	ClassIDList     QueryStringSlice `json:"class_id_list" form:"class_id_list"`
+	ContentTypeList QueryStringSlice `json:"content_type_list" form:"content_type_list"`
 }
 
 type MaterialUsage struct {
@@ -113,9 +113,9 @@ type ContentUsage struct {
 }
 
 type StudentUsageMaterialViewCountReportRequest struct {
-	TimeRangeList   []TimeRange `json:"time_range_list" form:"time_range_list"`
-	ClassIDList     []string    `json:"class_id_list" form:"class_id_list"`
-	ContentTypeList []string    `json:"content_type_list" form:"content_type_list"`
+	TimeRangeList   QueryStringSlice `json:"time_range_list" form:"time_range_list"`
+	ClassIDList     QueryStringSlice `json:"class_id_list" form:"class_id_list"`
+	ContentTypeList QueryStringSlice `json:"content_type_list" form:"content_type_list"`
 }
 
 type StudentUsageMaterialViewCountReportResponse struct {

@@ -3,13 +3,14 @@ package model
 import (
 	"context"
 	"database/sql"
+	"sync"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
-	"time"
 )
 
 type IClassesAssignments interface {
@@ -149,7 +150,7 @@ func (c ClassesAssignmentsModel) getScheduleIDMapByType(ctx context.Context, sch
 
 func (c ClassesAssignmentsModel) GetOverview(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentOverViewRequest) ([]*entity.ClassesAssignmentOverView, error) {
 	relations, err := GetScheduleRelationModel().Query(ctx, op, &da.ScheduleRelationCondition{
-		RelationIDs:  entity.NullStrings{Strings: request.ClassIDs, Valid: true},
+		RelationIDs:  entity.NullStrings{Strings: request.ClassIDs.Slice(), Valid: true},
 		RelationType: sql.NullString{String: string(entity.ScheduleRelationTypeClassRosterClass), Valid: true},
 	})
 	if err != nil {
@@ -182,7 +183,7 @@ func (c ClassesAssignmentsModel) GetOverview(ctx context.Context, op *entity.Ope
 		{Type: string(entity.StudyType), Count: 0},
 		{Type: string(entity.HomeFunType), Count: 0},
 	}
-	scheduleTypeMaps := c.getScheduleIDMapByType(ctx, schedules, request.Durations)
+	scheduleTypeMaps := c.getScheduleIDMapByType(ctx, schedules, request.Durations.TimeRangeSlice())
 	if scheduleTypeMaps[entity.LiveType] != nil {
 		overviews[0].Count = len(utils.SliceDeduplication(scheduleTypeMaps[entity.LiveType]))
 	}
@@ -275,7 +276,7 @@ func (c ClassesAssignmentsModel) getScheduleRatios(ctx context.Context, schedule
 
 func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentsViewRequest) ([]*entity.ClassesAssignmentsView, error) {
 	relations, err := GetScheduleRelationModel().Query(ctx, op, &da.ScheduleRelationCondition{
-		RelationIDs:  entity.NullStrings{Strings: request.ClassIDs, Valid: true},
+		RelationIDs:  entity.NullStrings{Strings: request.ClassIDs.Slice(), Valid: true},
 		RelationType: sql.NullString{String: string(entity.ScheduleRelationTypeClassRosterClass), Valid: true},
 	})
 
@@ -286,7 +287,7 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 		}
 	}
 
-	filterSchedules, scheduleIDRangeIDMap, err := c.getScheduleIDMapByTimeRange(ctx, relations, request.Durations, request.Type)
+	filterSchedules, scheduleIDRangeIDMap, err := c.getScheduleIDMapByTimeRange(ctx, relations, request.Durations.TimeRangeSlice(), request.Type)
 	if err != nil {
 		log.Error(ctx, "GetStatistic: extract time duration failed", log.Err(err), log.Any("request", request))
 		return nil, err
@@ -305,11 +306,11 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 	result := make([]*entity.ClassesAssignmentsView, len(request.ClassIDs))
 	for i := range request.ClassIDs {
 		view := &entity.ClassesAssignmentsView{
-			ClassID:        request.ClassIDs[i],
+			ClassID:        request.ClassIDs.Slice()[i],
 			DurationsRatio: make([]entity.ClassesAssignmentsDurationRatio, len(request.Durations)),
 		}
 		ids := make([]string, 0)
-		for j, duration := range request.Durations {
+		for j, duration := range request.Durations.TimeRangeSlice() {
 			var rationSum float32
 			count := 0
 			for _, id := range scheduleIDRangeIDMap[duration] {
@@ -355,7 +356,7 @@ func (c ClassesAssignmentsModel) GetUnattended(ctx context.Context, op *entity.O
 		}
 	}
 
-	filterSchedules, _, err := c.getScheduleIDMapByTimeRange(ctx, relations, request.Durations, request.Type)
+	filterSchedules, _, err := c.getScheduleIDMapByTimeRange(ctx, relations, request.Durations.TimeRangeSlice(), request.Type)
 	if err != nil {
 		log.Error(ctx, "GetUnattended: extract time duration failed", log.Err(err), log.Any("request", request))
 		return nil, err
