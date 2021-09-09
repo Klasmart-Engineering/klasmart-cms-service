@@ -28,6 +28,15 @@ type studentUsageDA struct {
 	BaseDA
 }
 
+func (s studentUsageDA) makePlaceHolderForStringSlice(slice []string) (pl string) {
+	return strings.TrimRight(strings.Repeat("?,", len(slice)), ",")
+}
+func (s studentUsageDA) appendStringSlice(args []interface{}, slice []string) []interface{} {
+	for _, s2 := range slice {
+		args = append(args, s2)
+	}
+	return args
+}
 func (s studentUsageDA) GetMaterialUsages(ctx context.Context, req *entity.StudentUsageMaterialReportRequest) (usages []*entity.MaterialUsage, err error) {
 	usages = make([]*entity.MaterialUsage, 0)
 	if len(req.TimeRangeList) < 1 {
@@ -43,6 +52,7 @@ func (s studentUsageDA) GetMaterialUsages(ctx context.Context, req *entity.Stude
 		if err != nil {
 			return
 		}
+
 		sqlArr = append(sqlArr, fmt.Sprintf(`
 select class_id,content_type,count(1) as used_count,? as time_range from (
 	select
@@ -54,12 +64,15 @@ select class_id,content_type,count(1) as used_count,? as time_range from (
 FROM
 	student_usage_records
 where
-	class_id in (?)
-	and content_type in (?)
+	class_id in (%s)
+	and content_type in (%s)
 	and schedule_start_at BETWEEN ? and ?
 ) t group by t.class_id,t.content_type
-`))
-		args = append(args, timeRange, req.ClassIDList, req.ContentTypeList, min, max)
+`, s.makePlaceHolderForStringSlice(req.ClassIDList), s.makePlaceHolderForStringSlice(req.ContentTypeList)))
+		args = append(args, timeRange)
+		args = s.appendStringSlice(args, req.ClassIDList)
+		args = s.appendStringSlice(args, req.ContentTypeList)
+		args = append(args, min, max)
 	}
 	sql := strings.Join(sqlArr, " union all ")
 	err = s.exec(ctx, sql, args, &usages)
@@ -75,10 +88,9 @@ func (s studentUsageDA) GetMaterialViewCountUsages(ctx context.Context, req *ent
 		return
 	}
 
-	args := []interface{}{
-		req.ClassIDList,
-		req.ContentTypeList,
-	}
+	var args []interface{}
+	args = s.appendStringSlice(args, req.ClassIDList)
+	args = s.appendStringSlice(args, req.ContentTypeList)
 
 	var pls []string
 	for _, timeRange := range req.TimeRangeList {
@@ -101,11 +113,12 @@ select content_type,count(1) as used_count from (
 FROM
 	student_usage_records
 where
-	class_id in (?)
-	and content_type in (?)
+	class_id in (%s)
+	and content_type in (%s)
 	and (%s)
 ) t group by t.content_type
-`, strings.Join(pls, " or "))
+`, s.makePlaceHolderForStringSlice(req.ClassIDList), s.makePlaceHolderForStringSlice(req.ContentTypeList), strings.Join(pls, " or "))
+
 	err = s.exec(ctx, sql, args, &usages)
 	if err != nil {
 		return
@@ -126,15 +139,9 @@ func (s studentUsageDA) exec(ctx context.Context, sql string, args []interface{}
 	}()
 	db := dbo.MustGetDB(ctx)
 	log.Info(ctx, "start execute sql", log.Any("sql", sql), log.Any("args", args))
-	r := db.Exec(sql, args)
-	err = r.Error
+	err = db.Raw(sql, args...).Scan(result).Error
 	if err != nil {
 		log.Error(ctx, "execute sql error", log.Err(err), log.Any("sql", sql), log.Any("args", args))
-		return
-	}
-	err = r.Scan(result).Error
-	if err != nil {
-		log.Error(ctx, "scan error", log.Err(err))
 		return
 	}
 	return
