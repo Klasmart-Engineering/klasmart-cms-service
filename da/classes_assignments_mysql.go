@@ -30,7 +30,7 @@ func (c ClassesAssignmentsSQLDA) BatchInsertTx(ctx context.Context, tx *dbo.DBCo
 func (c ClassesAssignmentsSQLDA) BatchUpdateFinishAndEnd(ctx context.Context, tx *dbo.DBContext, scheduleID string, attendedIDs []string, endTime int64) error {
 	if len(attendedIDs) > 0 {
 		sql := fmt.Sprintf("update %s set finish_counts=finish_counts+1, last_end_at=? where schedule_id=? and attendance_id in (?)", entity.ClassesAssignmentsRecords{}.TableName())
-		err := tx.Exec(sql, endTime,  scheduleID, attendedIDs).Error
+		err := tx.Exec(sql, endTime, scheduleID, attendedIDs).Error
 		if err != nil {
 			log.Error(ctx, "BatchUpdateFinish: update failed",
 				log.String("sql", sql),
@@ -94,6 +94,11 @@ func (c *ClassesAssignmentsCondition) GetConditions() ([]string, []interface{}) 
 	if c.ScheduleIDs.Valid {
 		wheres = append(wheres, "schedule_id in (?)")
 		params = append(params, c.ScheduleIDs.Strings)
+	}
+
+	if c.FinishCountsLTE.Valid {
+		wheres = append(wheres, " finish_counts <= ?")
+		params = append(params, c.FinishCountsLTE.Int64)
 	}
 
 	return wheres, params

@@ -43,7 +43,7 @@ func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Op
 		return "", nil
 	}
 	shouldAttendances, err := GetScheduleRelationModel().Query(ctx, op, &da.ScheduleRelationCondition{
-		ScheduleID: sql.NullString{String: schedule.ID, Valid: true},
+		ScheduleID:   sql.NullString{String: schedule.ID, Valid: true},
 		RelationType: sql.NullString{String: string(entity.ScheduleRelationTypeClassRosterStudent), Valid: true},
 	})
 	if err != nil {
@@ -53,7 +53,7 @@ func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Op
 
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		existAttendances, err := da.GetClassesAssignmentsDA().QueryTx(ctx, tx, &da.ClassesAssignmentsCondition{
-			ClassID: sql.NullString{String: classID, Valid: true},
+			ClassID:    sql.NullString{String: classID, Valid: true},
 			ScheduleID: sql.NullString{String: schedule.ID, Valid: true},
 		})
 		if err != nil {
@@ -74,7 +74,7 @@ func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Op
 				}
 			}
 			if !exist {
-				insertRecords = append(insertRecords, &entity.ClassesAssignmentsRecords{
+				insert := &entity.ClassesAssignmentsRecords{
 					ID:              utils.NewID(),
 					ClassID:         classID,
 					ScheduleID:      schedule.ID,
@@ -82,7 +82,11 @@ func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Op
 					ScheduleType:    entity.NewScheduleInReportType(schedule.ClassType, schedule.IsHomeFun),
 					ScheduleStartAt: schedule.StartAt,
 					CreateAt:        time.Now().Unix(),
-				})
+				}
+				if schedule.ClassType == entity.ScheduleClassTypeHomework {
+					insert.ScheduleStartAt = schedule.CreatedAt
+				}
+				insertRecords = append(insertRecords, insert)
 			}
 		}
 		err = da.GetClassesAssignmentsDA().BatchInsertTx(ctx, tx, insertRecords)
@@ -106,6 +110,43 @@ func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Op
 	return "", err
 }
 
+func (c ClassesAssignmentsModel) getMinAndMax(ctx context.Context, timeRanges []entity.TimeRange) (int64, int64, error) {
+	min := int64(^uint64(0) >> 1)
+	max := int64(0)
+	for i := range timeRanges {
+		startAt, endAt, err := timeRanges[i].Value(ctx)
+		if err != nil {
+			log.Error(ctx, "getMinAndMax: extract time duration failed", log.Err(err), log.Any("timeRanges", timeRanges))
+			return 0, 0, err
+		}
+		if min > startAt {
+			min = startAt
+		}
+		if max < endAt {
+			max = endAt
+		}
+	}
+	return min, max, nil
+}
+
+func (c ClassesAssignmentsModel) getScheduleIDMapByType(ctx context.Context, schedules []*entity.Schedule, durations []entity.TimeRange) map[entity.ScheduleInReportType][]string {
+	results := make(map[entity.ScheduleInReportType][]string)
+	for _, schedule := range schedules {
+		for i := range durations {
+			if schedule.ClassType == entity.ScheduleClassTypeOnlineClass && durations[i].MustContain(ctx, schedule.StartAt) {
+				results[entity.LiveType] = append(results[entity.LiveType], schedule.ID)
+			}
+			if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
+				results[entity.StudyType] = append(results[entity.LiveType], schedule.ID)
+			}
+			if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
+				results[entity.HomeFunType] = append(results[entity.LiveType], schedule.ID)
+			}
+		}
+	}
+	return results
+}
+
 func (c ClassesAssignmentsModel) GetOverview(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentOverViewRequest) ([]*entity.ClassesAssignmentOverView, error) {
 	relations, err := GetScheduleRelationModel().Query(ctx, op, &da.ScheduleRelationCondition{
 		RelationIDs:  entity.NullStrings{Strings: request.ClassIDs, Valid: true},
@@ -121,20 +162,10 @@ func (c ClassesAssignmentsModel) GetOverview(ctx context.Context, op *entity.Ope
 		scheduleIDs[i] = relations[i].ScheduleID
 	}
 
-	min := int64(^uint64(0) >> 1)
-	max := int64(0)
-	for i := range request.Durations {
-		startAt, endAt, err := request.Durations[i].Value(ctx)
-		if err != nil {
-			log.Error(ctx, "GetOverview: extract time duration failed", log.Err(err), log.Any("request", request))
-			return nil, err
-		}
-		if min > startAt {
-			min = startAt
-		}
-		if max < endAt {
-			max = endAt
-		}
+	min, max, err := c.getMinAndMax(ctx, request.Durations)
+	if err != nil {
+		log.Error(ctx, "GetOverview: extract time duration failed", log.Err(err), log.Any("request", request))
+		return nil, err
 	}
 
 	schedules, err := GetScheduleModel().QueryUnsafe(ctx, &entity.ScheduleQueryCondition{
@@ -147,53 +178,58 @@ func (c ClassesAssignmentsModel) GetOverview(ctx context.Context, op *entity.Ope
 		return nil, err
 	}
 	overviews := []*entity.ClassesAssignmentOverView{
-		{Type: "", Count: 0},
-		{Type: "", Count: 0},
-		{Type: "", Count: 0},
+		{Type: string(entity.LiveType), Count: 0},
+		{Type: string(entity.StudyType), Count: 0},
+		{Type: string(entity.HomeFunType), Count: 0},
 	}
-	for i := range schedules {
-		if schedules[i].ClassType == entity.ScheduleClassTypeOnlineClass {
-			overviews[0].Count++
-		}
-		if schedules[i].ClassType == entity.ScheduleClassTypeHomework && !schedules[i].IsHomeFun {
-			overviews[1].Count++
-		}
-		if schedules[i].ClassType == entity.ScheduleClassTypeHomework && schedules[i].IsHomeFun {
-			overviews[2].Count++
-		}
+	scheduleTypeMaps := c.getScheduleIDMapByType(ctx, schedules, request.Durations)
+	if scheduleTypeMaps[entity.LiveType] != nil {
+		overviews[0].Count = len(utils.SliceDeduplication(scheduleTypeMaps[entity.LiveType]))
+	}
+	if scheduleTypeMaps[entity.StudyType] != nil {
+		overviews[0].Count = len(utils.SliceDeduplication(scheduleTypeMaps[entity.StudyType]))
+	}
+	if scheduleTypeMaps[entity.HomeFunType] != nil {
+		overviews[0].Count = len(utils.SliceDeduplication(scheduleTypeMaps[entity.HomeFunType]))
 	}
 	return overviews, nil
 }
 
-func (c ClassesAssignmentsModel) getTimeRangeSchedule(ctx context.Context, relations []*entity.ScheduleRelation, durations []entity.TimeRange, kind string) (map[entity.TimeRange][]string, error) {
+func (c ClassesAssignmentsModel) getScheduleIDMapByTimeRange(ctx context.Context, relations []*entity.ScheduleRelation, durations []entity.TimeRange, kind string) (map[entity.TimeRange][]string, error) {
 	ids := make([]string, len(relations))
 	for i := range relations {
 		ids[i] = relations[i].ScheduleID
 	}
-	min := int64(^uint64(0) >> 1)
-	max := int64(0)
-	for i := range durations {
-		startAt, endAt, err := durations[i].Value(ctx)
-		if err != nil {
-			log.Error(ctx, "getTimeRangeSchedule: extract time duration failed", log.Err(err))
-			return nil, err
-		}
-		if min > startAt {
-			min = startAt
-		}
-		if max < endAt {
-			max = endAt
-		}
-	}
-	schedules, err := GetScheduleModel().QueryUnsafe(ctx, &entity.ScheduleQueryCondition{
-		IDs:        entity.NullStrings{Strings: ids, Valid: true},
-		StartAtGe:  sql.NullInt64{Int64: min, Valid: true},
-		StartAtLt:  sql.NullInt64{Int64: max, Valid: true},
-		ClassTypes: entity.NullStrings{Strings: []string{kind}, Valid: true},
-		IsHomefun:  sql.NullBool{Bool: false, Valid: true},
-	})
+	min, max, err := c.getMinAndMax(ctx, durations)
 	if err != nil {
-		log.Error(ctx, "getTimeRangeSchedule: get class's duration schedules failed", log.Err(err))
+		log.Error(ctx, "getScheduleIDMapByTimeRange: extract time duration failed", log.Err(err))
+		return nil, err
+	}
+
+	condition := &entity.ScheduleQueryCondition{IDs: entity.NullStrings{Strings: ids, Valid: true}}
+
+	if kind == string(entity.LiveType) {
+		classType := string(entity.ScheduleClassTypeOnlineClass)
+		condition.ClassTypes = entity.NullStrings{Strings: []string{classType}, Valid: true}
+		condition.StartAtGe = sql.NullInt64{Int64: min, Valid: true}
+		condition.StartAtLt = sql.NullInt64{Int64: max, Valid: true}
+	}
+	if kind == string(entity.StudyType) {
+		classType := string(entity.ScheduleClassTypeHomework)
+		condition.ClassTypes = entity.NullStrings{Strings: []string{classType}, Valid: true}
+		condition.CreateAtGe = sql.NullInt64{Int64: min, Valid: true}
+		condition.CreateAtLt = sql.NullInt64{Int64: max, Valid: true}
+	}
+	if kind == string(entity.HomeFunType) {
+		classType := string(entity.ScheduleClassTypeHomework)
+		condition.ClassTypes = entity.NullStrings{Strings: []string{classType}, Valid: true}
+		condition.CreateAtGe = sql.NullInt64{Int64: min, Valid: true}
+		condition.CreateAtLt = sql.NullInt64{Int64: max, Valid: true}
+		condition.IsHomefun = sql.NullBool{Bool: true, Valid: true}
+	}
+	schedules, err := GetScheduleModel().QueryUnsafe(ctx, condition)
+	if err != nil {
+		log.Error(ctx, "getScheduleIDMapByTimeRange: get class's duration schedules failed", log.Err(err))
 		return nil, err
 	}
 
@@ -208,8 +244,27 @@ func (c ClassesAssignmentsModel) getTimeRangeSchedule(ctx context.Context, relat
 	return scheduleMap, nil
 }
 
-func (c ClassesAssignmentsModel) getScheduleRatios(ctx context.Context, scheduleIDs []string) (map[string]float32, error) {
-	panic("implement me")
+func (c ClassesAssignmentsModel) getScheduleRatios(ctx context.Context, scheduleIDs []string) (map[string][]int, error) {
+	records, err := da.GetClassesAssignmentsDA().QueryTx(ctx, dbo.MustGetDB(ctx), &da.ClassesAssignmentsCondition{
+		ScheduleIDs: entity.NullStrings{Strings: scheduleIDs, Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "getScheduleRatios: query failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs))
+		return nil, err
+	}
+	shouldActualMap := make(map[string][]int)
+	for _, record := range records {
+		if shouldActualMap[record.ScheduleID] == nil {
+			shouldActualMap[record.ScheduleID] = make([]int, 2)
+		}
+		shouldActualMap[record.ScheduleID][0]++
+		if record.FinishCount > 0 {
+			shouldActualMap[record.ScheduleID][1]++
+		}
+	}
+	return shouldActualMap, nil
 }
 
 func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentsViewRequest) ([]*entity.ClassesAssignmentsView, error) {
@@ -225,20 +280,20 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 		}
 	}
 
-	rangeSchedule, err := c.getTimeRangeSchedule(ctx, relations, request.Durations, request.Type)
+	scheduleIDRangeIDMap, err := c.getScheduleIDMapByTimeRange(ctx, relations, request.Durations, request.Type)
 	if err != nil {
 		log.Error(ctx, "GetStatistic: extract time duration failed", log.Err(err), log.Any("request", request))
 		return nil, err
 	}
 
 	scheduleIDs := make([]string, 0)
-	for _, v := range rangeSchedule {
+	for _, v := range scheduleIDRangeIDMap {
 		for i := range v {
 			scheduleIDs = append(scheduleIDs, v[i])
 		}
 	}
 
-	scheduleRatios, err := c.getScheduleRatios(ctx, scheduleIDs)
+	scheduleShouldActualMap, err := c.getScheduleRatios(ctx, scheduleIDs)
 	if err != nil {
 		log.Error(ctx, "GetStatistic: getScheduleRatios failed", log.Err(err), log.Any("request", request))
 		return nil, err
@@ -250,16 +305,17 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 			DurationsRatio: make([]entity.ClassesAssignmentsDurationRatio, len(request.Durations)),
 		}
 		ids := make([]string, 0)
-		for j, durationRatio := range view.DurationsRatio {
+		for j, duration := range request.Durations {
 			var rationSum float32
 			count := 0
-			for _, id := range rangeSchedule[entity.TimeRange(durationRatio.Key)] {
+			for _, id := range scheduleIDRangeIDMap[duration] {
 				if scheduleClassMap[id] == view.ClassID {
 					ids = append(ids, id)
-					rationSum += scheduleRatios[id]
+					rationSum += float32(scheduleShouldActualMap[id][1]) / float32(scheduleShouldActualMap[id][0])
 					count++
 				}
 			}
+			view.DurationsRatio[j].Key = string(duration)
 			view.DurationsRatio[j].Ratio = rationSum / float32(count)
 		}
 		view.Total = len(utils.SliceDeduplication(ids))
@@ -293,7 +349,7 @@ func (c ClassesAssignmentsModel) GetUnattended(ctx context.Context, op *entity.O
 		}
 	}
 
-	rangeSchedule, err := c.getTimeRangeSchedule(ctx, relations, request.Durations, request.Type)
+	rangeSchedule, err := c.getScheduleIDMapByTimeRange(ctx, relations, request.Durations, request.Type)
 	if err != nil {
 		log.Error(ctx, "GetUnattended: extract time duration failed", log.Err(err), log.Any("request", request))
 		return nil, err
@@ -316,11 +372,12 @@ func (c ClassesAssignmentsModel) GetUnattended(ctx context.Context, op *entity.O
 		return nil, err
 	}
 
-	// get one-page students order by student name
+	// TODO: get one-page students order by student name
 	students := make([]struct {
 		ID   string
 		Name string
 	}, 0)
+
 	result := make([]*entity.ClassesAssignmentsUnattendedStudentsView, 0)
 	for i := range students {
 		scheduleIDMap := unattendedMap[students[i].ID]
