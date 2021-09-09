@@ -214,6 +214,11 @@ func (s *Server) addAssessment(c *gin.Context) {
 		return
 	}
 
+	log.Info(ctx, "add assessment call back info",
+		log.String("log type", "report"),
+		log.String("token", body.Token),
+		log.String("step", "REPORT step1"))
+
 	args := entity.AddClassAndLiveAssessmentArgs{}
 	if _, err := jwt.ParseWithClaims(body.Token, &args, func(token *jwt.Token) (interface{}, error) {
 		return config.Get().Assessment.AddAssessmentSecret, nil
