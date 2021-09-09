@@ -137,10 +137,10 @@ func (c ClassesAssignmentsModel) getScheduleIDMapByType(ctx context.Context, sch
 				results[entity.LiveType] = append(results[entity.LiveType], schedule.ID)
 			}
 			if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
-				results[entity.StudyType] = append(results[entity.LiveType], schedule.ID)
+				results[entity.StudyType] = append(results[entity.StudyType], schedule.ID)
 			}
 			if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
-				results[entity.HomeFunType] = append(results[entity.LiveType], schedule.ID)
+				results[entity.HomeFunType] = append(results[entity.HomeFunType], schedule.ID)
 			}
 		}
 	}
@@ -162,16 +162,16 @@ func (c ClassesAssignmentsModel) GetOverview(ctx context.Context, op *entity.Ope
 		scheduleIDs[i] = relations[i].ScheduleID
 	}
 
-	min, max, err := c.getMinAndMax(ctx, request.Durations)
-	if err != nil {
-		log.Error(ctx, "GetOverview: extract time duration failed", log.Err(err), log.Any("request", request))
-		return nil, err
-	}
+	//min, max, err := c.getMinAndMax(ctx, request.Durations)
+	//if err != nil {
+	//	log.Error(ctx, "GetOverview: extract time duration failed", log.Err(err), log.Any("request", request))
+	//	return nil, err
+	//}
 
 	schedules, err := GetScheduleModel().QueryUnsafe(ctx, &entity.ScheduleQueryCondition{
-		IDs:       entity.NullStrings{Strings: scheduleIDs, Valid: true},
-		StartAtGe: sql.NullInt64{Int64: min, Valid: true},
-		StartAtLt: sql.NullInt64{Int64: max, Valid: true},
+		IDs: entity.NullStrings{Strings: scheduleIDs, Valid: true},
+		//StartAtGe: sql.NullInt64{Int64: min, Valid: true},
+		//StartAtLt: sql.NullInt64{Int64: max, Valid: true},
 	})
 	if err != nil {
 		log.Error(ctx, "GetOverview: get class's duration schedules failed", log.Err(err), log.Any("request", request))
@@ -187,10 +187,10 @@ func (c ClassesAssignmentsModel) GetOverview(ctx context.Context, op *entity.Ope
 		overviews[0].Count = len(utils.SliceDeduplication(scheduleTypeMaps[entity.LiveType]))
 	}
 	if scheduleTypeMaps[entity.StudyType] != nil {
-		overviews[0].Count = len(utils.SliceDeduplication(scheduleTypeMaps[entity.StudyType]))
+		overviews[1].Count = len(utils.SliceDeduplication(scheduleTypeMaps[entity.StudyType]))
 	}
 	if scheduleTypeMaps[entity.HomeFunType] != nil {
-		overviews[0].Count = len(utils.SliceDeduplication(scheduleTypeMaps[entity.HomeFunType]))
+		overviews[2].Count = len(utils.SliceDeduplication(scheduleTypeMaps[entity.HomeFunType]))
 	}
 	return overviews, nil
 }
@@ -236,8 +236,12 @@ func (c ClassesAssignmentsModel) getScheduleIDMapByTimeRange(ctx context.Context
 	scheduleMap := make(map[entity.TimeRange][]string)
 	filterSchedules := make([]*entity.Schedule, 0)
 	for i := range schedules {
+		startAt := schedules[i].StartAt
+		if schedules[i].ClassType == entity.ScheduleClassTypeHomework {
+			startAt = schedules[i].CreatedAt
+		}
 		for j := range durations {
-			if durations[j].MustContain(ctx, schedules[i].StartAt) {
+			if durations[j].MustContain(ctx, startAt) {
 				scheduleMap[durations[j]] = append(scheduleMap[durations[j]], schedules[i].ID)
 				filterSchedules = append(filterSchedules, schedules[i])
 			}
@@ -311,7 +315,9 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 			for _, id := range scheduleIDRangeIDMap[duration] {
 				if scheduleClassMap[id] == view.ClassID {
 					ids = append(ids, id)
-					rationSum += float32(scheduleShouldActualMap[id][1]) / float32(scheduleShouldActualMap[id][0])
+					if scheduleShouldActualMap[id] != nil {
+						rationSum += float32(scheduleShouldActualMap[id][1]) / float32(scheduleShouldActualMap[id][0])
+					}
 					count++
 				}
 			}
