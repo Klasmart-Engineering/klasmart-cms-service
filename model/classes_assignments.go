@@ -303,11 +303,11 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 		log.Error(ctx, "GetStatistic: getScheduleRatios failed", log.Err(err), log.Any("request", request))
 		return nil, err
 	}
-	result := make([]*entity.ClassesAssignmentsView, len(request.ClassIDs))
-	for i := range request.ClassIDs {
+	result := make([]*entity.ClassesAssignmentsView, len(request.ClassIDs.Slice()))
+	for i, classID := range request.ClassIDs.Slice() {
 		view := &entity.ClassesAssignmentsView{
-			ClassID:        request.ClassIDs.Slice()[i],
-			DurationsRatio: make([]entity.ClassesAssignmentsDurationRatio, len(request.Durations)),
+			ClassID:        classID,
+			DurationsRatio: make([]entity.ClassesAssignmentsDurationRatio, len(request.Durations.Slice())),
 		}
 		ids := make([]string, 0)
 		for j, duration := range request.Durations.TimeRangeSlice() {
