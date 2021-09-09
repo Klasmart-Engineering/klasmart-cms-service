@@ -46,7 +46,7 @@ func (s studentUsageDA) GetMaterialUsages(ctx context.Context, req *entity.Stude
 	var sqlArr []string
 	var args []interface{}
 
-	for _, timeRange := range req.TimeRangeList.Slice() {
+	for _, timeRange := range req.TimeRangeList.TimeRangeSlice() {
 		var min, max int64
 		min, max, err = timeRange.Value(ctx)
 		if err != nil {
@@ -68,10 +68,10 @@ where
 	and content_type in (%s)
 	and schedule_start_at BETWEEN ? and ?
 ) t group by t.class_id,t.content_type
-`, s.makePlaceHolderForStringSlice(req.ClassIDList), s.makePlaceHolderForStringSlice(req.ContentTypeList)))
+`, s.makePlaceHolderForStringSlice(req.ClassIDList.Slice()), s.makePlaceHolderForStringSlice(req.ContentTypeList.Slice())))
 		args = append(args, timeRange)
-		args = s.appendStringSlice(args, req.ClassIDList)
-		args = s.appendStringSlice(args, req.ContentTypeList)
+		args = s.appendStringSlice(args, req.ClassIDList.Slice())
+		args = s.appendStringSlice(args, req.ContentTypeList.Slice())
 		args = append(args, min, max)
 	}
 	sql := strings.Join(sqlArr, " union all ")
@@ -89,11 +89,11 @@ func (s studentUsageDA) GetMaterialViewCountUsages(ctx context.Context, req *ent
 	}
 
 	var args []interface{}
-	args = s.appendStringSlice(args, req.ClassIDList)
-	args = s.appendStringSlice(args, req.ContentTypeList)
+	args = s.appendStringSlice(args, req.ClassIDList.Slice())
+	args = s.appendStringSlice(args, req.ContentTypeList.Slice())
 
 	var pls []string
-	for _, timeRange := range req.TimeRangeList.Slice() {
+	for _, timeRange := range req.TimeRangeList.TimeRangeSlice() {
 		var min, max int64
 		min, max, err = timeRange.Value(ctx)
 		if err != nil {
@@ -117,7 +117,7 @@ where
 	and content_type in (%s)
 	and (%s)
 ) t group by t.content_type
-`, s.makePlaceHolderForStringSlice(req.ClassIDList), s.makePlaceHolderForStringSlice(req.ContentTypeList), strings.Join(pls, " or "))
+`, s.makePlaceHolderForStringSlice(req.ClassIDList.Slice()), s.makePlaceHolderForStringSlice(req.ContentTypeList.Slice()), strings.Join(pls, " or "))
 
 	err = s.exec(ctx, sql, args, &usages)
 	if err != nil {

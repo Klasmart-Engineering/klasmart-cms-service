@@ -52,11 +52,18 @@ func (tr TimeRange) MustContain(ctx context.Context, value int64) bool {
 	return value >= start && value < end
 }
 
-type TimeRangeSlice string
+type QueryStringSlice string
 
-func (t TimeRangeSlice) Slice() (trs []TimeRange) {
+func (t QueryStringSlice) TimeRangeSlice() (trs []TimeRange) {
 	for _, s := range strings.Split(string(t), ",") {
 		trs = append(trs, TimeRange(s))
+	}
+	return
+}
+
+func (t QueryStringSlice) Slice() (trs []string) {
+	for _, s := range strings.Split(string(t), ",") {
+		trs = append(trs, s)
 	}
 	return
 }
