@@ -21,13 +21,13 @@ import (
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/student_usage/classes_assignments_overview [get]
+// @Router /reports/student_usage/classes_assignments_overview [post]
 func (s *Server) getClassesAssignmentsOverview(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 
 	var request entity.ClassesAssignmentOverViewRequest
-	err := c.ShouldBindQuery(&request)
+	err := c.ShouldBindJSON(&request)
 	if err != nil {
 		log.Error(ctx, "getClassesAssignmentsOverview: ShouldBindQuery failed", log.Any("request", request))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -56,13 +56,13 @@ func (s *Server) getClassesAssignmentsOverview(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/student_usage/classes_assignments [get]
+// @Router /reports/student_usage/classes_assignments [post]
 func (s *Server) getClassesAssignments(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 
 	var request entity.ClassesAssignmentsViewRequest
-	err := c.ShouldBindQuery(&request)
+	err := c.ShouldBindJSON(&request)
 	if err != nil {
 		log.Error(ctx, "getClassesAssignments: ShouldBindQuery failed", log.Any("request", request))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -90,13 +90,13 @@ func (s *Server) getClassesAssignments(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/student_usage/classes_assignments/{class_id}/unattended [get]
+// @Router /reports/student_usage/classes_assignments/{class_id}/unattended [post]
 func (s *Server) getClassesAssignmentsUnattended(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 
 	var request entity.ClassesAssignmentsUnattendedViewRequest
-	err := c.ShouldBindQuery(&request)
+	err := c.ShouldBindJSON(&request)
 	if err != nil {
 		log.Error(ctx, "getClassesAssignmentsUnattended: ShouldBindQuery failed", log.Any("request", request))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
