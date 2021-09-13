@@ -77,6 +77,10 @@ func (oc Outcome) HasLocked() bool {
 	return oc.LockedBy != "" && oc.LockedBy != constant.LockedByNoBody
 }
 
+const (
+	OutcomeOrderByName = "name"
+)
+
 type OutcomeCondition struct {
 	IDs            []string `json:"ids" form:"ids"`
 	OutcomeName    string   `json:"outcome_name" form:"outcome_name"`
