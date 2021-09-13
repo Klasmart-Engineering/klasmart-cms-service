@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -71,6 +73,8 @@ func (m *reportModel) GetStudentUsageMaterial(ctx context.Context, op *entity.Op
 func (m *reportModel) AddStudentUsageRecordTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, record *entity.StudentUsageRecord) (err error) {
 	sche, err := GetScheduleModel().GetPlainByID(ctx, record.RoomID)
 	if err != nil {
+		log.Error(ctx, "can not find schedule by id", log.Any("schedule_id", record.RoomID))
+		err = constant.ErrInvalidArgs
 		return
 	}
 	if sche.LessonPlanID == "" {
