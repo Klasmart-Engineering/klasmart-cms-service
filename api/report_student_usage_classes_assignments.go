@@ -102,6 +102,7 @@ func (s *Server) getClassesAssignmentsUnattended(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+	request.ClassID = c.Param("class_id")
 	result, err := model.GetClassesAssignmentsModel().GetUnattended(ctx, op, &request)
 	switch err {
 	case nil:
