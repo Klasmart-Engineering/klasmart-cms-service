@@ -67,6 +67,12 @@ func (s *Server) addStudentUsageRecordEvent(c *gin.Context) {
 		return config.Get().Assessment.AddAssessmentSecret, nil
 	})
 
+	if req.StudentUsageRecord.RoomID == "" {
+		log.Error(ctx, "room_id is required", log.Any("req", req))
+		err = constant.ErrInvalidArgs
+		return
+	}
+
 	err = model.GetReportModel().AddStudentUsageRecordTx(ctx, dbo.MustGetDB(ctx), op, &req.StudentUsageRecord)
 	if err != nil {
 		return
