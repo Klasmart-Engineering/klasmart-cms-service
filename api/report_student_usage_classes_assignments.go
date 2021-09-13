@@ -29,7 +29,9 @@ func (s *Server) getClassesAssignmentsOverview(c *gin.Context) {
 	var request entity.ClassesAssignmentOverViewRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
-		log.Error(ctx, "getClassesAssignmentsOverview: ShouldBindQuery failed", log.Any("request", request))
+		log.Error(ctx, "getClassesAssignmentsOverview: ShouldBindQuery failed",
+			log.Err(err),
+			log.Any("request", request))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -64,7 +66,9 @@ func (s *Server) getClassesAssignments(c *gin.Context) {
 	var request entity.ClassesAssignmentsViewRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
-		log.Error(ctx, "getClassesAssignments: ShouldBindQuery failed", log.Any("request", request))
+		log.Error(ctx, "getClassesAssignments: ShouldBindQuery failed",
+			log.Err(err),
+			log.Any("request", request))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -98,7 +102,9 @@ func (s *Server) getClassesAssignmentsUnattended(c *gin.Context) {
 	var request entity.ClassesAssignmentsUnattendedViewRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
-		log.Error(ctx, "getClassesAssignmentsUnattended: ShouldBindQuery failed", log.Any("request", request))
+		log.Error(ctx, "getClassesAssignmentsUnattended: ShouldBindQuery failed",
+			log.Err(err),
+			log.Any("request", request))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
