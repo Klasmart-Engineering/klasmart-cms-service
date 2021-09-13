@@ -37,6 +37,7 @@ type ClassesAssignmentsUnattendedViewRequest struct {
 type ScheduleView struct {
 	ScheduleID   string `json:"schedule_id"`
 	ScheduleName string `json:"schedule_name"`
+	StartAt      int64  `json:"start_at"`
 	Type         string `json:"type"`
 }
 type ClassesAssignmentsUnattendedStudentsView struct {
