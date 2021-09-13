@@ -478,10 +478,10 @@ func (c ClassesAssignmentsModel) GetUnattended(ctx context.Context, op *entity.O
 				},
 			}
 			if scheduleIDScheduleMap[scheduleID] != nil && scheduleIDScheduleMap[scheduleID].ClassType == entity.ScheduleClassTypeOnlineClass {
-				view.Schedule.StartAt = scheduleIDScheduleMap[scheduleID].StartAt
+				view.Time = scheduleIDScheduleMap[scheduleID].StartAt
 			}
 			if scheduleIDScheduleMap[scheduleID] != nil && scheduleIDScheduleMap[scheduleID].ClassType == entity.ScheduleClassTypeHomework {
-				view.Schedule.StartAt = scheduleIDScheduleMap[scheduleID].CreatedAt
+				view.Time = scheduleIDScheduleMap[scheduleID].CreatedAt
 			}
 			result = append(result, view)
 		}
