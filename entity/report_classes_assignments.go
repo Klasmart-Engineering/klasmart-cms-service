@@ -37,14 +37,12 @@ type ClassesAssignmentsUnattendedViewRequest struct {
 type ScheduleView struct {
 	ScheduleID   string `json:"schedule_id"`
 	ScheduleName string `json:"schedule_name"`
-	StartAt      int64  `json:"start_at"`
 	Type         string `json:"type"`
 }
 type ClassesAssignmentsUnattendedStudentsView struct {
-	StudentID   string       `json:"student_id"`
-	StudentName string       `json:"student_name"`
-	Schedule    ScheduleView `json:"schedule"`
-	Time        int64        `json:"time"`
+	StudentID string       `json:"student_id"`
+	Schedule  ScheduleView `json:"schedule"`
+	Time      int64        `json:"time"`
 }
 
 type ScheduleInReportType string
