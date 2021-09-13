@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 
@@ -66,6 +67,12 @@ func (s *Server) addStudentUsageRecordEvent(c *gin.Context) {
 		// temp solution, ops is offline
 		return config.Get().Assessment.AddAssessmentSecret, nil
 	})
+	if err != nil {
+		log.Warn(ctx, "jwt.ParseWithClaims failed", log.Any("jwtToken", jwtToken))
+		err = constant.ErrInvalidArgs
+		return
+	}
+	req.ContentType = strings.ToLower(strings.TrimSpace(req.ContentType))
 
 	if req.StudentUsageRecord.RoomID == "" {
 		log.Warn(ctx, "room_id is required", log.Any("req", req))
