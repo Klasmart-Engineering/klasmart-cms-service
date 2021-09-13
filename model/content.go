@@ -221,6 +221,7 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 		_, err := GetFolderModel().GetFolderByIDTx(ctx, tx, content.DirPath.Parent(), user)
 		if err != nil && err == ErrResourceNotFound {
 			content.DirPath = constant.FolderRootPath
+			content.ParentFolder = content.DirPath.Parent()
 		}
 		if err != nil && err != ErrResourceNotFound {
 			log.Error(ctx, "doPublishContent: check parent failed", log.Err(err), log.Any("content", content), log.String("uid", user.UserID))
