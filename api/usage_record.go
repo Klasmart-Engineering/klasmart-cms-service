@@ -42,14 +42,14 @@ func (s *Server) addStudentUsageRecordEvent(c *gin.Context) {
 		case constant.ErrInvalidArgs:
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		default:
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.defaultErrorHandler(c, err)
 		}
 	}()
 	op := s.getOperator(c)
 	jwtToken := entity.JwtToken{}
 	err = c.ShouldBindJSON(&jwtToken)
 	if err != nil {
-		log.Error(ctx, "invalid params", log.Err(err))
+		log.Warn(ctx, "invalid params", log.Err(err))
 		err = constant.ErrInvalidArgs
 		return
 	}
@@ -68,7 +68,7 @@ func (s *Server) addStudentUsageRecordEvent(c *gin.Context) {
 	})
 
 	if req.StudentUsageRecord.RoomID == "" {
-		log.Error(ctx, "room_id is required", log.Any("req", req))
+		log.Warn(ctx, "room_id is required", log.Any("req", req))
 		err = constant.ErrInvalidArgs
 		return
 	}
