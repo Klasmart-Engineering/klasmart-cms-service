@@ -40,10 +40,9 @@ type ScheduleView struct {
 	Type         string `json:"type"`
 }
 type ClassesAssignmentsUnattendedStudentsView struct {
-	StudentID   string       `json:"student_id"`
-	StudentName string       `json:"student_name"`
-	Schedule    ScheduleView `json:"schedule"`
-	Time        int64        `json:"time"`
+	StudentID string       `json:"student_id"`
+	Schedule  ScheduleView `json:"schedule"`
+	Time      int64        `json:"time"`
 }
 
 type ScheduleInReportType string
