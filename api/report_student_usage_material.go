@@ -35,7 +35,7 @@ func (s *Server) getStudentUsageMaterialReport(c *gin.Context) {
 		case constant.ErrInvalidArgs:
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		default:
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.defaultErrorHandler(c, err)
 		}
 	}()
 	op := s.getOperator(c)
@@ -76,7 +76,7 @@ func (s *Server) getStudentUsageMaterialViewCountReport(c *gin.Context) {
 		case constant.ErrInvalidArgs:
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		default:
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.defaultErrorHandler(c, err)
 		}
 	}()
 	op := s.getOperator(c)
