@@ -34,6 +34,7 @@ func (m *reportModel) GetStudentUsageMaterialViewCount(ctx context.Context, op *
 		res.ContentUsageList = append(res.ContentUsageList, contentUsage)
 	}
 
+	res.ContentUsageList = res.ContentUsageList.FillZeroItems(req.TimeRangeList, req.ContentTypeList)
 	return
 }
 
@@ -67,6 +68,17 @@ func (m *reportModel) GetStudentUsageMaterial(ctx context.Context, op *entity.Op
 		res.ClassUsageList = append(res.ClassUsageList, classUsage)
 	}
 
+	for _, classID := range req.ClassIDList {
+		classUsage, found := res.ClassUsageList.Find(classID)
+		if !found {
+			classUsage = &entity.ClassUsage{
+				ID:               classID,
+				ContentUsageList: make(entity.ContentUsageSlice, 0),
+			}
+			res.ClassUsageList = append(res.ClassUsageList, classUsage)
+		}
+		classUsage.ContentUsageList = classUsage.ContentUsageList.FillZeroItems(req.TimeRangeList, req.ContentTypeList)
+	}
 	return
 }
 
