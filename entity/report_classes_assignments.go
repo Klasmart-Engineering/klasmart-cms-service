@@ -1,8 +1,8 @@
 package entity
 
 type ClassesAssignmentOverViewRequest struct {
-	ClassIDs  QueryStringSlice `json:"class_ids" form:"class_ids"`
-	Durations QueryStringSlice `json:"durations" form:"durations"`
+	ClassIDs  []string    `json:"class_ids" form:"class_ids"`
+	Durations []TimeRange `json:"durations" form:"durations"`
 }
 
 type ClassesAssignmentOverView struct {
@@ -11,9 +11,9 @@ type ClassesAssignmentOverView struct {
 }
 
 type ClassesAssignmentsViewRequest struct {
-	ClassIDs  QueryStringSlice `json:"class_ids" form:"class_ids"`
-	Durations QueryStringSlice `json:"durations" form:"durations"`
-	Type      string           `json:"type"`
+	ClassIDs  []string    `json:"class_ids" form:"class_ids"`
+	Durations []TimeRange `json:"durations" form:"durations"`
+	Type      string      `json:"type"`
 }
 
 type ClassesAssignmentsDurationRatio struct {
@@ -29,10 +29,10 @@ type ClassesAssignmentsView struct {
 
 type ClassesAssignmentsUnattendedViewRequest struct {
 	ClassID   string
-	Page      int              `json:"page" form:"page"`
-	PageSize  int              `json:"page_size" form:"page_size"`
-	Durations QueryStringSlice `json:"durations" form:"durations"`
-	Type      string           `json:"type"`
+	Page      int         `json:"page" form:"page"`
+	PageSize  int         `json:"page_size" form:"page_size"`
+	Durations []TimeRange `json:"durations" form:"durations"`
+	Type      string      `json:"type"`
 }
 
 type ScheduleView struct {

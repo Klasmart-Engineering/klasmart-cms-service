@@ -159,9 +159,9 @@ func (s Server) registeRoute() {
 		reports.GET("/reports/student_usage/class_registration", s.mustLogin, s.getStudentUsageClassRegistration)
 		reports.GET("/reports/student_usage/material_view_count", s.mustLogin, s.getStudentUsageMaterialViewCountReport)
 		reports.GET("/reports/student_usage/material", s.mustLogin, s.getStudentUsageMaterialReport)
-		reports.GET("/reports/student_usage/classes_assignments_overview", s.mustLogin, s.getClassesAssignmentsOverview)
-		reports.GET("/reports/student_usage/classes_assignments", s.mustLogin, s.getClassesAssignments)
-		reports.GET("/reports/student_usage/classes_assignments/:class_id/unattended", s.mustLogin, s.getClassesAssignmentsUnattended)
+		reports.POST("/reports/student_usage/classes_assignments_overview", s.mustLogin, s.getClassesAssignmentsOverview)
+		reports.POST("/reports/student_usage/classes_assignments", s.mustLogin, s.getClassesAssignments)
+		reports.POST("/reports/student_usage/classes_assignments/:class_id/unattended", s.mustLogin, s.getClassesAssignmentsUnattended)
 	}
 
 	outcomes := s.engine.Group("/v1")
