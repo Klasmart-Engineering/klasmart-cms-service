@@ -349,6 +349,11 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 					ids = append(ids, id)
 					if scheduleShouldActualMap[id] != nil && scheduleShouldActualMap[id][0] != 0 {
 						rationSum += float32(scheduleShouldActualMap[id][1]) / float32(scheduleShouldActualMap[id][0])
+						log.Debug(ctx, "statistic",
+							log.String("class_id", view.ClassID),
+							log.String("duration", string(duration)),
+							log.String("schedule_id", id),
+							log.Any("should_actual", scheduleShouldActualMap[id]))
 					}
 					count++
 				}
