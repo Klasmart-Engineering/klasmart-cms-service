@@ -2962,7 +2962,10 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 
 		outcomeEntities := make([]*entity.Outcome, 0)
 		if outComes {
-			outcomeEntities, err = GetOutcomeModel().GetOrderedLatestByIDs(ctx, user, dbo.MustGetDB(ctx), contentList[i].Outcomes, constant.OrderByName)
+			outcomeEntities, err = GetOutcomeModel().GetLatestOutcomes(ctx, user, dbo.MustGetDB(ctx), &entity.OutcomeCondition{
+				IDs:     contentList[i].Outcomes,
+				OrderBy: entity.OutcomeOrderByName,
+			})
 			if err != nil {
 				log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", contentList[i].Outcomes), log.String("uid", user.UserID))
 			}

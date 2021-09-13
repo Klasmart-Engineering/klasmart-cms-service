@@ -39,8 +39,7 @@ type IOutcomeModel interface {
 
 	GetByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
 	GetLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
-	GetOrderedLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string, order string) ([]*entity.Outcome, error)
-
+	GetLatestOutcomes(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, conditionIDs *entity.OutcomeCondition) ([]*entity.Outcome, error)
 	Approve(ctx context.Context, operator *entity.Operator, outcomeID string) error
 	Reject(ctx context.Context, operator *entity.Operator, outcomeID string, reason string) error
 
@@ -1336,27 +1335,28 @@ func (ocm OutcomeModel) GetByIDs(ctx context.Context, operator *entity.Operator,
 	}
 	return outcomes, nil
 }
-func (ocm OutcomeModel) GetOrderedLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string, order string) (outcomes []*entity.Outcome, err error) {
+
+func (ocm OutcomeModel) GetLatestOutcomes(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, conditionIDs *entity.OutcomeCondition) (outcomes []*entity.Outcome, err error) {
 	cond1 := da.OutcomeCondition{
-		IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
+		IDs: dbo.NullStrings{Strings: conditionIDs.IDs, Valid: true},
 	}
 	total, otcs1, err1 := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &cond1)
 	if err1 != nil {
-		log.Error(ctx, "GetLatestByIDs: SearchOutcome failed",
+		log.Error(ctx, "GetLatestOutcomes: SearchOutcome failed",
 			log.Err(err1),
 			log.String("op", operator.UserID),
-			log.Strings("outcome_ids", outcomeIDs))
+			log.Any("condition", conditionIDs))
 		return nil, err1
 	}
 	if total == 0 {
-		log.Debug(ctx, "GetLatestByIDs: SearchOutcome return empty",
+		log.Debug(ctx, "GetLatestOutcomes: SearchOutcome return empty",
 			log.String("op", operator.UserID),
-			log.Strings("outcome_ids", outcomeIDs))
+			log.Any("condition", conditionIDs))
 		outcomes = []*entity.Outcome{}
 		return
 	}
 	cond2 := da.OutcomeCondition{
-		OrderBy: da.NewOrderBy(order),
+		OrderBy: da.NewOrderBy(conditionIDs.OrderBy),
 	}
 	for _, o := range otcs1 {
 		cond2.IDs.Strings = append(cond2.IDs.Strings, o.LatestID)
@@ -1387,9 +1387,8 @@ func (ocm OutcomeModel) GetOrderedLatestByIDs(ctx context.Context, operator *ent
 	}
 	return
 }
-
-func (ocm OutcomeModel) GetLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (outcomes []*entity.Outcome, err error) {
-	return ocm.GetOrderedLatestByIDs(ctx, operator, tx, outcomeIDs, "")
+func (ocm OutcomeModel) GetLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error) {
+	return ocm.GetLatestOutcomes(ctx, operator, tx, &entity.OutcomeCondition{IDs: outcomeIDs})
 }
 
 func (ocm OutcomeModel) GetLatestByIDsMapResult(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (latests map[string]*entity.Outcome, err error) {

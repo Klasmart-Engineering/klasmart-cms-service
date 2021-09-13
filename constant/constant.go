@@ -144,7 +144,3 @@ const (
 const (
 	ResponseHeaderKeyInternalErrorType = "X-Internal-Error-Type"
 )
-
-const (
-	OrderByName = "name"
-)
