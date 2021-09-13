@@ -18,9 +18,7 @@ import (
 // @ID getStudentUsageMaterialReport
 // @Accept json
 // @Produce json
-// @Param class_id_list query []string false "class id list"
-// @Param content_type_list query []string false "content type list"
-// @Param time_range_list query []string false "time range list"
+// @Param request query entity.StudentUsageMaterialReportRequest true "request"
 // @Success 200 {object} entity.StudentUsageMaterialReportResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -61,9 +59,7 @@ func (s *Server) getStudentUsageMaterialReport(c *gin.Context) {
 // @ID getStudentUsageMaterialViewCountReport
 // @Accept json
 // @Produce json
-// @Param time_range_list query []string false "time range list"
-// @Param class_id_list query []string false "class id list"
-// @Param content_type_list query []string false "content type list"
+// @Param request query entity.StudentUsageMaterialViewCountReportRequest true "request"
 // @Success 200 {object} entity.StudentUsageMaterialViewCountReportResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
