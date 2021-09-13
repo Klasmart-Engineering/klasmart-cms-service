@@ -130,22 +130,29 @@ func (c ClassesAssignmentsModel) getMinAndMax(ctx context.Context, timeRanges []
 	return min, max, nil
 }
 
-func (c ClassesAssignmentsModel) getScheduleIDMapByType(ctx context.Context, schedules []*entity.Schedule, durations []entity.TimeRange) map[entity.ScheduleInReportType][]string {
+func (c ClassesAssignmentsModel) getScheduleIDMapByType(ctx context.Context, schedules []*entity.Schedule, durations []entity.TimeRange) ([]string, map[entity.ScheduleInReportType][]string) {
 	results := make(map[entity.ScheduleInReportType][]string)
 	for _, schedule := range schedules {
 		for i := range durations {
 			if schedule.ClassType == entity.ScheduleClassTypeOnlineClass && durations[i].MustContain(ctx, schedule.StartAt) {
 				results[entity.LiveType] = append(results[entity.LiveType], schedule.ID)
 			}
-			if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
+			if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun && durations[i].MustContain(ctx, schedule.CreatedAt) {
 				results[entity.StudyType] = append(results[entity.StudyType], schedule.ID)
 			}
-			if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
+			if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun && durations[i].MustContain(ctx, schedule.CreatedAt) {
 				results[entity.HomeFunType] = append(results[entity.HomeFunType], schedule.ID)
 			}
 		}
 	}
-	return results
+
+	scheduleIDs := make([]string, 0)
+	for k, v := range results {
+		results[k] = utils.SliceDeduplicationExcludeEmpty(v)
+		scheduleIDs = append(scheduleIDs, results[k]...)
+	}
+
+	return scheduleIDs, results
 }
 
 func (c ClassesAssignmentsModel) GetOverview(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentOverViewRequest) ([]*entity.ClassesAssignmentOverView, error) {
@@ -163,12 +170,6 @@ func (c ClassesAssignmentsModel) GetOverview(ctx context.Context, op *entity.Ope
 		scheduleIDs[i] = relations[i].ScheduleID
 	}
 
-	//min, max, err := c.getMinAndMax(ctx, request.Durations)
-	//if err != nil {
-	//	log.Error(ctx, "GetOverview: extract time duration failed", log.Err(err), log.Any("request", request))
-	//	return nil, err
-	//}
-
 	schedules, err := GetScheduleModel().QueryUnsafe(ctx, &entity.ScheduleQueryCondition{
 		IDs: entity.NullStrings{Strings: scheduleIDs, Valid: true},
 		//StartAtGe: sql.NullInt64{Int64: min, Valid: true},
@@ -183,15 +184,24 @@ func (c ClassesAssignmentsModel) GetOverview(ctx context.Context, op *entity.Ope
 		{Type: string(entity.StudyType), Count: 0},
 		{Type: string(entity.HomeFunType), Count: 0},
 	}
-	scheduleTypeMaps := c.getScheduleIDMapByType(ctx, schedules, request.Durations)
+	durationScheduleIDs, scheduleTypeMaps := c.getScheduleIDMapByType(ctx, schedules, request.Durations)
+	shouldAndActual, err := c.getScheduleShouldAndActual(ctx, durationScheduleIDs)
+	if err != nil {
+		log.Error(ctx, "GetOverView: get ratios failed", log.Err(err), log.Any("request", request), log.Strings("schedule_ids", durationScheduleIDs))
+		return nil, err
+	}
+
 	if scheduleTypeMaps[entity.LiveType] != nil {
-		overviews[0].Count = len(utils.SliceDeduplication(scheduleTypeMaps[entity.LiveType]))
+		overviews[0].Count = len(scheduleTypeMaps[entity.LiveType])
+		overviews[0].Ratio = c.getScheduleTotalRatios(ctx, scheduleTypeMaps[entity.LiveType], shouldAndActual)
 	}
 	if scheduleTypeMaps[entity.StudyType] != nil {
-		overviews[1].Count = len(utils.SliceDeduplication(scheduleTypeMaps[entity.StudyType]))
+		overviews[1].Count = len(scheduleTypeMaps[entity.StudyType])
+		overviews[1].Ratio = c.getScheduleTotalRatios(ctx, scheduleTypeMaps[entity.StudyType], shouldAndActual)
 	}
 	if scheduleTypeMaps[entity.HomeFunType] != nil {
-		overviews[2].Count = len(utils.SliceDeduplication(scheduleTypeMaps[entity.HomeFunType]))
+		overviews[2].Count = len(scheduleTypeMaps[entity.HomeFunType])
+		overviews[2].Ratio = c.getScheduleTotalRatios(ctx, scheduleTypeMaps[entity.HomeFunType], shouldAndActual)
 	}
 	return overviews, nil
 }
@@ -251,12 +261,12 @@ func (c ClassesAssignmentsModel) getScheduleIDMapByTimeRange(ctx context.Context
 	return filterSchedules, scheduleMap, nil
 }
 
-func (c ClassesAssignmentsModel) getScheduleRatios(ctx context.Context, scheduleIDs []string) (map[string][]int, error) {
+func (c ClassesAssignmentsModel) getScheduleShouldAndActual(ctx context.Context, scheduleIDs []string) (map[string][]int, error) {
 	records, err := da.GetClassesAssignmentsDA().QueryTx(ctx, dbo.MustGetDB(ctx), &da.ClassesAssignmentsCondition{
 		ScheduleIDs: entity.NullStrings{Strings: scheduleIDs, Valid: true},
 	})
 	if err != nil {
-		log.Error(ctx, "getScheduleRatios: query failed",
+		log.Error(ctx, "getScheduleShouldAndActual: query failed",
 			log.Err(err),
 			log.Strings("schedule_ids", scheduleIDs))
 		return nil, err
@@ -272,6 +282,20 @@ func (c ClassesAssignmentsModel) getScheduleRatios(ctx context.Context, schedule
 		}
 	}
 	return shouldActualMap, nil
+}
+
+func (c ClassesAssignmentsModel) getScheduleTotalRatios(ctx context.Context, scheduleIDs []string, shouldActualMap map[string][]int) float32 {
+	if len(scheduleIDs) <= 0 {
+		return 0
+	}
+
+	sumRatios := float32(0)
+	for _, id := range scheduleIDs {
+		if shouldActualMap != nil && shouldActualMap[id] != nil && shouldActualMap[id][0] != 0 {
+			sumRatios += float32(shouldActualMap[id][1]) / float32(shouldActualMap[id][0])
+		}
+	}
+	return sumRatios / float32(len(scheduleIDs))
 }
 
 func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentsViewRequest) ([]*entity.ClassesAssignmentsView, error) {
@@ -298,9 +322,9 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 		scheduleIDs[i] = filterSchedules[i].ID
 	}
 
-	scheduleShouldActualMap, err := c.getScheduleRatios(ctx, scheduleIDs)
+	scheduleShouldActualMap, err := c.getScheduleShouldAndActual(ctx, scheduleIDs)
 	if err != nil {
-		log.Error(ctx, "GetStatistic: getScheduleRatios failed", log.Err(err), log.Any("request", request))
+		log.Error(ctx, "GetStatistic: getScheduleShouldAndActual failed", log.Err(err), log.Any("request", request))
 		return nil, err
 	}
 
