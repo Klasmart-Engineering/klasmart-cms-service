@@ -30,8 +30,6 @@ type ClassesAssignmentsView struct {
 
 type ClassesAssignmentsUnattendedViewRequest struct {
 	ClassID   string
-	Page      int         `json:"page" form:"page"`
-	PageSize  int         `json:"page_size" form:"page_size"`
 	Durations []TimeRange `json:"durations" form:"durations"`
 	Type      string      `json:"type"`
 }
