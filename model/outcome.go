@@ -39,6 +39,7 @@ type IOutcomeModel interface {
 
 	GetByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
 	GetLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
+	GetOrderedLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string, order string) ([]*entity.Outcome, error)
 
 	Approve(ctx context.Context, operator *entity.Operator, outcomeID string) error
 	Reject(ctx context.Context, operator *entity.Operator, outcomeID string, reason string) error
@@ -1335,8 +1336,7 @@ func (ocm OutcomeModel) GetByIDs(ctx context.Context, operator *entity.Operator,
 	}
 	return outcomes, nil
 }
-
-func (ocm OutcomeModel) GetLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (outcomes []*entity.Outcome, err error) {
+func (ocm OutcomeModel) GetOrderedLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string, order string) (outcomes []*entity.Outcome, err error) {
 	cond1 := da.OutcomeCondition{
 		IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
 	}
@@ -1355,7 +1355,9 @@ func (ocm OutcomeModel) GetLatestByIDs(ctx context.Context, operator *entity.Ope
 		outcomes = []*entity.Outcome{}
 		return
 	}
-	cond2 := da.OutcomeCondition{}
+	cond2 := da.OutcomeCondition{
+		OrderBy: da.NewOrderBy(order),
+	}
 	for _, o := range otcs1 {
 		cond2.IDs.Strings = append(cond2.IDs.Strings, o.LatestID)
 	}
@@ -1384,6 +1386,10 @@ func (ocm OutcomeModel) GetLatestByIDs(ctx context.Context, operator *entity.Ope
 		return nil, err1
 	}
 	return
+}
+
+func (ocm OutcomeModel) GetLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (outcomes []*entity.Outcome, err error) {
+	return ocm.GetOrderedLatestByIDs(ctx, operator, tx, outcomeIDs, "")
 }
 
 func (ocm OutcomeModel) GetLatestByIDsMapResult(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (latests map[string]*entity.Outcome, err error) {
