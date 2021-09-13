@@ -15,8 +15,7 @@ import (
 // @ID getClassesAssignmentsOverview
 // @Accept json
 // @Produce json
-// @Param class_ids query []string false "class id list"
-// @Param durations query []string false "time durations, for example: [startTime1-endTime1, startTime2-endTime2]"
+// @Param overview body entity.ClassesAssignmentOverViewRequest true "overview"
 // @Success 200 {object} []entity.ClassesAssignmentOverView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -50,10 +49,7 @@ func (s *Server) getClassesAssignmentsOverview(c *gin.Context) {
 // @ID getClassesAssignments
 // @Accept json
 // @Produce json
-// @Param page query integer false "page"
-// @Param page_size query integer false "page size"
-// @Param class_ids query []string false "class id list"
-// @Param durations query []string false "time durations, for example: [startTime1-endTime1, startTime2-endTime2]"
+// @Param classes_assignments body entity.ClassesAssignmentsViewRequest true "classAssignments"
 // @Success 200 {object} []entity.ClassesAssignmentsView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -87,9 +83,7 @@ func (s *Server) getClassesAssignments(c *gin.Context) {
 // @ID getClassesAssignmentsUnattended
 // @Accept json
 // @Produce json
-// @Param page query integer false "page"
-// @Param page_size query integer false "page size"
-// @Param durations query []string false "time durations, for example: [startTime1-endTime1, startTime2-endTime2]"
+// @Param unattended body entity.ClassesAssignmentsUnattendedViewRequest true "unattended"
 // @Success 200 {object} []entity.ClassesAssignmentsUnattendedStudentsView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
