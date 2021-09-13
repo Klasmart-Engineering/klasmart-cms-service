@@ -18,14 +18,12 @@ import (
 // @ID getStudentUsageMaterialReport
 // @Accept json
 // @Produce json
-// @Param class_id_list query []string false "class id list"
-// @Param content_type_list query []string false "content type list"
-// @Param time_range_list query []string false "time range list"
+// @Param request body entity.StudentUsageMaterialReportRequest true "request"
 // @Success 200 {object} entity.StudentUsageMaterialReportResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/student_usage/material [get]
+// @Router /reports/student_usage/material [post]
 func (s *Server) getStudentUsageMaterialReport(c *gin.Context) {
 	ctx := c.Request.Context()
 	var err error
@@ -37,12 +35,12 @@ func (s *Server) getStudentUsageMaterialReport(c *gin.Context) {
 		case constant.ErrInvalidArgs:
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		default:
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.defaultErrorHandler(c, err)
 		}
 	}()
 	op := s.getOperator(c)
 	req := entity.StudentUsageMaterialReportRequest{}
-	err = c.ShouldBindQuery(&req)
+	err = c.ShouldBindJSON(&req)
 	if err != nil {
 		log.Error(ctx, "invalid request", log.Err(err))
 		err = constant.ErrInvalidArgs
@@ -61,14 +59,12 @@ func (s *Server) getStudentUsageMaterialReport(c *gin.Context) {
 // @ID getStudentUsageMaterialViewCountReport
 // @Accept json
 // @Produce json
-// @Param time_range_list query []string false "time range list"
-// @Param class_id_list query []string false "class id list"
-// @Param content_type_list query []string false "content type list"
+// @Param request body entity.StudentUsageMaterialViewCountReportRequest true "request"
 // @Success 200 {object} entity.StudentUsageMaterialViewCountReportResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/student_usage/material_view_count [get]
+// @Router /reports/student_usage/material_view_count [post]
 func (s *Server) getStudentUsageMaterialViewCountReport(c *gin.Context) {
 	ctx := c.Request.Context()
 	var err error
@@ -80,12 +76,12 @@ func (s *Server) getStudentUsageMaterialViewCountReport(c *gin.Context) {
 		case constant.ErrInvalidArgs:
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		default:
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.defaultErrorHandler(c, err)
 		}
 	}()
 	op := s.getOperator(c)
 	req := entity.StudentUsageMaterialViewCountReportRequest{}
-	err = c.ShouldBindQuery(&req)
+	err = c.ShouldBindJSON(&req)
 	if err != nil {
 		log.Error(ctx, "invalid request", log.Err(err))
 		err = constant.ErrInvalidArgs
