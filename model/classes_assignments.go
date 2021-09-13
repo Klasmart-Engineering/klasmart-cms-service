@@ -172,6 +172,10 @@ func (c ClassesAssignmentsModel) GetOverview(ctx context.Context, op *entity.Ope
 
 	schedules, err := GetScheduleModel().QueryUnsafe(ctx, &entity.ScheduleQueryCondition{
 		IDs: entity.NullStrings{Strings: scheduleIDs, Valid: true},
+		ClassTypes: entity.NullStrings{Strings: []string{
+			string(entity.ScheduleClassTypeOnlineClass),
+			string(entity.ScheduleClassTypeHomework),
+		}, Valid: true},
 		//StartAtGe: sql.NullInt64{Int64: min, Valid: true},
 		//StartAtLt: sql.NullInt64{Int64: max, Valid: true},
 	})
@@ -439,10 +443,10 @@ func (c ClassesAssignmentsModel) GetUnattended(ctx context.Context, op *entity.O
 		return nil, err
 	}
 	scheduleIDs := make([]string, len(filterSchedules))
-	scheduleIDNameMap := make(map[string]string)
+	scheduleIDScheduleMap := make(map[string]*entity.Schedule)
 	for i := range filterSchedules {
 		scheduleIDs[i] = filterSchedules[i].ID
-		scheduleIDNameMap[filterSchedules[i].ID] = filterSchedules[i].Title
+		scheduleIDScheduleMap[filterSchedules[i].ID] = filterSchedules[i]
 	}
 
 	shouldAttendedMap, err := c.getShouldAttendedSchedulesMap(ctx, op, scheduleIDs, nil)
@@ -469,9 +473,15 @@ func (c ClassesAssignmentsModel) GetUnattended(ctx context.Context, op *entity.O
 				StudentID: k,
 				Schedule: entity.ScheduleView{
 					ScheduleID:   scheduleID,
-					ScheduleName: scheduleIDNameMap[scheduleID],
+					ScheduleName: scheduleIDScheduleMap[scheduleID].Title,
 					Type:         request.Type,
 				},
+			}
+			if scheduleIDScheduleMap[scheduleID] != nil && scheduleIDScheduleMap[scheduleID].ClassType == entity.ScheduleClassTypeOnlineClass {
+				view.Schedule.StartAt = scheduleIDScheduleMap[scheduleID].StartAt
+			}
+			if scheduleIDScheduleMap[scheduleID] != nil && scheduleIDScheduleMap[scheduleID].ClassType == entity.ScheduleClassTypeHomework {
+				view.Schedule.StartAt = scheduleIDScheduleMap[scheduleID].CreatedAt
 			}
 			result = append(result, view)
 		}

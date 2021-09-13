@@ -34,7 +34,22 @@ func (m *reportModel) GetStudentUsageMaterialViewCount(ctx context.Context, op *
 		res.ContentUsageList = append(res.ContentUsageList, contentUsage)
 	}
 
-	res.ContentUsageList = res.ContentUsageList.FillZeroItems(req.TimeRangeList, req.ContentTypeList)
+	for _, typ := range req.ContentTypeList {
+		found := false
+		for _, usage := range res.ContentUsageList {
+			if usage.Type == typ {
+				found = true
+				continue
+			}
+		}
+		if !found {
+			res.ContentUsageList = append(res.ContentUsageList, &entity.ContentUsage{
+				Type:  typ,
+				Count: 0,
+			})
+		}
+	}
+
 	return
 }
 
