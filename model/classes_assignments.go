@@ -189,7 +189,7 @@ func (c ClassesAssignmentsModel) GetOverview(ctx context.Context, op *entity.Ope
 		{Type: string(entity.HomeFunType), Count: 0},
 	}
 	durationScheduleIDs, scheduleTypeMaps := c.getScheduleIDMapByType(ctx, schedules, request.Durations)
-	shouldAndActual, err := c.getScheduleShouldAndActual(ctx, durationScheduleIDs)
+	shouldAndActual, err := c.countScheduleShouldAndActual(ctx, op, durationScheduleIDs)
 	if err != nil {
 		log.Error(ctx, "GetOverView: get ratios failed", log.Err(err), log.Any("request", request), log.Strings("schedule_ids", durationScheduleIDs))
 		return nil, err
@@ -265,25 +265,42 @@ func (c ClassesAssignmentsModel) getScheduleIDMapByTimeRange(ctx context.Context
 	return filterSchedules, scheduleMap, nil
 }
 
-func (c ClassesAssignmentsModel) getScheduleShouldAndActual(ctx context.Context, scheduleIDs []string) (map[string][]int, error) {
-	records, err := da.GetClassesAssignmentsDA().QueryTx(ctx, dbo.MustGetDB(ctx), &da.ClassesAssignmentsCondition{
-		ScheduleIDs: entity.NullStrings{Strings: scheduleIDs, Valid: true},
+func (c ClassesAssignmentsModel) countScheduleShouldAndActual(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]int, error) {
+	allStudents, err := GetScheduleRelationModel().Query(ctx, op, &da.ScheduleRelationCondition{
+		ScheduleIDs:  entity.NullStrings{Strings: scheduleIDs, Valid: true},
+		RelationType: sql.NullString{String: string(entity.ScheduleRelationTypeClassRosterStudent), Valid: true},
 	})
 	if err != nil {
-		log.Error(ctx, "getScheduleShouldAndActual: query failed",
+		log.Error(ctx, "countScheduleShouldAndActual: query relation failed",
 			log.Err(err),
 			log.Strings("schedule_ids", scheduleIDs))
 		return nil, err
 	}
-	shouldActualMap := make(map[string][]int)
-	for _, record := range records {
-		if shouldActualMap[record.ScheduleID] == nil {
-			shouldActualMap[record.ScheduleID] = make([]int, 2)
-		}
-		shouldActualMap[record.ScheduleID][0]++
-		if record.FinishCount > 0 {
-			shouldActualMap[record.ScheduleID][1]++
-		}
+	allMap := make(map[string][]string)
+	for _, relation := range allStudents {
+		allMap[relation.ScheduleID] = append(allMap[relation.ScheduleID], relation.RelationID)
+	}
+
+	attendance, err := da.GetClassesAssignmentsDA().QueryTx(ctx, dbo.MustGetDB(ctx), &da.ClassesAssignmentsCondition{
+		ScheduleIDs:    entity.NullStrings{Strings: scheduleIDs, Valid: true},
+		FinishCountsGT: sql.NullInt64{Int64: 0, Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "countScheduleShouldAndActual: query attendance failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs))
+		return nil, err
+	}
+	actualMap := make(map[string][]string)
+	for _, r := range attendance {
+		actualMap[r.ScheduleID] = append(actualMap[r.ScheduleID], r.AttendanceID)
+	}
+
+	shouldActualMap := make(map[string][]int, len(allMap))
+	for k, v := range allMap {
+		shouldActualMap[k] = make([]int, 2)
+		shouldActualMap[k][0] = len(utils.SliceDeduplication(v))
+		shouldActualMap[k][1] = len(utils.SliceDeduplication(actualMap[k]))
 	}
 	return shouldActualMap, nil
 }
@@ -326,9 +343,9 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 		scheduleIDs[i] = filterSchedules[i].ID
 	}
 
-	scheduleShouldActualMap, err := c.getScheduleShouldAndActual(ctx, scheduleIDs)
+	scheduleShouldActualMap, err := c.countScheduleShouldAndActual(ctx, op, scheduleIDs)
 	if err != nil {
-		log.Error(ctx, "GetStatistic: getScheduleShouldAndActual failed", log.Err(err), log.Any("request", request))
+		log.Error(ctx, "GetStatistic: countScheduleShouldAndActual failed", log.Err(err), log.Any("request", request))
 		return nil, err
 	}
 
@@ -349,7 +366,7 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 					ids = append(ids, id)
 					if scheduleShouldActualMap[id] != nil && scheduleShouldActualMap[id][0] != 0 {
 						rationSum += float32(scheduleShouldActualMap[id][1]) / float32(scheduleShouldActualMap[id][0])
-						log.Debug(ctx, "statistic",
+						log.Debug(ctx, "ratio_sum",
 							log.String("class_id", view.ClassID),
 							log.String("duration", string(duration)),
 							log.String("schedule_id", id),
