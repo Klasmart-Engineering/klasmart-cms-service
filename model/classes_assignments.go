@@ -363,15 +363,61 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 	return result, nil
 }
 
-func (c ClassesAssignmentsModel) getUnattendedMap(ctx context.Context, unattended []*entity.ClassesAssignmentsRecords) (map[string]map[string]bool, error) {
-	result := make(map[string]map[string]bool)
-	for _, record := range unattended {
-		if _, ok := result[record.AttendanceID]; !ok {
-			result[record.AttendanceID] = make(map[string]bool)
-		}
-		result[record.AttendanceID][record.ScheduleID] = true
+func (c ClassesAssignmentsModel) getShouldAttendedSchedulesMap(ctx context.Context, op *entity.Operator, scheduleIDs []string, studentIDs []string) (map[string][]string, error) {
+	relations, err := GetScheduleRelationModel().Query(ctx, op, &da.ScheduleRelationCondition{
+		ScheduleIDs:  entity.NullStrings{Strings: scheduleIDs, Valid: true},
+		RelationIDs:  entity.NullStrings{Strings: studentIDs, Valid: studentIDs != nil},
+		RelationType: sql.NullString{String: string(entity.ScheduleRelationTypeClassRosterStudent), Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "GetAllAttendanceSchedulesMap: query failed",
+			log.Err(err),
+			log.Strings("student_ids", studentIDs),
+			log.Strings("schedule_ids", scheduleIDs))
+		return nil, err
+	}
+	result := make(map[string][]string)
+	for _, relation := range relations {
+		result[relation.RelationID] = append(result[relation.RelationID], relation.ScheduleID)
 	}
 	return result, nil
+}
+
+func (c ClassesAssignmentsModel) getActualAttendedSchedulesMap(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]string, error) {
+	records, err := da.GetClassesAssignmentsDA().QueryTx(ctx, dbo.MustGetDB(ctx), &da.ClassesAssignmentsCondition{
+		ScheduleIDs:    entity.NullStrings{Strings: scheduleIDs, Valid: true},
+		FinishCountsGT: sql.NullInt64{Int64: 0, Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "getActualAttendedSchedulesMap: query failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs))
+		return nil, err
+	}
+	result := make(map[string][]string)
+	for _, record := range records {
+		result[record.AttendanceID] = append(result[record.AttendanceID], record.ScheduleID)
+	}
+	return result, nil
+}
+
+func (c ClassesAssignmentsModel) getUnattendedSchedulesMap(ctx context.Context, shouldMap map[string][]string, actualMap map[string][]string) map[string][]string {
+	result := make(map[string][]string, len(shouldMap))
+	for k, v := range shouldMap {
+		attendances := actualMap[k]
+		attended := false
+		for _, attendanceID := range v {
+			for i := range attendances {
+				if attendanceID == attendances[i] {
+					attended = true
+				}
+			}
+			if !attended {
+				result[k] = append(result[k], attendanceID)
+			}
+		}
+	}
+	return result
 }
 
 func (c ClassesAssignmentsModel) GetUnattended(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentsUnattendedViewRequest) ([]*entity.ClassesAssignmentsUnattendedStudentsView, error) {
@@ -399,51 +445,37 @@ func (c ClassesAssignmentsModel) GetUnattended(ctx context.Context, op *entity.O
 		scheduleIDNameMap[filterSchedules[i].ID] = filterSchedules[i].Title
 	}
 
-	unattended, err := da.GetClassesAssignmentsDA().QueryTx(ctx, dbo.MustGetDB(ctx), &da.ClassesAssignmentsCondition{
-		ScheduleIDs:     entity.NullStrings{Strings: scheduleIDs, Valid: true},
-		FinishCountsLTE: sql.NullInt64{Int64: 0, Valid: true},
-	})
+	shouldAttendedMap, err := c.getShouldAttendedSchedulesMap(ctx, op, scheduleIDs, nil)
 	if err != nil {
-		log.Error(ctx, "GetUnattended: extract time duration failed", log.Err(err), log.Any("request", request))
+		log.Error(ctx, "GetUnattended: should attended schedules map",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs))
 		return nil, err
 	}
-	unattendedMap, err := c.getUnattendedMap(ctx, unattended)
+	actualAttendedMap, err := c.getActualAttendedSchedulesMap(ctx, op, scheduleIDs)
 	if err != nil {
-		log.Error(ctx, "GetUnattended: extract time duration failed", log.Err(err), log.Any("request", request))
+		log.Error(ctx, "GetUnattended: actual attended schedules map",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs))
 		return nil, err
 	}
 
-	// TODO: get one-page students order by student name
-	// Now, give all unattendedMap
-	type studentType struct {
-		ID   string
-		Name string
-	}
-	students := make([]*studentType, len(unattendedMap))
-	index := 0
-	for k, _ := range unattendedMap {
-		students[index] = &studentType{ID: k}
-		index++
-	}
+	unattendedMap := c.getUnattendedSchedulesMap(ctx, shouldAttendedMap, actualAttendedMap)
 
 	result := make([]*entity.ClassesAssignmentsUnattendedStudentsView, 0)
-	for i := range students {
-		scheduleIDMap := unattendedMap[students[i].ID]
-		for j := range scheduleIDs {
+	for k, v := range unattendedMap {
+		for _, scheduleID := range v {
 			view := &entity.ClassesAssignmentsUnattendedStudentsView{
-				StudentID:   students[i].ID,
-				StudentName: students[i].Name,
-			}
-			if scheduleIDMap != nil && scheduleIDMap[scheduleIDs[j]] {
-				scheduleView := entity.ScheduleView{
-					ScheduleID:   scheduleIDs[j],
-					ScheduleName: scheduleIDNameMap[scheduleIDs[j]],
+				StudentID: k,
+				Schedule: entity.ScheduleView{
+					ScheduleID:   scheduleID,
+					ScheduleName: scheduleIDNameMap[scheduleID],
 					Type:         request.Type,
-				}
-				view.Schedule = scheduleView
+				},
 			}
 			result = append(result, view)
 		}
+
 	}
 	return result, nil
 }

@@ -102,11 +102,24 @@ type MaterialUsage struct {
 
 type StudentUsageMaterialReportResponse struct {
 	Request        *StudentUsageMaterialReportRequest `json:"request"`
-	ClassUsageList []*ClassUsage                      `json:"class_usage_list"`
+	ClassUsageList ClassUsageSlice                    `json:"class_usage_list"`
 }
+type ClassUsageSlice []*ClassUsage
+
+func (cus ClassUsageSlice) Find(id string) (classUsage *ClassUsage, found bool) {
+	for _, cu := range cus {
+		if cu.ID == id {
+			classUsage = cu
+			found = true
+			return
+		}
+	}
+	return
+}
+
 type ClassUsage struct {
-	ID               string          `json:"id"`
-	ContentUsageList []*ContentUsage `json:"content_usage_list"`
+	ID               string            `json:"id"`
+	ContentUsageList ContentUsageSlice `json:"content_usage_list"`
 }
 
 type ContentUsage struct {
@@ -123,5 +136,34 @@ type StudentUsageMaterialViewCountReportRequest struct {
 
 type StudentUsageMaterialViewCountReportResponse struct {
 	Request          *StudentUsageMaterialViewCountReportRequest `json:"request"`
-	ContentUsageList []*ContentUsage                             `json:"content_usage_list"`
+	ContentUsageList ContentUsageSlice                           `json:"content_usage_list"`
+}
+
+type ContentUsageSlice []*ContentUsage
+
+func (cus ContentUsageSlice) Find(tr TimeRange, typ string) (usage *ContentUsage, found bool) {
+	for _, cu := range cus {
+		if cu.Type == typ && cu.TimeRange == tr {
+			usage = cu
+			found = true
+			return
+		}
+	}
+	return
+}
+
+func (cus ContentUsageSlice) FillZeroItems(trs []TimeRange, contentTypeList []string) ContentUsageSlice {
+	for _, tr := range trs {
+		for _, typ := range contentTypeList {
+			_, ok := cus.Find(tr, typ)
+			if !ok {
+				cus = append(cus, &ContentUsage{
+					TimeRange: tr,
+					Type:      typ,
+					Count:     0,
+				})
+			}
+		}
+	}
+	return cus
 }

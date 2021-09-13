@@ -30,8 +30,6 @@ type ClassesAssignmentsView struct {
 
 type ClassesAssignmentsUnattendedViewRequest struct {
 	ClassID   string
-	Page      int         `json:"page" form:"page"`
-	PageSize  int         `json:"page_size" form:"page_size"`
 	Durations []TimeRange `json:"durations" form:"durations"`
 	Type      string      `json:"type"`
 }
@@ -51,10 +49,10 @@ type ClassesAssignmentsUnattendedStudentsView struct {
 type ScheduleInReportType string
 
 const (
-	UnknownType ScheduleInReportType = "Unknown"
-	LiveType    ScheduleInReportType = "Live"
-	StudyType   ScheduleInReportType = "Study"
-	HomeFunType ScheduleInReportType = "HomeFun"
+	UnknownType ScheduleInReportType = "unknown"
+	LiveType    ScheduleInReportType = "live"
+	StudyType   ScheduleInReportType = "study"
+	HomeFunType ScheduleInReportType = "home_fun"
 )
 
 func NewScheduleInReportType(classType ScheduleClassType, isFun bool) ScheduleInReportType {
