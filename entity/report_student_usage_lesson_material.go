@@ -35,6 +35,9 @@ func (r *StudentUsageRecord) GetBatchInsertColsAndValues() (cols []string, value
 	cols = append(cols, "class_type")
 	values = append(values, r.ClassType)
 
+	cols = append(cols, "room_id")
+	values = append(values, r.RoomID)
+
 	cols = append(cols, "lesson_material_url")
 	values = append(values, r.LessonMaterialUrl)
 

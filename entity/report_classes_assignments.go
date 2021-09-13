@@ -6,8 +6,9 @@ type ClassesAssignmentOverViewRequest struct {
 }
 
 type ClassesAssignmentOverView struct {
-	Type  string `json:"type"`
-	Count int    `json:"count"`
+	Type  string  `json:"type"`
+	Count int     `json:"count"`
+	Ratio float32 `json:"ratio"`
 }
 
 type ClassesAssignmentsViewRequest struct {
