@@ -18,7 +18,7 @@ import (
 // @ID getStudentUsageMaterialReport
 // @Accept json
 // @Produce json
-// @Param request query entity.StudentUsageMaterialReportRequest true "request"
+// @Param request body entity.StudentUsageMaterialReportRequest true "request"
 // @Success 200 {object} entity.StudentUsageMaterialReportResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -59,7 +59,7 @@ func (s *Server) getStudentUsageMaterialReport(c *gin.Context) {
 // @ID getStudentUsageMaterialViewCountReport
 // @Accept json
 // @Produce json
-// @Param request query entity.StudentUsageMaterialViewCountReportRequest true "request"
+// @Param request body entity.StudentUsageMaterialViewCountReportRequest true "request"
 // @Success 200 {object} entity.StudentUsageMaterialViewCountReportResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
