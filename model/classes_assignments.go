@@ -363,17 +363,6 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 	return result, nil
 }
 
-//func (c ClassesAssignmentsModel) getUnattendedMap(ctx context.Context, unattended []*entity.ClassesAssignmentsRecords) (map[string]map[string]bool, error) {
-//	result := make(map[string]map[string]bool)
-//	for _, record := range unattended {
-//		if _, ok := result[record.AttendanceID]; !ok {
-//			result[record.AttendanceID] = make(map[string]bool)
-//		}
-//		result[record.AttendanceID][record.ScheduleID] = true
-//	}
-//	return result, nil
-//}
-
 func (c ClassesAssignmentsModel) getShouldAttendedSchedulesMap(ctx context.Context, op *entity.Operator, scheduleIDs []string, studentIDs []string) (map[string][]string, error) {
 	relations, err := GetScheduleRelationModel().Query(ctx, op, &da.ScheduleRelationCondition{
 		ScheduleIDs:  entity.NullStrings{Strings: scheduleIDs, Valid: true},
