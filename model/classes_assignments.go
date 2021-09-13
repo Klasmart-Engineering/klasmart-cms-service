@@ -372,6 +372,7 @@ func (c ClassesAssignmentsModel) getShouldAttendedSchedulesMap(ctx context.Conte
 	if err != nil {
 		log.Error(ctx, "GetAllAttendanceSchedulesMap: query failed",
 			log.Err(err),
+			log.Strings("student_ids", studentIDs),
 			log.Strings("schedule_ids", scheduleIDs))
 		return nil, err
 	}
@@ -401,7 +402,7 @@ func (c ClassesAssignmentsModel) getActualAttendedSchedulesMap(ctx context.Conte
 }
 
 func (c ClassesAssignmentsModel) getUnattendedSchedulesMap(ctx context.Context, shouldMap map[string][]string, actualMap map[string][]string) map[string][]string {
-	result := make(map[string][]string)
+	result := make(map[string][]string, len(shouldMap))
 	for k, v := range shouldMap {
 		attendances := actualMap[k]
 		attended := false

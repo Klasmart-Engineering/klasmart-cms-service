@@ -49,10 +49,10 @@ type ClassesAssignmentsUnattendedStudentsView struct {
 type ScheduleInReportType string
 
 const (
-	UnknownType ScheduleInReportType = "Unknown"
-	LiveType    ScheduleInReportType = "Live"
-	StudyType   ScheduleInReportType = "Study"
-	HomeFunType ScheduleInReportType = "HomeFun"
+	UnknownType ScheduleInReportType = "unknown"
+	LiveType    ScheduleInReportType = "live"
+	StudyType   ScheduleInReportType = "study"
+	HomeFunType ScheduleInReportType = "home_fun"
 )
 
 func NewScheduleInReportType(classType ScheduleClassType, isFun bool) ScheduleInReportType {
