@@ -309,8 +309,9 @@ func (s *liveTokenModel) GetMaterials(ctx context.Context, op *entity.Operator, 
 		}
 
 		materialItem := &entity.LiveMaterial{
-			ID:   item.ID,
-			Name: item.Name,
+			ID:          item.ID,
+			ContentData: item.Data,
+			Name:        item.Name,
 		}
 		mData, ok := item.Data.(*MaterialData)
 		if !ok {

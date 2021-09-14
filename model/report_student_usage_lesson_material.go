@@ -131,6 +131,9 @@ func (m *reportModel) AddStudentUsageRecordTx(ctx context.Context, tx *dbo.DBCon
 	material, found := materials.FindByUrl(ctx, record.LessonMaterialUrl)
 	if found {
 		record.LessonMaterialID = material.ID
+		if mData, ok := material.ContentData.(*MaterialData); ok {
+			record.ContentType = mData.FileType.String()
+		}
 	}
 
 	var models []entity.BatchInsertModeler
