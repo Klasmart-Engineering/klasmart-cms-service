@@ -235,6 +235,7 @@ func (c ClassesAssignmentsModel) getScheduleIDMapByTimeRange(ctx context.Context
 		condition.ClassTypes = entity.NullStrings{Strings: []string{classType}, Valid: true}
 		condition.CreateAtGe = sql.NullInt64{Int64: min, Valid: true}
 		condition.CreateAtLt = sql.NullInt64{Int64: max, Valid: true}
+		condition.IsHomefun = sql.NullBool{Bool: false, Valid: true}
 	}
 	if kind == string(entity.HomeFunType) {
 		classType := string(entity.ScheduleClassTypeHomework)
