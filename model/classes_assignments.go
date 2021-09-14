@@ -440,17 +440,23 @@ func (c ClassesAssignmentsModel) getUnattendedSchedulesMap(ctx context.Context, 
 	result := make(map[string][]string, len(shouldMap))
 	for k, v := range shouldMap {
 		attendances := actualMap[k]
-		attended := false
 		for _, attendanceID := range v {
+			attended := false
 			for i := range attendances {
 				if attendanceID == attendances[i] {
 					attended = true
+					break
 				}
 			}
 			if !attended {
 				result[k] = append(result[k], attendanceID)
 			}
 		}
+		log.Debug(ctx, "should and actual",
+			log.String("student_id", k),
+			log.Any("should", v),
+			log.Any("actual", attendances),
+			log.Any("unattended", result[k]))
 	}
 	return result
 }
