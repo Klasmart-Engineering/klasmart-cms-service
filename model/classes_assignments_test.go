@@ -47,9 +47,9 @@ func TestClassesAssignmentsModel_GetStatistic(t *testing.T) {
 	ctx := context.Background()
 	op := initOperator()
 	request := &entity.ClassesAssignmentsViewRequest{
-		ClassIDs:  []string{"d04a2fb9-b6ba-4542-9872-eabebde756fb", "968a820a-111c-40bd-82dc-9c2af4fe2129"},
+		ClassIDs:  []string{"41f5cea7-f079-4f57-a40c-4072a786af85"},
 		Durations: []entity.TimeRange{"1620554600-1631150516"},
-		Type:      string(entity.HomeFunType),
+		Type:      string(entity.LiveType),
 	}
 	result, err := GetClassesAssignmentsModel().GetStatistic(ctx, op, request)
 	if err != nil {
