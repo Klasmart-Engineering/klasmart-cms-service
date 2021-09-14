@@ -83,6 +83,7 @@ func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Op
 					ScheduleType:    entity.NewScheduleInReportType(schedule.ClassType, schedule.IsHomeFun),
 					ScheduleStartAt: schedule.StartAt,
 					CreateAt:        time.Now().Unix(),
+					LastEndAt: data.ClassEndTime,
 				}
 				if schedule.ClassType == entity.ScheduleClassTypeHomework {
 					insert.ScheduleStartAt = schedule.CreatedAt
@@ -366,21 +367,29 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 					ids = append(ids, id)
 					if scheduleShouldActualMap[id] != nil && scheduleShouldActualMap[id][0] != 0 {
 						rationSum += float32(scheduleShouldActualMap[id][1]) / float32(scheduleShouldActualMap[id][0])
-						log.Debug(ctx, "ratio_sum",
-							log.String("class_id", view.ClassID),
-							log.String("duration", string(duration)),
-							log.String("schedule_id", id),
-							log.Any("should_actual", scheduleShouldActualMap[id]))
+						// ignore the attendees as 0
+						count++
 					}
-					count++
+					log.Debug(ctx, "ratio_sum",
+						log.String("class_id", view.ClassID),
+						log.String("duration", string(duration)),
+						log.String("schedule_id", id),
+						log.Any("should_actual", scheduleShouldActualMap[id]))
 				}
 			}
 			view.DurationsRatio[j].Key = string(duration)
+			log.Debug(ctx, "ratio_denominator",
+				log.String("class_id", view.ClassID),
+				log.String("duration", string(duration)),
+				log.Int("count", count))
 			if count != 0 {
 				view.DurationsRatio[j].Ratio = rationSum / float32(count)
 			}
 
 		}
+		log.Debug(ctx, "ratio_schedules",
+			log.String("class_id", view.ClassID),
+			log.Strings("schedule_ids", utils.SliceDeduplication(ids)))
 		view.Total = len(utils.SliceDeduplication(ids))
 		result[i] = view
 	}
