@@ -108,7 +108,12 @@ func (m *reportModel) AddStudentUsageRecordTx(ctx context.Context, tx *dbo.DBCon
 		return
 	}
 	record.LessonPlanID = sche.LessonPlanID
-	record.ScheduleStartAt = sche.StartAt
+	if sche.StartAt > 0 {
+		record.ScheduleStartAt = sche.StartAt
+	} else {
+		record.ScheduleStartAt = sche.CreatedAt
+	}
+
 	classID, err := GetScheduleRelationModel().GetClassRosterID(ctx, op, record.RoomID)
 	if err != nil {
 		return
