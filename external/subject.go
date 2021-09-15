@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -12,6 +13,7 @@ import (
 )
 
 type SubjectServiceProvider interface {
+	cache.IQuerier
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Subject, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Subject, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -26,15 +28,26 @@ type Subject struct {
 	System bool     `json:"system"`
 }
 
+func (n *Subject) StringID() string {
+	return n.ID
+}
+func (n *Subject) RelatedIDs() []*cache.RelatedEntity {
+	return nil
+}
+
 func GetSubjectServiceProvider() SubjectServiceProvider {
 	return &AmsSubjectService{}
 }
 
 type AmsSubjectService struct{}
 
-func (s AmsSubjectService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Subject, error) {
+func (s AmsSubjectService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
 	if len(ids) == 0 {
-		return []*Subject{}, nil
+		return nil, nil
+	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
 	}
 
 	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
@@ -56,7 +69,7 @@ func (s AmsSubjectService) BatchGet(ctx context.Context, operator *entity.Operat
 		Data: &data,
 	}
 
-	_, err := GetAmsClient().Run(ctx, request, response)
+	_, err = GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get subjects by ids failed",
 			log.Err(err),
@@ -72,7 +85,7 @@ func (s AmsSubjectService) BatchGet(ctx context.Context, operator *entity.Operat
 		return nil, response.Errors
 	}
 
-	subjects := make([]*Subject, 0, len(data))
+	subjects := make([]cache.Object, 0, len(data))
 	for index := range ids {
 		subject := data[fmt.Sprintf("q%d", indexMapping[index])]
 		if subject == nil {
@@ -87,6 +100,18 @@ func (s AmsSubjectService) BatchGet(ctx context.Context, operator *entity.Operat
 		log.Any("subjects", subjects))
 
 	return subjects, nil
+}
+func (s AmsSubjectService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Subject, error) {
+	if len(ids) == 0 {
+		return []*Subject{}, nil
+	}
+	res := make([]*Subject, 0, len(ids))
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.ID(), ids, &res, operator)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (s AmsSubjectService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Subject, error) {
@@ -254,4 +279,8 @@ func (s AmsSubjectService) GetByOrganization(ctx context.Context, operator *enti
 		log.Any("subjects", subjects))
 
 	return subjects, nil
+}
+
+func (s AmsSubjectService) ID() string {
+	return "ams_subject_service"
 }

@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -13,6 +14,7 @@ import (
 )
 
 type ProgramServiceProvider interface {
+	cache.IQuerier
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Program, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Program, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -27,6 +29,12 @@ type Program struct {
 	System    bool     `json:"system"`
 }
 
+func (n *Program) StringID() string {
+	return n.ID
+}
+func (n *Program) RelatedIDs() []*cache.RelatedEntity {
+	return nil
+}
 func GetProgramServiceProvider() ProgramServiceProvider {
 	return &AmsProgramService{}
 }
@@ -36,6 +44,24 @@ type AmsProgramService struct{}
 func (s AmsProgramService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Program, error) {
 	if len(ids) == 0 {
 		return []*Program{}, nil
+	}
+	res := make([]*Program, 0, len(ids))
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.ID(), ids, &res, operator)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (s AmsProgramService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		fmt.Println("options:", options)
+		return nil, err
 	}
 
 	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
@@ -59,7 +85,7 @@ func (s AmsProgramService) BatchGet(ctx context.Context, operator *entity.Operat
 		Data: &data,
 	}
 
-	_, err := GetAmsClient().Run(ctx, request, response)
+	_, err = GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get programs by ids failed",
 			log.Err(err),
@@ -75,7 +101,7 @@ func (s AmsProgramService) BatchGet(ctx context.Context, operator *entity.Operat
 		return nil, response.Errors
 	}
 
-	programs := make([]*Program, 0, len(data))
+	programs := make([]cache.Object, 0, len(data))
 	for index := range ids {
 		program := data[fmt.Sprintf("q%d", indexMapping[index])]
 		if program == nil {
@@ -91,7 +117,6 @@ func (s AmsProgramService) BatchGet(ctx context.Context, operator *entity.Operat
 
 	return programs, nil
 }
-
 func (s AmsProgramService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Program, error) {
 	programs, err := s.BatchGet(ctx, operator, ids)
 	if err != nil {
@@ -189,4 +214,8 @@ func (s AmsProgramService) GetByOrganization(ctx context.Context, operator *enti
 		log.Any("programs", programs))
 
 	return programs, nil
+}
+
+func (s AmsProgramService) ID() string {
+	return "ams_program_service"
 }

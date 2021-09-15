@@ -2,8 +2,12 @@ package external
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
+	"github.com/go-redis/redis"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+	"gitlab.badanamu.com.cn/calmisland/ro"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -107,20 +111,37 @@ func initOperator(orgID string, authTo string, authCode string) *entity.Operator
 func TestMain(m *testing.M) {
 	config.Set(&config.Config{
 		AMS: config.AMSConfig{
-			EndPoint: "https://api.beta.kidsloop.net/user/",
+			EndPoint: "https://api.alpha.kidsloop.net/user/",
 		},
 		H5P: config.H5PServiceConfig{
 			EndPoint: "https://api.alpha.kidsloop.net/assessment/graphql/",
 		},
 	})
-
 	testOperator = &entity.Operator{
-		UserID: "2522eae0-5f72-45d1-98f6-35827ab816a7",
-		OrgID:  "92db7ddd-1f23-4f64-bd47-94f6d34a50c0", // Badanamu HQ
-		Token:  "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI1MjJlYWUwLTVmNzItNDVkMS05OGY2LTM1ODI3YWI4MTZhNyIsImVtYWlsIjoib3Jna2lkc2xvb3AxQHlvcG1haWwuY29tIiwiZXhwIjoxNjIyNjIxNTU2LCJpc3MiOiJraWRzbG9vcCJ9.h70Xq63TvRLJxZZ8-5sxxPTChjRwzNcG9KJ5rnRg66iDZ1HLfouI4W1ED6eJ6lzJqJdIdkL3nKGdXM-ePtXfctd8vGBmm2TBuk4C2fq_zX9R5N7MzHVS1wzbRzD3D-U_tLLY-_JmEV2ECgoajoFpHP2DkUuVA-qu1AubdFDLc9VS9ETbdNtEFQw0eF3x4eEiuT7WVKx3VX-FQLw0IJF0CMlNYSoWAWPxIqG7M5VwzTX1OPwG2eZXpwQ7RozPQWE7Sft1dQt9TvHPkj40xC7UgNB637wTB5-MUxJRNNIrNfcsJHOtro_ZT8JR7GnQWAf24Xmt2oOkFDDT68KVJ0yH2g",
+		UserID: "14494c07-0d4f-5141-9db2-15799993f448",
+		OrgID:  "a44da070-1907-46c4-bc4c-f26ced889439", // Badanamu HQ
+		Token:  "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYzMTY4NTU3OSwiaXNzIjoia2lkc2xvb3AifQ.RBjU31IYIZHKSW36qDpvaH2fNBPBUeGVvtN-kApFGXLPqebSru9PZvv9D52LQgQq_ocE9g3DxsdMv0WF2IHVVz0KFHUhpJc-QDuMhFt4sm_sPeWASMgk-SMhGR_7ucNqVV6F97EATumIhkMuqTCqNpuJBUbuxCnRssTud76MATANOC90EQGcr8vfmzEVuv1TVCUmuTCvejGGbU-V-MKj5JeB32WIQeWqYwUkmhmR8sqxPbhR-ZRXIiVSni1OJzF35rcEGIAuEPYtRvuRypSF96LFVpZpPjxMIyT6ZltYWIsUw0b78xrRuc9pATVrT1dOpK-xulqKeVd6205aKqkrgw",
 	}
+	ro.SetConfig(&redis.Options{Addr: "127.0.0.1:6379"})
+	initQuerier(context.Background())
 
 	os.Exit(m.Run())
+}
+
+func initQuerier(ctx context.Context) {
+	engine := cache.GetCacheEngine()
+	engine.AddQuerier(ctx, GetUserServiceProvider())
+	engine.AddQuerier(ctx, GetTeacherServiceProvider())
+	engine.AddQuerier(ctx, GetSubjectServiceProvider())
+	engine.AddQuerier(ctx, GetSubCategoryServiceProvider())
+	engine.AddQuerier(ctx, GetStudentServiceProvider())
+	engine.AddQuerier(ctx, GetSchoolServiceProvider())
+	engine.AddQuerier(ctx, GetProgramServiceProvider())
+	engine.AddQuerier(ctx, GetOrganizationServiceProvider())
+	engine.AddQuerier(ctx, GetGradeServiceProvider())
+	engine.AddQuerier(ctx, GetClassServiceProvider())
+	engine.AddQuerier(ctx, GetCategoryServiceProvider())
+	engine.AddQuerier(ctx, GetAgeServiceProvider())
 }
 
 func TestRegexp(t *testing.T) {

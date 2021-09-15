@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -13,6 +14,7 @@ import (
 )
 
 type AgeServiceProvider interface {
+	cache.IQuerier
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Age, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Age, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -27,6 +29,12 @@ type Age struct {
 	System bool     `json:"system"`
 }
 
+func (n *Age) StringID() string {
+	return n.ID
+}
+func (n *Age) RelatedIDs() []*cache.RelatedEntity {
+	return nil
+}
 func GetAgeServiceProvider() AgeServiceProvider {
 	return &AmsAgeService{}
 }
@@ -36,6 +44,23 @@ type AmsAgeService struct{}
 func (s AmsAgeService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Age, error) {
 	if len(ids) == 0 {
 		return []*Age{}, nil
+	}
+
+	res := make([]*Age, 0, len(ids))
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.ID(), ids, &res, operator)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+func (s AmsAgeService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
 	}
 
 	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
@@ -57,7 +82,7 @@ func (s AmsAgeService) BatchGet(ctx context.Context, operator *entity.Operator, 
 		Data: &data,
 	}
 
-	_, err := GetAmsClient().Run(ctx, request, response)
+	_, err = GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get ages by ids failed",
 			log.Err(err),
@@ -73,7 +98,7 @@ func (s AmsAgeService) BatchGet(ctx context.Context, operator *entity.Operator, 
 		return nil, response.Errors
 	}
 
-	ages := make([]*Age, 0, len(data))
+	ages := make([]cache.Object, 0, len(data))
 	for index := range ids {
 		age := data[fmt.Sprintf("q%d", indexMapping[index])]
 		if age == nil {
@@ -260,4 +285,7 @@ func (s AmsAgeService) GetByOrganization(ctx context.Context, operator *entity.O
 		log.Any("ages", ages))
 
 	return ages, nil
+}
+func (s AmsAgeService) ID() string {
+	return "ams_age_service"
 }

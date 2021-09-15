@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
 	"sync"
 	"text/template"
@@ -18,6 +19,7 @@ import (
 )
 
 type ClassServiceProvider interface {
+	cache.IQuerier
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableClass, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableClass, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -39,6 +41,12 @@ type NullableClass struct {
 	Valid bool `json:"-"`
 }
 
+func (n *NullableClass) StringID() string {
+	return n.Class.ID
+}
+func (n *NullableClass) RelatedIDs() []*cache.RelatedEntity {
+	return nil
+}
 func GetClassServiceProvider() ClassServiceProvider {
 	return &AmsClassService{}
 }
@@ -86,6 +94,24 @@ func (s AmsClassService) BatchGet(ctx context.Context, operator *entity.Operator
 		return []*NullableClass{}, nil
 	}
 
+	res := make([]*NullableClass, 0, len(ids))
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.ID(), ids, &res, operator)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (s AmsClassService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
+	}
+
 	raw := `query{
 	{{range $i, $e := .}}
 	index_{{$i}}: class(class_id: "{{$e}}"){
@@ -128,7 +154,7 @@ func (s AmsClassService) BatchGet(ctx context.Context, operator *entity.Operator
 		log.Error(ctx, "Res error", log.String("q", buf.String()), log.Any("res", res), log.Err(res.Errors))
 		return nil, res.Errors
 	}
-	var classes []*NullableClass
+	var classes []cache.Object
 	for index := range ids {
 		class := payload[fmt.Sprintf("index_%d", indexMapping[index])]
 		if class == nil {
@@ -144,7 +170,6 @@ func (s AmsClassService) BatchGet(ctx context.Context, operator *entity.Operator
 
 	return classes, nil
 }
-
 func (s AmsClassService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableClass, error) {
 	classes, err := s.BatchGet(ctx, operator, ids)
 	if err != nil {
@@ -429,4 +454,7 @@ func (s AmsClassService) GetBySchoolIDs(ctx context.Context, operator *entity.Op
 		log.Any("classes", classes))
 
 	return classes, nil
+}
+func (s AmsClassService) ID() string {
+	return "ams_class_service"
 }

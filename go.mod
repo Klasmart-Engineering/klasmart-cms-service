@@ -37,6 +37,7 @@ require (
 	gitlab.badanamu.com.cn/calmisland/common-log v0.1.4
 	gitlab.badanamu.com.cn/calmisland/dbo v0.1.10
 	gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13
+	gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.4 // indirect
 	gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20210813055601-f0a5d22461a0
 	go.etcd.io/etcd v3.3.25+incompatible // indirect
 	go.mongodb.org/mongo-driver v1.4.0

@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"os"
 	"os/signal"
 	"syscall"
@@ -36,13 +38,30 @@ func initDB() {
 	}
 	dbo.ReplaceGlobal(dboHandler)
 }
+
+func initQuerier() {
+	//init querier
+	ctx := context.Background()
+	engine := cache.GetCacheEngine()
+	engine.AddQuerier(ctx, external.GetUserServiceProvider())
+	engine.AddQuerier(ctx, external.GetTeacherServiceProvider())
+	engine.AddQuerier(ctx, external.GetSubjectServiceProvider())
+	engine.AddQuerier(ctx, external.GetSubCategoryServiceProvider())
+	engine.AddQuerier(ctx, external.GetStudentServiceProvider())
+	engine.AddQuerier(ctx, external.GetSchoolServiceProvider())
+	engine.AddQuerier(ctx, external.GetProgramServiceProvider())
+	engine.AddQuerier(ctx, external.GetOrganizationServiceProvider())
+	engine.AddQuerier(ctx, external.GetGradeServiceProvider())
+	engine.AddQuerier(ctx, external.GetClassServiceProvider())
+	engine.AddQuerier(ctx, external.GetCategoryServiceProvider())
+	engine.AddQuerier(ctx, external.GetAgeServiceProvider())
+}
 func initCache() {
-	//if config.Get().RedisConfig.OpenCache {
 	ro.SetConfig(&redis.Options{
 		Addr:     fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
 		Password: config.Get().RedisConfig.Password,
 	})
-	//}
+	initQuerier()
 }
 
 // @title KidsLoop 2.0 REST API
