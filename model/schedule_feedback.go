@@ -249,6 +249,20 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 		}
 	}(ctx)
 
+	go func(ctx context.Context, op *entity.Operator) {
+		data := &entity.AddClassAndLiveAssessmentArgs{
+			ScheduleID:    input.ScheduleID,
+			AttendanceIDs: []string{op.UserID},
+			ClassEndTime:  time.Now().Unix(),
+		}
+		_, err := GetClassesAssignmentsModel().CreateRecord(ctx, op, data)
+		if err != nil {
+			log.Error(ctx, "feedback notify assignments",
+				log.Err(err),
+				log.Any("data", data))
+		}
+	}(ctx, op)
+
 	return id.(string), nil
 }
 
