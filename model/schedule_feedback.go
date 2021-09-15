@@ -163,6 +163,22 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 		return "", err
 	}
 
+	// notify classes assignments to statistic home fun attendance
+	go func(ctx context.Context, op *entity.Operator) {
+		data := &entity.AddClassAndLiveAssessmentArgs{
+			ScheduleID:    input.ScheduleID,
+			AttendanceIDs: []string{op.UserID},
+			ClassEndTime:  time.Now().Unix(),
+		}
+		log.Debug(ctx, "feedback notify assignments", log.Any("data", data))
+		_, err := GetClassesAssignmentsModel().CreateRecord(ctx, op, data)
+		if err != nil {
+			log.Error(ctx, "feedback notify assignments",
+				log.Err(err),
+				log.Any("data", data))
+		}
+	}(ctx, op)
+
 	id, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
 		// insert feedback
 		feedback := &entity.ScheduleFeedback{
@@ -248,21 +264,6 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 			removeResourceMetadata(ctx, v.AttachmentID)
 		}
 	}(ctx)
-
-	// notify classes assignments to statistic home fun attendance
-	go func(ctx context.Context, op *entity.Operator) {
-		data := &entity.AddClassAndLiveAssessmentArgs{
-			ScheduleID:    input.ScheduleID,
-			AttendanceIDs: []string{op.UserID},
-			ClassEndTime:  time.Now().Unix(),
-		}
-		_, err := GetClassesAssignmentsModel().CreateRecord(ctx, op, data)
-		if err != nil {
-			log.Error(ctx, "feedback notify assignments",
-				log.Err(err),
-				log.Any("data", data))
-		}
-	}(ctx, op)
 
 	return id.(string), nil
 }
