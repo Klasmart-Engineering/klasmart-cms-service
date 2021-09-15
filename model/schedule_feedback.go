@@ -249,6 +249,7 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 		}
 	}(ctx)
 
+	// notify classes assignments to statistic home fun attendance
 	go func(ctx context.Context, op *entity.Operator) {
 		data := &entity.AddClassAndLiveAssessmentArgs{
 			ScheduleID:    input.ScheduleID,
