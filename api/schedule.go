@@ -1136,6 +1136,23 @@ func (s *Server) getSubjectsInScheduleFilter(c *gin.Context) {
 	ctx := c.Request.Context()
 	programID := c.Query("program_id")
 
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ViewSubjects20115)
+	if err != nil {
+		log.Error(ctx, "getSubjectsInScheduleFilter: HasOrganizationPermission failed",
+			log.Any("op", op),
+			log.String("perm", string(external.ViewSubjects20115)),
+			log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "getSubjectsInScheduleFilter: HasOrganizationPermission failed",
+			log.Any("op", op),
+			log.String("perm", string(external.ViewSubjects20115)))
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+		return
+	}
+
 	subjects, err := model.GetScheduleModel().GetSubjects(ctx, op, programID)
 	switch err {
 	case nil:
