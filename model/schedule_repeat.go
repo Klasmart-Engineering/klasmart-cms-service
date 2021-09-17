@@ -188,9 +188,22 @@ func (r *RepeatCyclePlan) GenerateTimeByEndRule(endRule *RepeatCycleEndRule) ([]
 	case entity.RepeatEndAfterTime:
 		afterTime := time.Unix(endRule.AfterTime, 0).In(r.repeatCfg.Location)
 		var isFirst = true
+
+		// check repeat after time
+		if baseEnd.After(afterTime) {
+			log.Error(r.ctx, "GenerateTimeByEndRule: afterTime invalid",
+				log.Any("afterTime", afterTime),
+				log.Any("baseStart", baseStart),
+				log.Any("baseEnd", baseEnd))
+			return nil, constant.ErrInvalidArgs
+		}
+
 		for baseEnd.Before(afterTime) && baseEnd.Before(r.repeatCfg.MaxTime) {
 			day, err := r.Interval(baseStart.Unix(), isFirst)
 			if err == ErrOverLimit {
+				log.Debug(r.ctx, "r.Interval error",
+					log.Err(err),
+					log.Bool("isFirst", isFirst))
 				continue
 			}
 			if err != nil {
