@@ -1,9 +1,11 @@
 package entity
 
+import "context"
+
 type TeacherLoadLessonSummaryRequest TeacherLoadLessonSummaryArgs
 type TeacherLoadLessonSummaryResponse TeacherLoadLessonSummaryRes
 
-func (t TeacherLoadLessonSummaryRequest) Validate() (TeacherLoadLessonSummaryArgs, error) {
+func (t TeacherLoadLessonSummaryRequest) Validate(ctx context.Context, op *Operator) (TeacherLoadLessonSummaryArgs, error) {
 	return TeacherLoadLessonSummaryArgs(t), nil
 }
 

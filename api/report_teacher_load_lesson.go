@@ -33,7 +33,7 @@ func (s *Server) summaryTeacherLoadLessons(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	args, err := request.Validate()
+	args, err := request.Validate(ctx, op)
 	if err != nil {
 		log.Error(ctx, "summaryTeacherLoadLessons: validate failed",
 			log.Err(err),
