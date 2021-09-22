@@ -43,6 +43,10 @@ func (s *Server) getTeacherLoadReportOfAssignment(c *gin.Context) {
 		err = constant.ErrInvalidArgs
 		return
 	}
+	err = req.ClassTypeList.Validate(ctx)
+	if err != nil {
+		return
+	}
 	//res, err := model.GetReportModel().GetStudentUsageMaterialViewCount(ctx, op, &req)
 	//if err != nil {
 	//	return
