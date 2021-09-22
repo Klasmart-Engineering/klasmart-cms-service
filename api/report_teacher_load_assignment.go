@@ -11,7 +11,7 @@ import (
 
 // @Summary list teaching load report
 // @Description list teaching load report
-// @Tags reports
+// @Tags reports/teacher_load
 // @ID getTeacherLoadReportOfAssignment
 // @Accept json
 // @Produce json
@@ -20,7 +20,7 @@ import (
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/teacher_report_assignment [get]
+// @Router /reports/teacher_load/assignments [post]
 func (s *Server) getTeacherLoadReportOfAssignment(c *gin.Context) {
 	ctx := c.Request.Context()
 	var err error
