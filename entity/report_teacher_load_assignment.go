@@ -1,11 +1,36 @@
 package entity
 
+import (
+	"context"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+)
+
 type TeacherLoadAssignmentRequest struct {
 	TeacherIDList []string `json:"teacher_id_list"`
 	ClassIDList   []string `json:"class_id_list"`
 
-	ClassTypeList []ClassType `json:"class_type_list"`
-	Duration      TimeRange   `json:"duration"`
+	// one of study, home_fun
+	ClassTypeList ClassTypeList `json:"class_type_list" binding:"oneOf=study,home_fun"`
+	Duration      TimeRange     `json:"duration"`
+}
+type ClassTypeList []string
+
+func (ctl ClassTypeList) Validate(ctx context.Context) (err error) {
+	if len(ctl) < 1 {
+		err = constant.ErrInvalidArgs
+		log.Error(ctx, "class_type_list is required", log.Err(err), log.Any("class_type_list", ctl))
+		return
+	}
+	for _, s := range ctl {
+		if s != "study" && s != "home_fun" {
+			err = constant.ErrInvalidArgs
+			log.Error(ctx, "invalid class_type, class_type should be one of study,home_fun", log.Err(err), log.Any("class_type_list", ctl))
+		}
+	}
+	return
 }
 
 type TeacherLoadAssignmentResponse struct {
