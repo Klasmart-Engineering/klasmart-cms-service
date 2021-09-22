@@ -14,7 +14,49 @@ import (
 // @ID summaryTeacherLoadLessons
 // @Accept json
 // @Produce json
-// @Param overview body entity.TeacherLoadLessonSummaryRequest true "request"
+// @Param overview body entity.TeacherLoadLessonRequest true "request"
+// @Success 200 {object} []entity.TeacherLoadLessonListResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /reports/teacher_loading/lessons_list [post]
+func (s *Server) listTeacherLoadLessons(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+
+	var request entity.TeacherLoadLessonRequest
+	err := c.ShouldBindJSON(&request)
+	if err != nil {
+		log.Error(ctx, "summaryTeacherLoadLessons: ShouldBindQuery failed",
+			log.Err(err),
+			log.Any("request", request))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	args, err := request.Validate(ctx, op)
+	if err != nil {
+		log.Error(ctx, "summaryTeacherLoadLessons: validate failed",
+			log.Err(err),
+			log.Any("request", request))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	result, err := model.GetTeacherLoadLessonsModel().Summary(ctx, op, &args)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		s.defaultErrorHandler(c, err)
+	}
+}
+
+// @Summary get teacher load Report
+// @Description teacher load summary
+// @Tags reports/teacherLoading
+// @ID summaryTeacherLoadLessons
+// @Accept json
+// @Produce json
+// @Param overview body entity.TeacherLoadLessonRequest true "request"
 // @Success 200 {object} []entity.TeacherLoadLessonSummaryResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -24,7 +66,7 @@ func (s *Server) summaryTeacherLoadLessons(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 
-	var request entity.TeacherLoadLessonSummaryRequest
+	var request entity.TeacherLoadLessonRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
 		log.Error(ctx, "summaryTeacherLoadLessons: ShouldBindQuery failed",

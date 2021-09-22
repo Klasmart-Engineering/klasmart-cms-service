@@ -7,7 +7,8 @@ import (
 )
 
 type ITeacherLoadLessonsModel interface {
-	Summary(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadLessonSummaryArgs) (*entity.TeacherLoadLessonSummaryRes, error)
+	List(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadLessonArgs) ([]*entity.TeacherLoadLesson, error)
+	Summary(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadLessonArgs) (*entity.TeacherLoadLessonSummary, error)
 }
 
 var (
@@ -24,6 +25,10 @@ func GetTeacherLoadLessonsModel() ITeacherLoadLessonsModel {
 
 type teacherLoadLessonModel struct{}
 
-func (t teacherLoadLessonModel) Summary(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadLessonSummaryArgs) (*entity.TeacherLoadLessonSummaryRes, error) {
+func (t teacherLoadLessonModel) List(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadLessonArgs) ([]*entity.TeacherLoadLesson, error) {
+	panic("implement me")
+}
+
+func (t teacherLoadLessonModel) Summary(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadLessonArgs) (*entity.TeacherLoadLessonSummary, error) {
 	panic("implement me")
 }

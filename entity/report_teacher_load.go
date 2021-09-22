@@ -1,15 +1,16 @@
 package entity
 
-import "context"
+import (
+	"context"
+)
 
-type TeacherLoadLessonSummaryRequest TeacherLoadLessonSummaryArgs
-type TeacherLoadLessonSummaryResponse TeacherLoadLessonSummaryRes
+type TeacherLoadLessonRequest TeacherLoadLessonArgs
 
-func (t TeacherLoadLessonSummaryRequest) Validate(ctx context.Context, op *Operator) (TeacherLoadLessonSummaryArgs, error) {
-	return TeacherLoadLessonSummaryArgs(t), nil
+func (t TeacherLoadLessonRequest) Validate(ctx context.Context, op *Operator) (TeacherLoadLessonArgs, error) {
+	return TeacherLoadLessonArgs(t), nil
 }
 
-type TeacherLoadLessonSummaryArgs struct {
+type TeacherLoadLessonArgs struct {
 	TeacherIDs []string  `json:"teacher_ids" form:"teacher_ids"`
 	ClassIDs   []string  `json:"class_ids" form:"class_ids"`
 	Duration   TimeRange `json:"duration" form:"duration"`
@@ -33,7 +34,10 @@ type TeacherLoadLessonSummary struct {
 	MissedInClassLessons    int `json:"missed_in_class_lessons"`
 }
 
-type TeacherLoadLessonSummaryRes struct {
-	List    []*TeacherLoadLesson     `json:"list"`
-	Summary TeacherLoadLessonSummary `json:"summary"`
+type TeacherLoadLessonListResponse struct {
+	List []*TeacherLoadLesson `json:"list"`
+}
+
+type TeacherLoadLessonSummaryResponse struct {
+	Summary *TeacherLoadLessonSummary `json:"summary"`
 }
