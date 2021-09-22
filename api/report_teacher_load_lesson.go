@@ -19,7 +19,7 @@ import (
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/teacher_loading/lessons_list [post]
+// @Router /reports/teacher_load/lessons_list [post]
 func (s *Server) listTeacherLoadLessons(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
@@ -61,7 +61,7 @@ func (s *Server) listTeacherLoadLessons(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/teacher_loading/lessons_summary [post]
+// @Router /reports/teacher_load/lessons_summary [post]
 func (s *Server) summaryTeacherLoadLessons(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
