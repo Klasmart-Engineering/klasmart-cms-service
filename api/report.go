@@ -8,7 +8,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"net/http"
 )
 
@@ -209,8 +208,6 @@ func (s *Server) getStudentPerformanceReport(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param teaching_load body entity.ReportListTeachingLoadArgs true "query teaching load"
-// @Param page query integer false "page"
-// @Param size query integer false "size"
 // @Success 200 {object} entity.ReportListTeachingLoadResult
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -225,7 +222,6 @@ func (s *Server) listTeachingLoadReport(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	args.Pager = utils.GetDboPager(c.Query("page"), c.Query("size"))
 
 	result, err := model.GetReportTeachingLoadModel().ListTeachingLoadReport(ctx, dbo.MustGetDB(ctx), operator, &args)
 	switch err {

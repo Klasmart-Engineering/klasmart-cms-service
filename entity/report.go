@@ -3,8 +3,6 @@ package entity
 import (
 	"encoding/json"
 	"strings"
-
-	"gitlab.badanamu.com.cn/calmisland/dbo"
 )
 
 type StudentsAchievementReportResponse struct {
@@ -395,7 +393,6 @@ type ReportListTeachingLoadArgs struct {
 	TeacherIDs []string  `json:"teacher_ids"`
 	ClassIDs   []string  `json:"class_ids"`
 	TimeOffset int       `json:"time_offset"`
-	Pager      dbo.Pager `json:"pager"`
 }
 
 type ReportListTeachingLoadResult struct {
