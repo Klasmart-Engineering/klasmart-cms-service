@@ -15,7 +15,7 @@ import (
 // @ID getTeacherLoadReportOfAssignment
 // @Accept json
 // @Produce json
-// @Param request body string entity.TeacherLoadAssignmentRequest "request arg"
+// @Param request body entity.TeacherLoadAssignmentRequest true "request "
 // @Success 200 {object} entity.TeacherLoadAssignmentResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
