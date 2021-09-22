@@ -14,8 +14,8 @@ type TeacherLoadMissedLessonsArgs struct {
 	TeacherId  string    `json:"teacher_id" form:"teacher_id"`
 	ClassIDs   []string  `json:"class_ids" form:"class_ids"`
 	Duration   TimeRange `json:"duration" form:"duration"`
-	PageNumber int       `json:"pageNumber" form:"pageNumber"`
-	PageSize   int       `json:"pageSize" form:"pageSize"`
+	PageNumber int       `json:"page_number" form:"page_number"`
+	PageSize   int       `json:"page_size" form:"page_size"`
 }
 type TeacherLoadMissedLessonsResponse struct {
 	List []*TeacherLoadMissedLesson `json:"list"`

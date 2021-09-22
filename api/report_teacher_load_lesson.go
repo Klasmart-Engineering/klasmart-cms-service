@@ -95,7 +95,7 @@ func (s *Server) summaryTeacherLoadLessons(c *gin.Context) {
 // @Summary get teacher missed lessons
 // @Description teacher missed lessons
 // @Tags reports/teacher_Loader
-// @ID listTeacherLoadLessons
+// @ID listTeacherMissedLessons
 // @Accept json
 // @Produce json
 // @Param overview body entity.TeacherLoadMissedLessonsRequest true "request"
