@@ -392,7 +392,6 @@ type GetTeachingHoursReportResultItem struct {
 // endregion activities
 
 type ReportListTeachingLoadArgs struct {
-	SchoolID   string    `json:"school_id"`
 	TeacherIDs []string  `json:"teacher_ids"`
 	ClassIDs   []string  `json:"class_ids"`
 	TimeOffset int       `json:"time_offset"`
