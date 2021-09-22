@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -30,6 +32,22 @@ func (m *reportModel) GetStudentUsageMaterialViewCount(ctx context.Context, op *
 			Count: usage.UsedCount,
 		}
 		res.ContentUsageList = append(res.ContentUsageList, contentUsage)
+	}
+
+	for _, typ := range req.ContentTypeList {
+		found := false
+		for _, usage := range res.ContentUsageList {
+			if usage.Type == typ {
+				found = true
+				continue
+			}
+		}
+		if !found {
+			res.ContentUsageList = append(res.ContentUsageList, &entity.ContentUsage{
+				Type:  typ,
+				Count: 0,
+			})
+		}
 	}
 
 	return
@@ -65,19 +83,37 @@ func (m *reportModel) GetStudentUsageMaterial(ctx context.Context, op *entity.Op
 		res.ClassUsageList = append(res.ClassUsageList, classUsage)
 	}
 
+	for _, classID := range req.ClassIDList {
+		classUsage, found := res.ClassUsageList.Find(classID)
+		if !found {
+			classUsage = &entity.ClassUsage{
+				ID:               classID,
+				ContentUsageList: make(entity.ContentUsageSlice, 0),
+			}
+			res.ClassUsageList = append(res.ClassUsageList, classUsage)
+		}
+		classUsage.ContentUsageList = classUsage.ContentUsageList.FillZeroItems(req.TimeRangeList, req.ContentTypeList)
+	}
 	return
 }
 
 func (m *reportModel) AddStudentUsageRecordTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, record *entity.StudentUsageRecord) (err error) {
 	sche, err := GetScheduleModel().GetPlainByID(ctx, record.RoomID)
 	if err != nil {
+		log.Error(ctx, "can not find schedule by id", log.Any("schedule_id", record.RoomID))
+		err = constant.ErrInvalidArgs
 		return
 	}
 	if sche.LessonPlanID == "" {
 		return
 	}
 	record.LessonPlanID = sche.LessonPlanID
-	record.ScheduleStartAt = sche.StartAt
+	if sche.StartAt > 0 {
+		record.ScheduleStartAt = sche.StartAt
+	} else {
+		record.ScheduleStartAt = sche.CreatedAt
+	}
+
 	classID, err := GetScheduleRelationModel().GetClassRosterID(ctx, op, record.RoomID)
 	if err != nil {
 		return
@@ -95,6 +131,9 @@ func (m *reportModel) AddStudentUsageRecordTx(ctx context.Context, tx *dbo.DBCon
 	material, found := materials.FindByUrl(ctx, record.LessonMaterialUrl)
 	if found {
 		record.LessonMaterialID = material.ID
+		if mData, ok := material.ContentData.(*MaterialData); ok {
+			record.ContentType = mData.FileType.String()
+		}
 	}
 
 	var models []entity.BatchInsertModeler

@@ -42,6 +42,12 @@ func (s studentUsageDA) GetMaterialUsages(ctx context.Context, req *entity.Stude
 	if len(req.TimeRangeList) < 1 {
 		return
 	}
+	if len(req.ClassIDList) < 1 {
+		return
+	}
+	if len(req.ContentTypeList) < 1 {
+		return
+	}
 
 	var sqlArr []string
 	var args []interface{}

@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 
@@ -42,14 +43,14 @@ func (s *Server) addStudentUsageRecordEvent(c *gin.Context) {
 		case constant.ErrInvalidArgs:
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		default:
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			s.defaultErrorHandler(c, err)
 		}
 	}()
 	op := s.getOperator(c)
 	jwtToken := entity.JwtToken{}
 	err = c.ShouldBindJSON(&jwtToken)
 	if err != nil {
-		log.Error(ctx, "invalid params", log.Err(err))
+		log.Warn(ctx, "invalid params", log.Err(err))
 		err = constant.ErrInvalidArgs
 		return
 	}
@@ -66,6 +67,18 @@ func (s *Server) addStudentUsageRecordEvent(c *gin.Context) {
 		// temp solution, ops is offline
 		return config.Get().Assessment.AddAssessmentSecret, nil
 	})
+	if err != nil {
+		log.Warn(ctx, "jwt.ParseWithClaims failed", log.Err(err), log.Any("jwtToken", jwtToken))
+		err = constant.ErrInvalidArgs
+		return
+	}
+	req.ContentType = strings.ToLower(strings.TrimSpace(req.ContentType))
+
+	if req.StudentUsageRecord.RoomID == "" {
+		log.Warn(ctx, "room_id is required", log.Any("req", req))
+		err = constant.ErrInvalidArgs
+		return
+	}
 
 	err = model.GetReportModel().AddStudentUsageRecordTx(ctx, dbo.MustGetDB(ctx), op, &req.StudentUsageRecord)
 	if err != nil {

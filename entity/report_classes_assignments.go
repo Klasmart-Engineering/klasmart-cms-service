@@ -6,8 +6,9 @@ type ClassesAssignmentOverViewRequest struct {
 }
 
 type ClassesAssignmentOverView struct {
-	Type  string `json:"type"`
-	Count int    `json:"count"`
+	Type  string  `json:"type"`
+	Count int     `json:"count"`
+	Ratio float32 `json:"ratio"`
 }
 
 type ClassesAssignmentsViewRequest struct {
@@ -29,8 +30,6 @@ type ClassesAssignmentsView struct {
 
 type ClassesAssignmentsUnattendedViewRequest struct {
 	ClassID   string
-	Page      int         `json:"page" form:"page"`
-	PageSize  int         `json:"page_size" form:"page_size"`
 	Durations []TimeRange `json:"durations" form:"durations"`
 	Type      string      `json:"type"`
 }
@@ -42,7 +41,7 @@ type ScheduleView struct {
 }
 type ClassesAssignmentsUnattendedStudentsView struct {
 	StudentID   string       `json:"student_id"`
-	StudentName string       `json:"student_name"`
+	StudentName string       `json:"student_name"` // fill by frontend
 	Schedule    ScheduleView `json:"schedule"`
 	Time        int64        `json:"time"`
 }
@@ -50,10 +49,10 @@ type ClassesAssignmentsUnattendedStudentsView struct {
 type ScheduleInReportType string
 
 const (
-	UnknownType ScheduleInReportType = "Unknown"
-	LiveType    ScheduleInReportType = "Live"
-	StudyType   ScheduleInReportType = "Study"
-	HomeFunType ScheduleInReportType = "HomeFun"
+	UnknownType ScheduleInReportType = "unknown"
+	LiveType    ScheduleInReportType = "live"
+	StudyType   ScheduleInReportType = "study"
+	HomeFunType ScheduleInReportType = "home_fun"
 )
 
 func NewScheduleInReportType(classType ScheduleClassType, isFun bool) ScheduleInReportType {

@@ -138,4 +138,6 @@ const (
 	DeleteMyPendingMilestone     PermissionName = "delete_my_pending_milestone_490"
 	ApprovePendingMilestone      PermissionName = "approve_pending_milestone_491"
 	RejectPendingMilestone       PermissionName = "reject_pending_milestone_492"
+
+	ViewSubjects20115 PermissionName = "view_subjects_20115"
 )

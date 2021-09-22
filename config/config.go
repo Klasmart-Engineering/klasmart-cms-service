@@ -450,7 +450,7 @@ func loadCORSConfig(ctx context.Context) {
 func loadUserConfig(ctx context.Context) {
 	cacheExpiration, err := time.ParseDuration(os.Getenv("user_cache_expiration"))
 	if err != nil {
-		config.User.CacheExpiration = 4 * time.Hour
+		config.User.CacheExpiration = constant.UserDefaultCacheExpiration
 	} else {
 		config.User.CacheExpiration = cacheExpiration
 	}

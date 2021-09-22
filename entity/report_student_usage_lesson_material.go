@@ -35,6 +35,9 @@ func (r *StudentUsageRecord) GetBatchInsertColsAndValues() (cols []string, value
 	cols = append(cols, "class_type")
 	values = append(values, r.ClassType)
 
+	cols = append(cols, "room_id")
+	values = append(values, r.RoomID)
+
 	cols = append(cols, "lesson_material_url")
 	values = append(values, r.LessonMaterialUrl)
 
@@ -85,9 +88,9 @@ type JwtToken struct {
 }
 
 type StudentUsageMaterialReportRequest struct {
-	TimeRangeList   []TimeRange `json:"time_range_list" form:"time_range_list"`
-	ClassIDList     []string    `json:"class_id_list" form:"class_id_list"`
-	ContentTypeList []string    `json:"content_type_list" form:"content_type_list"`
+	TimeRangeList   []TimeRange `json:"time_range_list" form:"time_range_list" binding:"gt=0"`
+	ClassIDList     []string    `json:"class_id_list" form:"class_id_list" binding:"gt=0"`
+	ContentTypeList []string    `json:"content_type_list" form:"content_type_list" binding:"gt=0"`
 }
 
 type MaterialUsage struct {
@@ -99,11 +102,24 @@ type MaterialUsage struct {
 
 type StudentUsageMaterialReportResponse struct {
 	Request        *StudentUsageMaterialReportRequest `json:"request"`
-	ClassUsageList []*ClassUsage                      `json:"class_usage_list"`
+	ClassUsageList ClassUsageSlice                    `json:"class_usage_list"`
 }
+type ClassUsageSlice []*ClassUsage
+
+func (cus ClassUsageSlice) Find(id string) (classUsage *ClassUsage, found bool) {
+	for _, cu := range cus {
+		if cu.ID == id {
+			classUsage = cu
+			found = true
+			return
+		}
+	}
+	return
+}
+
 type ClassUsage struct {
-	ID               string          `json:"id"`
-	ContentUsageList []*ContentUsage `json:"content_usage_list"`
+	ID               string            `json:"id"`
+	ContentUsageList ContentUsageSlice `json:"content_usage_list"`
 }
 
 type ContentUsage struct {
@@ -113,12 +129,41 @@ type ContentUsage struct {
 }
 
 type StudentUsageMaterialViewCountReportRequest struct {
-	TimeRangeList   []TimeRange `json:"time_range_list" form:"time_range_list"`
-	ClassIDList     []string    `json:"class_id_list" form:"class_id_list"`
-	ContentTypeList []string    `json:"content_type_list" form:"content_type_list"`
+	TimeRangeList   []TimeRange `json:"time_range_list" form:"time_range_list" binding:"gt=0"`
+	ClassIDList     []string    `json:"class_id_list" form:"class_id_list" binding:"gt=0"`
+	ContentTypeList []string    `json:"content_type_list" form:"content_type_list" binding:"gt=0"`
 }
 
 type StudentUsageMaterialViewCountReportResponse struct {
 	Request          *StudentUsageMaterialViewCountReportRequest `json:"request"`
-	ContentUsageList []*ContentUsage                             `json:"content_usage_list"`
+	ContentUsageList ContentUsageSlice                           `json:"content_usage_list"`
+}
+
+type ContentUsageSlice []*ContentUsage
+
+func (cus ContentUsageSlice) Find(tr TimeRange, typ string) (usage *ContentUsage, found bool) {
+	for _, cu := range cus {
+		if cu.Type == typ && cu.TimeRange == tr {
+			usage = cu
+			found = true
+			return
+		}
+	}
+	return
+}
+
+func (cus ContentUsageSlice) FillZeroItems(trs []TimeRange, contentTypeList []string) ContentUsageSlice {
+	for _, tr := range trs {
+		for _, typ := range contentTypeList {
+			_, ok := cus.Find(tr, typ)
+			if !ok {
+				cus = append(cus, &ContentUsage{
+					TimeRange: tr,
+					Type:      typ,
+					Count:     0,
+				})
+			}
+		}
+	}
+	return cus
 }

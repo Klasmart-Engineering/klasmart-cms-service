@@ -52,44 +52,46 @@ func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Op
 		return "", err
 	}
 
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		existAttendances, err := da.GetClassesAssignmentsDA().QueryTx(ctx, tx, &da.ClassesAssignmentsCondition{
-			ClassID:    sql.NullString{String: classID, Valid: true},
-			ScheduleID: sql.NullString{String: schedule.ID, Valid: true},
-		})
-		if err != nil {
-			log.Error(ctx, "CreateRecord: get exists failed",
-				log.Err(err),
-				log.Any("data", data),
-				log.Any("should", shouldAttendances))
-			return err
-		}
+	existAttendances, err := da.GetClassesAssignmentsDA().QueryTx(ctx, dbo.MustGetDB(ctx), &da.ClassesAssignmentsCondition{
+		ClassID:    sql.NullString{String: classID, Valid: true},
+		ScheduleID: sql.NullString{String: schedule.ID, Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "CreateRecord: get exists failed",
+			log.Err(err),
+			log.Any("data", data),
+			log.Any("should", shouldAttendances))
+		return "", err
+	}
 
-		insertRecords := make([]*entity.ClassesAssignmentsRecords, 0)
-		for i := range shouldAttendances {
-			exist := false
-			for j := range existAttendances {
-				if shouldAttendances[i].RelationID == existAttendances[j].AttendanceID {
-					exist = true
-					break
-				}
-			}
-			if !exist {
-				insert := &entity.ClassesAssignmentsRecords{
-					ID:              utils.NewID(),
-					ClassID:         classID,
-					ScheduleID:      schedule.ID,
-					AttendanceID:    shouldAttendances[i].RelationID,
-					ScheduleType:    entity.NewScheduleInReportType(schedule.ClassType, schedule.IsHomeFun),
-					ScheduleStartAt: schedule.StartAt,
-					CreateAt:        time.Now().Unix(),
-				}
-				if schedule.ClassType == entity.ScheduleClassTypeHomework {
-					insert.ScheduleStartAt = schedule.CreatedAt
-				}
-				insertRecords = append(insertRecords, insert)
+	insertRecords := make([]*entity.ClassesAssignmentsRecords, 0)
+	for i := range shouldAttendances {
+		exist := false
+		for j := range existAttendances {
+			if shouldAttendances[i].RelationID == existAttendances[j].AttendanceID {
+				exist = true
+				break
 			}
 		}
+		if !exist {
+			insert := &entity.ClassesAssignmentsRecords{
+				ID:              utils.NewID(),
+				ClassID:         classID,
+				ScheduleID:      schedule.ID,
+				AttendanceID:    shouldAttendances[i].RelationID,
+				ScheduleType:    entity.NewScheduleInReportType(schedule.ClassType, schedule.IsHomeFun),
+				ScheduleStartAt: schedule.StartAt,
+				CreateAt:        time.Now().Unix(),
+				LastEndAt:       data.ClassEndTime,
+			}
+			if schedule.ClassType == entity.ScheduleClassTypeHomework {
+				insert.ScheduleStartAt = schedule.CreatedAt
+			}
+			insertRecords = append(insertRecords, insert)
+		}
+	}
+
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		err = da.GetClassesAssignmentsDA().BatchInsertTx(ctx, tx, insertRecords)
 		if err != nil {
 			log.Error(ctx, "CreateRecord: BatchInsertTx failed",
@@ -130,22 +132,29 @@ func (c ClassesAssignmentsModel) getMinAndMax(ctx context.Context, timeRanges []
 	return min, max, nil
 }
 
-func (c ClassesAssignmentsModel) getScheduleIDMapByType(ctx context.Context, schedules []*entity.Schedule, durations []entity.TimeRange) map[entity.ScheduleInReportType][]string {
+func (c ClassesAssignmentsModel) getScheduleIDMapByType(ctx context.Context, schedules []*entity.Schedule, durations []entity.TimeRange) ([]string, map[entity.ScheduleInReportType][]string) {
 	results := make(map[entity.ScheduleInReportType][]string)
 	for _, schedule := range schedules {
 		for i := range durations {
 			if schedule.ClassType == entity.ScheduleClassTypeOnlineClass && durations[i].MustContain(ctx, schedule.StartAt) {
 				results[entity.LiveType] = append(results[entity.LiveType], schedule.ID)
 			}
-			if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
+			if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun && durations[i].MustContain(ctx, schedule.CreatedAt) {
 				results[entity.StudyType] = append(results[entity.StudyType], schedule.ID)
 			}
-			if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
+			if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun && durations[i].MustContain(ctx, schedule.CreatedAt) {
 				results[entity.HomeFunType] = append(results[entity.HomeFunType], schedule.ID)
 			}
 		}
 	}
-	return results
+
+	scheduleIDs := make([]string, 0)
+	for k, v := range results {
+		results[k] = utils.SliceDeduplicationExcludeEmpty(v)
+		scheduleIDs = append(scheduleIDs, results[k]...)
+	}
+
+	return scheduleIDs, results
 }
 
 func (c ClassesAssignmentsModel) GetOverview(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentOverViewRequest) ([]*entity.ClassesAssignmentOverView, error) {
@@ -163,14 +172,12 @@ func (c ClassesAssignmentsModel) GetOverview(ctx context.Context, op *entity.Ope
 		scheduleIDs[i] = relations[i].ScheduleID
 	}
 
-	//min, max, err := c.getMinAndMax(ctx, request.Durations)
-	//if err != nil {
-	//	log.Error(ctx, "GetOverview: extract time duration failed", log.Err(err), log.Any("request", request))
-	//	return nil, err
-	//}
-
 	schedules, err := GetScheduleModel().QueryUnsafe(ctx, &entity.ScheduleQueryCondition{
 		IDs: entity.NullStrings{Strings: scheduleIDs, Valid: true},
+		ClassTypes: entity.NullStrings{Strings: []string{
+			string(entity.ScheduleClassTypeOnlineClass),
+			string(entity.ScheduleClassTypeHomework),
+		}, Valid: true},
 		//StartAtGe: sql.NullInt64{Int64: min, Valid: true},
 		//StartAtLt: sql.NullInt64{Int64: max, Valid: true},
 	})
@@ -183,15 +190,24 @@ func (c ClassesAssignmentsModel) GetOverview(ctx context.Context, op *entity.Ope
 		{Type: string(entity.StudyType), Count: 0},
 		{Type: string(entity.HomeFunType), Count: 0},
 	}
-	scheduleTypeMaps := c.getScheduleIDMapByType(ctx, schedules, request.Durations)
+	durationScheduleIDs, scheduleTypeMaps := c.getScheduleIDMapByType(ctx, schedules, request.Durations)
+	shouldAndActual, err := c.countScheduleShouldAndActual(ctx, op, durationScheduleIDs)
+	if err != nil {
+		log.Error(ctx, "GetOverView: get ratios failed", log.Err(err), log.Any("request", request), log.Strings("schedule_ids", durationScheduleIDs))
+		return nil, err
+	}
+
 	if scheduleTypeMaps[entity.LiveType] != nil {
-		overviews[0].Count = len(utils.SliceDeduplication(scheduleTypeMaps[entity.LiveType]))
+		overviews[0].Count = len(scheduleTypeMaps[entity.LiveType])
+		overviews[0].Ratio = c.getScheduleTotalRatios(ctx, scheduleTypeMaps[entity.LiveType], shouldAndActual)
 	}
 	if scheduleTypeMaps[entity.StudyType] != nil {
-		overviews[1].Count = len(utils.SliceDeduplication(scheduleTypeMaps[entity.StudyType]))
+		overviews[1].Count = len(scheduleTypeMaps[entity.StudyType])
+		overviews[1].Ratio = c.getScheduleTotalRatios(ctx, scheduleTypeMaps[entity.StudyType], shouldAndActual)
 	}
 	if scheduleTypeMaps[entity.HomeFunType] != nil {
-		overviews[2].Count = len(utils.SliceDeduplication(scheduleTypeMaps[entity.HomeFunType]))
+		overviews[2].Count = len(scheduleTypeMaps[entity.HomeFunType])
+		overviews[2].Ratio = c.getScheduleTotalRatios(ctx, scheduleTypeMaps[entity.HomeFunType], shouldAndActual)
 	}
 	return overviews, nil
 }
@@ -220,6 +236,7 @@ func (c ClassesAssignmentsModel) getScheduleIDMapByTimeRange(ctx context.Context
 		condition.ClassTypes = entity.NullStrings{Strings: []string{classType}, Valid: true}
 		condition.CreateAtGe = sql.NullInt64{Int64: min, Valid: true}
 		condition.CreateAtLt = sql.NullInt64{Int64: max, Valid: true}
+		condition.IsHomefun = sql.NullBool{Bool: false, Valid: true}
 	}
 	if kind == string(entity.HomeFunType) {
 		classType := string(entity.ScheduleClassTypeHomework)
@@ -251,27 +268,58 @@ func (c ClassesAssignmentsModel) getScheduleIDMapByTimeRange(ctx context.Context
 	return filterSchedules, scheduleMap, nil
 }
 
-func (c ClassesAssignmentsModel) getScheduleRatios(ctx context.Context, scheduleIDs []string) (map[string][]int, error) {
-	records, err := da.GetClassesAssignmentsDA().QueryTx(ctx, dbo.MustGetDB(ctx), &da.ClassesAssignmentsCondition{
-		ScheduleIDs: entity.NullStrings{Strings: scheduleIDs, Valid: true},
+func (c ClassesAssignmentsModel) countScheduleShouldAndActual(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]int, error) {
+	allStudents, err := GetScheduleRelationModel().Query(ctx, op, &da.ScheduleRelationCondition{
+		ScheduleIDs:  entity.NullStrings{Strings: scheduleIDs, Valid: true},
+		RelationType: sql.NullString{String: string(entity.ScheduleRelationTypeClassRosterStudent), Valid: true},
 	})
 	if err != nil {
-		log.Error(ctx, "getScheduleRatios: query failed",
+		log.Error(ctx, "countScheduleShouldAndActual: query relation failed",
 			log.Err(err),
 			log.Strings("schedule_ids", scheduleIDs))
 		return nil, err
 	}
-	shouldActualMap := make(map[string][]int)
-	for _, record := range records {
-		if shouldActualMap[record.ScheduleID] == nil {
-			shouldActualMap[record.ScheduleID] = make([]int, 2)
-		}
-		shouldActualMap[record.ScheduleID][0]++
-		if record.FinishCount > 0 {
-			shouldActualMap[record.ScheduleID][1]++
-		}
+	allMap := make(map[string][]string)
+	for _, relation := range allStudents {
+		allMap[relation.ScheduleID] = append(allMap[relation.ScheduleID], relation.RelationID)
+	}
+
+	attendance, err := da.GetClassesAssignmentsDA().QueryTx(ctx, dbo.MustGetDB(ctx), &da.ClassesAssignmentsCondition{
+		ScheduleIDs:    entity.NullStrings{Strings: scheduleIDs, Valid: true},
+		FinishCountsGT: sql.NullInt64{Int64: 0, Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "countScheduleShouldAndActual: query attendance failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs))
+		return nil, err
+	}
+	actualMap := make(map[string][]string)
+	for _, r := range attendance {
+		actualMap[r.ScheduleID] = append(actualMap[r.ScheduleID], r.AttendanceID)
+	}
+
+	shouldActualMap := make(map[string][]int, len(allMap))
+	for k, v := range allMap {
+		shouldActualMap[k] = make([]int, 2)
+		shouldActualMap[k][0] = len(utils.SliceDeduplication(v))
+		shouldActualMap[k][1] = len(utils.SliceDeduplication(actualMap[k]))
 	}
 	return shouldActualMap, nil
+}
+
+func (c ClassesAssignmentsModel) getScheduleTotalRatios(ctx context.Context, scheduleIDs []string, shouldActualMap map[string][]int) float32 {
+	if len(scheduleIDs) <= 0 {
+		return 0
+	}
+
+	sumRatios := float32(0)
+	for _, id := range scheduleIDs {
+		if shouldActualMap != nil && shouldActualMap[id] != nil && shouldActualMap[id][0] != 0 {
+			sumRatios += float32(shouldActualMap[id][1]) / float32(shouldActualMap[id][0])
+		}
+	}
+	return sumRatios / float32(len(scheduleIDs))
 }
 
 func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentsViewRequest) ([]*entity.ClassesAssignmentsView, error) {
@@ -298,9 +346,9 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 		scheduleIDs[i] = filterSchedules[i].ID
 	}
 
-	scheduleShouldActualMap, err := c.getScheduleRatios(ctx, scheduleIDs)
+	scheduleShouldActualMap, err := c.countScheduleShouldAndActual(ctx, op, scheduleIDs)
 	if err != nil {
-		log.Error(ctx, "GetStatistic: getScheduleRatios failed", log.Err(err), log.Any("request", request))
+		log.Error(ctx, "GetStatistic: countScheduleShouldAndActual failed", log.Err(err), log.Any("request", request))
 		return nil, err
 	}
 
@@ -321,16 +369,29 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 					ids = append(ids, id)
 					if scheduleShouldActualMap[id] != nil && scheduleShouldActualMap[id][0] != 0 {
 						rationSum += float32(scheduleShouldActualMap[id][1]) / float32(scheduleShouldActualMap[id][0])
+						// ignore the attendees as 0
+						count++
 					}
-					count++
+					log.Debug(ctx, "ratio_sum",
+						log.String("class_id", view.ClassID),
+						log.String("duration", string(duration)),
+						log.String("schedule_id", id),
+						log.Any("should_actual", scheduleShouldActualMap[id]))
 				}
 			}
 			view.DurationsRatio[j].Key = string(duration)
+			log.Debug(ctx, "ratio_denominator",
+				log.String("class_id", view.ClassID),
+				log.String("duration", string(duration)),
+				log.Int("count", count))
 			if count != 0 {
 				view.DurationsRatio[j].Ratio = rationSum / float32(count)
 			}
 
 		}
+		log.Debug(ctx, "ratio_schedules",
+			log.String("class_id", view.ClassID),
+			log.Strings("schedule_ids", utils.SliceDeduplication(ids)))
 		view.Total = len(utils.SliceDeduplication(ids))
 		result[i] = view
 	}
@@ -339,15 +400,67 @@ func (c ClassesAssignmentsModel) GetStatistic(ctx context.Context, op *entity.Op
 	return result, nil
 }
 
-func (c ClassesAssignmentsModel) getUnattendedMap(ctx context.Context, unattended []*entity.ClassesAssignmentsRecords) (map[string]map[string]bool, error) {
-	result := make(map[string]map[string]bool)
-	for _, record := range unattended {
-		if _, ok := result[record.AttendanceID]; !ok {
-			result[record.AttendanceID] = make(map[string]bool)
-		}
-		result[record.AttendanceID][record.ScheduleID] = true
+func (c ClassesAssignmentsModel) getShouldAttendedSchedulesMap(ctx context.Context, op *entity.Operator, scheduleIDs []string, studentIDs []string) (map[string][]string, error) {
+	relations, err := GetScheduleRelationModel().Query(ctx, op, &da.ScheduleRelationCondition{
+		ScheduleIDs:  entity.NullStrings{Strings: scheduleIDs, Valid: true},
+		RelationIDs:  entity.NullStrings{Strings: studentIDs, Valid: studentIDs != nil},
+		RelationType: sql.NullString{String: string(entity.ScheduleRelationTypeClassRosterStudent), Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "GetAllAttendanceSchedulesMap: query failed",
+			log.Err(err),
+			log.Strings("student_ids", studentIDs),
+			log.Strings("schedule_ids", scheduleIDs))
+		return nil, err
+	}
+	result := make(map[string][]string)
+	for _, relation := range relations {
+		result[relation.RelationID] = append(result[relation.RelationID], relation.ScheduleID)
 	}
 	return result, nil
+}
+
+func (c ClassesAssignmentsModel) getActualAttendedSchedulesMap(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]string, error) {
+	records, err := da.GetClassesAssignmentsDA().QueryTx(ctx, dbo.MustGetDB(ctx), &da.ClassesAssignmentsCondition{
+		ScheduleIDs:    entity.NullStrings{Strings: scheduleIDs, Valid: true},
+		FinishCountsGT: sql.NullInt64{Int64: 0, Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "getActualAttendedSchedulesMap: query failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs))
+		return nil, err
+	}
+	result := make(map[string][]string)
+	for _, record := range records {
+		result[record.AttendanceID] = append(result[record.AttendanceID], record.ScheduleID)
+	}
+	return result, nil
+}
+
+func (c ClassesAssignmentsModel) getUnattendedSchedulesMap(ctx context.Context, shouldMap map[string][]string, actualMap map[string][]string) map[string][]string {
+	result := make(map[string][]string, len(shouldMap))
+	for k, v := range shouldMap {
+		attendances := actualMap[k]
+		for _, attendanceID := range v {
+			attended := false
+			for i := range attendances {
+				if attendanceID == attendances[i] {
+					attended = true
+					break
+				}
+			}
+			if !attended {
+				result[k] = append(result[k], attendanceID)
+			}
+		}
+		log.Debug(ctx, "should and actual",
+			log.String("student_id", k),
+			log.Any("should", v),
+			log.Any("actual", attendances),
+			log.Any("unattended", result[k]))
+	}
+	return result
 }
 
 func (c ClassesAssignmentsModel) GetUnattended(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentsUnattendedViewRequest) ([]*entity.ClassesAssignmentsUnattendedStudentsView, error) {
@@ -369,57 +482,49 @@ func (c ClassesAssignmentsModel) GetUnattended(ctx context.Context, op *entity.O
 		return nil, err
 	}
 	scheduleIDs := make([]string, len(filterSchedules))
-	scheduleIDNameMap := make(map[string]string)
+	scheduleIDScheduleMap := make(map[string]*entity.Schedule)
 	for i := range filterSchedules {
 		scheduleIDs[i] = filterSchedules[i].ID
-		scheduleIDNameMap[filterSchedules[i].ID] = filterSchedules[i].Title
+		scheduleIDScheduleMap[filterSchedules[i].ID] = filterSchedules[i]
 	}
 
-	unattended, err := da.GetClassesAssignmentsDA().QueryTx(ctx, dbo.MustGetDB(ctx), &da.ClassesAssignmentsCondition{
-		ScheduleIDs:     entity.NullStrings{Strings: scheduleIDs, Valid: true},
-		FinishCountsLTE: sql.NullInt64{Int64: 0, Valid: true},
-	})
+	shouldAttendedMap, err := c.getShouldAttendedSchedulesMap(ctx, op, scheduleIDs, nil)
 	if err != nil {
-		log.Error(ctx, "GetUnattended: extract time duration failed", log.Err(err), log.Any("request", request))
+		log.Error(ctx, "GetUnattended: should attended schedules map",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs))
 		return nil, err
 	}
-	unattendedMap, err := c.getUnattendedMap(ctx, unattended)
+	actualAttendedMap, err := c.getActualAttendedSchedulesMap(ctx, op, scheduleIDs)
 	if err != nil {
-		log.Error(ctx, "GetUnattended: extract time duration failed", log.Err(err), log.Any("request", request))
+		log.Error(ctx, "GetUnattended: actual attended schedules map",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs))
 		return nil, err
 	}
 
-	// TODO: get one-page students order by student name
-	// Now, give all unattendedMap
-	type studentType struct {
-		ID   string
-		Name string
-	}
-	students := make([]*studentType, len(unattendedMap))
-	index := 0
-	for k, _ := range unattendedMap {
-		students[index] = &studentType{ID: k}
-		index++
-	}
+	unattendedMap := c.getUnattendedSchedulesMap(ctx, shouldAttendedMap, actualAttendedMap)
 
 	result := make([]*entity.ClassesAssignmentsUnattendedStudentsView, 0)
-	for i := range students {
-		scheduleIDMap := unattendedMap[students[i].ID]
-		for j := range scheduleIDs {
+	for k, v := range unattendedMap {
+		for _, scheduleID := range v {
 			view := &entity.ClassesAssignmentsUnattendedStudentsView{
-				StudentID:   students[i].ID,
-				StudentName: students[i].Name,
-			}
-			if scheduleIDMap != nil && scheduleIDMap[scheduleIDs[j]] {
-				scheduleView := entity.ScheduleView{
-					ScheduleID:   scheduleIDs[j],
-					ScheduleName: scheduleIDNameMap[scheduleIDs[j]],
+				StudentID: k,
+				Schedule: entity.ScheduleView{
+					ScheduleID:   scheduleID,
+					ScheduleName: scheduleIDScheduleMap[scheduleID].Title,
 					Type:         request.Type,
-				}
-				view.Schedule = scheduleView
+				},
+			}
+			if scheduleIDScheduleMap[scheduleID] != nil && scheduleIDScheduleMap[scheduleID].ClassType == entity.ScheduleClassTypeOnlineClass {
+				view.Time = scheduleIDScheduleMap[scheduleID].StartAt
+			}
+			if scheduleIDScheduleMap[scheduleID] != nil && scheduleIDScheduleMap[scheduleID].ClassType == entity.ScheduleClassTypeHomework {
+				view.Time = scheduleIDScheduleMap[scheduleID].CreatedAt
 			}
 			result = append(result, view)
 		}
+
 	}
 	return result, nil
 }

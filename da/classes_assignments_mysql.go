@@ -67,6 +67,7 @@ type ClassesAssignmentsCondition struct {
 	ScheduleType    sql.NullString     `json:"schedule_type"`
 	ScheduleTypes   entity.NullStrings `json:"schedule_types"`
 	FinishCountsLTE sql.NullInt64      `json:"FinishCountsLTE"`
+	FinishCountsGT  sql.NullInt64      `json:"FinishCountsGT"`
 
 	OrderBy string    `json:"order_by"`
 	Pager   dbo.Pager `json:"pager"`
@@ -99,6 +100,11 @@ func (c *ClassesAssignmentsCondition) GetConditions() ([]string, []interface{}) 
 	if c.FinishCountsLTE.Valid {
 		wheres = append(wheres, " finish_counts <= ?")
 		params = append(params, c.FinishCountsLTE.Int64)
+	}
+
+	if c.FinishCountsGT.Valid {
+		wheres = append(wheres, "finish_counts > ?")
+		params = append(params, c.FinishCountsGT.Int64)
 	}
 
 	return wheres, params

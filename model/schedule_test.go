@@ -128,3 +128,26 @@ func TestRemoveResourceMetadata(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestGetRepeatResult(t *testing.T) {
+	ctx := context.TODO()
+	m := &scheduleModel{}
+	r, err := m.getRepeatResult(ctx, 1632639194, 1632649980, &entity.RepeatOptions{
+		Type: "daily",
+		Daily: entity.RepeatDaily{
+			Interval: 1,
+			End: entity.RepeatEnd{
+				Type:       "after_time",
+				AfterCount: 1,
+				AfterTime:  1642649980,
+			},
+		},
+	}, time.Local)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, v := range r {
+		t.Log(v)
+	}
+}
