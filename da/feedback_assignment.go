@@ -6,7 +6,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"sync"
 )
@@ -21,35 +20,12 @@ type feedbackAssignmentDA struct {
 }
 
 func (s *feedbackAssignmentDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, assignments []*entity.FeedbackAssignment) (int64, error) {
-	var data [][]interface{}
-	for _, item := range assignments {
-		data = append(data, []interface{}{
-			item.ID,
-			item.FeedbackID,
-			item.AttachmentID,
-			item.AttachmentName,
-			item.Number,
-			item.CreateAt,
-			item.UpdateAt,
-			item.DeleteAt,
-		})
+	_, err := s.Insert(ctx, &assignments)
+	if err != nil {
+		logger.Error(ctx, "batch insert feedbackAssignment: batch insert failed", log.Any("assignments", assignments), log.Err(err))
+		return 0, err
 	}
-	format, values := SQLBatchInsert(constant.TableNameFeedbackAssignment, []string{
-		"`id`",
-		"`feedback_id`",
-		"`attachment_id`",
-		"`attachment_name`",
-		"`number`",
-		"`create_at`",
-		"`update_at`",
-		"`delete_at`",
-	}, data)
-	execResult := dbContext.Exec(format, values...)
-	if execResult.Error != nil {
-		logger.Error(ctx, "db exec sql error", log.String("format", format), log.Any("values", values), log.Err(execResult.Error))
-		return 0, execResult.Error
-	}
-	return execResult.RowsAffected, nil
+	return int64(len(assignments)), nil
 }
 
 var (

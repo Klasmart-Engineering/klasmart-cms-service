@@ -134,40 +134,11 @@ func (a *assessmentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items
 	if len(items) == 0 {
 		return nil
 	}
-	columns := []string{
-		"id",
-		"schedule_id",
-		"title",
-		"complete_time",
-		"status",
-		"create_at",
-		"update_at",
-		"delete_at",
-		"class_length",
-		"class_end_time",
-	}
-	var matrix [][]interface{}
-	for _, item := range items {
-		matrix = append(matrix, []interface{}{
-			item.ID,
-			item.ScheduleID,
-			item.Title,
-			item.CompleteTime,
-			item.Status,
-			item.CreateAt,
-			item.UpdateAt,
-			item.DeleteAt,
-			item.ClassLength,
-			item.ClassEndTime,
-		})
-	}
-	format, values := SQLBatchInsert(entity.Assessment{}.TableName(), columns, matrix)
-	if err := tx.Exec(format, values...).Error; err != nil {
+	_, err := a.Insert(ctx, &items)
+	if err != nil {
 		log.Error(ctx, "BatchInsert: batch insert failed",
 			log.Err(err),
 			log.Any("items", items),
-			log.String("format", format),
-			log.Any("values", values),
 		)
 		return err
 	}

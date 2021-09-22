@@ -14,11 +14,7 @@ type ClassesAssignmentsSQLDA struct {
 }
 
 func (c ClassesAssignmentsSQLDA) BatchInsertTx(ctx context.Context, tx *dbo.DBContext, records []*entity.ClassesAssignmentsRecords) error {
-	var models []entity.BatchInsertModeler
-	for _, record := range records {
-		models = append(models, record)
-	}
-	err := c.BaseDA.BatchInsertTx(ctx, tx, models...)
+	_,err := c.BaseDA.InsertTx(ctx,tx,records)
 	if err != nil {
 		log.Error(ctx, "BatchInsertTx: classes_assignments failed",
 			log.Any("record", records))

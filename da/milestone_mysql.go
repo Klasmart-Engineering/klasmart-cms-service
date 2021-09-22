@@ -460,28 +460,22 @@ func (mso MilestoneOutcomeSQLDA) DeleteTx(ctx context.Context, tx *dbo.DBContext
 	return nil
 }
 func (mso MilestoneOutcomeSQLDA) InsertTx(ctx context.Context, tx *dbo.DBContext, milestonesOutcomes []*entity.MilestoneOutcome) error {
-	table := entity.MilestoneOutcome{}.TableName()
+	var models []entity.MilestoneOutcome
 	if len(milestonesOutcomes) > 0 {
-		values := make([][]interface{}, len(milestonesOutcomes))
 		now := time.Now().Unix()
 		for i := range milestonesOutcomes {
 			tm := now + int64(i)
-			values[i] = []interface{}{
-				milestonesOutcomes[i].MilestoneID,
-				milestonesOutcomes[i].OutcomeAncestor,
-				tm,
-				tm,
-			}
+			models = append(models, entity.MilestoneOutcome{MilestoneID: milestonesOutcomes[i].MilestoneID,
+				OutcomeAncestor: milestonesOutcomes[i].OutcomeAncestor, CreateAt: tm, UpdateAt: tm})
 		}
-		sql, results := SQLBatchInsert(table, []string{"milestone_id", "outcome_ancestor", "create_at", "update_at"}, values)
-		err := tx.Exec(sql, results...).Error
+		_, err := mso.Insert(ctx, &models)
 		if err != nil {
-			log.Error(ctx, "InsertTx: exec insert sql failed",
+			log.Error(ctx, "batch insert milestoneOutcome: batch insert failed",
 				log.Err(err),
-				log.Any("milestonesOutcomes", milestonesOutcomes),
-				log.String("sql", sql))
+				log.Any("milestonesOutcomes", milestonesOutcomes))
 			return err
 		}
+		return nil
 	}
 	return nil
 }

@@ -89,25 +89,12 @@ func (c QueryAssessmentContentOutcomeAttendanceCondition) GetOrderBy() string {
 	return ""
 }
 
-func (*assessmentContentOutcomeAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentContentOutcomeAttendance) error {
+func (as *assessmentContentOutcomeAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentContentOutcomeAttendance) error {
 	if len(items) == 0 {
 		return nil
 	}
-	var (
-		columns = []string{"id", "assessment_id", "content_id", "outcome_id", "attendance_id"}
-		matrix  [][]interface{}
-	)
-	for _, item := range items {
-		matrix = append(matrix, []interface{}{
-			item.ID,
-			item.AssessmentID,
-			item.ContentID,
-			item.OutcomeID,
-			item.AttendanceID,
-		})
-	}
-	format, values := SQLBatchInsert(entity.AssessmentContentOutcomeAttendance{}.TableName(), columns, matrix)
-	if err := tx.Exec(format, values...).Error; err != nil {
+	_, err := as.Insert(ctx, &items)
+	if err != nil {
 		log.Error(ctx, "BatchInsert: SQLBatchInsert: batch insert assessment content outcome attendances failed",
 			log.Err(err),
 			log.Any("items", items),

@@ -71,26 +71,12 @@ func (d *assessmentContentDA) GetLessonMaterials(ctx context.Context, tx *dbo.DB
 	return materials, nil
 }
 
-func (*assessmentContentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentContent) error {
+func (d *assessmentContentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentContent) error {
 	if len(items) == 0 {
 		return nil
 	}
-	var (
-		columns = []string{"id", "assessment_id", "content_id", "content_name", "content_type", "checked"}
-		matrix  [][]interface{}
-	)
-	for _, item := range items {
-		matrix = append(matrix, []interface{}{
-			item.ID,
-			item.AssessmentID,
-			item.ContentID,
-			item.ContentName,
-			item.ContentType,
-			item.Checked,
-		})
-	}
-	format, values := SQLBatchInsert(entity.AssessmentContent{}.TableName(), columns, matrix)
-	if err := tx.Exec(format, values...).Error; err != nil {
+	_, err := d.Insert(ctx, &items)
+	if err != nil {
 		log.Error(ctx, "BatchInsert: SQLBatchInsert: batch insert assessment contents failed",
 			log.Err(err),
 			log.Any("items", items),
