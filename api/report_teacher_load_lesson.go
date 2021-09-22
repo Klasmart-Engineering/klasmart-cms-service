@@ -9,9 +9,9 @@ import (
 )
 
 // @Summary get teacher load Report
-// @Description teacher load summary
-// @Tags reports/teacherLoading
-// @ID summaryTeacherLoadLessons
+// @Description teacher load list
+// @Tags reports/teacher_Loader
+// @ID listTeacherLoadLessons
 // @Accept json
 // @Produce json
 // @Param overview body entity.TeacherLoadLessonRequest true "request"
@@ -41,7 +41,7 @@ func (s *Server) listTeacherLoadLessons(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	result, err := model.GetTeacherLoadLessonsModel().Summary(ctx, op, &args)
+	result, err := model.GetTeacherLoadLessonsModel().List(ctx, op, &args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -52,7 +52,7 @@ func (s *Server) listTeacherLoadLessons(c *gin.Context) {
 
 // @Summary get teacher load Report
 // @Description teacher load summary
-// @Tags reports/teacherLoading
+// @Tags reports/teacher_load
 // @ID summaryTeacherLoadLessons
 // @Accept json
 // @Produce json
