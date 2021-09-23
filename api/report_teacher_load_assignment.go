@@ -16,7 +16,7 @@ import (
 // @Accept json
 // @Produce json
 // @Param request body entity.TeacherLoadAssignmentRequest true "request "
-// @Success 200 {object} entity.TeacherLoadAssignmentResponse
+// @Success 200 {object} []entity.TeacherLoadAssignmentResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -43,10 +43,14 @@ func (s *Server) getTeacherLoadReportOfAssignment(c *gin.Context) {
 		err = constant.ErrInvalidArgs
 		return
 	}
+	err = req.ClassTypeList.Validate(ctx)
+	if err != nil {
+		return
+	}
 	//res, err := model.GetReportModel().GetStudentUsageMaterialViewCount(ctx, op, &req)
 	//if err != nil {
 	//	return
 	//}
 	_ = op
-	c.JSON(http.StatusOK, entity.TeacherLoadAssignmentResponse{})
+	c.JSON(http.StatusOK, []entity.TeacherLoadAssignmentResponse{})
 }
