@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"sort"
+	"strconv"
 	"sync"
 	"time"
 
@@ -40,140 +41,86 @@ type learningSummaryReportModel struct {
 	assessmentBase
 }
 
-func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryTimeFilterArgs) ([]*entity.LearningSummaryFilterYear, error) {
-	// try get cache
-	cacheResult, err := da.GetAssessmentRedisDA().GetQueryLearningSummaryTimeFilterResult(ctx, args)
+// QueryTimeFilter returns years-weeks data for frontend under proper permission
+// ref: https://calmisland.atlassian.net/wiki/spaces/NKL/pages/2331050001/Sprint+13+CMS+Report+Sep+15th+-+Oct+12th
+// product owner requires this date below as the beginning in the drop-down box
+// block 2, point 2: `‘Year’ is single choice, values includes all years from ‘2020’, default is current year.`
+// and 2019-12-30 Monday is the beginning record
+func (l *learningSummaryReportModel) QueryTimeFilter(
+	ctx context.Context, tx *dbo.DBContext,
+	operator *entity.Operator,
+	args *entity.QueryLearningSummaryTimeFilterArgs) (ret []*entity.LearningSummaryFilterYear, err error) {
+
+	// check permission
+	permissionsShouldHave := []external.PermissionName{
+		external.LearningSummaryReport,
+		external.ReportLearningSummaryStudent,
+		external.ReportLearningSummarySchool,
+		external.ReportLearningSummaryTeacher,
+		external.ReportLearningSummmaryOrg,
+	}
+	permitMap, err := external.GetPermissionServiceProvider().
+		HasOrganizationPermissions(ctx, operator, permissionsShouldHave)
+	logOperatorField := log.Any("operator", operator)
+	logPermissionsShouldHaveField := log.Any("permissions", permissionsShouldHave)
 	if err != nil {
-		log.Debug(ctx, "query time filter: get cache failed",
-			log.Err(err),
-			log.Any("args", args),
-		)
-	} else {
-		log.Debug(ctx, "query time filter: hit cache",
-			log.Err(err),
-			log.Any("args", args),
-			log.Any("cache_result", cacheResult),
-		)
-		return cacheResult, nil
+		log.Panic(ctx,"failed to query permissions",
+			log.Err(err), logOperatorField, logPermissionsShouldHaveField)
+	}
+	hitOne := false
+	for _, p := range permitMap {
+		hitOne = hitOne || p
+	}
+	if !hitOne {
+		log.Debug(ctx, "all permissions check failed",
+			logOperatorField, logPermissionsShouldHaveField)
+		return nil, constant.ErrForbidden
 	}
 
-	fixedZone := time.FixedZone("time_filter", args.TimeOffset)
-	var result []*entity.LearningSummaryFilterYear
+	// make data
+	// benchmark info
+	// BenchmarkWeeks100y
+	//	cpu: Intel(R) Core(TM) i5-8500 CPU @ 3.00GHz
+	//	BenchmarkWeeks100y
+	//  BenchmarkWeeks100y-6   	    1797	   2758555 ns/op
+	// BenchmarkWeeks10y
+	//	cpu: Intel(R) Core(TM) i5-8500 CPU @ 3.00GHz
+	//	BenchmarkWeeks10y
+	//	BenchmarkWeeks10y-6   	   10000	    304150 ns/op
+	fixedZone := time.FixedZone("fixed-zone:" + strconv.Itoa(args.TimeOffset), args.TimeOffset)
+	nowWithZone := time.Now().In(fixedZone)
+	ret = l.getYearsWeeksData(nowWithZone)
+	return
+}
 
-	now := time.Now()
-	m := make(map[int][][2]int64)
-	switch args.SummaryType {
-	case entity.LearningSummaryTypeLiveClass:
-		schedules, err := l.findRelatedSchedules(ctx, tx, operator, entity.LearningSummaryTypeLiveClass, &entity.LearningSummaryFilter{
-			SchoolIDs: args.SchoolIDs,
-			TeacherID: args.TeacherID,
-			StudentID: args.StudentID,
+func (l *learningSummaryReportModel) getYearsWeeksData(nowWithZone time.Time) (ret []*entity.LearningSummaryFilterYear) {
+	result := make(map[int][]entity.LearningSummaryFilterWeek)
+	cursor := time.Date(2019, 12, 30, 23, 59, 59, int(time.Second - 1), nowWithZone.Location())
+	for {
+		endCursor := cursor.Add(time.Hour * 24 * 6)
+		if endCursor.After(nowWithZone) {
+			break
+		}
+		endYear, _, _ := endCursor.Date()
+		if _, ok := result[endYear]; !ok {
+			result[endYear] = make([]entity.LearningSummaryFilterWeek, 52, 54)
+		}
+		result[endYear] = append(result[endYear], entity.LearningSummaryFilterWeek{
+			WeekStart: cursor.Unix(),
+			WeekEnd:   endCursor.Unix(),
 		})
-		if err != nil {
-			log.Error(ctx, "query time filter: find related schedules failed",
-				log.Err(err),
-				log.Any("args", args),
-			)
-			return nil, err
-		}
-		for _, s := range schedules {
-			if time.Unix(s.StartAt, 0).After(now) {
-				continue
-			}
-			year := time.Unix(s.StartAt, 0).Year()
-			weekStart, weekEnd := utils.FindWeekTimeRangeFromMonday(s.StartAt, fixedZone)
-			m[year] = append(m[year], [2]int64{weekStart, weekEnd})
-		}
-	case entity.LearningSummaryTypeAssignment:
-		schedules, err := l.findRelatedSchedules(ctx, tx, operator, entity.LearningSummaryTypeAssignment, &entity.LearningSummaryFilter{
-			SchoolIDs: args.SchoolIDs,
-			TeacherID: args.TeacherID,
-			StudentID: args.StudentID,
-		})
-		if err != nil {
-			log.Error(ctx, "query time filter: find related schedules failed",
-				log.Err(err),
-				log.Any("args", args),
-			)
-			return nil, err
-		}
-		scheduleIDs := make([]string, 0, len(schedules))
-		for _, s := range schedules {
-			scheduleIDs = append(scheduleIDs, s.ID)
-		}
-		scheduleIDs = utils.SliceDeduplicationExcludeEmpty(scheduleIDs)
-		assessments, err := l.queryUnifiedAssessments(ctx, tx, operator, &entity.QueryUnifiedAssessmentArgs{
-			Types: entity.NullAssessmentTypes{
-				Value: []entity.AssessmentType{entity.AssessmentTypeStudy, entity.AssessmentTypeHomeFunStudy},
-				Valid: true,
-			},
-			Status: entity.NullAssessmentStatus{
-				Value: entity.AssessmentStatusComplete,
-				Valid: true,
-			},
-			OrgID: entity.NullString{
-				String: operator.OrgID,
-				Valid:  true,
-			},
-			ScheduleIDs: entity.NullStrings{
-				Strings: scheduleIDs,
-				Valid:   true,
-			},
-		})
-		if err != nil {
-			log.Error(ctx, "query time filter: query unified assessments failed",
-				log.Err(err),
-				log.Any("args", args),
-			)
-			return nil, err
-		}
-		for _, a := range assessments {
-			if time.Unix(a.CompleteTime, 0).After(now) {
-				continue
-			}
-			year := time.Unix(a.CompleteTime, 0).Year()
-			weekStart, weekEnd := utils.FindWeekTimeRangeFromMonday(a.CompleteTime, fixedZone)
-			m[year] = append(m[year], [2]int64{weekStart, weekEnd})
-		}
+		cursor = endCursor.Add(time.Hour * 24)
 	}
-
-	// calc current week
-	currentWeekStart, currentWeekEnd := utils.FindWeekTimeRangeFromMonday(time.Now().Unix(), fixedZone)
-
-	// fill result
-	for year, weeks := range m {
-		item := entity.LearningSummaryFilterYear{Year: year}
-		weeks = l.deduplicationAndSortWeeks(weeks)
-		for _, w := range weeks {
-			if w[0] == currentWeekStart && w[1] == currentWeekEnd {
-				continue
-			}
-			item.Weeks = append(item.Weeks, entity.LearningSummaryFilterWeek{
-				WeekStart: w[0],
-				WeekEnd:   w[1],
-			})
+	for year, weekList := range result {
+		utils.ReverseSliceInPlace(weekList)
+		item := entity.LearningSummaryFilterYear{
+			Year:  year,
+			Weeks: weekList,
 		}
-		if len(item.Weeks) == 0 {
-			continue
-		}
-		result = append(result, &item)
+		ret = append(ret, &item)
 	}
-
-	// sort result
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Year < result[j].Year
-	})
-
-	// try set cache
-	if err := da.GetAssessmentRedisDA().SetQueryLearningSummaryTimeFilterResult(ctx, args, result); err != nil {
-		log.Debug(ctx, "query learning summary time filter: set cache failed",
-			log.Err(err),
-			log.Any("args", args),
-			log.Any("result", result),
-		)
-	}
-
-	return result, nil
+	utils.ReverseSliceInPlace(ret)
+	return
 }
 
 func (l *learningSummaryReportModel) deduplicationAndSortWeeks(weeks [][2]int64) [][2]int64 {

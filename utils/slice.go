@@ -1,6 +1,9 @@
 package utils
 
-import "strings"
+import (
+	"reflect"
+	"strings"
+)
 
 func SliceDeduplication(s []string) []string {
 	temp := make(map[string]bool)
@@ -193,4 +196,12 @@ func HasSubset(parent, children []string) bool {
 		}
 	}
 	return true
+}
+
+func ReverseSliceInPlace(s interface{}) {
+	n := reflect.ValueOf(s).Len()
+	swap := reflect.Swapper(s)
+	for i, j := 0, n-1; i < j; i, j = i+1, j-1 {
+		swap(i, j)
+	}
 }

@@ -139,5 +139,11 @@ const (
 	ApprovePendingMilestone      PermissionName = "approve_pending_milestone_491"
 	RejectPendingMilestone       PermissionName = "reject_pending_milestone_492"
 
+	LearningSummaryReport PermissionName = "learning_summary_report_653"
+	ReportLearningSummaryStudent PermissionName = "report_learning_summary_student_649"
+	ReportLearningSummaryTeacher PermissionName = "report_learning_summary_teacher_650"
+	ReportLearningSummarySchool PermissionName = "report_learning_summary_school_651"
+	ReportLearningSummmaryOrg PermissionName = "report_learning_summary_org_652"
+
 	ViewSubjects20115 PermissionName = "view_subjects_20115"
 )
