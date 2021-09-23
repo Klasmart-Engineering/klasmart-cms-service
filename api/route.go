@@ -109,6 +109,7 @@ func (s Server) registeRoute() {
 
 		schedules.POST("/schedules_time_view/dates", s.mustLogin, s.postScheduledDates)
 		schedules.POST("/schedules_time_view", s.mustLogin, s.postScheduleTimeView)
+		schedules.POST("/schedules_time_view/list", s.mustLogin, s.getScheduleTimeViewList)
 	}
 	scheduleFeedback := s.engine.Group("/v1/schedules_feedbacks")
 	{

@@ -151,3 +151,19 @@ func TestGetRepeatResult(t *testing.T) {
 		t.Log(v)
 	}
 }
+
+func TestQueryScheduleTimeView(t *testing.T) {
+	schedules, err := GetScheduleModel().QueryScheduleTimeView(context.TODO(),
+		&entity.ScheduleTimeViewQuery{
+			ViewType: "month",
+			TimeAt:   1632378161,
+		},
+		&entity.Operator{}, time.Now().Location())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, v := range schedules {
+		t.Log(v)
+	}
+}
