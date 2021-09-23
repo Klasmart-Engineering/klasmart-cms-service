@@ -15,7 +15,7 @@ import (
 // @Accept json
 // @Produce json
 // @Param overview body entity.TeacherLoadLessonRequest true "request"
-// @Success 200 {object} []entity.TeacherLoadLessonListResponse
+// @Success 200 {array}  entity.TeacherLoadLesson
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -57,7 +57,7 @@ func (s *Server) listTeacherLoadLessons(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param overview body entity.TeacherLoadLessonRequest true "request"
-// @Success 200 {object} []entity.TeacherLoadLessonSummaryResponse
+// @Success 200 {object} entity.TeacherLoadLessonSummary
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -99,7 +99,7 @@ func (s *Server) summaryTeacherLoadLessons(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param overview body entity.TeacherLoadMissedLessonsRequest true "request"
-// @Success 200 {object} []entity.TeacherLoadMissedLessonsResponse
+// @Success 200 {object} entity.TeacherLoadMissedLessonsResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse

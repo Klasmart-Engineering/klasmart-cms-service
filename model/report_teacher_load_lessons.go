@@ -2,6 +2,8 @@ package model
 
 import (
 	"context"
+	"database/sql"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"sync"
 )
@@ -9,7 +11,7 @@ import (
 type ITeacherLoadLessonsModel interface {
 	List(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadLessonArgs) ([]*entity.TeacherLoadLesson, error)
 	Summary(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadLessonArgs) (*entity.TeacherLoadLessonSummary, error)
-	MissedLessonsList(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadMissedLessonsArgs) ([]*entity.TeacherLoadMissedLesson, error)
+	MissedLessonsList(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadMissedLessonsArgs) (*entity.TeacherLoadMissedLessonsResponse, error)
 }
 
 var (
@@ -27,12 +29,16 @@ func GetTeacherLoadLessonsModel() ITeacherLoadLessonsModel {
 type teacherLoadLessonModel struct{}
 
 func (t teacherLoadLessonModel) List(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadLessonArgs) ([]*entity.TeacherLoadLesson, error) {
+	GetScheduleRelationModel().Query(ctx, op, &da.ScheduleRelationCondition{
+		RelationIDs:  entity.NullStrings{Strings: args.ClassIDs, Valid: true},
+		RelationType: sql.NullString{String: string(entity.ScheduleRelationTypeClassRosterClass), Valid: true},
+	})
 	panic("implement me")
 }
 
 func (t teacherLoadLessonModel) Summary(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadLessonArgs) (*entity.TeacherLoadLessonSummary, error) {
 	panic("implement me")
 }
-func (t teacherLoadLessonModel) MissedLessonsList(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadMissedLessonsArgs) ([]*entity.TeacherLoadMissedLesson, error) {
+func (t teacherLoadLessonModel) MissedLessonsList(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadMissedLessonsArgs) (*entity.TeacherLoadMissedLessonsResponse, error) {
 	panic("implement me")
 }

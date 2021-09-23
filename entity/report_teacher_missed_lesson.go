@@ -18,14 +18,15 @@ type TeacherLoadMissedLessonsArgs struct {
 	PageSize   int       `json:"page_size" form:"page_size"`
 }
 type TeacherLoadMissedLessonsResponse struct {
-	List []*TeacherLoadMissedLesson `json:"list"`
+	List  []*TeacherLoadMissedLesson `json:"list"`
+	Total int                        `json:"total"`
 }
 
 type TeacherLoadMissedLesson struct {
-	LessonType  []string  `json:"lesson_type" form:"lesson_type"`
-	LessonName  []string  `json:"lesson_name" form:"lesson_name"`
-	ClassName   TimeRange `json:"class_name" form:"class_name"`
-	NoOfStudent TimeRange `json:"no_of_student" form:"no_of_student"`
-	StartDate   TimeRange `json:"start_date" form:"start_date"`
-	EndDate     TimeRange `json:"end_date" form:"end_date"`
+	LessonType  string `json:"lesson_type" form:"lesson_type"`
+	LessonName  string `json:"lesson_name" form:"lesson_name"`
+	ClassName   string `json:"class_name" form:"class_name"`
+	NoOfStudent int    `json:"no_of_student" form:"no_of_student"`
+	StartDate   int64  `json:"start_date" form:"start_date"`
+	EndDate     int64  `json:"end_date" form:"end_date"`
 }
