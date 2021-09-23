@@ -2,6 +2,8 @@ package model
 
 import (
 	"context"
+	"database/sql"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"sync"
 )
@@ -26,6 +28,10 @@ func GetTeacherLoadLessonsModel() ITeacherLoadLessonsModel {
 type teacherLoadLessonModel struct{}
 
 func (t teacherLoadLessonModel) List(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadLessonArgs) ([]*entity.TeacherLoadLesson, error) {
+	GetScheduleRelationModel().Query(ctx, op, &da.ScheduleRelationCondition{
+		RelationIDs:  entity.NullStrings{Strings: args.ClassIDs, Valid: true},
+		RelationType: sql.NullString{String: string(entity.ScheduleRelationTypeClassRosterClass), Valid: true},
+	})
 	panic("implement me")
 }
 
