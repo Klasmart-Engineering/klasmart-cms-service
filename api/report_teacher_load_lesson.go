@@ -99,7 +99,7 @@ func (s *Server) summaryTeacherLoadLessons(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param overview body entity.TeacherLoadMissedLessonsRequest true "request"
-// @Success 200 {object} []entity.TeacherLoadMissedLessonsResponse
+// @Success 200 {object} entity.TeacherLoadMissedLessonsResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -128,7 +128,7 @@ func (s *Server) listTeacherMissedLessons(c *gin.Context) {
 	result, err := model.GetTeacherLoadLessonsModel().MissedLessonsList(ctx, op, &args)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, result)
+		c.JSON(http.StatusOK, entity.TeacherLoadMissedLessonsResponse{List: result})
 	default:
 		s.defaultErrorHandler(c, err)
 	}
