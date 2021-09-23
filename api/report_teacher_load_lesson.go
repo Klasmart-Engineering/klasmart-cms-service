@@ -57,7 +57,7 @@ func (s *Server) listTeacherLoadLessons(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param overview body entity.TeacherLoadLessonRequest true "request"
-// @Success 200 {array} entity.TeacherLoadLessonSummary
+// @Success 200 {object} entity.TeacherLoadLessonSummary
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
