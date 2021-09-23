@@ -28,6 +28,7 @@ type IReportModel interface {
 	AddStudentUsageRecordTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, record *entity.StudentUsageRecord) (err error)
 	GetStudentUsageMaterialViewCount(ctx context.Context, op *entity.Operator, req *entity.StudentUsageMaterialViewCountReportRequest) (res *entity.StudentUsageMaterialViewCountReportResponse, err error)
 	GetStudentUsageMaterial(ctx context.Context, op *entity.Operator, req *entity.StudentUsageMaterialReportRequest) (res *entity.StudentUsageMaterialReportResponse, err error)
+	GetTeacherLoadReportOfAssignment(ctx context.Context, op *entity.Operator, req *entity.TeacherLoadAssignmentRequest) (res []*entity.TeacherLoadAssignmentResponse, err error)
 }
 
 var (
