@@ -33,27 +33,21 @@ func (a RelationSqlDA) DeleteTx(ctx context.Context, tx *dbo.DBContext, table st
 
 func (a RelationSqlDA) InsertTx(ctx context.Context, tx *dbo.DBContext, table string, relations []*entity.Relation) error {
 	if len(relations) > 0 {
-		values := make([][]interface{}, len(relations))
 		now := time.Now().Unix()
+		var models []entity.MilestoneRelation
 		for i := range relations {
-			values[i] = []interface{}{
-				relations[i].MasterID,
-				relations[i].RelationID,
-				relations[i].RelationType,
-				relations[i].MasterType,
-				now + int64(i),
-				now + int64(i),
-			}
+			models = append(models, entity.MilestoneRelation{Relation: entity.Relation{MasterID: relations[i].MasterID,
+				RelationID: relations[i].RelationID, RelationType: relations[i].RelationType,
+				MasterType: relations[i].MasterType, CreateAt: now + int64(i), UpdateAt: now + int64(i)}})
 		}
-		format, result := SQLBatchInsert(table, []string{"master_id", "relation_id", "relation_type", "master_type", "create_at", "update_at"}, values)
-		err := tx.Exec(format, result...).Error
+		_, err := a.Insert(ctx, &models)
 		if err != nil {
-			log.Error(ctx, "Replace: exec insert sql failed",
+			log.Error(ctx, "db exec batchInsert milestones_relations sql error",
 				log.Err(err),
-				log.Any("relation", relations),
-				log.String("sql", format))
+				log.Any("relation", relations))
 			return err
 		}
+		return nil
 	}
 	return nil
 }

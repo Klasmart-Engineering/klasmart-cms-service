@@ -36,7 +36,7 @@ func (s BaseDA) BatchInsertTx(ctx context.Context, tx *dbo.DBContext, models ...
 		return
 	}
 	value := models[0]
-	tbName := tx.NewScope(value).TableName()
+	tbName := tx.GetTableName(value)
 
 	var insertCols []string
 	var insertValues []interface{}

@@ -45,20 +45,20 @@ func (d *outcomeAttendanceDA) BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Co
 	return items, nil
 }
 
-func (*outcomeAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.OutcomeAttendance) error {
+func (d *outcomeAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.OutcomeAttendance) error {
 	if len(items) == 0 {
 		return nil
 	}
-	columns := []string{"id", "assessment_id", "outcome_id", "attendance_id"}
-	var matrix [][]interface{}
+	var models []entity.OutcomeAttendance
 	for _, item := range items {
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		matrix = append(matrix, []interface{}{item.ID, item.AssessmentID, item.OutcomeID, item.AttendanceID})
+		models = append(models, entity.OutcomeAttendance{ID: item.ID, AssessmentID: item.AssessmentID,
+			OutcomeID: item.OutcomeID, AttendanceID: item.AttendanceID})
 	}
-	format, values := SQLBatchInsert(entity.OutcomeAttendance{}.TableName(), columns, matrix)
-	if err := tx.Exec(format, values...).Error; err != nil {
+	_, err := d.Insert(ctx, &models)
+	if err != nil {
 		log.Error(ctx, "batch insert outcomes_attendances: batch insert failed",
 			log.Err(err),
 			log.Any("items", items),

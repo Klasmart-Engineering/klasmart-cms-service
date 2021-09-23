@@ -72,20 +72,20 @@ func (*assessmentAttendanceDA) GetStudentIDsByAssessmentID(ctx context.Context, 
 	return ids, nil
 }
 
-func (*assessmentAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentAttendance) error {
+func (as *assessmentAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentAttendance) error {
 	if len(items) == 0 {
 		return nil
 	}
-	columns := []string{"id", "assessment_id", "attendance_id", "checked", "origin", "role"}
-	var matrix [][]interface{}
+	var models []entity.AssessmentAttendance
 	for _, item := range items {
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		matrix = append(matrix, []interface{}{item.ID, item.AssessmentID, item.AttendanceID, item.Checked, item.Origin, item.Role})
+		models = append(models, entity.AssessmentAttendance{ID: item.ID, AssessmentID: item.AssessmentID,
+			AttendanceID: item.AttendanceID, Checked: item.Checked, Origin: item.Origin, Role: item.Role})
 	}
-	format, values := SQLBatchInsert(entity.AssessmentAttendance{}.TableName(), columns, matrix)
-	if err := tx.Exec(format, values...).Error; err != nil {
+	_, err := as.Insert(ctx, &models)
+	if err != nil {
 		log.Error(ctx, "batch insert assessments_attendances: batch insert failed",
 			log.Err(err),
 			log.Any("items", items),

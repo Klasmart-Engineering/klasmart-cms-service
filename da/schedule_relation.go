@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 	"strings"
 	"sync"
 	"time"
@@ -74,30 +75,15 @@ func (s *scheduleRelationDA) MultipleBatchInsert(ctx context.Context, tx *dbo.DB
 }
 
 func (s *scheduleRelationDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, relations []*entity.ScheduleRelation) (int64, error) {
-	var sqlData [][]interface{}
-	for _, item := range relations {
-		sqlData = append(sqlData, []interface{}{
-			item.ID,
-			item.ScheduleID,
-			item.RelationID,
-			item.RelationType,
-		})
-	}
-	if len(sqlData) <= 0 {
+	if len(relations) <= 0 {
 		return 0, nil
 	}
-	format, values := SQLBatchInsert(constant.TableNameScheduleRelation, []string{
-		"`id`",
-		"`schedule_id`",
-		"`relation_id`",
-		"`relation_type`",
-	}, sqlData)
-
-	execResult := tx.Exec(format, values...)
-	if execResult.Error != nil {
-		return 0, execResult.Error
+	_, err := s.Insert(ctx, &relations)
+	if err != nil {
+		logger.Error(ctx, "db exec batchInsert scheduleRelation sql error", log.Any("values", relations), log.Err(err))
+		return 0, err
 	}
-	return execResult.RowsAffected, nil
+	return int64(len(relations)), nil
 }
 
 func (s *scheduleRelationDA) Delete(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) error {

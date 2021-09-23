@@ -215,23 +215,17 @@ func (o SetSQLDA) BulkBindOutcomeSet(ctx context.Context, op *entity.Operator, t
 
 func (o SetSQLDA) BindOutcomeSet(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeSets []*entity.OutcomeSet) error {
 	now := time.Now().Unix()
-	table := entity.OutcomeSet{}.TableName()
-	values := make([][]interface{}, len(outcomeSets))
+	var models []entity.OutcomeSet
 	for i := range outcomeSets {
-		values[i] = []interface{}{
-			outcomeSets[i].OutcomeID,
-			outcomeSets[i].SetID,
-			now + int64(i),
-			now + int64(i),
-		}
+		models = append(models, entity.OutcomeSet{OutcomeID: outcomeSets[i].OutcomeID,
+			SetID: outcomeSets[i].SetID, CreateAt: now + int64(i), UpdateAt: now + int64(i)})
 	}
-	sql, result := SQLBatchInsert(table, []string{"outcome_id", "set_id", "create_at", "update_at"}, values)
-	err := tx.Exec(sql, result...).Error
+	_, err := o.Insert(ctx, &models)
 	if err != nil {
 		log.Error(ctx, "BindOutcomeSet: failed",
 			log.Err(err),
 			log.Any("op", op),
-			log.String("sql", sql))
+			log.Any("outcomeSets", outcomeSets))
 		return err
 	}
 	return nil

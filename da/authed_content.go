@@ -41,21 +41,20 @@ func (ac *AuthedContentDA) BatchAddAuthedContent(ctx context.Context, tx *dbo.DB
 		return nil
 	}
 	createAt := time.Now().Unix()
-	columns := []string{
-		"id", "org_id", "content_id", "from_folder_id", "creator", "create_at", "duration",
-	}
-	var matrix [][]interface{}
+	var models []entity.AuthedContentRecord
 	for _, item := range req {
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		matrix = append(matrix, []interface{}{item.ID, item.OrgID, item.ContentID, item.FromFolderID, item.Creator, createAt, item.Duration})
+		models = append(models, entity.AuthedContentRecord{ID: item.ID, ContentID: item.ContentID,
+			FromFolderID: item.FromFolderID, Creator: item.Creator, CreateAt: createAt,
+			Duration: item.Duration})
 	}
-	format, values := SQLBatchInsert(entity.AuthedContentRecord{}.TableName(), columns, matrix)
-	if err := tx.Exec(format, values...).Error; err != nil {
+	_, err := ac.s.Insert(ctx, &models)
+	if err != nil {
 		log.Error(ctx, "batch insert cms_authed_contents: batch insert failed",
 			log.Err(err),
-			log.Any("items", matrix),
+			log.Any("items", req),
 		)
 		return err
 	}

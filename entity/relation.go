@@ -6,6 +6,8 @@ type Relation struct {
 	MasterType   RelationType `gorm:"column:master_type"`
 	RelationID   string       `gorm:"column:relation_id"`
 	RelationType RelationType `gorm:"column:relation_type"`
+	CreateAt     int64        `gorm:"column:create_at" json:"created_at"`
+	UpdateAt     int64        `gorm:"column:update_at" json:"updated_at"`
 }
 
 type RelationType string
