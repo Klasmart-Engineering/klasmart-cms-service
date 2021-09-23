@@ -64,7 +64,7 @@ func (l *learningSummaryReportModel) QueryTimeFilter(
 	logOperatorField := log.Any("operator", operator)
 	logPermissionsShouldHaveField := log.Any("permissions", permissionsShouldHave)
 	if err != nil {
-		log.Panic(ctx,"failed to query permissions",
+		log.Panic(ctx, "failed to query permissions",
 			log.Err(err), logOperatorField, logPermissionsShouldHaveField)
 	}
 	hitOne := false
@@ -87,7 +87,7 @@ func (l *learningSummaryReportModel) QueryTimeFilter(
 	//	cpu: Intel(R) Core(TM) i5-8500 CPU @ 3.00GHz
 	//	BenchmarkWeeks10y
 	//	BenchmarkWeeks10y-6   	   10000	    304150 ns/op
-	fixedZone := time.FixedZone("fixed-zone:" + strconv.Itoa(args.TimeOffset), args.TimeOffset)
+	fixedZone := time.FixedZone("fixed-zone:"+strconv.Itoa(args.TimeOffset), args.TimeOffset)
 	nowWithZone := time.Now().In(fixedZone)
 	ret = l.getYearsWeeksData(nowWithZone)
 	return
@@ -95,7 +95,7 @@ func (l *learningSummaryReportModel) QueryTimeFilter(
 
 func (l *learningSummaryReportModel) getYearsWeeksData(nowWithZone time.Time) (ret []*entity.LearningSummaryFilterYear) {
 	result := make(map[int][]entity.LearningSummaryFilterWeek)
-	cursor := time.Date(2019, 12, 30, 23, 59, 59, int(time.Second - 1), nowWithZone.Location())
+	cursor := time.Date(2019, 12, 30, 23, 59, 59, int(time.Second-1), nowWithZone.Location())
 	for {
 		endCursor := cursor.Add(time.Hour * 24 * 6)
 		if endCursor.After(nowWithZone) {

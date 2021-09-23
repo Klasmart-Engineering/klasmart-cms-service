@@ -47,11 +47,11 @@ func (s *Server) queryLearningSummaryTimeFilter(c *gin.Context) {
 		return
 	}
 	args := entity.QueryLearningSummaryTimeFilterArgs{
-		TimeOffset:  timeOffset,
-		OrgID:       operator.OrgID,
-		SchoolIDs:   utils.SliceDeduplicationExcludeEmpty(strings.Split(c.Query("school_ids"), ",")),
-		TeacherID:   c.Query("teacher_id"),
-		StudentID:   c.Query("student_id"),
+		TimeOffset: timeOffset,
+		OrgID:      operator.OrgID,
+		SchoolIDs:  utils.SliceDeduplicationExcludeEmpty(strings.Split(c.Query("school_ids"), ",")),
+		TeacherID:  c.Query("teacher_id"),
+		StudentID:  c.Query("student_id"),
 	}
 
 	// call business model
