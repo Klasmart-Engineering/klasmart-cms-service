@@ -3,6 +3,8 @@ package api
 import (
 	"net/http"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -47,10 +49,10 @@ func (s *Server) getTeacherLoadReportOfAssignment(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	//res, err := model.GetReportModel().GetStudentUsageMaterialViewCount(ctx, op, &req)
-	//if err != nil {
-	//	return
-	//}
+	res, err := model.GetReportModel().GetTeacherLoadReportOfAssignment(ctx, op, &req)
+	if err != nil {
+		return
+	}
 	_ = op
-	c.JSON(http.StatusOK, []entity.TeacherLoadAssignmentResponse{})
+	c.JSON(http.StatusOK, res)
 }

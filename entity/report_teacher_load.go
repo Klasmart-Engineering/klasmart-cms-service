@@ -27,11 +27,15 @@ type TeacherLoadLesson struct {
 	TotalScheduled          int    `json:"total_scheduled"`
 }
 
+type SummaryNode struct {
+	Count    int `json:"count"`
+	Duration int `json:"duration"`
+}
 type TeacherLoadLessonSummary struct {
-	CompletedLiveLessons    int `json:"completed_live_lessons"`
-	CompletedInClassLessons int `json:"completed_in_class_lessons"`
-	MissedLiveLessons       int `json:"missed_live_lessons"`
-	MissedInClassLessons    int `json:"missed_in_class_lessons"`
+	CompletedLiveLessons    SummaryNode `json:"completed_live_lessons"`
+	CompletedInClassLessons SummaryNode `json:"completed_in_class_lessons"`
+	MissedLiveLessons       SummaryNode `json:"missed_live_lessons"`
+	MissedInClassLessons    SummaryNode `json:"missed_in_class_lessons"`
 }
 
 type TeacherLoadLessonListResponse struct {
