@@ -144,3 +144,7 @@ const (
 const (
 	ResponseHeaderKeyInternalErrorType = "X-Internal-Error-Type"
 )
+
+const (
+	UserDefaultCacheExpiration = 4 * time.Hour
+)
