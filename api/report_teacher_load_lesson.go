@@ -10,7 +10,7 @@ import (
 
 // @Summary get teacher load Report
 // @Description teacher load list
-// @Tags reports/teacher_Loader
+// @Tags reports/teacherLoad
 // @ID listTeacherLoadLessons
 // @Accept json
 // @Produce json
@@ -52,7 +52,7 @@ func (s *Server) listTeacherLoadLessons(c *gin.Context) {
 
 // @Summary get teacher load Report
 // @Description teacher load summary
-// @Tags reports/teacher_load
+// @Tags reports/teacherLoad
 // @ID summaryTeacherLoadLessons
 // @Accept json
 // @Produce json
@@ -94,7 +94,7 @@ func (s *Server) summaryTeacherLoadLessons(c *gin.Context) {
 
 // @Summary get teacher missed lessons
 // @Description teacher missed lessons
-// @Tags reports/teacher_Loader
+// @Tags reports/teacherLoad
 // @ID listTeacherMissedLessons
 // @Accept json
 // @Produce json

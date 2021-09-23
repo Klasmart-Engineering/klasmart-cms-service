@@ -11,7 +11,7 @@ import (
 
 // @Summary list teaching load report
 // @Description list teaching load report
-// @Tags reports/teacher_load
+// @Tags reports/teacherLoad
 // @ID getTeacherLoadReportOfAssignment
 // @Accept json
 // @Produce json
