@@ -17,23 +17,29 @@ type OutcomeSQLDA struct {
 }
 
 type OutcomeCondition struct {
-	IDs            dbo.NullStrings
-	Name           sql.NullString
-	Description    sql.NullString
-	Keywords       sql.NullString
-	ShortcodeLike  sql.NullString
-	Shortcodes     dbo.NullStrings
-	PublishStatus  dbo.NullStrings
-	PublishScope   sql.NullString
-	AuthorName     sql.NullString
-	AuthorID       sql.NullString
-	Assumed        sql.NullBool
-	OrganizationID sql.NullString
-	SourceID       sql.NullString
-	SourceIDs      dbo.NullStrings
-	FuzzyKey       sql.NullString
-	AuthorIDs      dbo.NullStrings
-	AncestorIDs    dbo.NullStrings
+	IDs                    dbo.NullStrings
+	Name                   sql.NullString
+	Description            sql.NullString
+	Keywords               sql.NullString
+	ShortcodeLike          sql.NullString
+	Shortcodes             dbo.NullStrings
+	PublishStatus          dbo.NullStrings
+	PublishScope           sql.NullString
+	AuthorName             sql.NullString
+	AuthorID               sql.NullString
+	Assumed                sql.NullBool
+	OrganizationID         sql.NullString
+	SourceID               sql.NullString
+	SourceIDs              dbo.NullStrings
+	FuzzyKey               sql.NullString
+	AuthorIDs              dbo.NullStrings
+	AncestorIDs            dbo.NullStrings
+	RelationProgramIDs     dbo.NullStrings
+	RelationSubjectIDs     dbo.NullStrings
+	RelationCategoryIDs    dbo.NullStrings
+	RelationSubCategoryIDs dbo.NullStrings
+	RelationAgeIDs         dbo.NullStrings
+	RelationGradeIDs       dbo.NullStrings
 
 	IncludeDeleted bool
 	OrderBy        OutcomeOrderBy `json:"order_by"`
@@ -136,9 +142,52 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.Assumed.Bool)
 	}
 
+	if c.RelationProgramIDs.Valid {
+		sql := fmt.Sprintf(`exists(SELECT 1 FROM %s WHERE relation_id IN (?) AND relation_type = "%s" AND %s.id = %s.master_id)`,
+			entity.OutcomeRelationTable, entity.ProgramType, entity.OutcomeTable, entity.OutcomeRelationTable)
+		wheres = append(wheres, sql)
+		params = append(params, c.RelationProgramIDs.Strings)
+	}
+
+	if c.RelationSubjectIDs.Valid {
+		sql := fmt.Sprintf(`exists(SELECT 1 FROM %s WHERE relation_id IN (?) AND relation_type = "%s" AND %s.id = %s.master_id)`,
+			entity.OutcomeRelationTable, entity.SubjectType, entity.OutcomeTable, entity.OutcomeRelationTable)
+		wheres = append(wheres, sql)
+		params = append(params, c.RelationSubjectIDs.Strings)
+	}
+
+	if c.RelationCategoryIDs.Valid {
+		sql := fmt.Sprintf(`exists(SELECT 1 FROM %s WHERE relation_id IN (?) AND relation_type = "%s" AND %s.id = %s.master_id)`,
+			entity.OutcomeRelationTable, entity.CategoryType, entity.OutcomeTable, entity.OutcomeRelationTable)
+		wheres = append(wheres, sql)
+		params = append(params, c.RelationCategoryIDs.Strings)
+	}
+
+	if c.RelationSubCategoryIDs.Valid {
+		sql := fmt.Sprintf(`exists(SELECT 1 FROM %s WHERE relation_id IN (?) AND relation_type = "%s" AND %s.id = %s.master_id)`,
+			entity.OutcomeRelationTable, entity.SubcategoryType, entity.OutcomeTable, entity.OutcomeRelationTable)
+		wheres = append(wheres, sql)
+		params = append(params, c.RelationSubCategoryIDs.Strings)
+	}
+
+	if c.RelationAgeIDs.Valid {
+		sql := fmt.Sprintf(`exists(SELECT 1 FROM %s WHERE relation_id IN (?) AND relation_type = "%s" AND %s.id = %s.master_id)`,
+			entity.OutcomeRelationTable, entity.AgeType, entity.OutcomeTable, entity.OutcomeRelationTable)
+		wheres = append(wheres, sql)
+		params = append(params, c.RelationAgeIDs.Strings)
+	}
+
+	if c.RelationGradeIDs.Valid {
+		sql := fmt.Sprintf(`exists(SELECT 1 FROM %s WHERE relation_id IN (?) AND relation_type = "%s" AND %s.id = %s.master_id)`,
+			entity.OutcomeRelationTable, entity.GradeType, entity.OutcomeTable, entity.OutcomeRelationTable)
+		wheres = append(wheres, sql)
+		params = append(params, c.RelationGradeIDs.Strings)
+	}
+
 	if !c.IncludeDeleted {
 		wheres = append(wheres, "delete_at=0")
 	}
+
 	return wheres, params
 }
 
@@ -156,8 +205,16 @@ func NewOutcomeCondition(condition *entity.OutcomeCondition) *OutcomeCondition {
 		FuzzyKey:       sql.NullString{String: condition.FuzzyKey, Valid: condition.FuzzyKey != ""},
 		AuthorIDs:      dbo.NullStrings{Strings: condition.AuthorIDs, Valid: len(condition.AuthorIDs) > 0},
 		Assumed:        sql.NullBool{Bool: condition.Assumed == 1, Valid: condition.Assumed != -1},
-		OrderBy:        NewOrderBy(condition.OrderBy),
-		Pager:          NewPage(condition.Page, condition.PageSize),
+
+		RelationProgramIDs:     dbo.NullStrings{Strings: condition.ProgramIDs, Valid: len(condition.ProgramIDs) > 0},
+		RelationSubjectIDs:     dbo.NullStrings{Strings: condition.SubjectIDs, Valid: len(condition.SubjectIDs) > 0},
+		RelationCategoryIDs:    dbo.NullStrings{Strings: condition.CategoryIDs, Valid: len(condition.CategoryIDs) > 0},
+		RelationSubCategoryIDs: dbo.NullStrings{Strings: condition.SubCategoryIDs, Valid: len(condition.SubCategoryIDs) > 0},
+		RelationAgeIDs:         dbo.NullStrings{Strings: condition.AgeIDs, Valid: len(condition.AgeIDs) > 0},
+		RelationGradeIDs:       dbo.NullStrings{Strings: condition.GradeIDs, Valid: len(condition.GradeIDs) > 0},
+
+		OrderBy: NewOrderBy(condition.OrderBy),
+		Pager:   NewPage(condition.Page, condition.PageSize),
 	}
 }
 

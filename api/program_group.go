@@ -20,7 +20,7 @@ func (s *Server) getProgramGroup(c *gin.Context) {
 	ctx := c.Request.Context()
 	result, err := model.GetProgramGroupModel().AllGroupNames(ctx)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, result)

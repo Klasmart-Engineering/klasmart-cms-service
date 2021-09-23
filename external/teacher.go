@@ -15,7 +15,7 @@ import (
 )
 
 type TeacherServiceProvider interface {
-	cache.IQuerier
+	cache.IDataSource
 	Get(ctx context.Context, operator *entity.Operator, id string) (*Teacher, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableTeacher, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableTeacher, error)
@@ -79,7 +79,7 @@ func (s AmsTeacherService) BatchGet(ctx context.Context, operator *entity.Operat
 		return []*NullableTeacher{}, nil
 	}
 	res := make([]*NullableTeacher, 0, len(ids))
-	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.ID(), ids, &res, operator)
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
 	if err != nil {
 		return nil, err
 	}
@@ -401,6 +401,6 @@ func (s AmsTeacherService) FilterByPermission(ctx context.Context, operator *ent
 	return GetUserServiceProvider().FilterByPermission(ctx, operator, userIDs, permissionName)
 }
 
-func (s AmsTeacherService) ID() string {
+func (s AmsTeacherService) Name() string {
 	return "ams_teacher_service"
 }

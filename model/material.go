@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -107,6 +108,6 @@ func (h *MaterialData) PrepareVersion(ctx context.Context) error {
 }
 func (l *MaterialData) ReplaceContentIDs(ctx context.Context, IDMap map[string]string) {
 }
-func (h *MaterialData) PrepareResult(ctx context.Context, tx *dbo.DBContext, content *entity.ContentInfo, operator *entity.Operator) error {
+func (h *MaterialData) PrepareResult(ctx context.Context, tx *dbo.DBContext, content *entity.ContentInfo, operator *entity.Operator, ignorePermissionFilter bool) error {
 	return nil
 }

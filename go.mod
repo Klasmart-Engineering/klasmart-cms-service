@@ -18,13 +18,11 @@ require (
 	github.com/google/uuid v1.2.0 // indirect
 	github.com/hgfischer/go-otp v1.0.0
 	github.com/jinzhu/gorm v1.9.16
-	github.com/kr/text v0.2.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
-	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/onsi/ginkgo v1.14.0 // indirect
 	github.com/sirupsen/logrus v1.8.1
-	github.com/stretchr/testify v1.6.1
-	github.com/swaggo/swag v1.7.0
+	github.com/stretchr/testify v1.7.0
+	github.com/swaggo/swag v1.7.1
 	github.com/tencentcloud/tencentcloud-sdk-go v1.0.62
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.7 // indirect
 	github.com/tencentyun/scf-go-lib v0.0.0-20200624065115-ba679e2ec9c9 // indirect
@@ -33,11 +31,12 @@ require (
 	github.com/ugorji/go v1.2.2 // indirect
 	github.com/urfave/cli/v2 v2.3.0
 	gitlab.badanamu.com.cn/calmisland/chlorine v0.1.6
-	gitlab.badanamu.com.cn/calmisland/common-cn v0.16.0
+	gitlab.badanamu.com.cn/calmisland/common-cn v0.17.0
 	gitlab.badanamu.com.cn/calmisland/common-log v0.1.4
 	gitlab.badanamu.com.cn/calmisland/dbo v0.1.10
 	gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13
-	gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.4 // indirect
+	gitlab.badanamu.com.cn/calmisland/imq v0.2.18
+	gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.10
 	gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20210813055601-f0a5d22461a0
 	go.etcd.io/etcd v3.3.25+incompatible // indirect
 	go.mongodb.org/mongo-driver v1.4.0
@@ -49,7 +48,6 @@ require (
 	google.golang.org/genproto v0.0.0-20210406143921-e86de6bf7a46 // indirect
 	google.golang.org/grpc v1.37.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
-	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect

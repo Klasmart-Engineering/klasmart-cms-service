@@ -1,11 +1,12 @@
 package api
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -80,7 +81,7 @@ func (s *Server) queryLearningSummaryTimeFilter(c *gin.Context) {
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -153,7 +154,7 @@ func (s *Server) queryLearningSummaryRemainingFilter(c *gin.Context) {
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -205,7 +206,7 @@ func (s *Server) queryLiveClassesSummary(c *gin.Context) {
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }
 
@@ -257,7 +258,7 @@ func (s *Server) queryAssignmentsSummary(c *gin.Context) {
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }
 

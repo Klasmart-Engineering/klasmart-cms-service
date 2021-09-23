@@ -1,5 +1,7 @@
 package entity
 
+import "gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+
 type QueryLearningSummaryTimeFilterArgs struct {
 	TimeOffset  int                 `json:"time_offset"`
 	SummaryType LearningSummaryType `json:"summary_type" enums:"live_class,assignment"`
@@ -146,3 +148,7 @@ const (
 	AssessmentOutcomeStatusNotAchieved AssessmentOutcomeStatus = "not_achieved"
 	AssessmentOutcomeStatusPartially   AssessmentOutcomeStatus = "partially"
 )
+
+type StudentUsageReport struct {
+	utils.Pager
+}

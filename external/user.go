@@ -21,7 +21,7 @@ var (
 )
 
 type UserServiceProvider interface {
-	cache.IQuerier
+	cache.IDataSource
 	Get(ctx context.Context, operator *entity.Operator, id string) (*User, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableUser, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableUser, error)
@@ -85,7 +85,7 @@ func (s AmsUserService) Get(ctx context.Context, operator *entity.Operator, id s
 //TODO:No Test Program
 func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableUser, error) {
 	res := make([]*NullableUser, 0, len(ids))
-	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.ID(), ids, &res, operator)
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
 	if err != nil {
 		return nil, err
 	}
@@ -419,7 +419,7 @@ func (s AmsUserService) GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Ope
 	return result, nil
 }
 
-func (s AmsUserService) ID() string {
+func (s AmsUserService) Name() string {
 	return "ams_user_service"
 }
 

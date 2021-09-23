@@ -14,7 +14,7 @@ import (
 )
 
 type SubCategoryServiceProvider interface {
-	cache.IQuerier
+	cache.IDataSource
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*SubCategory, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*SubCategory, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -47,7 +47,7 @@ func (s AmsSubCategoryService) BatchGet(ctx context.Context, operator *entity.Op
 		return []*SubCategory{}, nil
 	}
 	res := make([]*SubCategory, 0, len(ids))
-	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.ID(), ids, &res, operator)
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
 	if err != nil {
 		return nil, err
 	}
@@ -290,6 +290,6 @@ func (s AmsSubCategoryService) GetByOrganization(ctx context.Context, operator *
 	return subCategories, nil
 }
 
-func (s AmsSubCategoryService) ID() string {
+func (s AmsSubCategoryService) Name() string {
 	return "ams_subcategory_service"
 }

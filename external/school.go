@@ -17,7 +17,7 @@ import (
 )
 
 type SchoolServiceProvider interface {
-	cache.IQuerier
+	cache.IDataSource
 	Get(ctx context.Context, operator *entity.Operator, id string) (*School, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableSchool, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableSchool, error)
@@ -80,7 +80,7 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operato
 		return []*NullableSchool{}, nil
 	}
 	res := make([]*NullableSchool, 0, len(ids))
-	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.ID(), ids, &res, operator)
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
 	if err != nil {
 		return nil, err
 	}
@@ -621,6 +621,6 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 
 	return schools, nil
 }
-func (s AmsSchoolService) ID() string {
+func (s AmsSchoolService) Name() string {
 	return "ams_school_service"
 }

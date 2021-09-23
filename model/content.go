@@ -111,10 +111,11 @@ type IContentModel interface {
 
 	GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentName, error)
 	GetContentNameByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
-	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*SubContentsWithName, error)
+	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator, ignorePermissionFilter bool) ([]*SubContentsWithName, error)
 	GetContentsSubContentsMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*SubContentsWithName, error)
 
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, remark, status string) error
+	AddAuthedContentIfFolderAlreadyShared(ctx context.Context, tx *dbo.DBContext, contentIDs []string, operator *entity.Operator) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
 
 	CountUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, error)
@@ -216,6 +217,18 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 		return err
 	}
 
+	if content.DirPath.Parent() != constant.FolderRootPath && content.DirPath.Parent() != "" {
+		_, err := GetFolderModel().GetFolderByIDTx(ctx, tx, content.DirPath.Parent(), user)
+		if err != nil && err == ErrResourceNotFound {
+			content.DirPath = constant.FolderRootPath
+			content.ParentFolder = content.DirPath.Parent()
+		}
+		if err != nil && err != ErrResourceNotFound {
+			log.Error(ctx, "doPublishContent: check parent failed", log.Err(err), log.Any("content", content), log.String("uid", user.UserID))
+			return err
+		}
+	}
+
 	err = da.GetContentDA().UpdateContent(ctx, tx, content.ID, *content)
 	if err != nil {
 		log.Error(ctx, "update lesson plan failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
@@ -230,6 +243,15 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 				log.Any("content", content),
 				log.Any("user", user))
 			return err
+		}
+		if content.DirPath.Parent() != constant.FolderRootPath && content.DirPath.Parent() != "" {
+			err = GetFolderModel().BatchUpdateFolderItemCount(ctx, tx, []string{content.DirPath.Parent()})
+			if err != nil {
+				log.Error(ctx, "BatchUpdateFolderItemCount failed",
+					log.Any("content", content),
+					log.Any("user", user))
+				return err
+			}
 		}
 	}
 
@@ -468,6 +490,21 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 		return "", err
 	}
 
+	if obj.ContentType.IsAsset() &&
+		obj.PublishStatus == entity.NewContentPublishStatus(entity.ContentStatusPublished) &&
+		obj.DirPath.Parent() != constant.FolderRootPath &&
+		obj.DirPath.Parent() != "" {
+		err = GetFolderModel().BatchUpdateFolderItemCount(ctx, tx, []string{obj.DirPath.Parent()})
+		if err != nil {
+			log.Error(ctx, "CreateContent: BatchUpdateFolderItemCount failed",
+				log.Err(err),
+				log.String("uid", operator.UserID),
+				log.String("pid", pid),
+				log.Any("content", obj))
+			return "", err
+		}
+	}
+
 	return pid, nil
 }
 
@@ -617,6 +654,74 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	da.GetContentRedis().CleanContentCache(ctx, []string{cid, content.SourceID})
+	return nil
+}
+
+func (cm *ContentModel) AddAuthedContentIfFolderAlreadyShared(ctx context.Context, tx *dbo.DBContext, contentIDs []string, operator *entity.Operator) error {
+	contents, err := da.GetContentDA().GetContentByIDList(ctx, tx, contentIDs)
+	//content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
+	if err != nil {
+		log.Error(ctx, "AddAuthedContentIfFolderAlreadyShared can't find content", log.Err(err), log.Strings("content_ids", contentIDs))
+		return err
+	}
+
+	contentAncestorDirs := make(map[string]map[string]bool)
+	allParentIDs := make([]string, 0)
+	allContentsAncestorDir := make([]string, 0)
+	for i := range contents {
+		if contents[i].ContentType == entity.ContentTypeMaterial || contents[i].ContentType == entity.ContentTypePlan {
+			fids := contents[i].DirPath.Parents()
+			ancestorDirs := make(map[string]bool)
+			for j := range fids {
+				ancestorDirs[fids[j]] = true
+			}
+			contentAncestorDirs[contents[i].ID] = ancestorDirs
+			allContentsAncestorDir = append(allContentsAncestorDir, fids...)
+
+			if len(fids) > 0 && fids[len(fids)-1] != constant.FolderRootPath && fids[len(fids)-1] != "" {
+				allParentIDs = append(allParentIDs, fids[len(fids)-1])
+			}
+		}
+	}
+	folderSharedRecords, err := GetFolderModel().GetFoldersSharedRecords(ctx, allContentsAncestorDir, operator)
+	if err != nil {
+		log.Error(ctx, "AddAuthedContentIfFolderAlreadyShared get shared folders failed", log.Err(err), log.Any("contents", contents))
+		return err
+	}
+
+	batchAddRequest := make([]*entity.AddAuthedContentRequest, 0)
+	for _, fid := range folderSharedRecords.Data {
+		for k, v := range contentAncestorDirs {
+			if v[fid.FolderID] {
+				for _, org := range fid.Orgs {
+					authedContent := entity.AddAuthedContentRequest{
+						OrgID:        org.ID,
+						FromFolderID: fid.FolderID,
+						ContentID:    k,
+					}
+					batchAddRequest = append(batchAddRequest, &authedContent)
+				}
+			}
+		}
+	}
+
+	err = GetAuthedContentRecordsModel().BatchAddByOrgIDs(ctx, tx, batchAddRequest, operator)
+	if err != nil {
+		log.Error(ctx, "AddAuthedContentIfFolderAlreadyShared batchAddByOrgIDs failed",
+			log.Err(err),
+			log.Any("batchAddRequest", batchAddRequest),
+			log.Any("contents", contents))
+		return err
+	}
+
+	err = GetFolderModel().BatchUpdateFolderItemCount(ctx, tx, allParentIDs)
+	if err != nil {
+		log.Error(ctx, "AddAuthedContentIfFolderAlreadyShared BatchUpdateFolderItemCount failed",
+			log.Err(err),
+			log.Any("parents", allParentIDs),
+			log.Any("contents", contents))
+		return err
+	}
 	return nil
 }
 
@@ -1165,6 +1270,8 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 		log.Error(ctx, "can't read content on delete contentdata", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
 		return err
 	}
+
+	parentIDs := make([]string, 0)
 	for i := range contents {
 		err = cm.doDeleteContent(ctx, tx, contents[i], user)
 		if err != nil {
@@ -1174,6 +1281,18 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 		if contents[i].SourceID != "" {
 			deletedIDs = append(deletedIDs, contents[i].SourceID)
 		}
+
+		if contents[i].DirPath.Parent() != constant.FolderRootPath && contents[i].DirPath.Parent() != "" {
+			parentIDs = append(parentIDs, contents[i].DirPath.Parent())
+		}
+	}
+	err = GetFolderModel().BatchUpdateFolderItemCount(ctx, tx, parentIDs)
+	if err != nil {
+		log.Error(ctx, "DeleteContentBulk: BatchUpdateFolderItemCount",
+			log.Err(err),
+			log.Strings("parentIDs", parentIDs),
+			log.Strings("ids", ids),
+			log.String("uid", user.UserID))
 	}
 	da.GetContentRedis().CleanContentCache(ctx, deletedIDs)
 	return nil
@@ -1339,6 +1458,21 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 		return err
 	}
 
+	log.Debug(ctx, "delete_content_not_update count",
+		log.String("parent", content.DirPath.Parent()),
+		log.Any("content", content))
+
+	if content.DirPath.Parent() != constant.FolderRootPath && content.DirPath.Parent() != "" {
+		err = GetFolderModel().BatchUpdateFolderItemCount(ctx, tx, []string{content.DirPath.Parent()})
+		if err != nil {
+			log.Error(ctx, "doDeleteContent: BatchUpdateFolderItemCount failed",
+				log.Err(err),
+				log.Any("content", content),
+				log.String("uid", user.UserID))
+			return err
+		}
+	}
+
 	//解锁source content
 	if content.SourceID != "" {
 		err = cm.UnlockContent(ctx, tx, content.SourceID, user)
@@ -1500,7 +1634,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 				log.Error(ctx, "can't prepare version for sub contents", log.Err(err), log.Any("content", content))
 				return nil, err
 			}
-			err = v.PrepareResult(ctx, tx, content, user)
+			err = v.PrepareResult(ctx, tx, content, user, false)
 			if err != nil {
 				log.Error(ctx, "can't get sub contents", log.Err(err), log.Any("content", content))
 				return nil, err
@@ -1552,7 +1686,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 	return contentInfoMap, nil
 }
 
-func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*SubContentsWithName, error) {
+func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator, ignorePermissionFilter bool) ([]*SubContentsWithName, error) {
 	obj, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't read content", log.Err(err), log.String("cid", cid))
@@ -1588,7 +1722,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 			log.Error(ctx, "can't prepare version for sub contents", log.Err(err), log.Any("content", content))
 			return nil, err
 		}
-		err = v.PrepareResult(ctx, tx, content, user)
+		err = v.PrepareResult(ctx, tx, content, user, ignorePermissionFilter)
 		if err != nil {
 			log.Error(ctx, "can't get sub contents", log.Err(err), log.Any("content", content))
 			return nil, err
@@ -1728,7 +1862,7 @@ func (cm *ContentModel) fillContentDetails(ctx context.Context, tx *dbo.DBContex
 		log.Error(ctx, "can't update contentdata version for details", log.Err(err))
 		return nil, ErrParseContentDataDetailsFailed
 	}
-	err = contentData.PrepareResult(ctx, tx, content, user)
+	err = contentData.PrepareResult(ctx, tx, content, user, false)
 	if err != nil {
 		log.Error(ctx, "can't get contentdata for details", log.Err(err))
 		return nil, ErrParseContentDataDetailsFailed
@@ -2829,7 +2963,10 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 
 		outcomeEntities := make([]*entity.Outcome, 0)
 		if outComes {
-			outcomeEntities, err = GetOutcomeModel().GetLatestByIDs(ctx, user, dbo.MustGetDB(ctx), contentList[i].Outcomes)
+			outcomeEntities, err = GetOutcomeModel().GetLatestOutcomes(ctx, user, dbo.MustGetDB(ctx), &entity.OutcomeCondition{
+				IDs:     contentList[i].Outcomes,
+				OrderBy: entity.OutcomeOrderByName,
+			})
 			if err != nil {
 				log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", contentList[i].Outcomes), log.String("uid", user.UserID))
 			}

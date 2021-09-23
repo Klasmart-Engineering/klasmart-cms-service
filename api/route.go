@@ -154,6 +154,14 @@ func (s Server) registeRoute() {
 		reports.GET("/reports/learning_summary/remaining_filter", s.mustLogin, s.queryLearningSummaryRemainingFilter)
 		reports.GET("/reports/learning_summary/live_classes", s.mustLogin, s.queryLiveClassesSummary)
 		reports.GET("/reports/learning_summary/assignments", s.mustLogin, s.queryAssignmentsSummary)
+
+		reports.GET("/reports/student_usage/organization_registration", s.mustLogin, s.getStudentUsageOrganizationRegistration)
+		reports.POST("/reports/student_usage/class_registration", s.mustLogin, s.getStudentUsageClassRegistration)
+		reports.POST("/reports/student_usage/material_view_count", s.mustLogin, s.getStudentUsageMaterialViewCountReport)
+		reports.POST("/reports/student_usage/material", s.mustLogin, s.getStudentUsageMaterialReport)
+		reports.POST("/reports/student_usage/classes_assignments_overview", s.mustLogin, s.getClassesAssignmentsOverview)
+		reports.POST("/reports/student_usage/classes_assignments", s.mustLogin, s.getClassesAssignments)
+		reports.POST("/reports/student_usage/classes_assignments/:class_id/unattended", s.mustLogin, s.getClassesAssignmentsUnattended)
 	}
 
 	outcomes := s.engine.Group("/v1")
@@ -177,6 +185,7 @@ func (s Server) registeRoute() {
 
 		outcomes.GET("/private_learning_outcomes", s.mustLogin, s.queryPrivateOutcomes)
 		outcomes.GET("/pending_learning_outcomes", s.mustLogin, s.queryPendingOutcomes)
+		outcomes.POST("/published_learning_outcomes", s.mustLogin, s.queryPublishedOutcomes)
 	}
 
 	shortcode := s.engine.Group("/v1")
@@ -311,6 +320,11 @@ func (s Server) registeRoute() {
 	organizationPermissions := s.engine.Group("/v1/organization_permissions")
 	{
 		organizationPermissions.POST("", s.mustLogin, s.hasOrganizationPermissions)
+	}
+
+	studentUsageReport := s.engine.Group("/v1/student_usage_record")
+	{
+		studentUsageReport.POST("/event", s.addStudentUsageRecordEvent)
 	}
 }
 

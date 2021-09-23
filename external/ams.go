@@ -2,9 +2,12 @@ package external
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"regexp"
 	"sync"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -47,6 +50,20 @@ func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorin
 			log.Any("req", req))
 	}
 	statusCode, err := c.Client.Run(ctx, req, resp)
+	if err != nil {
+		log.Error(
+			ctx,
+			"external/AmsClient.Run error",
+			log.Err(err),
+			log.Any("req", req),
+			log.Any("statusCode", statusCode),
+			log.Any("resp", resp),
+		)
+		err = &entity.ExternalError{
+			Err:  err,
+			Type: constant.InternalErrorTypeAms,
+		}
+	}
 
 	if foundStopwatch {
 		externalStopwatch.Stop()

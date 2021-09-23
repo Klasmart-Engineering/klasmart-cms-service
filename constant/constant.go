@@ -19,6 +19,8 @@ const (
 	TableNameProgramGroup = "programs_groups"
 
 	TableNameOrganizationProperty = "organizations_properties"
+
+	TableNameStudentUsageRecord = "student_usage_records"
 )
 
 const (
@@ -137,4 +139,8 @@ const (
 const (
 	VisibilitySettingsGroupOrg    = "org"
 	VisibilitySettingsGroupSchool = "school"
+)
+
+const (
+	ResponseHeaderKeyInternalErrorType = "X-Internal-Error-Type"
 )

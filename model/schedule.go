@@ -18,6 +18,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mq"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
@@ -847,6 +848,9 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 	if err != nil {
 		log.Warn(ctx, "clean schedule cache error", log.String("orgID", op.OrgID), log.Err(err))
 	}
+
+	go removeResourceMetadata(ctx, viewData.Attachment.ID)
+
 	return id.(string), nil
 }
 
@@ -1088,6 +1092,8 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 	if err != nil {
 		log.Warn(ctx, "clean schedule cache error", log.String("orgID", operator.OrgID), log.Err(err))
 	}
+
+	go removeResourceMetadata(ctx, viewData.Attachment.ID)
 	return id, nil
 }
 
@@ -1677,7 +1683,7 @@ func (s *scheduleModel) getLessonPlanWithMaterial(ctx context.Context, op *entit
 		}
 		result.IsAuth = isAuth
 
-		contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), lessonPlanID, op)
+		contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), lessonPlanID, op, false)
 		if err == dbo.ErrRecordNotFound {
 			log.Error(ctx, "getMaterials:get content sub by id not found",
 				log.Err(err),
@@ -3311,6 +3317,42 @@ func (s *scheduleModel) QueryUnsafe(ctx context.Context, condition *entity.Sched
 	}
 
 	return scheduleList, nil
+}
+
+func removeResourceMetadata(ctx context.Context, resourceID string) error {
+	if resourceID == "" {
+		return nil
+	}
+
+	var err error
+	log.Debug(ctx, "start removeFileMetadata", log.String("resourceID", resourceID))
+	defer log.Debug(ctx, "finish removeFileMetadata", log.String("resourceID", resourceID), log.Err(err))
+
+	parts := strings.Split(resourceID, "-")
+	if len(parts) != 2 {
+		log.Error(ctx, "invalid resource id", log.String("resourceId", resourceID))
+		return ErrInvalidResourceID
+	}
+
+	resourcePath := strings.Join(parts, "/")
+	queue, err := mq.GetMQ(ctx)
+	if err != nil {
+		log.Error(ctx, "mq.GetMQ error",
+			log.Err(err))
+		return err
+	}
+
+	topic := entity.KFPSAttachment.Classify()
+	err = queue.Publish(ctx, topic, resourcePath)
+	if err != nil {
+		log.Error(ctx, "queue.Publish error",
+			log.String("topic", topic),
+			log.String("message", resourcePath),
+			log.Err(err))
+		return err
+	}
+
+	return nil
 }
 
 var (

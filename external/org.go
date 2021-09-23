@@ -18,7 +18,7 @@ import (
 )
 
 type OrganizationServiceProvider interface {
-	cache.IQuerier
+	cache.IDataSource
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableOrganization, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableOrganization, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -59,7 +59,7 @@ func (s AmsOrganizationService) BatchGet(ctx context.Context, operator *entity.O
 	}
 
 	res := make([]*NullableOrganization, 0, len(ids))
-	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.ID(), ids, &res, operator)
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
 	if err != nil {
 		return nil, err
 	}
@@ -442,6 +442,6 @@ func (s AmsOrganizationService) GetByUserID(ctx context.Context, operator *entit
 	return orgs, nil
 }
 
-func (s AmsOrganizationService) ID() string {
+func (s AmsOrganizationService) Name() string {
 	return "ams_org_service"
 }

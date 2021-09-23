@@ -14,7 +14,7 @@ import (
 )
 
 type GradeServiceProvider interface {
-	cache.IQuerier
+	cache.IDataSource
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Grade, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Grade, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -46,7 +46,7 @@ func (s AmsGradeService) BatchGet(ctx context.Context, operator *entity.Operator
 		return []*Grade{}, nil
 	}
 	res := make([]*Grade, 0, len(ids))
-	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.ID(), ids, &res, operator)
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
 	if err != nil {
 		return nil, err
 	}
@@ -288,6 +288,6 @@ func (s AmsGradeService) GetByOrganization(ctx context.Context, operator *entity
 
 	return grades, nil
 }
-func (s AmsGradeService) ID() string {
+func (s AmsGradeService) Name() string {
 	return "ams_grade_service"
 }

@@ -14,7 +14,7 @@ import (
 )
 
 type ProgramServiceProvider interface {
-	cache.IQuerier
+	cache.IDataSource
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Program, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Program, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -46,7 +46,7 @@ func (s AmsProgramService) BatchGet(ctx context.Context, operator *entity.Operat
 		return []*Program{}, nil
 	}
 	res := make([]*Program, 0, len(ids))
-	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.ID(), ids, &res, operator)
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
 	if err != nil {
 		return nil, err
 	}
@@ -216,6 +216,6 @@ func (s AmsProgramService) GetByOrganization(ctx context.Context, operator *enti
 	return programs, nil
 }
 
-func (s AmsProgramService) ID() string {
+func (s AmsProgramService) Name() string {
 	return "ams_program_service"
 }

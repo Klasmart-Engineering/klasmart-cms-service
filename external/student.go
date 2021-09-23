@@ -15,7 +15,7 @@ import (
 )
 
 type StudentServiceProvider interface {
-	cache.IQuerier
+	cache.IDataSource
 	Get(ctx context.Context, operator *entity.Operator, id string) (*Student, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableStudent, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableStudent, error)
@@ -76,7 +76,7 @@ func (s AmsStudentService) BatchGet(ctx context.Context, operator *entity.Operat
 		return []*NullableStudent{}, nil
 	}
 	res := make([]*NullableStudent, 0, len(ids))
-	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.ID(), ids, &res, operator)
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
 	if err != nil {
 		return nil, err
 	}
@@ -241,6 +241,6 @@ func (s AmsStudentService) Query(ctx context.Context, operator *entity.Operator,
 func (s AmsStudentService) FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error) {
 	return GetUserServiceProvider().FilterByPermission(ctx, operator, userIDs, permissionName)
 }
-func (s AmsStudentService) ID() string {
+func (s AmsStudentService) Name() string {
 	return "ams_student_service"
 }

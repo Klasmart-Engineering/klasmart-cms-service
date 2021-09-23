@@ -18,7 +18,7 @@ type ContentData interface {
 	Marshal(ctx context.Context) (string, error)
 
 	Validate(ctx context.Context, contentType entity.ContentType) error
-	PrepareResult(ctx context.Context, tx *dbo.DBContext, content *entity.ContentInfo, operator *entity.Operator) error
+	PrepareResult(ctx context.Context, tx *dbo.DBContext, content *entity.ContentInfo, operator *entity.Operator, ignorePermissionFilter bool) error
 	PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error
 	PrepareVersion(ctx context.Context) error
 	SubContentIDs(ctx context.Context) []string

@@ -1,8 +1,10 @@
 package entity
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"encoding/json"
 	"strings"
+
+	"gitlab.badanamu.com.cn/calmisland/dbo"
 )
 
 type StudentsAchievementReportResponse struct {
@@ -113,6 +115,29 @@ func ReportOutcomeStatusPriority(status ReportOutcomeStatus) int {
 type AssessmentOutcomeKey struct {
 	AssessmentID string `json:"assessment_id"`
 	OutcomeID    string `json:"outcome_id"`
+}
+
+// Implement TextUnmarshaler in order to support Unmarshal when key of map is a struct
+func (s *AssessmentOutcomeKey) UnmarshalText(text []byte) error {
+	type x AssessmentOutcomeKey
+	return json.Unmarshal(text, (*x)(s))
+}
+
+type NullAssessmentOutcomeKeys struct {
+	Value []*AssessmentOutcomeKey
+	Valid bool
+}
+
+type AssessmentOutcomeAttendanceKey struct {
+	AssessmentID string `json:"assessment_id"`
+	OutcomeID    string `json:"outcome_id"`
+	AttendanceID string `json:"attendance_id"`
+}
+
+// Implement TextUnmarshaler in order to support Unmarshal when key of map is a struct
+func (s *AssessmentOutcomeAttendanceKey) UnmarshalText(text []byte) error {
+	type x AssessmentOutcomeAttendanceKey
+	return json.Unmarshal(text, (*x)(s))
 }
 
 type SortingStudentReportItems struct {

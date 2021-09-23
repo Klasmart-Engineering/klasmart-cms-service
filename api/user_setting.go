@@ -1,12 +1,13 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 // @Summary setUserSetting
@@ -37,7 +38,7 @@ func (s *Server) setUserSetting(c *gin.Context) {
 			log.Any("op", op),
 			log.Any("data", data),
 		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, IDResponse{ID: id})
@@ -66,7 +67,7 @@ func (s *Server) getUserSettingByOperator(c *gin.Context) {
 			log.Err(err),
 			log.Any("op", op),
 		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 		return
 	}
 

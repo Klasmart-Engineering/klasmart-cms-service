@@ -14,7 +14,7 @@ import (
 )
 
 type CategoryServiceProvider interface {
-	cache.IQuerier
+	cache.IDataSource
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Category, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Category, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -48,7 +48,7 @@ func (s AmsCategoryService) BatchGet(ctx context.Context, operator *entity.Opera
 	}
 
 	res := make([]*Category, 0, len(ids))
-	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.ID(), ids, &res, operator)
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
 	if err != nil {
 		return nil, err
 	}
@@ -377,6 +377,6 @@ func (s AmsCategoryService) GetBySubjects(ctx context.Context, operator *entity.
 
 	return result, nil
 }
-func (s AmsCategoryService) ID() string {
+func (s AmsCategoryService) Name() string {
 	return "ams_category_service"
 }

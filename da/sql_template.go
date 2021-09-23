@@ -51,7 +51,11 @@ func (b *SQLTemplate) AppendTemplates(others ...*SQLTemplate) *SQLTemplate {
 }
 
 func (b *SQLTemplate) Join(sep string, left, right string) (string, []interface{}) {
-	return left + strings.Join(b.Formats, sep) + right, b.Values
+	content := strings.Join(b.Formats, sep)
+	if content == "" {
+		return "", b.Values
+	}
+	return left + content + right, b.Values
 }
 
 func (b *SQLTemplate) Concat() (string, []interface{}) {
@@ -63,6 +67,12 @@ func (b *SQLTemplate) And() (string, []interface{}) {
 }
 
 func (b *SQLTemplate) Or() (string, []interface{}) {
+	for idx, format := range b.Formats {
+		if format == "" {
+			continue
+		}
+		b.Formats[idx] = fmt.Sprintf("(%s)", format)
+	}
 	return b.Join(" or ", "(", ")")
 }
 
@@ -82,16 +92,4 @@ func SQLBatchInsert(table string, columns []string, matrix [][]interface{}) (str
 		t2.Appendf(placeholdersFormat, values...)
 	}
 	return t.AppendResult(t2.Join(", ", "", "")).Concat()
-}
-
-func RefInt(i int) *int {
-	return &i
-}
-
-func RefString(s string) *string {
-	return &s
-}
-
-func RefBool(b bool) *bool {
-	return &b
 }

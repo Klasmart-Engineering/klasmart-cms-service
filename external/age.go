@@ -14,7 +14,7 @@ import (
 )
 
 type AgeServiceProvider interface {
-	cache.IQuerier
+	cache.IDataSource
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Age, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Age, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -47,7 +47,7 @@ func (s AmsAgeService) BatchGet(ctx context.Context, operator *entity.Operator, 
 	}
 
 	res := make([]*Age, 0, len(ids))
-	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.ID(), ids, &res, operator)
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
 	if err != nil {
 		return nil, err
 	}
@@ -286,6 +286,6 @@ func (s AmsAgeService) GetByOrganization(ctx context.Context, operator *entity.O
 
 	return ages, nil
 }
-func (s AmsAgeService) ID() string {
+func (s AmsAgeService) Name() string {
 	return "ams_age_service"
 }

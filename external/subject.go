@@ -3,17 +3,16 @@ package external
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
-	"strings"
-
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"strings"
 )
 
 type SubjectServiceProvider interface {
-	cache.IQuerier
+	cache.IDataSource
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Subject, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Subject, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -106,7 +105,7 @@ func (s AmsSubjectService) BatchGet(ctx context.Context, operator *entity.Operat
 		return []*Subject{}, nil
 	}
 	res := make([]*Subject, 0, len(ids))
-	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.ID(), ids, &res, operator)
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
 	if err != nil {
 		return nil, err
 	}
@@ -281,6 +280,6 @@ func (s AmsSubjectService) GetByOrganization(ctx context.Context, operator *enti
 	return subjects, nil
 }
 
-func (s AmsSubjectService) ID() string {
+func (s AmsSubjectService) Name() string {
 	return "ams_subject_service"
 }

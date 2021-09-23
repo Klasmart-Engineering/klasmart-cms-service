@@ -19,7 +19,7 @@ import (
 )
 
 type ClassServiceProvider interface {
-	cache.IQuerier
+	cache.IDataSource
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableClass, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableClass, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -95,7 +95,7 @@ func (s AmsClassService) BatchGet(ctx context.Context, operator *entity.Operator
 	}
 
 	res := make([]*NullableClass, 0, len(ids))
-	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.ID(), ids, &res, operator)
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
 	if err != nil {
 		return nil, err
 	}
@@ -455,6 +455,6 @@ func (s AmsClassService) GetBySchoolIDs(ctx context.Context, operator *entity.Op
 
 	return classes, nil
 }
-func (s AmsClassService) ID() string {
+func (s AmsClassService) Name() string {
 	return "ams_class_service"
 }

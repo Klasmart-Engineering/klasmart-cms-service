@@ -209,12 +209,12 @@ func (m *homeFunStudyModel) GetDetail(ctx context.Context, operator *entity.Oper
 		var status entity.HomeFunStudyOutcomeStatus
 		if ao.Skip {
 			status = entity.HomeFunStudyOutcomeStatusNotAttempted
+		} else if len(outcomeAttendanceMap[ao.OutcomeID]) > 0 {
+			status = entity.HomeFunStudyOutcomeStatusAchieved
+		} else if ao.NoneAchieved {
+			status = entity.HomeFunStudyOutcomeStatusNotAchieved
 		} else {
-			if len(outcomeAttendanceMap[ao.OutcomeID]) > 0 {
-				status = entity.HomeFunStudyOutcomeStatusAchieved
-			} else {
-				status = entity.HomeFunStudyOutcomeStatusNotAchieved
-			}
+			status = entity.HomeFunStudyOutcomeStatusNotAchieved
 		}
 		result.Outcomes = append(result.Outcomes, &entity.HomeFunStudyOutcome{
 			OutcomeID:   ao.OutcomeID,

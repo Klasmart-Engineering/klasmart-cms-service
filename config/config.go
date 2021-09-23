@@ -45,6 +45,9 @@ type Config struct {
 	TencentConfig         TencentConfig         `json:"tencent" yaml:"tencent"`
 	KidsloopCNLoginConfig KidsloopCNLoginConfig `json:"kidsloop_cn" yaml:"kidsloop_cn"`
 	CORS                  CORSConfig            `json:"cors" yaml:"cors"`
+	ShowInternalErrorType bool                  `json:"show_internal_error_type"`
+	User                  UserConfig            `json:"user" yaml:"user"`
+	Report                ReportConfig          `json:"report" yaml:"report"`
 }
 
 var config *Config
@@ -147,6 +150,14 @@ type TencentSmsConfig struct {
 	OTPPeriod        string `json:"otp_period" yaml:"otp_period"`
 }
 
+type UserConfig struct {
+	CacheExpiration time.Duration `json:"cache_expiration" yaml:"cache_expiration"`
+}
+
+type ReportConfig struct {
+	PublicKey string `json:"report_public_key" yaml:"report_public_key"`
+}
+
 func assertGetEnv(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
@@ -170,8 +181,27 @@ func LoadEnvConfig() {
 	loadKidsloopCNLoginConfig(ctx)
 	loadAssessmentConfig(ctx)
 	loadCORSConfig(ctx)
+	loadShowInternalErrorTypeConfig(ctx)
+	loadUserConfig(ctx)
+	loadReportConfig(ctx)
 }
 
+func loadShowInternalErrorTypeConfig(ctx context.Context) {
+	var err error
+	s := os.Getenv("show_internal_error_type")
+	if s == "" {
+		return
+	}
+	config.ShowInternalErrorType, err = strconv.ParseBool(s)
+	if err != nil {
+		log.Panic(ctx,
+			"loadShowInternalErrorTypeConfig:load show_internal_error_type failed",
+			log.Err(err),
+			log.String("env_key", "show_internal_error_type"),
+			log.Any("show_internal_error_type", s),
+		)
+	}
+}
 func loadKidsloopCNLoginConfig(ctx context.Context) {
 	config.KidsLoopRegion = os.Getenv("kidsloop_region")
 	if config.KidsLoopRegion != constant.KidsloopCN {
@@ -397,6 +427,7 @@ func loadAMSConfig(ctx context.Context) {
 	if err != nil {
 		log.Panic(ctx, "loadAMSConfig:load public key failed", log.Err(err), log.String("publicKeyPath", publicKeyPath))
 	}
+
 	key, err := jwt.ParseRSAPublicKeyFromPEM(content)
 	if err != nil {
 		log.Panic(ctx, "loadAMSConfig:ParseRSAPublicKeyFromPEM failed", log.Err(err))
@@ -414,6 +445,19 @@ func loadH5PServiceConfig(ctx context.Context) {
 
 func loadCORSConfig(ctx context.Context) {
 	config.CORS.AllowOrigins = strings.Split(os.Getenv("cors_domain_list"), ",")
+}
+
+func loadUserConfig(ctx context.Context) {
+	cacheExpiration, err := time.ParseDuration(os.Getenv("user_cache_expiration"))
+	if err != nil {
+		config.User.CacheExpiration = 4 * time.Hour
+	} else {
+		config.User.CacheExpiration = cacheExpiration
+	}
+}
+
+func loadReportConfig(ctx context.Context) {
+	// config.Report.PublicKey = assertGetEnv("student_usage_report_public_key")
 }
 
 func Get() *Config {

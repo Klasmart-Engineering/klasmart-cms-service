@@ -2,8 +2,9 @@ package model
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"testing"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 func TestGetClassEventBusModel(t *testing.T) {

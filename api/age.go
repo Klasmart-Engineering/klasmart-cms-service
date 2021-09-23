@@ -36,6 +36,6 @@ func (s *Server) getAge(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		s.defaultErrorHandler(c, err)
 	}
 }

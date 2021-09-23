@@ -56,9 +56,11 @@ type LiveTokenInfo struct {
 }
 
 type LiveMaterial struct {
-	Name     string       `json:"name"`
-	URL      string       `json:"url,omitempty"`
-	TypeName MaterialType `json:"__typename"`
+	ID          string       `json:"-"`
+	ContentData interface{}  `json:"-"`
+	Name        string       `json:"name"`
+	URL         string       `json:"url,omitempty"`
+	TypeName    MaterialType `json:"__typename"`
 }
 type LiveTokenShort struct {
 	ID   string

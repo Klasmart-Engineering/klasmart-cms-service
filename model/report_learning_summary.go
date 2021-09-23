@@ -3,6 +3,11 @@ package model
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"sort"
+	"sync"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -10,9 +15,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sort"
-	"sync"
-	"time"
 )
 
 type ILearningSummaryReportModel interface {
@@ -58,6 +60,7 @@ func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *db
 	fixedZone := time.FixedZone("time_filter", args.TimeOffset)
 	var result []*entity.LearningSummaryFilterYear
 
+	now := time.Now()
 	m := make(map[int][][2]int64)
 	switch args.SummaryType {
 	case entity.LearningSummaryTypeLiveClass:
@@ -74,6 +77,9 @@ func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *db
 			return nil, err
 		}
 		for _, s := range schedules {
+			if time.Unix(s.StartAt, 0).After(now) {
+				continue
+			}
 			year := time.Unix(s.StartAt, 0).Year()
 			weekStart, weekEnd := utils.FindWeekTimeRangeFromMonday(s.StartAt, fixedZone)
 			m[year] = append(m[year], [2]int64{weekStart, weekEnd})
@@ -122,6 +128,9 @@ func (l *learningSummaryReportModel) QueryTimeFilter(ctx context.Context, tx *db
 			return nil, err
 		}
 		for _, a := range assessments {
+			if time.Unix(a.CompleteTime, 0).After(now) {
+				continue
+			}
 			year := time.Unix(a.CompleteTime, 0).Year()
 			weekStart, weekEnd := utils.FindWeekTimeRangeFromMonday(a.CompleteTime, fixedZone)
 			m[year] = append(m[year], [2]int64{weekStart, weekEnd})
@@ -658,6 +667,28 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 		return nil, err
 	}
 
+	// batch get assessment outcome status
+	var assessmentOutcomeKeys []*entity.AssessmentOutcomeKey
+	for assessmentID, outcomes := range assessmentIDToOutcomesMap {
+		for _, o := range outcomes {
+			assessmentOutcomeKeys = append(assessmentOutcomeKeys, &entity.AssessmentOutcomeKey{
+				AssessmentID: assessmentID,
+				OutcomeID:    o.ID,
+			})
+		}
+	}
+	outcomeStatusMap, err := l.batchGetAssessmentOutcomeStatus(ctx, filter.StudentID, assessmentOutcomeKeys)
+	if err != nil {
+		log.Error(ctx, "query live classes summary: find related outcomes failed",
+			log.Err(err),
+			log.String("student_id", filter.StudentID),
+			log.Any("keys", assessmentOutcomeKeys),
+			log.Strings("schedule_ids", scheduleIDs),
+			log.Any("filter", filter),
+		)
+		return nil, err
+	}
+
 	//  assembly result
 	result := &entity.QueryLiveClassesSummaryResult{}
 	for _, s := range schedules {
@@ -677,9 +708,17 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context
 			item.CreateAt = assessment.CreateAt
 			if outcomes := assessmentIDToOutcomesMap[assessment.ID]; len(outcomes) > 0 {
 				for _, o := range outcomes {
+					status, ok := outcomeStatusMap[entity.AssessmentOutcomeKey{
+						AssessmentID: assessment.ID,
+						OutcomeID:    o.ID,
+					}]
+					if !ok {
+						continue
+					}
 					item.Outcomes = append(item.Outcomes, &entity.LearningSummaryOutcome{
-						ID:   o.ID,
-						Name: o.Name,
+						ID:     o.ID,
+						Name:   o.Name,
+						Status: status,
 					})
 				}
 				l.sortOutcomesByAlphabetAsc(item.Outcomes)
@@ -1156,8 +1195,30 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 		}
 	}
 
+	// batch get assessment outcome status
+	var assessmentOutcomeKeys []*entity.AssessmentOutcomeKey
+	for assessmentID, outcomes := range assessmentIDToOutcomesMap {
+		for _, o := range outcomes {
+			assessmentOutcomeKeys = append(assessmentOutcomeKeys, &entity.AssessmentOutcomeKey{
+				AssessmentID: assessmentID,
+				OutcomeID:    o.ID,
+			})
+		}
+	}
+	outcomeStatusMap, err := l.batchGetAssessmentOutcomeStatus(ctx, filter.StudentID, assessmentOutcomeKeys)
+	if err != nil {
+		log.Error(ctx, "query assignments summary: batch get assessment outcome status failed",
+			log.Err(err),
+			log.String("student_id", filter.StudentID),
+			log.Any("keys", assessmentOutcomeKeys),
+			log.Any("filter", filter),
+			log.Any("home_fun_studies", homeFunStudyAssessments),
+		)
+		return nil, err
+	}
+
 	// assembly result
-	result := l.assemblyAssignmentsSummaryResult(filter, schedules, assessmentIDToOutcomesMap, lessonPlanNameMap, studyAssessmentMap, homeFunStudyAssessmentMap, roomCommentMap)
+	result := l.assemblyAssignmentsSummaryResult(filter, schedules, assessmentIDToOutcomesMap, lessonPlanNameMap, studyAssessmentMap, homeFunStudyAssessmentMap, roomCommentMap, outcomeStatusMap)
 
 	// sort items
 	l.sortAssignmentsSummaryItems(result.Items)
@@ -1167,7 +1228,16 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context
 	return result, nil
 }
 
-func (l *learningSummaryReportModel) assemblyAssignmentsSummaryResult(filter *entity.LearningSummaryFilter, schedules []*entity.Schedule, assessmentIDToOutcomesMap map[string][]*entity.Outcome, lessonPlanNameMap map[string]string, studyAssessmentMap map[string]*entity.Assessment, homeFunStudyAssessmentMap map[string]*entity.HomeFunStudy, roomCommentMap map[string]map[string][]string) *entity.QueryAssignmentsSummaryResult {
+func (l *learningSummaryReportModel) assemblyAssignmentsSummaryResult(
+	filter *entity.LearningSummaryFilter,
+	schedules []*entity.Schedule,
+	assessmentIDToOutcomesMap map[string][]*entity.Outcome,
+	lessonPlanNameMap map[string]string,
+	studyAssessmentMap map[string]*entity.Assessment,
+	homeFunStudyAssessmentMap map[string]*entity.HomeFunStudy,
+	roomCommentMap map[string]map[string][]string,
+	outcomeStatusMap map[entity.AssessmentOutcomeKey]entity.AssessmentOutcomeStatus,
+) *entity.QueryAssignmentsSummaryResult {
 	result := &entity.QueryAssignmentsSummaryResult{
 		StudyCount:        len(studyAssessmentMap),
 		HomeFunStudyCount: len(homeFunStudyAssessmentMap),
@@ -1191,9 +1261,17 @@ func (l *learningSummaryReportModel) assemblyAssignmentsSummaryResult(filter *en
 			}
 			if outcomes := assessmentIDToOutcomesMap[assessment.ID]; len(outcomes) > 0 {
 				for _, o := range outcomes {
+					status, ok := outcomeStatusMap[entity.AssessmentOutcomeKey{
+						AssessmentID: assessment.ID,
+						OutcomeID:    o.ID,
+					}]
+					if !ok {
+						continue
+					}
 					item.Outcomes = append(item.Outcomes, &entity.LearningSummaryOutcome{
-						ID:   o.ID,
-						Name: o.Name,
+						ID:     o.ID,
+						Name:   o.Name,
+						Status: status,
 					})
 				}
 			}
@@ -1215,9 +1293,17 @@ func (l *learningSummaryReportModel) assemblyAssignmentsSummaryResult(filter *en
 			}
 			if outcomes := assessmentIDToOutcomesMap[assessment.ID]; len(outcomes) > 0 {
 				for _, o := range outcomes {
+					status, ok := outcomeStatusMap[entity.AssessmentOutcomeKey{
+						AssessmentID: assessment.ID,
+						OutcomeID:    o.ID,
+					}]
+					if !ok {
+						continue
+					}
 					item.Outcomes = append(item.Outcomes, &entity.LearningSummaryOutcome{
-						ID:   o.ID,
-						Name: o.Name,
+						ID:     o.ID,
+						Name:   o.Name,
+						Status: status,
 					})
 				}
 			}
@@ -1234,4 +1320,146 @@ func (l *learningSummaryReportModel) sortAssignmentsSummaryItems(items []*entity
 	sort.Slice(items, func(i, j int) bool {
 		return items[i].CompleteAt < items[j].CompleteAt
 	})
+}
+
+func (l *learningSummaryReportModel) batchGetAssessmentOutcomeStatus(ctx context.Context, attendanceID string, keys []*entity.AssessmentOutcomeKey) (map[entity.AssessmentOutcomeKey]entity.AssessmentOutcomeStatus, error) {
+	if len(keys) == 0 {
+		log.Debug(ctx, "batch get assessment outcome status: empty keys")
+		return map[entity.AssessmentOutcomeKey]entity.AssessmentOutcomeStatus{}, nil
+	}
+
+	// query assessment outcome overall status
+	assessmentOutcomeCond := da.QueryAssessmentOutcomeConditions{
+		Keys: entity.NullAssessmentOutcomeKeys{
+			Value: keys,
+			Valid: true,
+		},
+	}
+	var assessmentOutcomes []*entity.AssessmentOutcome
+	if err := da.GetAssessmentOutcomeDA().Query(ctx, &assessmentOutcomeCond, &assessmentOutcomes); err != nil {
+		log.Error(ctx, "batch get assessment outcome status: query assessment outcome failed",
+			log.Err(err),
+			log.String("student_id", attendanceID),
+			log.Any("keys", keys),
+		)
+		return nil, err
+	}
+	assessmentOutcomesMap := make(map[entity.AssessmentOutcomeKey]*entity.AssessmentOutcome, len(assessmentOutcomes))
+	for _, ao := range assessmentOutcomes {
+		assessmentOutcomesMap[entity.AssessmentOutcomeKey{AssessmentID: ao.AssessmentID, OutcomeID: ao.OutcomeID}] = ao
+	}
+
+	// query assessment outcome attendances
+	assessmentOutcomeAttendanceCond := da.QueryAssessmentOutcomeAttendanceCondition{
+		AttendanceIDs: entity.NullStrings{
+			Strings: []string{attendanceID},
+			Valid:   true,
+		},
+		AssessmentIDAndOutcomeIDPairs: entity.NullAssessmentOutcomeKeys{
+			Value: keys,
+			Valid: true,
+		},
+	}
+	var assessmentOutcomeAttendances []*entity.OutcomeAttendance
+	if err := da.GetOutcomeAttendanceDA().Query(ctx, &assessmentOutcomeAttendanceCond, &assessmentOutcomeAttendances); err != nil {
+		log.Error(ctx, "batch get assessment outcome status: query assessment outcome attendance failed",
+			log.Err(err),
+			log.Any("cond", assessmentOutcomeAttendanceCond),
+			log.String("attendance_id", attendanceID),
+			log.Any("keys", keys),
+		)
+		return nil, err
+	}
+	assessmentOutcomeAttendMap := make(map[entity.AssessmentOutcomeAttendanceKey]bool, len(keys))
+	for _, a := range assessmentOutcomeAttendances {
+		assessmentOutcomeAttendMap[entity.AssessmentOutcomeAttendanceKey{
+			AssessmentID: a.AssessmentID,
+			OutcomeID:    a.OutcomeID,
+			AttendanceID: a.AttendanceID,
+		}] = true
+	}
+
+	// query assessment content outcome attend map
+	assessmentContentOutcomeAttendanceCond := da.QueryAssessmentContentOutcomeAttendanceCondition{
+		AttendanceIDs: entity.NullStrings{},
+		AssessmentIDAndOutcomeIDPairs: entity.NullAssessmentOutcomeKeys{
+			Value: keys,
+			Valid: true,
+		},
+	}
+	var assessmentContentOutcomeAttendances []*entity.AssessmentContentOutcomeAttendance
+	if err := da.GetAssessmentContentOutcomeAttendanceDA().Query(ctx, &assessmentContentOutcomeAttendanceCond, &assessmentContentOutcomeAttendances); err != nil {
+		log.Error(ctx, "batch get assessment outcome status: query assessment content outcome attendance failed",
+			log.Err(err),
+			log.String("student_id", attendanceID),
+			log.Any("keys", keys),
+		)
+		return nil, err
+	}
+	assessmentContentOutcomeAttendMap := map[entity.AssessmentOutcomeAttendanceKey]bool{}
+	for _, item := range assessmentContentOutcomeAttendances {
+		assessmentContentOutcomeAttendMap[entity.AssessmentOutcomeAttendanceKey{
+			AssessmentID: item.AssessmentID,
+			OutcomeID:    item.OutcomeID,
+			AttendanceID: item.AttendanceID,
+		}] = true
+	}
+
+	// construct partial status map
+	assessmentOutcomePartiallyAttendMap := make(map[entity.AssessmentOutcomeAttendanceKey]bool, len(keys))
+	for _, key := range keys {
+		if key == nil {
+			continue
+		}
+		withAttendanceKey := entity.AssessmentOutcomeAttendanceKey{
+			AssessmentID: key.AssessmentID,
+			OutcomeID:    key.OutcomeID,
+			AttendanceID: attendanceID,
+		}
+		if assessmentOutcomeAttendMap[withAttendanceKey] {
+			continue
+		}
+		if assessmentContentOutcomeAttendMap[withAttendanceKey] {
+			assessmentOutcomePartiallyAttendMap[withAttendanceKey] = true
+		}
+	}
+
+	// aggregate result
+	result := make(map[entity.AssessmentOutcomeKey]entity.AssessmentOutcomeStatus, len(keys))
+	for _, key := range keys {
+		if key == nil {
+			continue
+		}
+		ao := assessmentOutcomesMap[*key]
+		if ao == nil {
+			continue
+		}
+		withAttendanceKey := entity.AssessmentOutcomeAttendanceKey{
+			AssessmentID: key.AssessmentID,
+			OutcomeID:    key.OutcomeID,
+			AttendanceID: attendanceID,
+		}
+		if ao.Skip {
+			continue
+		} else if ao.NoneAchieved {
+			result[*key] = entity.AssessmentOutcomeStatusNotAchieved
+		} else if assessmentOutcomeAttendMap[withAttendanceKey] {
+			result[*key] = entity.AssessmentOutcomeStatusAchieved
+		} else if assessmentOutcomePartiallyAttendMap[withAttendanceKey] {
+			result[*key] = entity.AssessmentOutcomeStatusPartially
+		} else {
+			result[*key] = entity.AssessmentOutcomeStatusNotAchieved
+		}
+	}
+
+	log.Debug(ctx, "batch get assessment outcome status: print args",
+		log.String("attendance_id", attendanceID),
+		log.Any("keys", keys),
+		log.String("result", fmt.Sprintf("%+v", result)),
+		log.Any("assessment_outcomes", assessmentOutcomes),
+		log.Any("assessment_outcome_attendances", assessmentOutcomeAttendances),
+		log.Any("assessment_content_outcome_attendances", assessmentContentOutcomeAttendances),
+	)
+
+	return result, nil
 }

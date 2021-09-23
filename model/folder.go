@@ -79,6 +79,7 @@ type IFolderModel interface {
 	//获取Folder
 	//Get Folder
 	GetFolderByID(ctx context.Context, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error)
+	GetFolderByIDTx(ctx context.Context, tx *dbo.DBContext, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error)
 
 	//Share folder
 	ShareFolders(ctx context.Context, req entity.ShareFoldersRequest, operator *entity.Operator) error
@@ -90,6 +91,9 @@ type IFolderModel interface {
 	//查看路径是否存在
 	//check path existing
 	MustGetPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error)
+	GetFolderMayRoot(ctx context.Context, fid string, ownerType entity.OwnerType, partition entity.FolderPartition, operator *entity.Operator) (*entity.FolderItem, error)
+
+	BatchUpdateFolderItemCount(ctx context.Context, tx *dbo.DBContext, ids []string) error
 }
 
 type FolderModel struct{}
@@ -735,8 +739,13 @@ func (f *FolderModel) MustGetPath(ctx context.Context, tx *dbo.DBContext, ownerT
 	return folders[0].ChildrenPath().AsParentPath(), nil
 }
 
-func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error) {
-	folderItem, err := da.GetFolderDA().GetFolderByID(ctx, dbo.MustGetDB(ctx), folderID)
+func (f *FolderModel) GetFolderByIDTx(ctx context.Context, tx *dbo.DBContext, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error) {
+	folderItem, err := da.GetFolderDA().GetFolderByID(ctx, tx, folderID)
+
+	if err == dbo.ErrRecordNotFound {
+		return nil, ErrResourceNotFound
+	}
+
 	if err != nil {
 		log.Error(ctx, "get folder by id failed", log.Err(err), log.String("folderID", folderID))
 		return nil, ErrNoFolder
@@ -793,6 +802,10 @@ func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operat
 		result.Items = folderItems
 	}
 	return result, nil
+}
+
+func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error) {
+	return f.GetFolderByIDTx(ctx, dbo.MustGetDB(ctx), folderID, operator)
 }
 
 func (f *FolderModel) checkMoveFolder(ctx context.Context, folder *entity.FolderItem, distFolder *entity.FolderItem) error {
@@ -1366,6 +1379,14 @@ func (f *FolderModel) handleMoveFolders(ctx context.Context, tx *dbo.DBContext,
 		return err
 	}
 
+	// fix NKL-1220: sub folder missing after moved
+	for i := range folders {
+		path := distFolder.ChildrenPath()
+		folders[i].DirPath = path
+		folders[i].ParentID = distFolder.ID
+	}
+	// fix NKL-1220: sub folder missing after moved
+
 	//Move sub folders
 	//TODO:Execute one statement per folder, Maybe can Accelerate
 	for i := range folders {
@@ -1909,6 +1930,10 @@ func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, nam
 	return nil
 }
 
+func (f *FolderModel) BatchUpdateFolderItemCount(ctx context.Context, tx *dbo.DBContext, ids []string) error {
+	return f.batchRepairFolderItemsCountByIDs(ctx, tx, ids)
+}
+
 func (f *FolderModel) updateMoveFolderItemCount(ctx context.Context, tx *dbo.DBContext, ids []string) error {
 	//update folder items count
 	err := f.batchRepairFolderItemsCountByIDs(ctx, tx, ids)
@@ -1966,7 +1991,10 @@ func (f *FolderModel) getDescendantItemsMapByFolders(ctx context.Context, folder
 			}
 		}
 		folderMap[folders[i].ID] = subFolders
-		folderPath[folders[i].ID] = folders[i].ChildrenPath()
+
+		// fix NKL-1220: sub folder missing after moved
+		folderPath[folders[i].ID] = folders[i].DirPath
+		// fix NKL-1220: sub folder missing after moved
 	}
 
 	return &entity.FolderDescendantItemsAndPath{
@@ -2016,6 +2044,11 @@ func (f *FolderModel) getFolder(ctx context.Context, tx *dbo.DBContext, fid stri
 	}
 	return parentFolder, nil
 }
+
+func (f *FolderModel) GetFolderMayRoot(ctx context.Context, fid string, ownerType entity.OwnerType, partition entity.FolderPartition, operator *entity.Operator) (*entity.FolderItem, error) {
+	return f.getFolderMaybeRoot(ctx, dbo.MustGetDB(ctx), fid, ownerType, partition, operator)
+}
+
 func (f *FolderModel) getFolderMaybeRoot(ctx context.Context, tx *dbo.DBContext, fid string, ownerType entity.OwnerType, partition entity.FolderPartition, operator *entity.Operator) (*entity.FolderItem, error) {
 	if fid == constant.FolderRootPath {
 		return f.rootFolder(ctx, ownerType, partition, operator), nil
