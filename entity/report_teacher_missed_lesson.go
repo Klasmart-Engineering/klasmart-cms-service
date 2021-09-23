@@ -18,7 +18,8 @@ type TeacherLoadMissedLessonsArgs struct {
 	PageSize   int       `json:"page_size" form:"page_size"`
 }
 type TeacherLoadMissedLessonsResponse struct {
-	List []*TeacherLoadMissedLesson `json:"list"`
+	List  []*TeacherLoadMissedLesson `json:"list"`
+	Total int                        `json:"total"`
 }
 
 type TeacherLoadMissedLesson struct {
