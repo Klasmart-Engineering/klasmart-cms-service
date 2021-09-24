@@ -3348,6 +3348,19 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 			Status:    v.Status,
 			ClassID:   v.ClassID,
 		}
+
+		// handle schedule status
+		result[i].Status = v.Status.GetScheduleStatus(entity.ScheduleStatusInput{
+			EndAt:     v.EndAt,
+			DueAt:     v.DueAt,
+			ClassType: v.ClassType,
+		})
+
+		// handle homework schedule start and end time
+		if v.ClassType == entity.ScheduleClassTypeHomework && v.DueAt != 0 {
+			result[i].StartAt = utils.TodayZeroByTimeStamp(v.DueAt, loc).Unix()
+			result[i].EndAt = utils.TodayEndByTimeStamp(v.DueAt, loc).Unix()
+		}
 	}
 	return result, nil
 }
