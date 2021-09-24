@@ -2,11 +2,12 @@ package da
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
 )
 
 type IAssessmentOutcomeDA interface {
@@ -58,7 +59,7 @@ func (as *assessmentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBContex
 }
 
 func (*assessmentOutcomeDA) DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
-	tx.Reset()
+	tx.ResetCondition()
 
 	if err := tx.Where("assessment_id", assessmentID).Delete(entity.AssessmentOutcome{}).Error; err != nil {
 		log.Error(ctx, "delete outcomes by id: delete failed from db",
@@ -71,7 +72,7 @@ func (*assessmentOutcomeDA) DeleteByAssessmentID(ctx context.Context, tx *dbo.DB
 }
 
 func (*assessmentOutcomeDA) UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item *entity.AssessmentOutcome) error {
-	tx.Reset()
+	tx.ResetCondition()
 
 	changes := map[string]interface{}{
 		"skip":          item.Skip,
@@ -93,7 +94,7 @@ func (*assessmentOutcomeDA) UpdateByAssessmentIDAndOutcomeID(ctx context.Context
 }
 
 func (*assessmentOutcomeDA) UncheckByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
-	tx.Reset()
+	tx.ResetCondition()
 
 	changes := map[string]interface{}{
 		"checked": false,

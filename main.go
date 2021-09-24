@@ -17,7 +17,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"gitlab.badanamu.com.cn/calmisland/ro"
-	gormLogger "gorm.io/gorm/logger"
 
 	logger "gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 )
@@ -30,7 +29,7 @@ func initDB() {
 		c.MaxIdleConns = dbConf.MaxIdleConns
 		c.MaxOpenConns = dbConf.MaxOpenConns
 		c.ConnectionString = dbConf.ConnectionString
-		c.LogLevel = gormLogger.Info
+		c.LogLevel = dbo.Info
 	})
 	if err != nil {
 		log.Error(context.TODO(), "create dbo failed", log.Err(err))
