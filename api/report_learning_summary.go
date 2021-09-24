@@ -46,20 +46,12 @@ func (s *Server) queryLearningSummaryTimeFilter(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	strSummaryType := c.Query("summary_type")
-	summaryType := entity.LearningSummaryType(strSummaryType)
-	if !summaryType.Valid() {
-		log.Error(ctx, "parse learning summary time filter: invalid summary type", log.String("summary_type", strSummaryType))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
 	args := entity.QueryLearningSummaryTimeFilterArgs{
-		TimeOffset:  timeOffset,
-		SummaryType: summaryType,
-		OrgID:       operator.OrgID,
-		SchoolIDs:   utils.SliceDeduplicationExcludeEmpty(strings.Split(c.Query("school_ids"), ",")),
-		TeacherID:   c.Query("teacher_id"),
-		StudentID:   c.Query("student_id"),
+		TimeOffset: timeOffset,
+		OrgID:      operator.OrgID,
+		SchoolIDs:  utils.SliceDeduplicationExcludeEmpty(strings.Split(c.Query("school_ids"), ",")),
+		TeacherID:  c.Query("teacher_id"),
+		StudentID:  c.Query("student_id"),
 	}
 
 	// call business model
