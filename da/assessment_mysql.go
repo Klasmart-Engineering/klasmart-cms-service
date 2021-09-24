@@ -140,7 +140,7 @@ func (a *assessmentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items
 	if len(items) == 0 {
 		return nil
 	}
-	_, err := a.Insert(ctx, &items)
+	_, err := a.InsertTx(ctx, tx, &items)
 	if err != nil {
 		log.Error(ctx, "BatchInsert: batch insert failed",
 			log.Err(err),

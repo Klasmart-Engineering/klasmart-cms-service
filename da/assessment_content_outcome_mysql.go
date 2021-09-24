@@ -35,7 +35,7 @@ func (as *assessmentContentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.D
 	if len(items) == 0 {
 		return nil
 	}
-	_, err := as.Insert(ctx, &items)
+	_, err := as.InsertTx(ctx, tx, &items)
 	if err != nil {
 		log.Error(ctx, "BatchInsert: SQLBatchInsert: batch insert assessment content outcomes failed",
 			log.Err(err),
