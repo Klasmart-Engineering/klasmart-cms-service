@@ -35,6 +35,8 @@ type outcomeAttendanceDA struct {
 }
 
 func (d *outcomeAttendanceDA) BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) ([]*entity.OutcomeAttendance, error) {
+	tx.Reset()
+
 	var items []*entity.OutcomeAttendance
 	if err := tx.
 		Where("assessment_id = ?", assessmentID).
@@ -49,6 +51,8 @@ func (d *outcomeAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext
 	if len(items) == 0 {
 		return nil
 	}
+
+	tx.Reset()
 	var models []entity.OutcomeAttendance
 	for _, item := range items {
 		if item.ID == "" {
@@ -72,6 +76,8 @@ func (*outcomeAttendanceDA) BatchDeleteByAssessmentIDAndOutcomeIDs(ctx context.C
 	if len(outcomeIDs) == 0 {
 		return nil
 	}
+
+	tx.Reset()
 	if err := tx.
 		Where("assessment_id = ?", assessmentID).
 		Where("outcome_id in (?)", outcomeIDs).
@@ -89,6 +95,8 @@ func (d *outcomeAttendanceDA) BatchGetByAssessmentIDs(ctx context.Context, tx *d
 	if len(assessmentIDs) == 0 {
 		return nil, nil
 	}
+
+	tx.Reset()
 	var items []*entity.OutcomeAttendance
 	if err := tx.
 		Where("assessment_id in (?)", assessmentIDs).
@@ -106,6 +114,8 @@ func (d *outcomeAttendanceDA) BatchGetByAssessmentIDsAndAttendanceID(ctx context
 	if len(assessmentIDs) == 0 || attendanceID == "" {
 		return nil, nil
 	}
+
+	tx.Reset()
 	var items []*entity.OutcomeAttendance
 	if err := tx.
 		Where("assessment_id in (?) and attendance_id = ?", assessmentIDs, attendanceID).

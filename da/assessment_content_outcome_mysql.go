@@ -83,6 +83,8 @@ func (c *QueryAssessmentContentOutcomeConditions) GetOrderBy() string {
 }
 
 func (*assessmentContentOutcomeDA) UpdateNoneAchieved(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentContentOutcome) error {
+	tx.Reset()
+
 	falseChanges := map[string]interface{}{"none_achieved": false}
 	trueChanges := map[string]interface{}{"none_achieved": true}
 	falseCond := NewSQLTemplate("")

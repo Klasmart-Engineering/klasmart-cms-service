@@ -40,6 +40,8 @@ type assessmentDA struct {
 }
 
 func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error) {
+	tx.Reset()
+
 	cacheResult, err := GetAssessmentRedisDA().GetAssessment(ctx, id)
 	if err != nil {
 		log.Info(ctx, "get assessment exclude soft deleted: get failed from cache",
@@ -78,6 +80,8 @@ func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBCont
 }
 
 func (a *assessmentDA) UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error {
+	tx.Reset()
+
 	nowUnix := time.Now().Unix()
 	updateFields := map[string]interface{}{
 		"status":    status,
@@ -118,6 +122,8 @@ func (a *assessmentDA) BatchSoftDelete(ctx context.Context, tx *dbo.DBContext, i
 	if len(ids) == 0 {
 		return nil
 	}
+
+	tx.Reset()
 	if err := tx.Model(entity.Assessment{}).Where(a.filterSoftDeletedTemplate()).
 		Where("id in (?)", ids).
 		Update("delete_at", time.Now().Unix()).Error; err != nil {

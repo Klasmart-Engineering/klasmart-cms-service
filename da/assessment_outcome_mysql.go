@@ -58,6 +58,8 @@ func (as *assessmentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBContex
 }
 
 func (*assessmentOutcomeDA) DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
+	tx.Reset()
+
 	if err := tx.Where("assessment_id", assessmentID).Delete(entity.AssessmentOutcome{}).Error; err != nil {
 		log.Error(ctx, "delete outcomes by id: delete failed from db",
 			log.Err(err),
@@ -69,6 +71,8 @@ func (*assessmentOutcomeDA) DeleteByAssessmentID(ctx context.Context, tx *dbo.DB
 }
 
 func (*assessmentOutcomeDA) UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item *entity.AssessmentOutcome) error {
+	tx.Reset()
+
 	changes := map[string]interface{}{
 		"skip":          item.Skip,
 		"none_achieved": item.NoneAchieved,
@@ -89,6 +93,8 @@ func (*assessmentOutcomeDA) UpdateByAssessmentIDAndOutcomeID(ctx context.Context
 }
 
 func (*assessmentOutcomeDA) UncheckByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
+	tx.Reset()
+
 	changes := map[string]interface{}{
 		"checked": false,
 	}

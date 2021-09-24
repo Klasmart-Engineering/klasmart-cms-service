@@ -35,6 +35,8 @@ type assessmentContentDA struct {
 }
 
 func (d *assessmentContentDA) GetLessonPlan(ctx context.Context, tx *dbo.DBContext, assessmentID string) (*entity.AssessmentContent, error) {
+	tx.Reset()
+
 	var plans []*entity.AssessmentContent
 	if err := d.QueryTx(ctx, tx, &QueryAssessmentContentConditions{
 		AssessmentID: entity.NullString{
@@ -87,6 +89,8 @@ func (d *assessmentContentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext
 }
 
 func (*assessmentContentDA) UpdatePartial(ctx context.Context, tx *dbo.DBContext, args *UpdatePartialAssessmentContentArgs) error {
+	tx.Reset()
+
 	changes := map[string]interface{}{
 		"content_comment": args.ContentComment,
 		"checked":         args.Checked,
@@ -106,6 +110,8 @@ func (*assessmentContentDA) UpdatePartial(ctx context.Context, tx *dbo.DBContext
 }
 
 func (*assessmentContentDA) UncheckAllLessonMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
+	tx.Reset()
+
 	changes := map[string]interface{}{
 		"checked": false,
 	}
@@ -124,6 +130,8 @@ func (*assessmentContentDA) UncheckAllLessonMaterials(ctx context.Context, tx *d
 }
 
 func (*assessmentContentDA) BatchCheckLessonMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string, materialIDs []string) error {
+	tx.Reset()
+
 	changes := map[string]interface{}{
 		"checked": true,
 	}

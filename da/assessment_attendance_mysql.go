@@ -35,6 +35,8 @@ type assessmentAttendanceDA struct {
 }
 
 func (*assessmentAttendanceDA) GetTeacherIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error) {
+	tx.Reset()
+
 	var (
 		items []*entity.AssessmentAttendance
 		ids   []string
@@ -54,6 +56,8 @@ func (*assessmentAttendanceDA) GetTeacherIDsByAssessmentID(ctx context.Context, 
 }
 
 func (*assessmentAttendanceDA) GetStudentIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error) {
+	tx.Reset()
+
 	var (
 		items []*entity.AssessmentAttendance
 		ids   []string
@@ -97,6 +101,8 @@ func (as *assessmentAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBCon
 
 // Uncheck assessment all students
 func (a *assessmentAttendanceDA) UncheckStudents(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
+	tx.Reset()
+
 	if err := tx.Model(&entity.AssessmentAttendance{}).Where("assessment_id = ? and role = ?", assessmentID, entity.AssessmentAttendanceRoleStudent).
 		Update("checked", false).
 		Error; err != nil {
@@ -110,6 +116,8 @@ func (a *assessmentAttendanceDA) UncheckStudents(ctx context.Context, tx *dbo.DB
 }
 
 func (a *assessmentAttendanceDA) BatchCheck(ctx context.Context, tx *dbo.DBContext, assessmentID string, attendanceIDs []string) error {
+	tx.Reset()
+
 	if len(attendanceIDs) == 0 {
 		return nil
 	}
