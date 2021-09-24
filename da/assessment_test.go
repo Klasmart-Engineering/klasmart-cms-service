@@ -13,22 +13,16 @@ import (
 func TestAdd(t *testing.T) {
 	ctx := context.Background()
 
-	var items []*entity.Schedule
-	err := GetScheduleDA().Query(ctx, &ScheduleCondition{}, &items)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(len(items))
+	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		tx.DB = tx.Debug()
 
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-
-		err := GetScheduleDA().DeleteWithFollowing(ctx, tx, "5fac989220981aafeecf6b48", 0)
+		err := GetScheduleDA().DeleteWithFollowing(ctx, tx, "5fac9892232323230981aafeecf6b48", 0)
 		if err != nil {
 			t.Log(err)
 			return err
 		}
 
-		_, err = GetScheduleDA().InsertTx(ctx, tx, &[]*entity.Schedule{
+		_, err = GetScheduleDA().Insert(ctx, &[]*entity.Schedule{
 			&entity.Schedule{
 				ID:              utils.NewID(),
 				Title:           "test title",
@@ -68,7 +62,4 @@ func TestAdd(t *testing.T) {
 		t.Log(err)
 		return
 	}
-	//dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-	//
-	//})
 }
