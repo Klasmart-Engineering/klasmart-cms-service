@@ -2,10 +2,11 @@ package da
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"sync"
 )
 
 var (
@@ -35,7 +36,7 @@ type assessmentContentDA struct {
 }
 
 func (d *assessmentContentDA) GetLessonPlan(ctx context.Context, tx *dbo.DBContext, assessmentID string) (*entity.AssessmentContent, error) {
-	tx.Reset()
+	tx.ResetCondition()
 
 	var plans []*entity.AssessmentContent
 	if err := d.QueryTx(ctx, tx, &QueryAssessmentContentConditions{
@@ -89,7 +90,7 @@ func (d *assessmentContentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext
 }
 
 func (*assessmentContentDA) UpdatePartial(ctx context.Context, tx *dbo.DBContext, args *UpdatePartialAssessmentContentArgs) error {
-	tx.Reset()
+	tx.ResetCondition()
 
 	changes := map[string]interface{}{
 		"content_comment": args.ContentComment,
@@ -110,7 +111,7 @@ func (*assessmentContentDA) UpdatePartial(ctx context.Context, tx *dbo.DBContext
 }
 
 func (*assessmentContentDA) UncheckAllLessonMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
-	tx.Reset()
+	tx.ResetCondition()
 
 	changes := map[string]interface{}{
 		"checked": false,
@@ -130,7 +131,7 @@ func (*assessmentContentDA) UncheckAllLessonMaterials(ctx context.Context, tx *d
 }
 
 func (*assessmentContentDA) BatchCheckLessonMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string, materialIDs []string) error {
-	tx.Reset()
+	tx.ResetCondition()
 
 	changes := map[string]interface{}{
 		"checked": true,
