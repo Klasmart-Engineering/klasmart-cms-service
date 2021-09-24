@@ -41,7 +41,7 @@ func (s *Server) listTeacherLoadLessons(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	result, err := model.GetTeacherLoadLessonsModel().List(ctx, op, &args)
+	result, err := model.GetReportModel().ListTeacherLoadLessons(ctx, op, &args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -83,7 +83,7 @@ func (s *Server) summaryTeacherLoadLessons(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	result, err := model.GetTeacherLoadLessonsModel().Summary(ctx, op, &args)
+	result, err := model.GetReportModel().SummaryTeacherLoadLessons(ctx, op, &args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -125,7 +125,7 @@ func (s *Server) listTeacherMissedLessons(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	result, err := model.GetTeacherLoadLessonsModel().MissedLessonsList(ctx, op, &args)
+	result, err := model.GetReportModel().MissedLessonsList(ctx, op, &args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
