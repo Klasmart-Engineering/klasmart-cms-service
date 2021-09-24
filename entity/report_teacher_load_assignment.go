@@ -9,14 +9,14 @@ import (
 )
 
 type TeacherLoadAssignmentRequest struct {
-	TeacherIDList []string `json:"teacher_id_list"`
-	ClassIDList   []string `json:"class_id_list"`
+	TeacherIDList []string `json:"teacher_id_list" binding:"gt=0"`
+	ClassIDList   []string `json:"class_id_list"  binding:"gt=0"`
 
 	// one of study, home_fun
-	ClassTypeList ClassTypeList `json:"class_type_list" binding:"oneOf=study,home_fun"`
+	ClassTypeList ClassTypeList `json:"class_type_list"  binding:"gt=0"`
 	Duration      TimeRange     `json:"duration"`
 }
-type ClassTypeList []string
+type ClassTypeList []constant.ReportClassType
 
 func (ctl ClassTypeList) Validate(ctx context.Context) (err error) {
 	if len(ctl) < 1 {
@@ -25,7 +25,7 @@ func (ctl ClassTypeList) Validate(ctx context.Context) (err error) {
 		return
 	}
 	for _, s := range ctl {
-		if s != "study" && s != "home_fun" {
+		if s != constant.ReportClassTypeStudy && s != constant.ReportClassTypeHomeFun {
 			err = constant.ErrInvalidArgs
 			log.Error(ctx, "invalid class_type, class_type should be one of study,home_fun", log.Err(err), log.Any("class_type_list", ctl))
 		}
@@ -33,14 +33,25 @@ func (ctl ClassTypeList) Validate(ctx context.Context) (err error) {
 	return
 }
 
-type TeacherLoadAssignmentResponse struct {
-	TeacherID                  string  `json:"teacher_id"`
-	TeacherName                string  `json:"teacher_name"`
-	CountOfClasses             int64   `json:"count_of_classes"`
-	CountOfStudents            int64   `json:"count_of_students"`
-	CountOfScheduledAssignment int64   `json:"count_of_scheduled_assignment"`
-	CountOfCompletedAssignment int64   `json:"count_of_completed_assignment"`
-	FeedbackPercentage         float64 `json:"feedback_percentage"`
-	CountOfPendingAssignment   int64   `json:"count_of_pending_assignment"`
-	AvgDaysOfPendingAssignment int64   `json:"avg_days_of_pending_assignment"`
+type TeacherLoadAssignmentResponseItem struct {
+	TeacherID string `json:"teacher_id" gorm:"column:teacher_id" `
+	// TeacherName just used by font-end: generate swagger json --> generate typescript class
+	TeacherName                string  `json:"teacher_name" gorm:"column:teacher_name" `
+	CountOfClasses             int64   `json:"count_of_classes" gorm:"column:count_of_classes" `
+	CountOfStudents            int64   `json:"count_of_students" gorm:"column:count_of_students" `
+	CountOfScheduledAssignment int64   `json:"count_of_scheduled_assignment" gorm:"column:count_of_scheduled_assignment" `
+	CountOfCompletedAssignment int64   `json:"count_of_completed_assignment" gorm:"column:count_of_completed_assignment" `
+	CountOfCommentedAssignment int64   `json:"-" gorm:"column:count_of_commented_assignment" `
+	FeedbackPercentage         float64 `json:"feedback_percentage" gorm:"column:feedback_percentage" `
+	CountOfPendingAssignment   int64   `json:"count_of_pending_assignment" gorm:"column:count_of_pending_assignment" `
+	AvgDaysOfPendingAssignment int64   `json:"avg_days_of_pending_assignment" gorm:"column:avg_days_of_pending_assignment" `
+}
+type TeacherLoadAssignmentResponseItemSlice []*TeacherLoadAssignmentResponseItem
+
+func (s TeacherLoadAssignmentResponseItemSlice) MapTeacherID() (m map[string]*TeacherLoadAssignmentResponseItem) {
+	m = map[string]*TeacherLoadAssignmentResponseItem{}
+	for _, item := range s {
+		m[item.TeacherID] = item
+	}
+	return
 }
