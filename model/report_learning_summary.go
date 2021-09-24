@@ -95,23 +95,30 @@ func (l *learningSummaryReportModel) QueryTimeFilter(
 
 func (l *learningSummaryReportModel) getYearsWeeksData(nowWithZone time.Time) (ret []*entity.LearningSummaryFilterYear) {
 	result := make(map[int][]entity.LearningSummaryFilterWeek)
-	cursor := time.Date(2019, 12, 30, 23, 59, 59, int(time.Second-1), nowWithZone.Location())
+	cursor := time.Date(2019, 12, 30, 0, 0, 0, 0, nowWithZone.Location())
 	for {
-		endCursor := cursor.Add(time.Hour * 24 * 6)
+		endCursor := cursor.Add(time.Hour * 24 * 7)
 		if endCursor.After(nowWithZone) {
 			break
 		}
 		endYear, _, _ := endCursor.Date()
 		if _, ok := result[endYear]; !ok {
-			result[endYear] = make([]entity.LearningSummaryFilterWeek, 52, 54)
+			result[endYear] = make([]entity.LearningSummaryFilterWeek, 0, 54)
 		}
 		result[endYear] = append(result[endYear], entity.LearningSummaryFilterWeek{
 			WeekStart: cursor.Unix(),
 			WeekEnd:   endCursor.Unix(),
 		})
-		cursor = endCursor.Add(time.Hour * 24)
+		cursor = endCursor
 	}
-	for year, weekList := range result {
+	for year := nowWithZone.Year(); year >= 2020; year-- {
+		// the first year in slice is the current year,
+		// but the week may cross two years,
+		// so the weekList is nil and should skip
+		weekList, exist := result[year]
+		if !exist {
+			continue
+		}
 		utils.ReverseSliceInPlace(weekList)
 		item := entity.LearningSummaryFilterYear{
 			Year:  year,
@@ -119,7 +126,6 @@ func (l *learningSummaryReportModel) getYearsWeeksData(nowWithZone time.Time) (r
 		}
 		ret = append(ret, &item)
 	}
-	utils.ReverseSliceInPlace(ret)
 	return
 }
 
