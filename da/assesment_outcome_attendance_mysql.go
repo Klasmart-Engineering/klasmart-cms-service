@@ -61,7 +61,7 @@ func (d *outcomeAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext
 		models = append(models, entity.OutcomeAttendance{ID: item.ID, AssessmentID: item.AssessmentID,
 			OutcomeID: item.OutcomeID, AttendanceID: item.AttendanceID})
 	}
-	_, err := d.Insert(ctx, &models)
+	_, err := d.InsertTx(ctx, tx, &models)
 	if err != nil {
 		log.Error(ctx, "batch insert outcomes_attendances: batch insert failed",
 			log.Err(err),

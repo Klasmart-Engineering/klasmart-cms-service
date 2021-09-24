@@ -23,7 +23,7 @@ func initDB() {
 		c.ShowSQL = true
 		c.MaxIdleConns = 2
 		c.MaxOpenConns = 4
-		c.ConnectionString = "root:root@tcp(127.0.0.1:3306)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local"
+		c.ConnectionString = "root:Passw0rd@tcp(127.0.0.1:3306)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local"
 	})
 	if err != nil {
 		log.Error(context.TODO(), "create dbo failed", log.Err(err))
