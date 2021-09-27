@@ -637,6 +637,18 @@ func (cd *DBContentDA) CountFolderContentUnsafe(ctx context.Context, tx *dbo.DBC
 	return total.Total, nil
 }
 
+func (cd *DBContentDA) appendConditionParamWithOrderAndPage(sql string, orderBy string, pager *dbo.Pager) string {
+
+	if orderBy != "" {
+		sql = fmt.Sprintf("%s order by %s", sql, orderBy)
+	}
+	if pager != nil && pager.Enable() {
+		offset, limit := pager.Offset()
+		sql = fmt.Sprintf("%s limit %d offset %d", sql, limit, offset)
+	}
+	return sql
+}
+
 func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 dbo.Conditions) (int, []*entity.FolderContent, error) {
 	query1, params1 := condition1.GetConditions()
 	query2, params2 := condition2.GetConditions()
@@ -658,18 +670,23 @@ func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBCont
 	//查询
 	//Query
 	folderContents := make([]*entity.FolderContent, 0)
-	db := tx.Raw(cd.searchFolderContentSQL(ctx, query1, query2), params1...)
-	orderBy := condition1.GetOrderBy()
-	if orderBy != "" {
-		db = db.Order(orderBy)
-	}
 
+	orderBy := condition1.GetOrderBy()
 	pager := condition1.GetPager()
-	if pager != nil && pager.Enable() {
-		// pagination
-		offset, limit := pager.Offset()
-		db = db.Offset(offset).Limit(limit)
-	}
+	exSql := cd.appendConditionParamWithOrderAndPage(cd.searchFolderContentSQL(ctx, query1, query2), orderBy, pager)
+	db := tx.Raw(exSql, params1...)
+	//db := tx.Raw(cd.searchFolderContentSQL(ctx, query1, query2), params1...)
+	//orderBy := condition1.GetOrderBy()
+	//if orderBy != "" {
+	//	db = db.Order(orderBy)
+	//}
+	//
+	//pager := condition1.GetPager()
+	//if pager != nil && pager.Enable() {
+	//	// pagination
+	//	offset, limit := pager.Offset()
+	//	db = db.Offset(offset).Limit(limit)
+	//}
 	err = db.Find(&folderContents).Error
 	if err != nil {
 		log.Error(ctx, "query raw sql failed", log.Err(err),
