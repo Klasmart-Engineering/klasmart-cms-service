@@ -90,7 +90,7 @@ func (s *scheduleEventModel) AddMembersEvent(ctx context.Context, op *entity.Ope
 		return nil
 	}
 
-	_, err = da.GetScheduleRelationDA().BatchInsert(ctx, dbo.MustGetDB(ctx), relations)
+	_, err = da.GetScheduleRelationDA().InsertInBatches(ctx, relations, len(relations))
 	if err != nil {
 		log.Error(ctx, "count by schedule condition error", log.Err(err), log.Any("event", event), log.Any("relations", relations))
 		return err

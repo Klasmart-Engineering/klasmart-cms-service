@@ -857,17 +857,17 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 
 func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, scheduleList []*entity.Schedule, allRelations []*entity.ScheduleRelation, batchAddAssessmentSuperArgs *entity.BatchAddAssessmentSuperArgs) (string, error) {
 	// add to schedules
-	_, err := da.GetScheduleDA().MultipleBatchInsert(ctx, tx, scheduleList)
+	_, err := da.GetScheduleDA().InsertInBatchesTx(ctx, tx, scheduleList, len(scheduleList))
 	if err != nil {
-		log.Error(ctx, "schedule batchInsert error",
+		log.Error(ctx, "schedule InsertInBatchesTx error",
 			log.Err(err),
 			log.Any("scheduleList", scheduleList))
 		return "", err
 	}
 
-	_, err = da.GetScheduleRelationDA().MultipleBatchInsert(ctx, tx, allRelations)
+	_, err = da.GetScheduleRelationDA().InsertInBatchesTx(ctx, tx, allRelations, len(allRelations))
 	if err != nil {
-		log.Error(ctx, "schedules_relations batchInsert error",
+		log.Error(ctx, "schedules_relations InsertInBatchesTx error",
 			log.Err(err),
 			log.Any("allRelations", allRelations))
 		return "", err
@@ -1185,7 +1185,7 @@ func (s *scheduleModel) deleteScheduleRelationTx(ctx context.Context, tx *dbo.DB
 			return err
 		}
 
-		scheduleIDs := make([]string, len(scheduleList))
+		scheduleIDs = make([]string, len(scheduleList))
 		for i, item := range scheduleList {
 			scheduleIDs[i] = item.ID
 		}
