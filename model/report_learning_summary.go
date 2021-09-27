@@ -41,6 +41,26 @@ type learningSummaryReportModel struct {
 	assessmentBase
 }
 
+func (l *learningSummaryReportModel) mustGetLearningSummaryReportPermissionMap(
+	ctx context.Context, operator *entity.Operator) map[external.PermissionName]bool {
+	permissions := []external.PermissionName{
+		external.LearningSummaryReport,
+		external.ReportLearningSummaryStudent,
+		external.ReportLearningSummarySchool,
+		external.ReportLearningSummaryTeacher,
+		external.ReportLearningSummmaryOrg,
+	}
+	ret, err := external.GetPermissionServiceProvider().
+		HasOrganizationPermissions(ctx, operator, permissions)
+	if err != nil {
+		logOperatorField := log.Any("operator", operator)
+		permissionMap := log.Any("permissions", ret)
+		log.Panic(ctx, "failed to query permissions",
+			log.Err(err), logOperatorField, permissionMap)
+	}
+	return ret
+}
+
 // QueryTimeFilter returns years-weeks data for frontend under proper permission
 // ref: https://calmisland.atlassian.net/wiki/spaces/NKL/pages/2331050001/Sprint+13+CMS+Report+Sep+15th+-+Oct+12th
 // product owner requires this date below as the beginning in the drop-down box
@@ -59,16 +79,11 @@ func (l *learningSummaryReportModel) QueryTimeFilter(
 		external.ReportLearningSummaryTeacher,
 		external.ReportLearningSummmaryOrg,
 	}
-	permitMap, err := external.GetPermissionServiceProvider().
-		HasOrganizationPermissions(ctx, operator, permissionsShouldHave)
+	permissionMap := l.mustGetLearningSummaryReportPermissionMap(ctx, operator)
 	logOperatorField := log.Any("operator", operator)
 	logPermissionsShouldHaveField := log.Any("permissions", permissionsShouldHave)
-	if err != nil {
-		log.Panic(ctx, "failed to query permissions",
-			log.Err(err), logOperatorField, logPermissionsShouldHaveField)
-	}
 	hitOne := false
-	for _, p := range permitMap {
+	for _, p := range permissionMap {
 		hitOne = hitOne || p
 	}
 	if !hitOne {
@@ -145,32 +160,36 @@ func (l *learningSummaryReportModel) deduplicationAndSortWeeks(weeks [][2]int64)
 }
 
 func (l *learningSummaryReportModel) QueryRemainingFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryRemainingFilterArgs) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
-	switch args.FilterType {
-	case entity.LearningSummaryFilterTypeSchool:
+	permissionMap := l.mustGetLearningSummaryReportPermissionMap(ctx, operator)
+	logOperatorField := log.Any("operator", operator)
+	permissionMapField := log.Any("permissions", permissionMap)
+	switch t := args.FilterType; {
+	case t == entity.LearningSummaryFilterTypeSchool && permissionMap[external.ReportLearningSummarySchool]:
 		return l.queryRemainingFilterSchool(ctx, tx, operator)
-	case entity.LearningSummaryFilterTypeClass:
+	case t == entity.LearningSummaryFilterTypeClass:
 		var teacherIDs []string
 		if len(args.TeacherID) > 0 {
 			teacherIDs = append(teacherIDs, args.TeacherID)
 		}
 		return l.queryRemainingFilterClass(ctx, tx, operator, args.SchoolIDs, teacherIDs)
-	case entity.LearningSummaryFilterTypeTeacher:
+	case t == entity.LearningSummaryFilterTypeTeacher && permissionMap[external.ReportLearningSummaryTeacher]:
 		var classIDs []string
 		if len(args.ClassID) > 0 {
 			classIDs = append(classIDs, args.ClassID)
 		}
 		return l.queryRemainingFilterTeacher(ctx, tx, operator, classIDs)
-	case entity.LearningSummaryFilterTypeStudent:
+	case t == entity.LearningSummaryFilterTypeStudent && permissionMap[external.ReportLearningSummaryStudent]:
 		var classIDs []string
 		if len(args.ClassID) > 0 {
 			classIDs = append(classIDs, args.ClassID)
 		}
 		return l.queryRemainingFilterStudent(ctx, tx, operator, classIDs)
-	case entity.LearningSummaryFilterTypeSubject:
+	case t == entity.LearningSummaryFilterTypeSubject && permissionMap[external.ReportLearningSummmaryOrg]:
 		return l.queryRemainingFilterSubject(ctx, tx, operator, args)
 	default:
-		log.Error(ctx, "query remaining filter: invalid filter type")
-		return nil, constant.ErrInvalidArgs
+		log.Error(ctx, "query remaining filter: invalid filter type or wrong permission",
+			logOperatorField, permissionMapField, log.String("filter_type", string(t)))
+		return nil, constant.ErrForbidden
 	}
 }
 
