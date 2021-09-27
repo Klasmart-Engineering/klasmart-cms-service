@@ -32,6 +32,14 @@ func (ctl ClassTypeList) Validate(ctx context.Context) (err error) {
 	}
 	return
 }
+func (ctl ClassTypeList) Contains(t constant.ReportClassType) bool {
+	for _, classType := range ctl {
+		if classType == t {
+			return true
+		}
+	}
+	return false
+}
 
 type TeacherLoadAssignmentResponseItem struct {
 	TeacherID string `json:"teacher_id" gorm:"column:teacher_id" `
@@ -44,7 +52,7 @@ type TeacherLoadAssignmentResponseItem struct {
 	CountOfCommentedAssignment int64   `json:"-" gorm:"column:count_of_commented_assignment" `
 	FeedbackPercentage         float64 `json:"feedback_percentage" gorm:"column:feedback_percentage" `
 	CountOfPendingAssignment   int64   `json:"count_of_pending_assignment" gorm:"column:count_of_pending_assignment" `
-	AvgDaysOfPendingAssignment int64   `json:"avg_days_of_pending_assignment" gorm:"column:avg_days_of_pending_assignment" `
+	AvgDaysOfPendingAssignment float64 `json:"avg_days_of_pending_assignment" gorm:"column:avg_days_of_pending_assignment" `
 }
 type TeacherLoadAssignmentResponseItemSlice []*TeacherLoadAssignmentResponseItem
 

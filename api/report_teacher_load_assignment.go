@@ -53,6 +53,5 @@ func (s *Server) getTeacherLoadReportOfAssignment(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	_ = op
 	c.JSON(http.StatusOK, res)
 }

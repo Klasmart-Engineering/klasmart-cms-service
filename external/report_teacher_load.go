@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"net/http"
+	"sync"
+	"text/template"
+
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"net/http"
-	"sync"
-	"text/template"
 )
 
 type TeacherLoadServiceProvider interface {
@@ -103,8 +104,8 @@ type TeacherClassWithStudent struct {
 }
 
 type TeacherClassWithStudentCounter struct {
-	Class   int
-	Student int
+	Class   int64
+	Student int64
 }
 
 func (tcs TeacherClassWithStudent) CountClassAndStudent(ctx context.Context) TeacherClassWithStudentCounter {
@@ -123,7 +124,7 @@ func (tcs TeacherClassWithStudent) CountClassAndStudent(ctx context.Context) Tea
 	}
 
 	return TeacherClassWithStudentCounter{
-		Class:   len(utils.SliceDeduplication(classIDs)),
-		Student: len(utils.SliceDeduplication(studentIDs)),
+		Class:   int64(len(utils.SliceDeduplication(classIDs))),
+		Student: int64(len(utils.SliceDeduplication(studentIDs))),
 	}
 }
