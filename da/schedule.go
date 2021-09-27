@@ -135,71 +135,43 @@ func (s *scheduleDA) MultipleBatchInsert(ctx context.Context, tx *dbo.DBContext,
 }
 
 func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, schedules []*entity.Schedule) (int64, error) {
-	var data [][]interface{}
+	var models []entity.Schedule
 	for _, item := range schedules {
-		data = append(data, []interface{}{
-			item.ID,
-			item.Title,
-			item.ClassID,
-			item.LessonPlanID,
-			item.OrgID,
-			item.StartAt,
-			item.EndAt,
-			item.Status,
-			item.IsAllDay,
-			//item.SubjectID,
-			item.ProgramID,
-			item.ClassType,
-			item.DueAt,
-			item.Description,
-			item.Attachment,
-			item.ScheduleVersion,
-			item.RepeatID,
-			item.RepeatJson,
-			item.CreatedID,
-			item.UpdatedID,
-			item.DeletedID,
-			item.CreatedAt,
-			item.UpdatedAt,
-			item.DeleteAt,
-			item.IsHomeFun,
-			item.IsHidden,
+		models = append(models, entity.Schedule{
+			ID:           item.ID,
+			Title:        item.Title,
+			ClassID:      item.ClassID,
+			LessonPlanID: item.LessonPlanID,
+			OrgID:        item.OrgID,
+			StartAt:      item.StartAt,
+			EndAt:        item.EndAt,
+			Status:       item.Status,
+			IsAllDay:     item.IsAllDay,
+			//SubjectID:item.SubjectID,
+			ProgramID:       item.ProgramID,
+			ClassType:       item.ClassType,
+			DueAt:           item.DueAt,
+			Description:     item.Description,
+			Attachment:      item.Attachment,
+			ScheduleVersion: item.ScheduleVersion,
+			RepeatID:        item.RepeatID,
+			RepeatJson:      item.RepeatJson,
+			CreatedID:       item.CreatedID,
+			UpdatedID:       item.UpdatedID,
+			DeletedID:       item.DeletedID,
+			CreatedAt:       item.CreatedAt,
+			UpdatedAt:       item.UpdatedAt,
+			DeleteAt:        item.DeleteAt,
+			IsHomeFun:       item.IsHomeFun,
+			IsHidden:        item.IsHidden,
 		})
 	}
-	format, values := SQLBatchInsert(constant.TableNameSchedule, []string{
-		"`id`",
-		"`title`",
-		"`class_id`",
-		"`lesson_plan_id`",
-		"`org_id`",
-		"`start_at`",
-		"`end_at`",
-		"`status`",
-		"`is_all_day`",
-		//"`subject_id`",
-		"`program_id`",
-		"`class_type`",
-		"`due_at`",
-		"`description`",
-		"`attachment`",
-		"`version`",
-		"`repeat_id`",
-		"`repeat`",
-		"`created_id`",
-		"`updated_id`",
-		"`deleted_id`",
-		"`created_at`",
-		"`updated_at`",
-		"`delete_at`",
-		"`is_home_fun`",
-		"`is_hidden`",
-	}, data)
-	execResult := dbContext.Exec(format, values...)
-	if execResult.Error != nil {
-		logger.Error(ctx, "db exec sql error", log.Any("format", format), log.Any("values", values), log.Err(execResult.Error))
-		return 0, execResult.Error
+	_, err := s.Insert(ctx, &models)
+	if err != nil {
+		logger.Error(ctx, "db exec batchInsert Schedule sql error", log.Any("values", models), log.Err(err))
+		return 0, err
 	}
-	return execResult.RowsAffected, nil
+	return int64(len(schedules)), nil
 }
 
 func (s *scheduleDA) DeleteWithFollowing(ctx context.Context, tx *dbo.DBContext, repeatID string, startAt int64) error {

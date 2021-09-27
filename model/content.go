@@ -2801,7 +2801,7 @@ func (cm *ContentModel) copyContentProperties(ctx context.Context, tx *dbo.DBCon
 	}
 	return nil
 }
-func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList []*entity.ContentInfo, outComes bool, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error) {
+func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList []*entity.ContentInfo, includeOutcomes bool, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error) {
 	orgName := ""
 	orgProvider := external.GetOrganizationServiceProvider()
 	orgs, err := orgProvider.BatchGet(ctx, user, []string{user.OrgID})
@@ -2923,19 +2923,37 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		log.Error(ctx, "can't get grade info", log.Strings("gradeIDs", gradeIDs), log.Err(err))
 	}
 
-	//Outcomes
-	outcomeIDs := make([]string, 0)
-	for i := range contentList {
-		outcomeIDs = append(outcomeIDs, contentList[i].Outcomes...)
+	var outcomeDictionary map[string]*entity.Outcome
+	if includeOutcomes {
+		outcomeMap := make(map[string]bool)
+		outcomeIDs := make([]string, 0)
+		for _, content := range contentList {
+			for _, id := range content.Outcomes {
+				if outcomeMap[id] {
+					continue
+				}
+
+				outcomeMap[id] = true
+				outcomeIDs = append(outcomeIDs, id)
+			}
+		}
+
+		outcomeDictionary = make(map[string]*entity.Outcome, len(outcomeIDs))
+		outcomeEntities, err := GetOutcomeModel().GetLatestOutcomes(ctx, user, dbo.MustGetDB(ctx), &entity.OutcomeCondition{
+			IDs:     outcomeIDs,
+			OrderBy: entity.OutcomeOrderByName,
+		})
+		if err != nil {
+			log.Warn(ctx, "get latest outcomes entity failed",
+				log.Err(err),
+				log.Strings("ids", outcomeIDs),
+				log.String("uid", user.UserID))
+		} else {
+			for _, outcome := range outcomeEntities {
+				outcomeDictionary[outcome.ID] = outcome
+			}
+		}
 	}
-	//outcomeEntities, err := GetOutcomeModel().GetLatestByIDs(ctx, dbo.MustGetDB(ctx), outcomeIDs, user)
-	//if err != nil {
-	//	log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", outcomeIDs), log.String("uid", user.UserID))
-	//}
-	//outcomeMaps := make(map[string]*entity.Outcome, len(outcomeEntities))
-	//for i := range outcomeEntities {
-	//	outcomeMaps[outcomeEntities[i].ID] = outcomeEntities[i]
-	//}
 
 	contentDetailsList := make([]*entity.ContentInfoWithDetails, len(contentList))
 	for i := range contentList {
@@ -2961,23 +2979,9 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			gradeNames[j] = gradeNameMap[contentList[i].Grade[j]]
 		}
 
-		outcomeEntities := make([]*entity.Outcome, 0)
-		if outComes {
-			outcomeEntities, err = GetOutcomeModel().GetLatestOutcomes(ctx, user, dbo.MustGetDB(ctx), &entity.OutcomeCondition{
-				IDs:     contentList[i].Outcomes,
-				OrderBy: entity.OutcomeOrderByName,
-			})
-			if err != nil {
-				log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", contentList[i].Outcomes), log.String("uid", user.UserID))
-			}
-		}
 		contentList[i].PublishScope = visibilitySettingsMap[contentList[i].ID]
 		publishScopeNames := make([]string, len(contentList[i].PublishScope))
-		log.Info(ctx, "get publish scope names",
-			log.Strings("contentList[i].PublishScope", contentList[i].PublishScope),
-			log.Any("visibilitySettingsMap", visibilitySettingsMap),
-			log.String("contentList[i].ID", contentList[i].ID),
-			log.Strings("visibilitySettingsMap[contentList[i].ID]", visibilitySettingsMap[contentList[i].ID]))
+
 		for j := range contentList[i].PublishScope {
 			publishScopeNames[j] = publishScopeNameMap[contentList[i].PublishScope[j]]
 		}
@@ -2996,23 +3000,28 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			OrgName:          orgName,
 			//AuthorName:        userNameMap[contentList[i].Author],
 			CreatorName:     userNameMap[contentList[i].Creator],
-			OutcomeEntities: outcomeEntities,
+			OutcomeEntities: []*entity.Outcome{},
 			IsMine:          contentList[i].Author == user.UserID,
+		}
+
+		if includeOutcomes {
+			for _, id := range contentList[i].Outcomes {
+				outcome, found := outcomeDictionary[id]
+				if !found {
+					continue
+				}
+
+				contentDetailsList[i].OutcomeEntities = append(contentDetailsList[i].OutcomeEntities, outcome)
+			}
 		}
 	}
 
 	//fill content permission info
 	cm.fillContentPermission(ctx, contentDetailsList, user)
 
-	return contentDetailsList, nil
-}
+	log.Info(ctx, "build content detail list successfully", log.Any("content", contentDetailsList))
 
-func (cm *ContentModel) getOutcomes(ctx context.Context, pickIDs []string, user *entity.Operator) []*entity.Outcome {
-	outcomeEntities, err := GetOutcomeModel().GetLatestByIDs(ctx, user, dbo.MustGetDB(ctx), pickIDs)
-	if err != nil {
-		log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", pickIDs), log.String("uid", user.UserID))
-	}
-	return outcomeEntities
+	return contentDetailsList, nil
 }
 
 func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Operator) ([]string, error) {

@@ -2,10 +2,11 @@ package da
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"sync"
 )
 
 var (
@@ -35,6 +36,8 @@ type assessmentContentDA struct {
 }
 
 func (d *assessmentContentDA) GetLessonPlan(ctx context.Context, tx *dbo.DBContext, assessmentID string) (*entity.AssessmentContent, error) {
+	tx.ResetCondition()
+
 	var plans []*entity.AssessmentContent
 	if err := d.QueryTx(ctx, tx, &QueryAssessmentContentConditions{
 		AssessmentID: entity.NullString{
@@ -71,26 +74,12 @@ func (d *assessmentContentDA) GetLessonMaterials(ctx context.Context, tx *dbo.DB
 	return materials, nil
 }
 
-func (*assessmentContentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentContent) error {
+func (d *assessmentContentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentContent) error {
 	if len(items) == 0 {
 		return nil
 	}
-	var (
-		columns = []string{"id", "assessment_id", "content_id", "content_name", "content_type", "checked"}
-		matrix  [][]interface{}
-	)
-	for _, item := range items {
-		matrix = append(matrix, []interface{}{
-			item.ID,
-			item.AssessmentID,
-			item.ContentID,
-			item.ContentName,
-			item.ContentType,
-			item.Checked,
-		})
-	}
-	format, values := SQLBatchInsert(entity.AssessmentContent{}.TableName(), columns, matrix)
-	if err := tx.Exec(format, values...).Error; err != nil {
+	_, err := d.InsertTx(ctx, tx, &items)
+	if err != nil {
 		log.Error(ctx, "BatchInsert: SQLBatchInsert: batch insert assessment contents failed",
 			log.Err(err),
 			log.Any("items", items),
@@ -101,6 +90,8 @@ func (*assessmentContentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, 
 }
 
 func (*assessmentContentDA) UpdatePartial(ctx context.Context, tx *dbo.DBContext, args *UpdatePartialAssessmentContentArgs) error {
+	tx.ResetCondition()
+
 	changes := map[string]interface{}{
 		"content_comment": args.ContentComment,
 		"checked":         args.Checked,
@@ -120,6 +111,8 @@ func (*assessmentContentDA) UpdatePartial(ctx context.Context, tx *dbo.DBContext
 }
 
 func (*assessmentContentDA) UncheckAllLessonMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
+	tx.ResetCondition()
+
 	changes := map[string]interface{}{
 		"checked": false,
 	}
@@ -138,6 +131,8 @@ func (*assessmentContentDA) UncheckAllLessonMaterials(ctx context.Context, tx *d
 }
 
 func (*assessmentContentDA) BatchCheckLessonMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string, materialIDs []string) error {
+	tx.ResetCondition()
+
 	changes := map[string]interface{}{
 		"checked": true,
 	}

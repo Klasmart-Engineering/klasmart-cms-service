@@ -66,6 +66,7 @@ type IScheduleModel interface {
 	QueryScheduledDates(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]string, error)
 	// without permission check, internal function call
 	QueryUnsafe(ctx context.Context, condition *entity.ScheduleQueryCondition) ([]*entity.Schedule, error)
+	QueryScheduleTimeView(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]*entity.ScheduleTimeView, error)
 }
 
 type scheduleModel struct {
@@ -3294,6 +3295,7 @@ func (s *scheduleModel) QueryScheduledDates(ctx context.Context, query *entity.S
 	return result, nil
 }
 
+// without permission check, internal function call
 func (s *scheduleModel) QueryUnsafe(ctx context.Context, condition *entity.ScheduleQueryCondition) ([]*entity.Schedule, error) {
 	var scheduleList []*entity.Schedule
 	daCondition := &da.ScheduleCondition{
@@ -3317,6 +3319,50 @@ func (s *scheduleModel) QueryUnsafe(ctx context.Context, condition *entity.Sched
 	}
 
 	return scheduleList, nil
+}
+
+func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]*entity.ScheduleTimeView, error) {
+	condition, err := s.PrepareScheduleTimeViewCondition(ctx, query, op, loc)
+	if err != nil {
+		return nil, err
+	}
+
+	var scheduleList []*entity.Schedule
+	err = da.GetScheduleDA().Query(ctx, condition, &scheduleList)
+	if err != nil {
+		log.Error(ctx, "da.GetScheduleDA().Query error",
+			log.Err(err),
+			log.Any("condition", condition))
+		return nil, err
+	}
+
+	result := make([]*entity.ScheduleTimeView, len(scheduleList))
+	for i, v := range scheduleList {
+		result[i] = &entity.ScheduleTimeView{
+			ID:        v.ID,
+			Title:     v.Title,
+			StartAt:   v.StartAt,
+			EndAt:     v.EndAt,
+			DueAt:     v.DueAt,
+			ClassType: v.ClassType,
+			Status:    v.Status,
+			ClassID:   v.ClassID,
+		}
+
+		// handle schedule status
+		result[i].Status = v.Status.GetScheduleStatus(entity.ScheduleStatusInput{
+			EndAt:     v.EndAt,
+			DueAt:     v.DueAt,
+			ClassType: v.ClassType,
+		})
+
+		// handle homework schedule start and end time
+		if v.ClassType == entity.ScheduleClassTypeHomework && v.DueAt != 0 {
+			result[i].StartAt = utils.TodayZeroByTimeStamp(v.DueAt, loc).Unix()
+			result[i].EndAt = utils.TodayEndByTimeStamp(v.DueAt, loc).Unix()
+		}
+	}
+	return result, nil
 }
 
 func removeResourceMetadata(ctx context.Context, resourceID string) error {

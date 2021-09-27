@@ -31,25 +31,12 @@ type assessmentContentOutcomeDA struct {
 	dbo.BaseDA
 }
 
-func (*assessmentContentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentContentOutcome) error {
+func (as *assessmentContentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentContentOutcome) error {
 	if len(items) == 0 {
 		return nil
 	}
-	var (
-		columns = []string{"id", "assessment_id", "content_id", "outcome_id", "none_achieved"}
-		matrix  [][]interface{}
-	)
-	for _, item := range items {
-		matrix = append(matrix, []interface{}{
-			item.ID,
-			item.AssessmentID,
-			item.ContentID,
-			item.OutcomeID,
-			item.NoneAchieved,
-		})
-	}
-	format, values := SQLBatchInsert(entity.AssessmentContentOutcome{}.TableName(), columns, matrix)
-	if err := tx.Exec(format, values...).Error; err != nil {
+	_, err := as.InsertTx(ctx, tx, &items)
+	if err != nil {
 		log.Error(ctx, "BatchInsert: SQLBatchInsert: batch insert assessment content outcomes failed",
 			log.Err(err),
 			log.Any("items", items),
@@ -96,6 +83,8 @@ func (c *QueryAssessmentContentOutcomeConditions) GetOrderBy() string {
 }
 
 func (*assessmentContentOutcomeDA) UpdateNoneAchieved(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentContentOutcome) error {
+	tx.ResetCondition()
+
 	falseChanges := map[string]interface{}{"none_achieved": false}
 	trueChanges := map[string]interface{}{"none_achieved": true}
 	falseCond := NewSQLTemplate("")

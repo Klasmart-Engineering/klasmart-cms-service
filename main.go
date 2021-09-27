@@ -29,6 +29,7 @@ func initDB() {
 		c.MaxIdleConns = dbConf.MaxIdleConns
 		c.MaxOpenConns = dbConf.MaxOpenConns
 		c.ConnectionString = dbConf.ConnectionString
+		c.LogLevel = dbo.Info
 	})
 	if err != nil {
 		log.Error(context.TODO(), "create dbo failed", log.Err(err))

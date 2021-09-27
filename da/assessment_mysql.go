@@ -40,6 +40,8 @@ type assessmentDA struct {
 }
 
 func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error) {
+	tx.ResetCondition()
+
 	cacheResult, err := GetAssessmentRedisDA().GetAssessment(ctx, id)
 	if err != nil {
 		log.Info(ctx, "get assessment exclude soft deleted: get failed from cache",
@@ -78,6 +80,8 @@ func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBCont
 }
 
 func (a *assessmentDA) UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error {
+	tx.ResetCondition()
+
 	nowUnix := time.Now().Unix()
 	updateFields := map[string]interface{}{
 		"status":    status,
@@ -118,6 +122,8 @@ func (a *assessmentDA) BatchSoftDelete(ctx context.Context, tx *dbo.DBContext, i
 	if len(ids) == 0 {
 		return nil
 	}
+
+	tx.ResetCondition()
 	if err := tx.Model(entity.Assessment{}).Where(a.filterSoftDeletedTemplate()).
 		Where("id in (?)", ids).
 		Update("delete_at", time.Now().Unix()).Error; err != nil {
@@ -134,40 +140,11 @@ func (a *assessmentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items
 	if len(items) == 0 {
 		return nil
 	}
-	columns := []string{
-		"id",
-		"schedule_id",
-		"title",
-		"complete_time",
-		"status",
-		"create_at",
-		"update_at",
-		"delete_at",
-		"class_length",
-		"class_end_time",
-	}
-	var matrix [][]interface{}
-	for _, item := range items {
-		matrix = append(matrix, []interface{}{
-			item.ID,
-			item.ScheduleID,
-			item.Title,
-			item.CompleteTime,
-			item.Status,
-			item.CreateAt,
-			item.UpdateAt,
-			item.DeleteAt,
-			item.ClassLength,
-			item.ClassEndTime,
-		})
-	}
-	format, values := SQLBatchInsert(entity.Assessment{}.TableName(), columns, matrix)
-	if err := tx.Exec(format, values...).Error; err != nil {
+	_, err := a.InsertTx(ctx, tx, &items)
+	if err != nil {
 		log.Error(ctx, "BatchInsert: batch insert failed",
 			log.Err(err),
 			log.Any("items", items),
-			log.String("format", format),
-			log.Any("values", values),
 		)
 		return err
 	}

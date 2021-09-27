@@ -136,16 +136,16 @@ func (m *reportModel) AddStudentUsageRecordTx(ctx context.Context, tx *dbo.DBCon
 		}
 	}
 
-	var models []entity.BatchInsertModeler
+	var models []entity.StudentUsageRecord
 	for _, student := range record.Students {
 		usageRecord := *record
 		usageRecord.ID = utils.NewID()
 		usageRecord.StudentUserID = student.UserID
 		usageRecord.StudentName = student.Name
 		usageRecord.StudentEmail = student.Email
-		models = append(models, &usageRecord)
+		models = append(models, usageRecord)
 	}
-	err = da.GetStudentUsageDA().BatchInsertTx(ctx, tx, models...)
+	_,err = da.GetStudentUsageDA().InsertTx(ctx, tx, models)
 	if err != nil {
 		return
 	}

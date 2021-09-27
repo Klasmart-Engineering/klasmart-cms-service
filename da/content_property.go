@@ -20,25 +20,13 @@ type ContentPropertyDA struct {
 }
 
 func (c *ContentPropertyDA) BatchAdd(ctx context.Context, tx *dbo.DBContext, co []*entity.ContentProperty) error {
-	var data [][]interface{}
-	for _, item := range co {
-		data = append(data, []interface{}{
-			item.PropertyType,
-			item.ContentID,
-			item.PropertyID,
-			item.Sequence,
-		})
-	}
-	format, values := SQLBatchInsert(entity.ContentProperty{}.TableName(), []string{
-		"`property_type`",
-		"`content_id`",
-		"`property_id`",
-		"`sequence`",
-	}, data)
-	execResult := tx.Exec(format, values...)
-	if execResult.Error != nil {
-		logger.Error(ctx, "db exec sql error", log.Any("format", format), log.Any("values", values), log.Err(execResult.Error))
-		return execResult.Error
+	_, err := c.s.Insert(ctx, &co)
+	if err != nil {
+		log.Error(ctx, "db exec sql error\"",
+			log.Err(err),
+			log.Any("items", co),
+		)
+		return err
 	}
 	return nil
 }

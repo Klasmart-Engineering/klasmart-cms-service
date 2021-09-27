@@ -2,11 +2,12 @@ package da
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
 )
 
 type IOutcomeAttendanceDA interface {
@@ -35,6 +36,8 @@ type outcomeAttendanceDA struct {
 }
 
 func (d *outcomeAttendanceDA) BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) ([]*entity.OutcomeAttendance, error) {
+	tx.ResetCondition()
+
 	var items []*entity.OutcomeAttendance
 	if err := tx.
 		Where("assessment_id = ?", assessmentID).
@@ -45,20 +48,22 @@ func (d *outcomeAttendanceDA) BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Co
 	return items, nil
 }
 
-func (*outcomeAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.OutcomeAttendance) error {
+func (d *outcomeAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.OutcomeAttendance) error {
 	if len(items) == 0 {
 		return nil
 	}
-	columns := []string{"id", "assessment_id", "outcome_id", "attendance_id"}
-	var matrix [][]interface{}
+
+	tx.ResetCondition()
+	var models []entity.OutcomeAttendance
 	for _, item := range items {
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		matrix = append(matrix, []interface{}{item.ID, item.AssessmentID, item.OutcomeID, item.AttendanceID})
+		models = append(models, entity.OutcomeAttendance{ID: item.ID, AssessmentID: item.AssessmentID,
+			OutcomeID: item.OutcomeID, AttendanceID: item.AttendanceID})
 	}
-	format, values := SQLBatchInsert(entity.OutcomeAttendance{}.TableName(), columns, matrix)
-	if err := tx.Exec(format, values...).Error; err != nil {
+	_, err := d.InsertTx(ctx, tx, &models)
+	if err != nil {
 		log.Error(ctx, "batch insert outcomes_attendances: batch insert failed",
 			log.Err(err),
 			log.Any("items", items),
@@ -72,6 +77,8 @@ func (*outcomeAttendanceDA) BatchDeleteByAssessmentIDAndOutcomeIDs(ctx context.C
 	if len(outcomeIDs) == 0 {
 		return nil
 	}
+
+	tx.ResetCondition()
 	if err := tx.
 		Where("assessment_id = ?", assessmentID).
 		Where("outcome_id in (?)", outcomeIDs).
@@ -89,6 +96,8 @@ func (d *outcomeAttendanceDA) BatchGetByAssessmentIDs(ctx context.Context, tx *d
 	if len(assessmentIDs) == 0 {
 		return nil, nil
 	}
+
+	tx.ResetCondition()
 	var items []*entity.OutcomeAttendance
 	if err := tx.
 		Where("assessment_id in (?)", assessmentIDs).
@@ -106,6 +115,8 @@ func (d *outcomeAttendanceDA) BatchGetByAssessmentIDsAndAttendanceID(ctx context
 	if len(assessmentIDs) == 0 || attendanceID == "" {
 		return nil, nil
 	}
+
+	tx.ResetCondition()
 	var items []*entity.OutcomeAttendance
 	if err := tx.
 		Where("assessment_id in (?) and attendance_id = ?", assessmentIDs, attendanceID).
