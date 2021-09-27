@@ -3,7 +3,6 @@ package external
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 	"text/template"
 
@@ -200,6 +199,8 @@ func (s AmsOrganizationService) GetNameByOrganizationOrSchool(ctx context.Contex
 		return []string{}, nil
 	}
 
+	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+
 	raw := `query{
 	{{range $i, $e := .}}
 	org_{{$i}}: organization(organization_id: "{{$e}}"){
@@ -220,7 +221,7 @@ func (s AmsOrganizationService) GetNameByOrganizationOrSchool(ctx context.Contex
 		return nil, err
 	}
 	buf := buffer.Buffer{}
-	err = temp.Execute(&buf, ids)
+	err = temp.Execute(&buf, _ids)
 	if err != nil {
 		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
 		return nil, err
@@ -231,7 +232,7 @@ func (s AmsOrganizationService) GetNameByOrganizationOrSchool(ctx context.Contex
 		Name   string   `json:"name"`
 		Status APStatus `json:"status"`
 	}
-	payload := make(map[string]*Payload, len(ids))
+	payload := make(map[string]*Payload, len(_ids))
 	res := chlorine.Response{
 		Data: &payload,
 	}
@@ -246,14 +247,14 @@ func (s AmsOrganizationService) GetNameByOrganizationOrSchool(ctx context.Contex
 		return nil, res.Errors
 	}
 	nameList := make([]string, len(ids))
-	for k, v := range payload {
-		index, err := strconv.Atoi(k[len("org_"):])
-		if err != nil {
-			log.Error(ctx, "Res error", log.String("q", buf.String()), log.Any("res", res), log.Err(res.Errors))
-			return nil, err
+	for i := range ids {
+		orgKey := fmt.Sprintf("org_%d", indexMapping[i])
+		schKey := fmt.Sprintf("sch_%d", indexMapping[i])
+		if payload[orgKey] != nil && payload[orgKey].Name != "" {
+			nameList[i] = payload[orgKey].Name
 		}
-		if v != nil && nameList[index] == "" {
-			nameList[index] = v.Name
+		if payload[schKey] != nil && payload[schKey].Name != "" {
+			nameList[i] = payload[schKey].Name
 		}
 	}
 
