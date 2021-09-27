@@ -417,6 +417,7 @@ func (cd *DBContentDA) BatchUpdateContentPath(ctx context.Context, tx *dbo.DBCon
 	if len(cids) < 1 {
 		return nil
 	}
+	tx.ResetCondition()
 	err := tx.Model(entity.Content{}).Where("id IN (?)", cids).Updates(entity.Content{DirPath: dirPath, ParentFolder: dirPath.Parent()}).Error
 	if err != nil {
 		return err
@@ -536,6 +537,7 @@ func (cm *DBContentDA) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBCo
 	}
 	fidsSQL := strings.Join(fidsSQLParts, constant.StringArraySeparator)
 
+	tx.ResetCondition()
 	sql := fmt.Sprintf(`UPDATE cms_contents SET dir_path = replace(dir_path,?,?) WHERE id IN (%s)`, fidsSQL)
 	err := tx.Exec(sql, params...).Error
 
