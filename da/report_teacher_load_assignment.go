@@ -31,7 +31,7 @@ select
 	? as teacher_id,
 	sr.relation_id as class_id,
 	1 as is_home_fun ,
-	UNIX_TIMESTAMP() - IF(hfs.due_at <= 0,hfs.create_at,s.due_at) - 7*24*60*60 as pending_seconds	
+	UNIX_TIMESTAMP() - IF(hfs.due_at <= 0,hfs.create_at,hfs.due_at) - 7*24*60*60 as pending_seconds	
 from home_fun_studies hfs 
 inner join schedules_relations sr on
 		hfs.schedule_id = sr.schedule_id
@@ -39,7 +39,7 @@ where hfs.status='in_progress'
 and sr.relation_type = 'class_roster_class'
 and JSON_contains(teacher_ids,?) 
 `
-		args = append(args, teacherID, teacherID)
+		args = append(args, teacherID, fmt.Sprintf(`"%s"`, teacherID))
 	}
 	sql := fmt.Sprintf(`
 select 	 
@@ -184,7 +184,7 @@ from  home_fun_studies
 where JSON_contains(teacher_ids,?) 
 and complete_at between ? and ?
 `)
-		args = append(args, teacherID, `"`+teacherID+`""`, startAt, endAt)
+		args = append(args, teacherID, fmt.Sprintf(`"%s"`, teacherID), startAt, endAt)
 	}
 	sql := strings.Join(sqlArr, "\n union \n")
 	err = r.QueryRawSQL(ctx, &res, sql, args...)
