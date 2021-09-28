@@ -33,10 +33,20 @@ func (t *reportModel) ListTeacherLoadLessons(ctx context.Context, op *entity.Ope
 
 	result := make([]*entity.TeacherLoadLesson, len(args.TeacherIDs))
 	for i, tid := range args.TeacherIDs {
-		load := mapTeacherLoadLesson[tid]
-		counter := mapTeacherClassWithStudent[tid].CountClassAndStudent(ctx)
-		load.NumberOfClasses = counter.Class
-		result[i] = load
+		load := entity.TeacherLoadLesson{TeacherID: tid}
+		if mapTeacherLoadLesson[tid] != nil {
+			load.CompletedLiveLessons = mapTeacherLoadLesson[tid].CompletedLiveLessons
+			load.CompletedInClassLessons = mapTeacherLoadLesson[tid].CompletedInClassLessons
+			load.MissedLiveLessons = mapTeacherLoadLesson[tid].MissedLiveLessons
+			load.MissedInClassLessons = mapTeacherLoadLesson[tid].MissedInClassLessons
+			load.TotalScheduled = mapTeacherLoadLesson[tid].TotalScheduled
+		}
+		if mapTeacherClassWithStudent[tid] != nil {
+			counter := mapTeacherClassWithStudent[tid].CountClassAndStudent(ctx)
+			load.NumberOfClasses = counter.Class
+			load.NumberOfStudents = counter.Student
+		}
+		result[i] = &load
 	}
 	return result, nil
 }

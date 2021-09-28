@@ -87,8 +87,13 @@ query {
 		return nil, err
 	}
 	result := make(map[string]*TeacherClassWithStudent, len(data))
-	for _, v := range data {
-		result[v.UserID] = v
+	for i, v := range data {
+		log.Debug(ctx, "BatchGetClassWithStudent: extract result",
+			log.String("index", i),
+			log.Any("data", v))
+		if v != nil {
+			result[v.UserID] = v
+		}
 	}
 	return result, nil
 }
