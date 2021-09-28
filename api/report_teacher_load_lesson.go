@@ -27,7 +27,7 @@ func (s *Server) listTeacherLoadLessons(c *gin.Context) {
 	var request entity.TeacherLoadLessonRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
-		log.Error(ctx, "summaryTeacherLoadLessons: ShouldBindQuery failed",
+		log.Error(ctx, "listTeacherLoadLessons: ShouldBindQuery failed",
 			log.Err(err),
 			log.Any("request", request))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -35,7 +35,7 @@ func (s *Server) listTeacherLoadLessons(c *gin.Context) {
 	}
 	args, err := request.Validate(ctx, op)
 	if err != nil {
-		log.Error(ctx, "summaryTeacherLoadLessons: validate failed",
+		log.Error(ctx, "listTeacherLoadLessons: validate failed",
 			log.Err(err),
 			log.Any("request", request))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))

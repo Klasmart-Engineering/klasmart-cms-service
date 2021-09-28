@@ -2,11 +2,28 @@ package entity
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
 type TeacherLoadLessonRequest TeacherLoadLessonArgs
 
 func (t TeacherLoadLessonRequest) Validate(ctx context.Context, op *Operator) (TeacherLoadLessonArgs, error) {
+	if len(t.TeacherIDs) == 0 {
+		return TeacherLoadLessonArgs{}, constant.ErrInvalidArgs
+	}
+
+	if len(t.ClassIDs) == 0 {
+		return TeacherLoadLessonArgs{}, constant.ErrInvalidArgs
+	}
+
+	_, _, err := t.Duration.Value(ctx)
+	if err != nil {
+		log.Error(ctx, "Validate: duration not correct",
+			log.Err(err),
+			log.Any("duration", t.Duration))
+		return TeacherLoadLessonArgs{}, constant.ErrInvalidArgs
+	}
 	return TeacherLoadLessonArgs(t), nil
 }
 
