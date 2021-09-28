@@ -34,7 +34,7 @@ type TeacherLoadLessonArgs struct {
 }
 
 type TeacherLoadLesson struct {
-	TeacherID               string `json:"teacher_id" gorm:"-"`
+	TeacherID               string `json:"teacher_id" gorm:"column:teacher_id"`
 	NumberOfClasses         int    `json:"number_of_classes" gorm:"-"`
 	NumberOfStudents        int    `json:"number_of_students" gorm:"-"`
 	CompletedLiveLessons    int    `json:"completed_live_Lessons" gorm:"column:live_completed_count"`
