@@ -28,6 +28,7 @@ func (ctl ClassTypeList) Validate(ctx context.Context) (err error) {
 		if s != constant.ReportClassTypeStudy && s != constant.ReportClassTypeHomeFun {
 			err = constant.ErrInvalidArgs
 			log.Error(ctx, "invalid class_type, class_type should be one of study,home_fun", log.Err(err), log.Any("class_type_list", ctl))
+			return
 		}
 	}
 	return

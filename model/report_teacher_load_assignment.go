@@ -86,7 +86,7 @@ func (m *reportModel) GetTeacherLoadReportOfAssignment(ctx context.Context, op *
 						continue
 					}
 					if teacherComment.Teacher == nil {
-						return
+						continue
 					}
 					teacherID := teacherComment.Teacher.UserID
 					item, ok := mCompleteCountStudy[teacherID]
