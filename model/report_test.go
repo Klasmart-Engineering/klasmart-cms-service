@@ -9,9 +9,9 @@ import (
 
 func TestLessoons(t *testing.T) {
 	ctx := context.Background()
-	request := entity.TeacherLoadMissedLessonsRequest{TeacherId: "be381662-3f63-5bdd-8dc7-9ee0fb735d5f",
-		ClassIDs: []string{"5751555a-cc18-4662-9ae5-a5ad90569f79"}, PageNumber: 2, PageSize: 2,
-		Duration: "1605110400-1605715200"}
+	request := entity.TeacherLoadMissedLessonsRequest{TeacherId: "0e6b5f9d-0383-5ac6-b13d-8af02697fa8b",
+		ClassIDs: []string{"0b3f5f4d-3540-42ab-9fda-474fbbe8b51c"}, PageNumber: 10, PageSize: 2,
+		Duration: "1608600600-1630419300"}
 	response, err := GetReportModel().MissedLessonsList(ctx, &request)
 	fmt.Println(err)
 	fmt.Println(response)
