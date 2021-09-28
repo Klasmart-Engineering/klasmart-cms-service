@@ -22,6 +22,3 @@ func GetReportDA() IReportDA {
 	})
 	return _reportDA
 }
-
-type ITeacherLoadLesson interface {
-}
