@@ -154,14 +154,14 @@ from
 		(
             select relation_id from schedules_relations sel 
             where sel.schedule_id=s.id 
-            and sel.relation_type='class_roster_class'
+            and sel.relation_type='${class_roster_class}'
         ) as class_id,
         (
 			select 
 				count(*) 
 			from schedules_relations sls 
 			where  sls.schedule_id=s.id 
-           	and sls.relation_type='class_roster_student'
+           	and sls.relation_type='${class_roster_teacher}'
 		) as no_of_student,
 		s.start_at as start_date,
 		s.end_at as end_date
@@ -176,6 +176,8 @@ from
 ) sc  
 where !EXISTS(select id from assessments ass where ass.schedule_id=sc.id)
 LIMIT @pageSize OFFSET @limitNumber`
+	sql = strings.Replace(sql, "${class_roster_teacher}", entity.ScheduleRelationTypeClassRosterTeacher.String(), -1)
+	sql = strings.Replace(sql, "${class_roster_class}", entity.ScheduleRelationTypeClassRosterClass.String(), -1)
 	startAt, endAt, err := request.Duration.Value(ctx)
 	if err != nil {
 		return
