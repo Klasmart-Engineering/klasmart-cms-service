@@ -60,6 +60,9 @@ type TeacherLoadAssignmentResponseItemSlice []*TeacherLoadAssignmentResponseItem
 func (s TeacherLoadAssignmentResponseItemSlice) MapTeacherID() (m map[string]*TeacherLoadAssignmentResponseItem) {
 	m = map[string]*TeacherLoadAssignmentResponseItem{}
 	for _, item := range s {
+		if item == nil {
+			continue
+		}
 		m[item.TeacherID] = item
 	}
 	return
