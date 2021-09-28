@@ -67,7 +67,7 @@ group by teacher_id;
 		return nil, err
 	}
 	var result []*entity.TeacherLoadLesson
-	err = tx.Raw(sql, args.TeacherIDs, start, end, args.ClassIDs).Find(&result).Error
+	err = r.QueryRawSQLTx(ctx, tx, &result, sql, args.TeacherIDs, start, end, args.ClassIDs)
 	if err != nil {
 		log.Error(ctx, "ListTeacherLoadLessons: sql exe failed",
 			log.Err(err),
@@ -131,7 +131,7 @@ from (
 		return nil, err
 	}
 	var result entity.TeacherLoadLessonSummaryFields
-	err = tx.Raw(sql, args.TeacherIDs, start, end, args.ClassIDs).Find(&result).Error
+	err = r.QueryRawSQLTx(ctx, tx, &result, sql, args.TeacherIDs, start, end, args.ClassIDs)
 	if err != nil {
 		log.Error(ctx, "SummaryTeacherLoadLessons: sql exe failed",
 			log.Err(err),
