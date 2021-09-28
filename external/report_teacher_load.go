@@ -104,8 +104,8 @@ type TeacherClassWithStudent struct {
 }
 
 type TeacherClassWithStudentCounter struct {
-	Class   int64
-	Student int64
+	Class   int
+	Student int
 }
 
 func (tcs TeacherClassWithStudent) CountClassAndStudent(ctx context.Context) TeacherClassWithStudentCounter {
@@ -124,7 +124,7 @@ func (tcs TeacherClassWithStudent) CountClassAndStudent(ctx context.Context) Tea
 	}
 
 	return TeacherClassWithStudentCounter{
-		Class:   int64(len(utils.SliceDeduplication(classIDs))),
-		Student: int64(len(utils.SliceDeduplication(studentIDs))),
+		Class:   len(utils.SliceDeduplication(classIDs)),
+		Student: len(utils.SliceDeduplication(studentIDs)),
 	}
 }

@@ -6,10 +6,39 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
 
 func (t *reportModel) ListTeacherLoadLessons(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadLessonArgs) ([]*entity.TeacherLoadLesson, error) {
-	return da.GetReportDA().ListTeacherLoadLessons(ctx, op, dbo.MustGetDB(ctx), args)
+	mapTeacherClassWithStudent, err := external.GetTeacherLoadServiceProvider().BatchGetClassWithStudent(ctx, op, args.TeacherIDs)
+	if err != nil {
+		log.Error(ctx, "ListTeacherLoadLessons: call ams failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("args", args))
+		return nil, err
+	}
+	res, err := da.GetReportDA().ListTeacherLoadLessons(ctx, op, dbo.MustGetDB(ctx), args)
+	if err != nil {
+		log.Error(ctx, "ListTeacherLoadLessons: call da failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("args", args))
+		return nil, err
+	}
+	mapTeacherLoadLesson := make(map[string]*entity.TeacherLoadLesson, len(res))
+	for i := range res {
+		mapTeacherLoadLesson[res[i].TeacherID] = res[i]
+	}
+
+	result := make([]*entity.TeacherLoadLesson, len(args.TeacherIDs))
+	for i, tid := range args.TeacherIDs {
+		load := mapTeacherLoadLesson[tid]
+		counter := mapTeacherClassWithStudent[tid].CountClassAndStudent(ctx)
+		load.NumberOfClasses = counter.Class
+		result[i] = load
+	}
+	return result, nil
 }
 
 func (t *reportModel) SummaryTeacherLoadLessons(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadLessonArgs) (*entity.TeacherLoadLessonSummary, error) {

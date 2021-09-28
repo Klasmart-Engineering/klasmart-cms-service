@@ -28,8 +28,8 @@ func (m *reportModel) GetTeacherLoadReportOfAssignment(ctx context.Context, op *
 	for _, item := range items {
 		if classWithStudent, ok := mTeacherClass[item.TeacherID]; ok {
 			classWithStudentCounter := classWithStudent.CountClassAndStudent(ctx)
-			item.CountOfClasses = classWithStudentCounter.Class
-			item.CountOfStudents = classWithStudentCounter.Student
+			item.CountOfClasses = int64(classWithStudentCounter.Class)
+			item.CountOfStudents = int64(classWithStudentCounter.Student)
 		}
 	}
 
