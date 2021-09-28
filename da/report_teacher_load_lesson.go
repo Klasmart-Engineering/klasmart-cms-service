@@ -4,6 +4,7 @@ import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"strings"
 )
@@ -182,7 +183,13 @@ select sc.* from
 	  select attendance_id from assessments_attendances ast 
      where ast.assessment_id = ass.id and ast.attendance_id=sc.teacher_id
     )
-	LIMIT @pageSize OFFSET @limitNumber`
+	LIMIT @pageSize OFFSET @offsetNumber`
+	if request.Page < 0 {
+		request.Page = constant.DefaultPageIndex
+	}
+	if request.PageSize < 0 {
+		request.PageSize = constant.DefaultPageSize
+	}
 	sql = strings.Replace(sql, "${OnlineClass}", entity.ScheduleClassTypeOnlineClass.String(), -1)
 	sql = strings.Replace(sql, "${OfflineClass}", entity.ScheduleClassTypeOfflineClass.String(), -1)
 	sql = strings.Replace(sql, "${class_roster_student}", entity.ScheduleRelationTypeClassRosterStudent.String(), -1)
@@ -193,7 +200,7 @@ select sc.* from
 	}
 	params := map[string]interface{}{"teacherId": request.TeacherId, "startDt": startAt, "endDt": endAt,
 		"class_ids": strings.Join(request.ClassIDs, ","),
-		"pageSize":  request.PageNumber, "limitNumber": (request.PageSize - 1) * request.PageNumber}
+		"pageSize":  request.PageSize, "offsetNumber": (request.Page - 1) * request.PageSize}
 	err = r.QueryRawSQL(ctx, &model, sql, params)
 	if err != nil {
 		log.Error(ctx, "exec missedLessonsListInfo sql failed",
@@ -236,7 +243,7 @@ select count(*) from
 	}
 	params := map[string]interface{}{"teacherId": request.TeacherId, "startDt": startAt, "endDt": endAt,
 		"class_ids": strings.Join(request.ClassIDs, ","),
-		"pageSize":  request.PageNumber, "limitNumber": (request.PageSize - 1) * request.PageNumber}
+		"pageSize":  request.Page, "limitNumber": (request.PageSize - 1) * request.Page}
 	err = r.QueryRawSQL(ctx, &total, sql, params)
 	if err != nil {
 		log.Error(ctx, "exec missedLessonsListTotal sql failed",

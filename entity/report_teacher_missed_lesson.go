@@ -1,11 +1,11 @@
 package entity
 
 type TeacherLoadMissedLessonsRequest struct {
-	TeacherId  string    `json:"teacher_id" form:"teacher_id" binding:"required"`
-	ClassIDs   []string  `json:"class_ids" form:"class_ids" binding:"required"`
-	Duration   TimeRange `json:"duration" form:"duration" binding:"required"`
-	PageNumber int       `json:"page_number" form:"page_number" binding:"required"`
-	PageSize   int       `json:"page_size" form:"page_size" binding:"required"`
+	TeacherId string    `json:"teacher_id" form:"teacher_id" binding:"required"`
+	ClassIDs  []string  `json:"class_ids" form:"class_ids" binding:"required"`
+	Duration  TimeRange `json:"duration" form:"duration" binding:"required"`
+	Page      int       `json:"page" form:"page" binding:"required"`
+	PageSize  int       `json:"page_size" form:"page_size" binding:"required"`
 }
 type TeacherLoadMissedLessonsResponse struct {
 	List  []*TeacherLoadMissedLesson `json:"list"`
@@ -13,10 +13,10 @@ type TeacherLoadMissedLessonsResponse struct {
 }
 
 type TeacherLoadMissedLesson struct {
-	LessonType  string `gorm:"column:class_type;type:varchar(1024);not null" json:"class_type"`
-	LessonName  string `gorm:"column:title;type:varchar(1024);not null" json:"title"`
-	ClassId     string `gorm:"column:class_id;type:varchar(1024);not null" json:"class_id"`
-	NoOfStudent int    `gorm:"column:no_of_student;type:int;not null" json:"no_of_student"`
-	StartDate   int64  `gorm:"column:start_date;type:bigint;not null" json:"start_date"`
-	EndDate     int64  `gorm:"column:end_date;type:bigint;not null" json:"end_date"`
+	LessonType  string `gorm:"column:class_type" json:"class_type"`
+	LessonName  string `gorm:"column:title" json:"title"`
+	ClassId     string `gorm:"column:class_id" json:"class_id"`
+	NoOfStudent int    `gorm:"column:no_of_student" json:"no_of_student"`
+	StartDate   int64  `gorm:"column:start_date" json:"start_date"`
+	EndDate     int64  `gorm:"column:end_date" json:"end_date"`
 }
