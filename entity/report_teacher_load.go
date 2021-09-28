@@ -17,25 +17,37 @@ type TeacherLoadLessonArgs struct {
 }
 
 type TeacherLoadLesson struct {
-	TeacherID               string `json:"teacher_id"`
-	NumberOfClasses         int    `json:"number_of_classes"`
-	NumberOfStudents        int    `json:"number_of_students"`
-	CompletedLiveLessons    int    `json:"completed_live_Lessons"`
-	CompletedInClassLessons int    `json:"completed_in_class_lessons"`
-	MissedLiveLessons       int    `json:"missed_live_lessons"`
-	MissedInClassLessons    int    `json:"missed_in_class_lessons"`
-	TotalScheduled          int    `json:"total_scheduled"`
+	TeacherID               string `json:"teacher_id" gorm:"-"`
+	NumberOfClasses         int    `json:"number_of_classes" gorm:"-"`
+	NumberOfStudents        int    `json:"number_of_students" gorm:"-"`
+	CompletedLiveLessons    int    `json:"completed_live_Lessons" gorm:"column:live_completed_count"`
+	CompletedInClassLessons int    `json:"completed_in_class_lessons" gorm:"column:in_class_completed_count"`
+	MissedLiveLessons       int    `json:"missed_live_lessons" gorm:"column:live_missed_count"`
+	MissedInClassLessons    int    `json:"missed_in_class_lessons" gorm:"column:in_class_missed_count"`
+	TotalScheduled          int    `json:"total_scheduled" gorm:"column:total_schedule"`
 }
 
 type SummaryNode struct {
 	Count    int `json:"count"`
 	Duration int `json:"duration"`
 }
+
 type TeacherLoadLessonSummary struct {
 	CompletedLiveLessons    SummaryNode `json:"completed_live_lessons"`
 	CompletedInClassLessons SummaryNode `json:"completed_in_class_lessons"`
 	MissedLiveLessons       SummaryNode `json:"missed_live_lessons"`
 	MissedInClassLessons    SummaryNode `json:"missed_in_class_lessons"`
+}
+
+type TeacherLoadLessonSummaryFields struct {
+	LiveCompletedCount       int `json:"live_completed_count" gorm:"column:live_completed_count"`
+	LiveCompletedDuration    int `json:"live_completed_duration" gorm:"column:live_completed_duration"`
+	InClassCompletedCount    int `json:"in_class_completed_count" gorm:"column:in_class_completed_count"`
+	InClassCompletedDuration int `json:"in_class_completed_duration" gorm:"column:in_class_completed_duration"`
+	LiveMissedCount          int `json:"live_missed_count" gorm:"column:live_missed_count"`
+	LiveMissedDuration       int `json:"live_missed_duration" gorm:"column:live_missed_duration"`
+	InClassMissedCount       int `json:"in_class_missed_count" gorm:"column:in_class_missed_count"`
+	InClassMissedDuration    int `json:"in_class_missed_duration" gorm:"column:in_class_missed_duration"`
 }
 
 type TeacherLoadLessonListResponse struct {

@@ -106,8 +106,6 @@ func (s *Server) summaryTeacherLoadLessons(c *gin.Context) {
 // @Router /reports/teacher_load/missed_lessons [post]
 func (s *Server) listTeacherMissedLessons(c *gin.Context) {
 	ctx := c.Request.Context()
-	op := s.getOperator(c)
-
 	var request entity.TeacherLoadMissedLessonsRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
@@ -117,15 +115,7 @@ func (s *Server) listTeacherMissedLessons(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	args, err := request.Validate(ctx, op)
-	if err != nil {
-		log.Error(ctx, "summaryTeacherLoadMissedLessons: validate failed",
-			log.Err(err),
-			log.Any("request", request))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
-	result, err := model.GetReportModel().MissedLessonsList(ctx, op, &args)
+	result, err := model.GetReportModel().MissedLessonsList(ctx, &request)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
