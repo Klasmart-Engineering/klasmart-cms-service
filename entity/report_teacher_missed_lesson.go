@@ -15,7 +15,7 @@ type TeacherLoadMissedLessonsResponse struct {
 type TeacherLoadMissedLesson struct {
 	LessonType  string `gorm:"column:class_type" json:"class_type"`
 	LessonName  string `gorm:"column:title" json:"title"`
-	ClassId     string `gorm:"column:class_id" json:"class_id"`
+	ClassID     string `gorm:"column:class_id" json:"class_id"`
 	NoOfStudent int    `gorm:"column:no_of_student" json:"no_of_student"`
 	StartDate   int64  `gorm:"column:start_date" json:"start_date"`
 	EndDate     int64  `gorm:"column:end_date" json:"end_date"`
