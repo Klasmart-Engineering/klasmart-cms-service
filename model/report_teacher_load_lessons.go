@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -42,7 +43,7 @@ func (t *reportModel) ListTeacherLoadLessons(ctx context.Context, op *entity.Ope
 			load.TotalScheduled = mapTeacherLoadLesson[tid].TotalScheduled
 		}
 		if mapTeacherClassWithStudent[tid] != nil {
-			counter := mapTeacherClassWithStudent[tid].CountClassAndStudent(ctx)
+			counter := mapTeacherClassWithStudent[tid].CountClassAndStudent(ctx, args.ClassIDs)
 			load.NumberOfClasses = counter.Class
 			load.NumberOfStudents = counter.Student
 		}
