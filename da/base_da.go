@@ -22,6 +22,10 @@ type BaseDA struct {
 	dbo.BaseDA
 }
 
+func (BaseDA) getPlaceHolder(length int) string {
+	return strings.TrimRight(strings.Repeat("?,", length), ",")
+}
+
 func (s BaseDA) BatchInsert(ctx context.Context, models ...entity.BatchInsertModeler) (err error) {
 	db, err := dbo.GetDB(ctx)
 	if err != nil {

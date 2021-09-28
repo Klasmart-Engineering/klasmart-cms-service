@@ -1,21 +1,11 @@
 package entity
 
-import (
-	"context"
-)
-
-type TeacherLoadMissedLessonsRequest TeacherLoadMissedLessonsArgs
-
-func (t TeacherLoadMissedLessonsRequest) Validate(ctx context.Context, op *Operator) (TeacherLoadMissedLessonsArgs, error) {
-	return TeacherLoadMissedLessonsArgs(t), nil
-}
-
-type TeacherLoadMissedLessonsArgs struct {
-	TeacherId  string    `json:"teacher_id" form:"teacher_id"`
-	ClassIDs   []string  `json:"class_ids" form:"class_ids"`
-	Duration   TimeRange `json:"duration" form:"duration"`
-	PageNumber int       `json:"page_number" form:"page_number"`
-	PageSize   int       `json:"page_size" form:"page_size"`
+type TeacherLoadMissedLessonsRequest struct {
+	TeacherId string    `json:"teacher_id" form:"teacher_id" binding:"required"`
+	ClassIDs  []string  `json:"class_ids" form:"class_ids" binding:"required"`
+	Duration  TimeRange `json:"duration" form:"duration" binding:"required"`
+	Page      int       `json:"page" form:"page" binding:"required"`
+	PageSize  int       `json:"page_size" form:"page_size" binding:"required"`
 }
 type TeacherLoadMissedLessonsResponse struct {
 	List  []*TeacherLoadMissedLesson `json:"list"`
@@ -23,10 +13,10 @@ type TeacherLoadMissedLessonsResponse struct {
 }
 
 type TeacherLoadMissedLesson struct {
-	LessonType  string `json:"lesson_type" form:"lesson_type"`
-	LessonName  string `json:"lesson_name" form:"lesson_name"`
-	ClassName   string `json:"class_name" form:"class_name"`
-	NoOfStudent int    `json:"no_of_student" form:"no_of_student"`
-	StartDate   int64  `json:"start_date" form:"start_date"`
-	EndDate     int64  `json:"end_date" form:"end_date"`
+	LessonType  string `gorm:"column:class_type" json:"class_type"`
+	LessonName  string `gorm:"column:title" json:"title"`
+	ClassID     string `gorm:"column:class_id" json:"class_id"`
+	NoOfStudent int    `gorm:"column:no_of_student" json:"no_of_student"`
+	StartDate   int64  `gorm:"column:start_date" json:"start_date"`
+	EndDate     int64  `gorm:"column:end_date" json:"end_date"`
 }

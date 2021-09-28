@@ -27,7 +27,7 @@ func (s *Server) listTeacherLoadLessons(c *gin.Context) {
 	var request entity.TeacherLoadLessonRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
-		log.Error(ctx, "summaryTeacherLoadLessons: ShouldBindQuery failed",
+		log.Error(ctx, "listTeacherLoadLessons: ShouldBindQuery failed",
 			log.Err(err),
 			log.Any("request", request))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -35,13 +35,13 @@ func (s *Server) listTeacherLoadLessons(c *gin.Context) {
 	}
 	args, err := request.Validate(ctx, op)
 	if err != nil {
-		log.Error(ctx, "summaryTeacherLoadLessons: validate failed",
+		log.Error(ctx, "listTeacherLoadLessons: validate failed",
 			log.Err(err),
 			log.Any("request", request))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	result, err := model.GetTeacherLoadLessonsModel().List(ctx, op, &args)
+	result, err := model.GetReportModel().ListTeacherLoadLessons(ctx, op, &args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -83,7 +83,7 @@ func (s *Server) summaryTeacherLoadLessons(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	result, err := model.GetTeacherLoadLessonsModel().Summary(ctx, op, &args)
+	result, err := model.GetReportModel().SummaryTeacherLoadLessons(ctx, op, &args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -106,8 +106,6 @@ func (s *Server) summaryTeacherLoadLessons(c *gin.Context) {
 // @Router /reports/teacher_load/missed_lessons [post]
 func (s *Server) listTeacherMissedLessons(c *gin.Context) {
 	ctx := c.Request.Context()
-	op := s.getOperator(c)
-
 	var request entity.TeacherLoadMissedLessonsRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
@@ -117,15 +115,7 @@ func (s *Server) listTeacherMissedLessons(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	args, err := request.Validate(ctx, op)
-	if err != nil {
-		log.Error(ctx, "summaryTeacherLoadMissedLessons: validate failed",
-			log.Err(err),
-			log.Any("request", request))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
-	result, err := model.GetTeacherLoadLessonsModel().MissedLessonsList(ctx, op, &args)
+	result, err := model.GetReportModel().MissedLessonsList(ctx, &request)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)

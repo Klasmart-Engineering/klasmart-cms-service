@@ -20,7 +20,7 @@ func TestStudentUsageRecordInJwt(t *testing.T) {
 			ContentType:       "",
 			ActionType:        "",
 			Timestamp:         0,
-			Students: []entity.Student{
+			Students: []*entity.Student{
 				{
 					UserID: "b1af180f-b2ca-48a5-93b7-10641aebb2ed",
 					Email:  "qa+stress_t1@calmid.com",
