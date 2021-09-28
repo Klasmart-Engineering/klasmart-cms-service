@@ -87,8 +87,13 @@ query {
 		return nil, err
 	}
 	result := make(map[string]*TeacherClassWithStudent, len(data))
-	for _, v := range data {
-		result[v.UserID] = v
+	for i, v := range data {
+		log.Debug(ctx, "BatchGetClassWithStudent: extract result",
+			log.String("index", i),
+			log.Any("data", v))
+		if v != nil {
+			result[v.UserID] = v
+		}
 	}
 	return result, nil
 }
@@ -108,10 +113,13 @@ type TeacherClassWithStudentCounter struct {
 	Student int
 }
 
-func (tcs TeacherClassWithStudent) CountClassAndStudent(ctx context.Context) TeacherClassWithStudentCounter {
-	classIDs := make([]string, 0, len(tcs.ClassesTeaching))
+func (tcs TeacherClassWithStudent) CountClassAndStudent(ctx context.Context, classIDList []string) TeacherClassWithStudentCounter {
+	classIDs := make([]string, 0, len(classIDList))
 	studentIDs := make([]string, 0)
 	for _, class := range tcs.ClassesTeaching {
+		if !utils.ContainsStr(classIDList, class.ClassID) {
+			continue
+		}
 		classIDs = append(classIDs, class.ClassID)
 		for _, student := range class.Students {
 			studentIDs = append(studentIDs, student.UserID)
