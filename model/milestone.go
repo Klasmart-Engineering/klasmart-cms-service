@@ -288,10 +288,13 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 		var needDeleteOutcomeMilestoneID []string
 		length := len(outcomeAncestors)
 		milestoneOutcomes := make([]*entity.MilestoneOutcome, length)
+		currentTime := time.Now().Unix()
 		for i := range outcomeAncestors {
 			milestoneOutcome := entity.MilestoneOutcome{
 				MilestoneID:     newMilsestone.ID,
 				OutcomeAncestor: outcomeAncestors[i],
+				CreateAt:        currentTime,
+				UpdateAt:        currentTime,
 			}
 			// milestoneOutcomes sort: first in last out
 			milestoneOutcomes[length-1-i] = &milestoneOutcome
