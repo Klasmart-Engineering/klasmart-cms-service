@@ -67,6 +67,7 @@ func (s *Server) addStudentUsageRecordEvent(c *gin.Context) {
 		// temp solution, ops is offline
 		return config.Get().Assessment.AddAssessmentSecret, nil
 	})
+	log.Info(ctx, "/student_usage_record/event", log.Any("req", req))
 	if err != nil {
 		log.Warn(ctx, "jwt.ParseWithClaims failed", log.Err(err), log.Any("jwtToken", jwtToken))
 		err = constant.ErrInvalidArgs
