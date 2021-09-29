@@ -461,6 +461,14 @@ func (m *assessmentModel) fillStudentAssessments(ctx context.Context,
 		return err
 	}
 
+	noneHomeFunScheduleIDs := make([]string, 0, len(schedulesMap))
+	for _, item := range schedulesMap {
+		if item.ClassType == entity.ScheduleClassTypeHomework && item.IsHomeFun {
+			continue
+		}
+		noneHomeFunScheduleIDs = append(noneHomeFunScheduleIDs, item.ID)
+	}
+
 	//query Assessment Comments
 	commentMap, err := m.queryAssessmentComments(ctx, operator, collectedIDs.ScheduleIDs, studentID)
 	if err != nil {
