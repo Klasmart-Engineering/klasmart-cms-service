@@ -659,7 +659,7 @@ func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBCont
 	//获取数量
 	//get folder total
 	query := cd.countFolderContentSQL(query1, query2)
-	err = tx.Raw(query, params1...).Scan(&total).Error
+	err = cd.s.QueryRawSQLTx(ctx, tx, &total, query, params1...)
 	if err != nil {
 		log.Error(ctx, "count raw sql failed", log.Err(err),
 			log.String("query", query), log.Any("params", params1),
@@ -674,20 +674,7 @@ func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBCont
 	orderBy := condition1.GetOrderBy()
 	pager := condition1.GetPager()
 	exSql := cd.appendConditionParamWithOrderAndPage(cd.searchFolderContentSQL(ctx, query1, query2), orderBy, pager)
-	db := tx.Raw(exSql, params1...)
-	//db := tx.Raw(cd.searchFolderContentSQL(ctx, query1, query2), params1...)
-	//orderBy := condition1.GetOrderBy()
-	//if orderBy != "" {
-	//	db = db.Order(orderBy)
-	//}
-	//
-	//pager := condition1.GetPager()
-	//if pager != nil && pager.Enable() {
-	//	// pagination
-	//	offset, limit := pager.Offset()
-	//	db = db.Offset(offset).Limit(limit)
-	//}
-	err = db.Find(&folderContents).Error
+	err = cd.s.QueryRawSQLTx(ctx, tx, &folderContents, exSql, params1...)
 	if err != nil {
 		log.Error(ctx, "query raw sql failed", log.Err(err),
 			log.String("query", query), log.Any("params", params1),
