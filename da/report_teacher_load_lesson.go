@@ -169,11 +169,11 @@ select sc.* from
    	from schedules s
    	inner join schedules_relations sl
     on s.id=sl.schedule_id
-   	where sl.relation_id=@teacherId -- teacherId params
+   	where sl.relation_id=? -- teacherId params
     and s.class_type in ('${OnlineClass}', '${OfflineClass}') 
     and s.delete_at = 0
-  	and s.end_at >= @startDt and s.end_at <@endDt
-    and class_id in (@class_ids)
+  	and s.end_at >= ? and s.end_at <?
+    and class_id in (?)
    	group by sl.schedule_id
    	order by s.end_at desc
 	)
@@ -183,7 +183,7 @@ select sc.* from
 	  select attendance_id from assessments_attendances ast 
      where ast.assessment_id = ass.id and ast.attendance_id=sc.teacher_id
     )
-	LIMIT @pageSize OFFSET @offsetNumber`
+	LIMIT ? OFFSET ?`
 	if request.Page < 0 {
 		request.Page = constant.DefaultPageIndex
 	}
@@ -198,15 +198,12 @@ select sc.* from
 	if err != nil {
 		return
 	}
-	params := map[string]interface{}{"teacherId": request.TeacherId, "startDt": startAt, "endDt": endAt,
-		"class_ids": strings.Join(request.ClassIDs, ","),
-		"pageSize":  request.PageSize, "offsetNumber": (request.Page - 1) * request.PageSize}
-	err = r.QueryRawSQL(ctx, &model, sql, params)
+	err = r.QueryRawSQL(ctx, &model, sql, request.TeacherId, startAt, endAt, request.ClassIDs, request.PageSize, (request.Page-1)*request.PageSize)
 	if err != nil {
 		log.Error(ctx, "exec missedLessonsListInfo sql failed",
 			log.Err(err),
 			log.String("sql", sql),
-			log.Any("params", params))
+			log.Any("params", request))
 		return
 	}
 	return
@@ -221,11 +218,11 @@ select count(*) from
    	from schedules s
    	inner join schedules_relations sl
     on s.id=sl.schedule_id
-   	where sl.relation_id=@teacherId -- teacherId params
+   	where sl.relation_id=? -- teacherId params
     and s.class_type in ('${OnlineClass}', '${OfflineClass}') 
     and s.delete_at = 0
-   	and s.end_at >= @startDt and s.end_at <@endDt
-    and class_id in (@class_ids)
+   	and s.end_at >= ? and s.end_at <?
+    and class_id in (?)
    	group by sl.schedule_id
    	order by s.end_at desc
 	)
@@ -241,15 +238,12 @@ select count(*) from
 	if err != nil {
 		return
 	}
-	params := map[string]interface{}{"teacherId": request.TeacherId, "startDt": startAt, "endDt": endAt,
-		"class_ids": strings.Join(request.ClassIDs, ","),
-		"pageSize":  request.Page, "limitNumber": (request.PageSize - 1) * request.Page}
-	err = r.QueryRawSQL(ctx, &total, sql, params)
+	err = r.QueryRawSQL(ctx, &total, sql, request.TeacherId, startAt, endAt, request.ClassIDs)
 	if err != nil {
 		log.Error(ctx, "exec missedLessonsListTotal sql failed",
 			log.Err(err),
 			log.String("sql", sql),
-			log.Any("params", params))
+			log.Any("params", request))
 		return
 	}
 	return
