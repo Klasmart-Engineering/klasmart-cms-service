@@ -295,6 +295,7 @@ func (c *MilestoneCondition) GetConditions() ([]string, []interface{}) {
 	if !c.IncludeDeleted {
 		wheres = append(wheres, "delete_at=0")
 	}
+
 	return wheres, params
 }
 
@@ -411,8 +412,9 @@ func (c *MilestoneOutcomeCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if !c.IncludeDeleted {
-		wheres = append(wheres, "delete_at is null")
+		wheres = append(wheres, "COALESCE(delete_at, 0) = 0")
 	}
+
 	return wheres, params
 }
 
@@ -456,26 +458,6 @@ func (mso MilestoneOutcomeSQLDA) DeleteTx(ctx context.Context, tx *dbo.DBContext
 				log.String("sql", sql))
 			return err
 		}
-	}
-	return nil
-}
-func (mso MilestoneOutcomeSQLDA) InsertTx(ctx context.Context, tx *dbo.DBContext, milestonesOutcomes []*entity.MilestoneOutcome) error {
-	var models []entity.MilestoneOutcome
-	if len(milestonesOutcomes) > 0 {
-		now := time.Now().Unix()
-		for i := range milestonesOutcomes {
-			tm := now + int64(i)
-			models = append(models, entity.MilestoneOutcome{MilestoneID: milestonesOutcomes[i].MilestoneID,
-				OutcomeAncestor: milestonesOutcomes[i].OutcomeAncestor, CreateAt: tm, UpdateAt: tm})
-		}
-		_, err := mso.Insert(ctx, &models)
-		if err != nil {
-			log.Error(ctx, "batch insert milestoneOutcome: batch insert failed",
-				log.Err(err),
-				log.Any("milestonesOutcomes", milestonesOutcomes))
-			return err
-		}
-		return nil
 	}
 	return nil
 }
