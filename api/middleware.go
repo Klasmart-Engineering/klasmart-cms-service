@@ -204,6 +204,7 @@ func (s Server) recovery() gin.HandlerFunc {
 				}
 
 				log.Error(c.Request.Context(), "[Recovery] panic recovered",
+					log.Any("err", err),
 					log.Stack("stack"),
 					log.Any("operator", s.getOperator(c)),
 					log.String("type", "recovery"),

@@ -2,11 +2,12 @@ package da
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
 )
 
 type IOutcomeAttendanceDA interface {
@@ -35,7 +36,7 @@ type outcomeAttendanceDA struct {
 }
 
 func (d *outcomeAttendanceDA) BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) ([]*entity.OutcomeAttendance, error) {
-	tx.Reset()
+	tx.ResetCondition()
 
 	var items []*entity.OutcomeAttendance
 	if err := tx.
@@ -52,7 +53,7 @@ func (d *outcomeAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext
 		return nil
 	}
 
-	tx.Reset()
+	tx.ResetCondition()
 	var models []entity.OutcomeAttendance
 	for _, item := range items {
 		if item.ID == "" {
@@ -77,7 +78,7 @@ func (*outcomeAttendanceDA) BatchDeleteByAssessmentIDAndOutcomeIDs(ctx context.C
 		return nil
 	}
 
-	tx.Reset()
+	tx.ResetCondition()
 	if err := tx.
 		Where("assessment_id = ?", assessmentID).
 		Where("outcome_id in (?)", outcomeIDs).
@@ -96,7 +97,7 @@ func (d *outcomeAttendanceDA) BatchGetByAssessmentIDs(ctx context.Context, tx *d
 		return nil, nil
 	}
 
-	tx.Reset()
+	tx.ResetCondition()
 	var items []*entity.OutcomeAttendance
 	if err := tx.
 		Where("assessment_id in (?)", assessmentIDs).
@@ -115,7 +116,7 @@ func (d *outcomeAttendanceDA) BatchGetByAssessmentIDsAndAttendanceID(ctx context
 		return nil, nil
 	}
 
-	tx.Reset()
+	tx.ResetCondition()
 	var items []*entity.OutcomeAttendance
 	if err := tx.
 		Where("assessment_id in (?) and attendance_id = ?", assessmentIDs, attendanceID).

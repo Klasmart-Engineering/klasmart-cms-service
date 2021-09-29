@@ -2,11 +2,12 @@ package da
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
 )
 
 type IAssessmentAttendanceDA interface {
@@ -35,7 +36,7 @@ type assessmentAttendanceDA struct {
 }
 
 func (*assessmentAttendanceDA) GetTeacherIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error) {
-	tx.Reset()
+	tx.ResetCondition()
 
 	var (
 		items []*entity.AssessmentAttendance
@@ -56,7 +57,7 @@ func (*assessmentAttendanceDA) GetTeacherIDsByAssessmentID(ctx context.Context, 
 }
 
 func (*assessmentAttendanceDA) GetStudentIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error) {
-	tx.Reset()
+	tx.ResetCondition()
 
 	var (
 		items []*entity.AssessmentAttendance
@@ -101,7 +102,7 @@ func (as *assessmentAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBCon
 
 // Uncheck assessment all students
 func (a *assessmentAttendanceDA) UncheckStudents(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
-	tx.Reset()
+	tx.ResetCondition()
 
 	if err := tx.Model(&entity.AssessmentAttendance{}).Where("assessment_id = ? and role = ?", assessmentID, entity.AssessmentAttendanceRoleStudent).
 		Update("checked", false).
@@ -116,7 +117,7 @@ func (a *assessmentAttendanceDA) UncheckStudents(ctx context.Context, tx *dbo.DB
 }
 
 func (a *assessmentAttendanceDA) BatchCheck(ctx context.Context, tx *dbo.DBContext, assessmentID string, attendanceIDs []string) error {
-	tx.Reset()
+	tx.ResetCondition()
 
 	if len(attendanceIDs) == 0 {
 		return nil

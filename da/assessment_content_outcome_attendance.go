@@ -115,7 +115,7 @@ func (*assessmentContentOutcomeAttendanceDA) BatchDelete(ctx context.Context, tx
 		return nil
 	}
 
-	tx.Reset()
+	tx.ResetCondition()
 	t := &SQLTemplate{}
 	for _, key := range keys {
 		t.Appendf("(assessment_id = ? and content_id = ? and outcome_id = ?)", key.AssessmentID, key.ContentID, key.OutcomeID)
