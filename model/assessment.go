@@ -470,7 +470,7 @@ func (m *assessmentModel) fillStudentAssessments(ctx context.Context,
 	}
 
 	//query Assessment Comments
-	commentMap, err := m.queryAssessmentComments(ctx, operator, collectedIDs.ScheduleIDs, studentID)
+	commentMap, err := m.queryAssessmentComments(ctx, operator, noneHomeFunScheduleIDs, studentID)
 	if err != nil {
 		log.Error(ctx, "queryAssessmentComments failed",
 			log.Err(err),
