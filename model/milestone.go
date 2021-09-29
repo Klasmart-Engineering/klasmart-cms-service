@@ -93,22 +93,27 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 
 		length := len(outcomeAncestors)
 		milestoneOutcomes := make([]*entity.MilestoneOutcome, length)
+		currentTime := time.Now().Unix()
 		for i := range outcomeAncestors {
 			milestoneOutcome := entity.MilestoneOutcome{
 				MilestoneID:     milestone.ID,
 				OutcomeAncestor: outcomeAncestors[i],
+				CreateAt:        currentTime,
+				UpdateAt:        currentTime,
 			}
 			// milestoneOutcomes sort: first in last out
 			milestoneOutcomes[length-1-i] = &milestoneOutcome
 		}
-		err = da.GetMilestoneOutcomeDA().InsertTx(ctx, tx, milestoneOutcomes)
+
+		_, err = da.GetMilestoneOutcomeDA().InsertInBatchesTx(ctx, tx, milestoneOutcomes, len(milestoneOutcomes))
 		if err != nil {
-			log.Error(ctx, "CreateMilestone: Replace failed",
+			log.Error(ctx, "CreateMilestone: da.GetMilestoneOutcomeDA().InsertTx failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Any("milestone", milestone))
+				log.Any("milestoneOutcomes", milestoneOutcomes))
 			return err
 		}
+
 		err = da.GetMilestoneRelationDA().InsertTx(ctx, tx, m.collectRelation(milestone))
 		if err != nil {
 			log.Error(ctx, "CreateMilestone: InsertTx failed",
@@ -301,12 +306,12 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 				log.Any("milestone", oldMilestone))
 			return err
 		}
-		err = da.GetMilestoneOutcomeDA().InsertTx(ctx, tx, milestoneOutcomes)
+		_, err = da.GetMilestoneOutcomeDA().InsertInBatchesTx(ctx, tx, milestoneOutcomes, len(milestoneOutcomes))
 		if err != nil {
-			log.Error(ctx, "Update: InsertTx failed",
+			log.Error(ctx, "Update: da.GetMilestoneOutcomeDA().InsertInBatchesTx failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Any("milestone", milestoneOutcomes))
+				log.Any("milestoneOutcomes", milestoneOutcomes))
 			return err
 		}
 
@@ -612,12 +617,12 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 			milestoneOutcomes[i].MilestoneID = newVersion.ID
 		}
 
-		err = da.GetMilestoneOutcomeDA().InsertTx(ctx, tx, milestoneOutcomes)
+		_, err = da.GetMilestoneOutcomeDA().InsertInBatchesTx(ctx, tx, milestoneOutcomes, len(milestoneOutcomes))
 		if err != nil {
-			log.Error(ctx, "Occupy: InsertTx failed",
+			log.Error(ctx, "Occupy: da.GetMilestoneOutcomeDA().InsertInBatchesTx failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Any("milestone_outcome", milestoneOutcomes))
+				log.Any("milestoneOutcomes", milestoneOutcomes))
 			return err
 		}
 
@@ -1026,12 +1031,13 @@ func (m MilestoneModel) BindToGeneral(ctx context.Context, op *entity.Operator, 
 		CreateAt:        now,
 		UpdateAt:        now,
 	}
-	err = da.GetMilestoneOutcomeDA().InsertTx(ctx, tx, []*entity.MilestoneOutcome{milestoneOutcome})
+
+	_, err = da.GetMilestoneOutcomeDA().InsertTx(ctx, tx, milestoneOutcome)
 	if err != nil {
-		log.Error(ctx, "BindToGeneral: InsertTx failed",
+		log.Error(ctx, "BindToGeneral: da.GetMilestoneOutcomeDA().InsertTx failed",
 			log.Any("op", op),
 			log.Any("general", general),
-			log.Any("outcome", outcome))
+			log.Any("milestoneOutcome", milestoneOutcome))
 		return err
 	}
 	return nil
