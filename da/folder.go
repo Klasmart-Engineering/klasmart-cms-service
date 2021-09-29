@@ -78,6 +78,7 @@ func (fda *FolderDA) UpdateFolder(ctx context.Context, tx *dbo.DBContext, fid st
 }
 
 func (fda *FolderDA) AddFolderItemsCount(ctx context.Context, tx *dbo.DBContext, fid string, addon int) error {
+	tx.ResetCondition()
 	err := tx.Model(&entity.FolderItem{ID: fid}).UpdateColumn("items_count", gorm.Expr("items_count + ?", addon)).Error
 	if err != nil {
 		log.Error(ctx, "update folder items count failed", log.Err(err), log.Int("addon", addon), log.String("fid", fid))
@@ -153,6 +154,7 @@ func (fda *FolderDA) BatchUpdateFolderItemsCount(ctx context.Context, tx *dbo.DB
 	sql = sql + " end) WHERE id IN (?)"
 	params[doubleSize] = ids
 
+	tx.ResetCondition()
 	err := tx.Exec(sql, params...).Error
 	if err != nil {
 		log.Error(ctx,
@@ -187,6 +189,7 @@ func (fda *FolderDA) BatchReplaceFolderPath(ctx context.Context, tx *dbo.DBConte
 	fidsSQL := strings.Join(fidsSQLParts, constant.StringArraySeparator)
 
 	sql := fmt.Sprintf(`UPDATE cms_folder_items SET dir_path = replace(dir_path,?,?) WHERE id IN (%s)`, fidsSQL)
+	tx.ResetCondition()
 	err := tx.Exec(sql, params...).Error
 
 	log.Info(ctx, "update folder",
@@ -222,6 +225,7 @@ func (fda *FolderDA) BatchUpdateFolderPathPrefix(ctx context.Context, tx *dbo.DB
 	fidsSQL := strings.Join(fidsSQLParts, ",")
 
 	sql := fmt.Sprintf(`UPDATE cms_folder_items SET dir_path = CONCAT(?, dir_path) WHERE id IN (%s)`, fidsSQL)
+	tx.ResetCondition()
 	err := tx.Exec(sql, params...).Error
 
 	log.Info(ctx, "update folder",
@@ -239,6 +243,7 @@ func (fda *FolderDA) BatchUpdateFolderPathPrefix(ctx context.Context, tx *dbo.DB
 	return nil
 }
 func (fda *FolderDA) BatchUpdateFolderPathByLink(ctx context.Context, tx *dbo.DBContext, link []string, path entity.Path) error {
+	tx.ResetCondition()
 	err := tx.Model(entity.FolderItem{}).Where("link IN (?)", link).Updates(map[string]interface{}{"path": path}).Error
 	if err != nil {
 		log.Error(ctx, "update folder da failed", log.Err(err), log.Strings("link", link), log.String("path", string(path)))
@@ -252,6 +257,7 @@ func (fda *FolderDA) BatchUpdateFoldersPath(ctx context.Context, tx *dbo.DBConte
 	if len(fids) < 1 {
 		return nil
 	}
+	tx.ResetCondition()
 	err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(entity.FolderItem{DirPath: dirPath, ParentID: dirPath.Parent()}).Error
 	if err != nil {
 		return err
@@ -263,6 +269,7 @@ func (fda *FolderDA) BatchDeleteFolders(ctx context.Context, tx *dbo.DBContext, 
 	if len(fids) < 1 {
 		return nil
 	}
+	tx.ResetCondition()
 	err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(entity.FolderItem{DeleteAt: time.Now().Unix()}).Error
 	if err != nil {
 		return err

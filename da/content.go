@@ -417,6 +417,7 @@ func (cd *DBContentDA) BatchUpdateContentPath(ctx context.Context, tx *dbo.DBCon
 	if len(cids) < 1 {
 		return nil
 	}
+	tx.ResetCondition()
 	err := tx.Model(entity.Content{}).Where("id IN (?)", cids).Updates(entity.Content{DirPath: dirPath, ParentFolder: dirPath.Parent()}).Error
 	if err != nil {
 		return err
@@ -536,6 +537,7 @@ func (cm *DBContentDA) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBCo
 	}
 	fidsSQL := strings.Join(fidsSQLParts, constant.StringArraySeparator)
 
+	tx.ResetCondition()
 	sql := fmt.Sprintf(`UPDATE cms_contents SET dir_path = replace(dir_path,?,?) WHERE id IN (%s)`, fidsSQL)
 	err := tx.Exec(sql, params...).Error
 
@@ -635,6 +637,18 @@ func (cd *DBContentDA) CountFolderContentUnsafe(ctx context.Context, tx *dbo.DBC
 	return total.Total, nil
 }
 
+func (cd *DBContentDA) appendConditionParamWithOrderAndPage(sql string, orderBy string, pager *dbo.Pager) string {
+
+	if orderBy != "" {
+		sql = fmt.Sprintf("%s order by %s", sql, orderBy)
+	}
+	if pager != nil && pager.Enable() {
+		offset, limit := pager.Offset()
+		sql = fmt.Sprintf("%s limit %d offset %d", sql, limit, offset)
+	}
+	return sql
+}
+
 func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 dbo.Conditions) (int, []*entity.FolderContent, error) {
 	query1, params1 := condition1.GetConditions()
 	query2, params2 := condition2.GetConditions()
@@ -645,7 +659,7 @@ func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBCont
 	//获取数量
 	//get folder total
 	query := cd.countFolderContentSQL(query1, query2)
-	err = tx.Raw(query, params1...).Scan(&total).Error
+	err = cd.s.QueryRawSQLTx(ctx, tx, &total, query, params1...)
 	if err != nil {
 		log.Error(ctx, "count raw sql failed", log.Err(err),
 			log.String("query", query), log.Any("params", params1),
@@ -656,19 +670,11 @@ func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBCont
 	//查询
 	//Query
 	folderContents := make([]*entity.FolderContent, 0)
-	db := tx.Raw(cd.searchFolderContentSQL(ctx, query1, query2), params1...)
-	orderBy := condition1.GetOrderBy()
-	if orderBy != "" {
-		db = db.Order(orderBy)
-	}
 
+	orderBy := condition1.GetOrderBy()
 	pager := condition1.GetPager()
-	if pager != nil && pager.Enable() {
-		// pagination
-		offset, limit := pager.Offset()
-		db = db.Offset(offset).Limit(limit)
-	}
-	err = db.Find(&folderContents).Error
+	exSql := cd.appendConditionParamWithOrderAndPage(cd.searchFolderContentSQL(ctx, query1, query2), orderBy, pager)
+	err = cd.s.QueryRawSQLTx(ctx, tx, &folderContents, exSql, params1...)
 	if err != nil {
 		log.Error(ctx, "query raw sql failed", log.Err(err),
 			log.String("query", query), log.Any("params", params1),
