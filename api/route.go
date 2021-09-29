@@ -109,6 +109,7 @@ func (s Server) registeRoute() {
 
 		schedules.POST("/schedules_time_view/dates", s.mustLogin, s.postScheduledDates)
 		schedules.POST("/schedules_time_view", s.mustLogin, s.postScheduleTimeView)
+		schedules.POST("/schedules_time_view/list", s.mustLogin, s.getScheduleTimeViewList)
 	}
 	scheduleFeedback := s.engine.Group("/v1/schedules_feedbacks")
 	{
@@ -148,7 +149,11 @@ func (s Server) registeRoute() {
 		reports.GET("/reports/performance/students", s.mustLogin, s.listStudentsPerformanceReport)
 		reports.GET("/reports/performance/students/:id", s.mustLogin, s.getStudentPerformanceReport)
 
-		reports.GET("/reports/teaching_loading", s.mustLogin, s.listTeachingLoadReport)
+		reports.POST("/reports/teaching_loading", s.mustLogin, s.listTeachingLoadReport)
+		reports.POST("/reports/teacher_load/lessons_list", s.mustLogin, s.listTeacherLoadLessons)
+		reports.POST("/reports/teacher_load/lessons_summary", s.mustLogin, s.summaryTeacherLoadLessons)
+		reports.POST("/reports/teacher_load/assignments", s.mustLogin, s.getTeacherLoadReportOfAssignment)
+		reports.POST("/reports/teacher_load/missed_lessons", s.mustLogin, s.listTeacherMissedLessons)
 
 		reports.GET("/reports/learning_summary/time_filter", s.mustLogin, s.queryLearningSummaryTimeFilter)
 		reports.GET("/reports/learning_summary/remaining_filter", s.mustLogin, s.queryLearningSummaryRemainingFilter)

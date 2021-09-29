@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 	"strings"
 	"sync"
 	"time"
@@ -19,9 +18,8 @@ import (
 type IScheduleRelationDA interface {
 	dbo.DataAccesser
 	Delete(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) error
-	BatchInsert(ctx context.Context, tx *dbo.DBContext, relations []*entity.ScheduleRelation) (int64, error)
+	// Deprecated: Only used to cmd/schedule_migrate/schedule_migrate.go
 	MultipleBatchInsert(ctx context.Context, tx *dbo.DBContext, relations []*entity.ScheduleRelation) (int64, error)
-	//GetRelationIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleRelationCondition) ([]string, error)
 	GetRelationIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleRelationCondition) ([]string, error)
 	DeleteByIDs(ctx context.Context, tx *dbo.DBContext, ids []string) error
 }
@@ -53,6 +51,7 @@ func (s *scheduleRelationDA) GetRelationIDsByCondition(ctx context.Context, tx *
 	return result, nil
 }
 
+// Deprecated: Only used to cmd/schedule_migrate/schedule_migrate.go
 func (s *scheduleRelationDA) MultipleBatchInsert(ctx context.Context, tx *dbo.DBContext, relations []*entity.ScheduleRelation) (int64, error) {
 	total := len(relations)
 	pageSize := constant.ScheduleRelationBatchInsertCount
@@ -65,25 +64,16 @@ func (s *scheduleRelationDA) MultipleBatchInsert(ctx context.Context, tx *dbo.DB
 			end = total
 		}
 		data := relations[start:end]
-		row, err := s.BatchInsert(ctx, tx, data)
+		batchSize := len(data)
+		_, err := s.InsertInBatchesTx(ctx, tx, data, batchSize)
 		if err != nil {
 			return rowsAffected, err
 		}
-		rowsAffected += row
-	}
-	return rowsAffected, nil
-}
 
-func (s *scheduleRelationDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, relations []*entity.ScheduleRelation) (int64, error) {
-	if len(relations) <= 0 {
-		return 0, nil
+		rowsAffected += int64(batchSize)
 	}
-	_, err := s.Insert(ctx, &relations)
-	if err != nil {
-		logger.Error(ctx, "db exec batchInsert scheduleRelation sql error", log.Any("values", relations), log.Err(err))
-		return 0, err
-	}
-	return int64(len(relations)), nil
+
+	return rowsAffected, nil
 }
 
 func (s *scheduleRelationDA) Delete(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) error {

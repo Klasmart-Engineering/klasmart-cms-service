@@ -110,7 +110,7 @@ func TestQueryUnsafe(t *testing.T) {
 		IDs:               entity.NullStrings{Strings: []string{"60f929bb7604f720d1943c33", "60f92bd0f964d549bf922b46"}, Valid: true},
 		RelationSchoolIDs: entity.NullStrings{Strings: []string{"60f929bb7604f720d1943c33", "60f92bd0f964d549bf922b46"}, Valid: true},
 		ClassTypes:        entity.NullStrings{Strings: []string{string(entity.ScheduleClassTypeHomework), string(entity.ScheduleClassTypeLabelOnlineClass)}, Valid: true},
-		IsHomefun:         sql.NullBool{false, true},
+		IsHomefun:         sql.NullBool{Bool: false, Valid: true},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -126,5 +126,44 @@ func TestRemoveResourceMetadata(t *testing.T) {
 	err := removeResourceMetadata(ctx, "schedule_attachment-6125d6e648bee33deac23bcc.jpg")
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestGetRepeatResult(t *testing.T) {
+	ctx := context.TODO()
+	m := &scheduleModel{}
+	r, err := m.getRepeatResult(ctx, 1632639194, 1632649980, &entity.RepeatOptions{
+		Type: "daily",
+		Daily: entity.RepeatDaily{
+			Interval: 1,
+			End: entity.RepeatEnd{
+				Type:       "after_time",
+				AfterCount: 1,
+				AfterTime:  1642649980,
+			},
+		},
+	}, time.Local)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, v := range r {
+		t.Log(v)
+	}
+}
+
+func TestQueryScheduleTimeView(t *testing.T) {
+	schedules, err := GetScheduleModel().QueryScheduleTimeView(context.TODO(),
+		&entity.ScheduleTimeViewQuery{
+			ViewType: "month",
+			TimeAt:   1632378161,
+		},
+		&entity.Operator{}, time.Now().Location())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, v := range schedules {
+		t.Log(v)
 	}
 }

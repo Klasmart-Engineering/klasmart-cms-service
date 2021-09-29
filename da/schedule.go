@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
-	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -19,15 +18,12 @@ import (
 
 type IScheduleDA interface {
 	dbo.DataAccesser
-	BatchInsert(context.Context, *dbo.DBContext, []*entity.Schedule) (int64, error)
-	MultipleBatchInsert(ctx context.Context, tx *dbo.DBContext, schedules []*entity.Schedule) (int64, error)
 	SoftDelete(ctx context.Context, tx *dbo.DBContext, id string, operator *entity.Operator) error
 	DeleteWithFollowing(ctx context.Context, tx *dbo.DBContext, repeatID string, startAt int64) error
 	GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
 	UpdateProgram(ctx context.Context, tx *sql.Tx, orgID string, oldProgramID string, newProgramID string) error
 	UpdateSubject(ctx context.Context, tx *sql.Tx, orgID string, oldSubjectID string, oldProgramID string, newSubjectID string) error
 	GetPrograms(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
-	//GetSubjects(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
 	GetClassTypes(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
 	GetTeachLoadByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]*ScheduleTeachLoadDBResult, error)
 }
@@ -62,31 +58,6 @@ func (s *scheduleDA) GetPrograms(ctx context.Context, tx *dbo.DBContext, conditi
 	return result, nil
 }
 
-//func (s *scheduleDA) GetSubjects(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error) {
-//	wheres, parameters := condition.GetConditions()
-//	whereSql := strings.Join(wheres, " and ")
-//	var scheduleList []*entity.Schedule
-//	err := tx.Table(constant.TableNameSchedule).Select("distinct subject_id").Where(whereSql, parameters...).Find(&scheduleList).Error
-//	if gorm.IsRecordNotFoundError(err) {
-//		return nil, constant.ErrRecordNotFound
-//	}
-//	if err != nil {
-//		log.Error(ctx, "get programs ids from db error",
-//			log.Err(err),
-//			log.Any("condition", condition),
-//		)
-//		return nil, err
-//	}
-//	var result = make([]string, 0, len(scheduleList))
-//	for _, item := range scheduleList {
-//		if item.SubjectID == "" {
-//			continue
-//		}
-//		result = append(result, item.SubjectID)
-//	}
-//	log.Debug(ctx, "SubjectIDs", log.Strings("SubjectIDs", result))
-//	return result, nil
-//}
 func (s *scheduleDA) GetClassTypes(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error) {
 	wheres, parameters := condition.GetConditions()
 	whereSql := strings.Join(wheres, " and ")
@@ -111,67 +82,6 @@ func (s *scheduleDA) GetClassTypes(ctx context.Context, tx *dbo.DBContext, condi
 	}
 	log.Debug(ctx, "class_type", log.Strings("class_type", result))
 	return result, nil
-}
-
-func (s *scheduleDA) MultipleBatchInsert(ctx context.Context, tx *dbo.DBContext, schedules []*entity.Schedule) (int64, error) {
-	total := len(schedules)
-	pageSize := constant.ScheduleBatchInsertCount
-	pageCount := (total + pageSize - 1) / pageSize
-	var rowsAffected int64
-	for i := 0; i < pageCount; i++ {
-		start := i * pageSize
-		end := (i + 1) * pageSize
-		if end >= total {
-			end = total
-		}
-		data := schedules[start:end]
-		row, err := s.BatchInsert(ctx, tx, data)
-		if err != nil {
-			return rowsAffected, err
-		}
-		rowsAffected += row
-	}
-	return rowsAffected, nil
-}
-
-func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, schedules []*entity.Schedule) (int64, error) {
-	var models []entity.Schedule
-	for _, item := range schedules {
-		models = append(models, entity.Schedule{
-			ID:           item.ID,
-			Title:        item.Title,
-			ClassID:      item.ClassID,
-			LessonPlanID: item.LessonPlanID,
-			OrgID:        item.OrgID,
-			StartAt:      item.StartAt,
-			EndAt:        item.EndAt,
-			Status:       item.Status,
-			IsAllDay:     item.IsAllDay,
-			//SubjectID:item.SubjectID,
-			ProgramID:       item.ProgramID,
-			ClassType:       item.ClassType,
-			DueAt:           item.DueAt,
-			Description:     item.Description,
-			Attachment:      item.Attachment,
-			ScheduleVersion: item.ScheduleVersion,
-			RepeatID:        item.RepeatID,
-			RepeatJson:      item.RepeatJson,
-			CreatedID:       item.CreatedID,
-			UpdatedID:       item.UpdatedID,
-			DeletedID:       item.DeletedID,
-			CreatedAt:       item.CreatedAt,
-			UpdatedAt:       item.UpdatedAt,
-			DeleteAt:        item.DeleteAt,
-			IsHomeFun:       item.IsHomeFun,
-			IsHidden:        item.IsHidden,
-		})
-	}
-	_, err := s.Insert(ctx, &models)
-	if err != nil {
-		logger.Error(ctx, "db exec batchInsert Schedule sql error", log.Any("values", models), log.Err(err))
-		return 0, err
-	}
-	return int64(len(schedules)), nil
 }
 
 func (s *scheduleDA) DeleteWithFollowing(ctx context.Context, tx *dbo.DBContext, repeatID string, startAt int64) error {

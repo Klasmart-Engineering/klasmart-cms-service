@@ -1136,6 +1136,23 @@ func (s *Server) getSubjectsInScheduleFilter(c *gin.Context) {
 	ctx := c.Request.Context()
 	programID := c.Query("program_id")
 
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ViewSubjects20115)
+	if err != nil {
+		log.Error(ctx, "getSubjectsInScheduleFilter: HasOrganizationPermission failed",
+			log.Any("op", op),
+			log.String("perm", string(external.ViewSubjects20115)),
+			log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "getSubjectsInScheduleFilter: HasOrganizationPermission failed",
+			log.Any("op", op),
+			log.String("perm", string(external.ViewSubjects20115)))
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+		return
+	}
+
 	subjects, err := model.GetScheduleModel().GetSubjects(ctx, op, programID)
 	switch err {
 	case nil:
@@ -1266,6 +1283,45 @@ func (s *Server) postScheduledDates(c *gin.Context) {
 	log.Info(ctx, "getScheduleTimeView: time_zone_offset", log.Any("data", data), log.Any("loc", loc))
 
 	result, err := model.GetScheduleModel().QueryScheduledDates(ctx, data, op, loc)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	default:
+		s.defaultErrorHandler(c, err)
+	}
+}
+
+// @Summary getScheduleTimeViewList
+// @ID getScheduleTimeViewList
+// @Description get schedule time view list without relation info
+// @Accept json
+// @Produce json
+// @Param queryData body entity.ScheduleTimeViewQuery true "schedule time view data to query"
+// @Tags schedule
+// @Success 200 {object} entity.ScheduleTimeView
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules_time_view/list [post]
+func (s *Server) getScheduleTimeViewList(c *gin.Context) {
+	op := s.getOperator(c)
+	ctx := c.Request.Context()
+
+	data := new(entity.ScheduleTimeViewQuery)
+	if err := c.ShouldBind(data); err != nil {
+		log.Error(ctx, "getScheduleList: should bind body failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	loc := utils.GetTimeLocationByOffset(data.TimeZoneOffset)
+	log.Info(ctx, "getScheduleList: time_zone_offset", log.Any("data", data), log.Any("loc", loc))
+
+	result, err := model.GetScheduleModel().QueryScheduleTimeView(ctx, data, op, loc)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)

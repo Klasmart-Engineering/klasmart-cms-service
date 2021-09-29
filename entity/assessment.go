@@ -5,6 +5,8 @@ const (
 	AssessmentTypeLive         AssessmentType = "live"
 	AssessmentTypeStudy        AssessmentType = "study"
 	AssessmentTypeHomeFunStudy AssessmentType = "home_fun_study"
+
+	AssessmentTypeStudyH5p AssessmentType = "study_h5p"
 )
 
 type AssessmentScheduleType struct {

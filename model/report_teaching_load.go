@@ -33,25 +33,7 @@ func GetReportTeachingLoadModel() IReportTeachingLoadModel {
 type reportTeachingLoadModel struct{}
 
 func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.ReportListTeachingLoadArgs) (*entity.ReportListTeachingLoadResult, error) {
-	// clean args
 	var err error
-	if args, err = m.cleanAndValidListArgs(ctx, tx, operator, args); err != nil {
-		log.Error(ctx, "ListTeachingLoadReport: checker.SearchAndCheckTeachers: search failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("args", args),
-		)
-		return nil, err
-	}
-
-	if len(args.TeacherIDs) == 0 {
-		log.Error(ctx, "ListTeachingLoadReport: not found teachers",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("args", args),
-		)
-		return nil, nil
-	}
 
 	// prepend time ranges
 	var (
@@ -75,9 +57,6 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 		ClassIDs:   args.ClassIDs,
 		TeacherIDs: args.TeacherIDs,
 		TimeRanges: ranges,
-	}
-	if args.SchoolID != "" {
-		input.SchoolIDs = []string{args.SchoolID}
 	}
 	log.Debug(ctx, "ListTeachingLoadReport: print call schedule args",
 		log.Any("input", input),
@@ -166,132 +145,4 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 	sort.Sort(entity.ReportListTeachingLoadItemsSortByTeacherName(r.Items))
 
 	return &r, nil
-}
-
-func (m *reportTeachingLoadModel) cleanAndValidListArgs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.ReportListTeachingLoadArgs) (*entity.ReportListTeachingLoadArgs, error) {
-	if args.SchoolID == "" {
-		args.SchoolID = string(entity.ListTeachingLoadReportOptionAll)
-	}
-	if len(args.ClassIDs) == 0 {
-		args.ClassIDs = append(args.ClassIDs, string(entity.ListTeachingLoadReportOptionAll))
-	}
-	if len(args.TeacherIDs) == 0 {
-		args.TeacherIDs = append(args.TeacherIDs, string(entity.ListTeachingLoadReportOptionAll))
-	}
-
-	checker := NewReportPermissionChecker(operator)
-	if err := checker.Search(ctx); err != nil {
-		log.Error(ctx, "cleanAndValidListArgs: checker.Search: search failed",
-			log.Err(err),
-			log.Any("args", args),
-		)
-		return nil, err
-	}
-
-	switch args.SchoolID {
-	case string(entity.ListTeachingLoadReportOptionAll):
-		args.SchoolID = ""
-		if args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
-			args.ClassIDs = nil
-			if checker.HasMyOrgPermission() {
-				schools, err := external.GetSchoolServiceProvider().GetByOrganizationID(ctx, operator, operator.OrgID)
-				if err != nil {
-					return nil, err
-				}
-				schoolIDs := make([]string, 0, len(schools))
-				for _, s := range schools {
-					schoolIDs = append(schoolIDs, s.ID)
-				}
-				m, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, operator, schoolIDs)
-				if err != nil {
-					return nil, err
-				}
-				for _, cc := range m {
-					for _, c := range cc {
-						args.ClassIDs = append(args.ClassIDs, c.ID)
-					}
-				}
-				classes, err := external.GetClassServiceProvider().GetOnlyUnderOrgClasses(ctx, operator, operator.OrgID)
-				if err != nil && err != constant.ErrRecordNotFound {
-					return nil, err
-				}
-				for _, c := range classes {
-					args.ClassIDs = append(args.ClassIDs, c.ID)
-				}
-			} else if checker.HasMySchoolPermission() {
-				schools, err := external.GetSchoolServiceProvider().GetByOperator(ctx, operator)
-				if err != nil {
-					return nil, err
-				}
-				schoolIDs := make([]string, 0, len(schools))
-				for _, s := range schools {
-					schoolIDs = append(schoolIDs, s.ID)
-				}
-				m, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, operator, schoolIDs)
-				if err != nil {
-					return nil, err
-				}
-				for _, cc := range m {
-					for _, c := range cc {
-						args.ClassIDs = append(args.ClassIDs, c.ID)
-					}
-				}
-			}
-		}
-	case string(entity.ListTeachingLoadReportOptionNoAssigned):
-		args.SchoolID = ""
-		if args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
-			args.ClassIDs = nil
-			classes, err := external.GetClassServiceProvider().GetOnlyUnderOrgClasses(ctx, operator, operator.OrgID)
-			if err != nil && err != constant.ErrRecordNotFound {
-				return nil, err
-			}
-			for _, c := range classes {
-				args.ClassIDs = append(args.ClassIDs, c.ID)
-			}
-		}
-	default:
-		if args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
-			args.ClassIDs = nil
-			m, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, operator, []string{args.SchoolID})
-			if err != nil {
-				return nil, err
-			}
-			for _, cc := range m {
-				for _, c := range cc {
-					args.ClassIDs = append(args.ClassIDs, c.ID)
-				}
-			}
-		}
-	}
-
-	if args.TeacherIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
-		args.TeacherIDs = nil
-		teachersMap, err := external.GetTeacherServiceProvider().GetByClasses(ctx, operator, args.ClassIDs)
-		if err != nil {
-			return nil, err
-		}
-		for _, tt := range teachersMap {
-			for _, t := range tt {
-				args.TeacherIDs = append(args.TeacherIDs, t.ID)
-			}
-		}
-	}
-
-	args.TeacherIDs = utils.SliceDeduplicationExcludeEmpty(args.TeacherIDs)
-	args.ClassIDs = utils.SliceDeduplicationExcludeEmpty(args.ClassIDs)
-
-	if len(args.ClassIDs) > 0 && args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
-		args.ClassIDs = nil
-	}
-
-	if ok := checker.CheckTeachers(args.TeacherIDs); !ok {
-		log.Error(ctx, "cleanAndValidListArgs: checker.CheckTeachers",
-			log.Any("args", args),
-			log.Strings("teacher_ids", args.TeacherIDs),
-		)
-		return nil, constant.ErrForbidden
-	}
-
-	return args, nil
 }

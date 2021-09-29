@@ -826,3 +826,14 @@ type ScheduleQueryCondition struct {
 	CreateAtLt         sql.NullInt64
 	DeleteAt           sql.NullInt64
 }
+
+type ScheduleTimeView struct {
+	ID        string            `json:"id"`
+	Title     string            `json:"title"`
+	StartAt   int64             `json:"start_at"`
+	EndAt     int64             `json:"end_at"`
+	DueAt     int64             `json:"due_at"`
+	ClassType ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
+	Status    ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
+	ClassID   string            `json:"class_id"`
+}

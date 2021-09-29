@@ -149,6 +149,7 @@ type HomeFunStudyOutcome struct {
 type HomeFunStudyOutcomeStatus string
 
 const (
+	HomeFunStudyOutcomeStatusDefault      HomeFunStudyOutcomeStatus = "default"
 	HomeFunStudyOutcomeStatusAchieved     HomeFunStudyOutcomeStatus = "achieved"
 	HomeFunStudyOutcomeStatusNotAchieved  HomeFunStudyOutcomeStatus = "not_achieved"
 	HomeFunStudyOutcomeStatusNotAttempted HomeFunStudyOutcomeStatus = "not_attempted"
