@@ -4,11 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sync"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"sync"
-	"time"
 )
 
 type RelationSqlDA struct {
@@ -36,11 +37,18 @@ func (a RelationSqlDA) InsertTx(ctx context.Context, tx *dbo.DBContext, table st
 		now := time.Now().Unix()
 		var models []entity.MilestoneRelation
 		for i := range relations {
-			models = append(models, entity.MilestoneRelation{Relation: entity.Relation{MasterID: relations[i].MasterID,
-				RelationID: relations[i].RelationID, RelationType: relations[i].RelationType,
-				MasterType: relations[i].MasterType, CreateAt: now + int64(i), UpdateAt: now + int64(i)}})
+			models = append(models, entity.MilestoneRelation{
+				Relation: entity.Relation{
+					MasterID:     relations[i].MasterID,
+					RelationID:   relations[i].RelationID,
+					RelationType: relations[i].RelationType,
+					MasterType:   relations[i].MasterType,
+					CreateAt:     now + int64(i),
+					UpdateAt:     now + int64(i),
+				},
+			})
 		}
-		_, err := a.Insert(ctx, &models)
+		_, err := a.InsertInBatchesTx(ctx, tx, &models, len(models))
 		if err != nil {
 			log.Error(ctx, "db exec batchInsert milestones_relations sql error",
 				log.Err(err),
