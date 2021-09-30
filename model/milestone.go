@@ -93,7 +93,7 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 
 		length := len(outcomeAncestors)
 		milestoneOutcomes := make([]*entity.MilestoneOutcome, length)
-		currentTime := time.Now().Unix()
+		currentTime := time.Now().Unix() + int64(length)
 		for i := range outcomeAncestors {
 			milestoneOutcome := entity.MilestoneOutcome{
 				MilestoneID:     milestone.ID,
@@ -104,7 +104,7 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 			// milestoneOutcomes sort: first in last out
 			milestoneOutcomes[length-1-i] = &milestoneOutcome
 
-			currentTime++
+			currentTime--
 		}
 
 		_, err = da.GetMilestoneOutcomeDA().InsertInBatchesTx(ctx, tx, milestoneOutcomes, len(milestoneOutcomes))
@@ -290,7 +290,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 		var needDeleteOutcomeMilestoneID []string
 		length := len(outcomeAncestors)
 		milestoneOutcomes := make([]*entity.MilestoneOutcome, length)
-		currentTime := time.Now().Unix()
+		currentTime := time.Now().Unix() + int64(length)
 		for i := range outcomeAncestors {
 			milestoneOutcome := entity.MilestoneOutcome{
 				MilestoneID:     newMilsestone.ID,
@@ -300,7 +300,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			}
 			// milestoneOutcomes sort: first in last out
 			milestoneOutcomes[length-1-i] = &milestoneOutcome
-			currentTime++
+			currentTime--
 		}
 
 		needDeleteOutcomeMilestoneID = append(needDeleteOutcomeMilestoneID, oldMilestone.ID)
@@ -621,6 +621,7 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 
 		for i := range milestoneOutcomes {
 			milestoneOutcomes[i].MilestoneID = newVersion.ID
+			milestoneOutcomes[i].ID = 0
 		}
 
 		_, err = da.GetMilestoneOutcomeDA().InsertInBatchesTx(ctx, tx, milestoneOutcomes, len(milestoneOutcomes))
