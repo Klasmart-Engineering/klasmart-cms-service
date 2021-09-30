@@ -70,12 +70,12 @@ func (t *reportModel) SummaryTeacherLoadLessons(ctx context.Context, op *entity.
 }
 func (t *reportModel) MissedLessonsList(ctx context.Context, request *entity.TeacherLoadMissedLessonsRequest) (response *entity.TeacherLoadMissedLessonsResponse, err error) {
 	response = new(entity.TeacherLoadMissedLessonsResponse)
-	da := da.GetReportDA()
-	list, err := da.MissedLessonsListInfo(ctx, request)
+	reportDA := da.GetReportDA()
+	list, err := reportDA.MissedLessonsListInfo(ctx, request)
 	if err != nil {
 		return nil, err
 	}
-	total, err := da.MissedLessonsListTotal(ctx, request)
+	total, err := reportDA.MissedLessonsListTotal(ctx, request)
 	if err != nil {
 		return nil, err
 	}

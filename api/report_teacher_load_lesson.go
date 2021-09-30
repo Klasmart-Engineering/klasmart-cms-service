@@ -1,11 +1,13 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 // @Summary get teacher load Report
@@ -114,6 +116,12 @@ func (s *Server) listTeacherMissedLessons(c *gin.Context) {
 			log.Any("request", request))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
+	}
+	if request.Page <= 0 {
+		request.Page = constant.DefaultPageIndex
+	}
+	if request.PageSize <= 0 {
+		request.PageSize = constant.DefaultPageSize
 	}
 	result, err := model.GetReportModel().MissedLessonsList(ctx, &request)
 	switch err {
