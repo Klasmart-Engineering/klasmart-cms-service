@@ -103,6 +103,8 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 			}
 			// milestoneOutcomes sort: first in last out
 			milestoneOutcomes[length-1-i] = &milestoneOutcome
+
+			currentTime++
 		}
 
 		_, err = da.GetMilestoneOutcomeDA().InsertInBatchesTx(ctx, tx, milestoneOutcomes, len(milestoneOutcomes))
@@ -298,6 +300,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			}
 			// milestoneOutcomes sort: first in last out
 			milestoneOutcomes[length-1-i] = &milestoneOutcome
+			currentTime++
 		}
 
 		needDeleteOutcomeMilestoneID = append(needDeleteOutcomeMilestoneID, oldMilestone.ID)
