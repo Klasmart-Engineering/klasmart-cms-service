@@ -2,11 +2,11 @@ package da
 
 import (
 	"context"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"strings"
 )
 
 type ITeacherLoadLesson interface {
@@ -184,12 +184,7 @@ select sc.* from
      where ast.assessment_id = ass.id and ast.attendance_id=sc.teacher_id
     )
 	LIMIT ? OFFSET ?`
-	if request.Page < 0 {
-		request.Page = constant.DefaultPageIndex
-	}
-	if request.PageSize < 0 {
-		request.PageSize = constant.DefaultPageSize
-	}
+
 	sql = strings.Replace(sql, "${OnlineClass}", entity.ScheduleClassTypeOnlineClass.String(), -1)
 	sql = strings.Replace(sql, "${OfflineClass}", entity.ScheduleClassTypeOfflineClass.String(), -1)
 	sql = strings.Replace(sql, "${class_roster_student}", entity.ScheduleRelationTypeClassRosterStudent.String(), -1)
