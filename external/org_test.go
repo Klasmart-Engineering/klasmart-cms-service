@@ -2,6 +2,7 @@ package external
 
 import (
 	"context"
+	"fmt"
 	"testing"
 )
 
@@ -28,7 +29,7 @@ func TestOrganizationService_BatchGet(t *testing.T) {
 }
 
 func TestAmsOrganizationService_GetNameByOrganizationOrSchool(t *testing.T) {
-	ids := []string{"9e285fc9-50fd-4cf2-ba5b-3f191c3338b4", "ac341b5f-a5f8-44a4-8b43-c0ff21d337b2"}
+	ids := []string{"92db7ddd-1f23-4f64-bd47-94f6d34a50c0", "92db7ddd-1f23-4f64-bd47-94f6d34a50c0"}
 	names, err := GetOrganizationServiceProvider().GetNameByOrganizationOrSchool(context.TODO(), testOperator, ids)
 	if err != nil {
 		t.Errorf("GetOrganizationServiceProvider().GetNameByOrganizationOrSchool() error = %v", err)
@@ -38,6 +39,9 @@ func TestAmsOrganizationService_GetNameByOrganizationOrSchool(t *testing.T) {
 	if len(names) != len(ids) {
 		t.Error("GetOrganizationServiceProvider().GetNameByOrganizationOrSchool() get empty slice")
 		return
+	}
+	for i := range names {
+		fmt.Printf("%#v\n", names[i])
 	}
 }
 
