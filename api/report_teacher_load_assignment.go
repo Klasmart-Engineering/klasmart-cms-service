@@ -3,6 +3,8 @@ package api
 import (
 	"net/http"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -11,12 +13,12 @@ import (
 
 // @Summary list teaching load report
 // @Description list teaching load report
-// @Tags reports/teacher_load
+// @Tags reports/teacherLoad
 // @ID getTeacherLoadReportOfAssignment
 // @Accept json
 // @Produce json
 // @Param request body entity.TeacherLoadAssignmentRequest true "request "
-// @Success 200 {object} entity.TeacherLoadAssignmentResponse
+// @Success 200 {object} []entity.TeacherLoadAssignmentResponseItem
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -47,10 +49,9 @@ func (s *Server) getTeacherLoadReportOfAssignment(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	//res, err := model.GetReportModel().GetStudentUsageMaterialViewCount(ctx, op, &req)
-	//if err != nil {
-	//	return
-	//}
-	_ = op
-	c.JSON(http.StatusOK, entity.TeacherLoadAssignmentResponse{})
+	res, err := model.GetReportModel().GetTeacherLoadReportOfAssignment(ctx, op, &req)
+	if err != nil {
+		return
+	}
+	c.JSON(http.StatusOK, res)
 }

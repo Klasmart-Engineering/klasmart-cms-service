@@ -15,10 +15,12 @@ require (
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/google/uuid v1.2.0 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/hgfischer/go-otp v1.0.0
 	github.com/jinzhu/gorm v1.9.16
 	github.com/leodido/go-urn v1.2.1 // indirect
+	github.com/lib/pq v1.5.2 // indirect
+	github.com/mattn/go-sqlite3 v2.0.1+incompatible // indirect
 	github.com/onsi/ginkgo v1.14.0 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
@@ -32,25 +34,27 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	gitlab.badanamu.com.cn/calmisland/chlorine v0.1.6
 	gitlab.badanamu.com.cn/calmisland/common-cn v0.17.0
-	gitlab.badanamu.com.cn/calmisland/common-log v0.1.4
-	gitlab.badanamu.com.cn/calmisland/dbo v0.1.10
+	gitlab.badanamu.com.cn/calmisland/common-log v0.1.6
+	gitlab.badanamu.com.cn/calmisland/dbo v0.3.0
 	gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13
 	gitlab.badanamu.com.cn/calmisland/imq v0.2.18
 	gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.10
 	gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20210813055601-f0a5d22461a0
 	go.etcd.io/etcd v3.3.25+incompatible // indirect
-	go.mongodb.org/mongo-driver v1.4.0
-	go.uber.org/multierr v1.6.0 // indirect
-	go.uber.org/zap v1.16.0
+	go.mongodb.org/mongo-driver v1.7.2
+	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/multierr v1.7.0 // indirect
+	go.uber.org/zap v1.19.1
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
-	golang.org/x/net v0.0.0-20210410081132-afb366fc7cd1
-	golang.org/x/sys v0.0.0-20210403161142-5e06dd20ab57 // indirect
-	google.golang.org/genproto v0.0.0-20210406143921-e86de6bf7a46 // indirect
-	google.golang.org/grpc v1.37.0 // indirect
+	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
+	golang.org/x/net v0.0.0-20210924054057-cf34111cab4d
+	golang.org/x/sys v0.0.0-20210923061019-b8560ed6a9b7 // indirect
+	golang.org/x/text v0.3.7 // indirect
+	google.golang.org/genproto v0.0.0-20210924002016-3dee208752a0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/yaml.v2 v2.4.0
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gorm.io/gorm v1.21.15 // indirect
 )
 
 replace (

@@ -111,6 +111,7 @@ func initOperator(orgID string, authTo string, authCode string) *entity.Operator
 func TestMain(m *testing.M) {
 	config.Set(&config.Config{
 		AMS: config.AMSConfig{
+			//EndPoint: "https://api.beta.kidsloop.net/user/",
 			EndPoint: "https://api.alpha.kidsloop.net/user/",
 		},
 		H5P: config.H5PServiceConfig{
@@ -118,9 +119,10 @@ func TestMain(m *testing.M) {
 		},
 	})
 	testOperator = &entity.Operator{
-		UserID: "14494c07-0d4f-5141-9db2-15799993f448",
-		OrgID:  "a44da070-1907-46c4-bc4c-f26ced889439", // Badanamu HQ
-		Token:  "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjdiYmQzYTc4LTJkM2QtNGM1MC1hZWYyLTViY2M2Njc1NmRmMSIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYzMTg0Nzc3OCwiaXNzIjoia2lkc2xvb3AifQ.fiJMWtJW8PuoC2NynMPXoBtGx0c-P8gzQiS3_ZQpofkb2OLIIxbBbnvT2WBBDILHshs1RHYRm0nimBLHUU4iu2U4ZAaOdDYtnna4ONeby3WKh8VWWlD_aCZZzlKeGW1qqimrSrv7d0m-lZmT9GGovuk0hwlGyFLwsGl2scsxyJ3sS7amXZWjGKKOZyrMyPoD42X6OWPtjUtehiId5mzzUvruF2SbbZ1DW0TCNbZ0ifEDnd11aCl1GEeBm5RcEyAxKSYoqTESuF28PoWdK-mSxvaJXPU7rFdGmqWeJLgTRh6BgOYfxO7_V4VcHfnZaySuEhZ0C_BTHflfSaVUfJ98pg",
+		UserID: "130ca9b7-32e3-4436-ab8b-8d492a033633",
+		OrgID:  "92db7ddd-1f23-4f64-bd47-94f6d34a50c0", // Badanamu HQ
+		//Token:  "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI1MjJlYWUwLTVmNzItNDVkMS05OGY2LTM1ODI3YWI4MTZhNyIsImVtYWlsIjoib3Jna2lkc2xvb3AxQHlvcG1haWwuY29tIiwiZXhwIjoxNjIyNjIxNTU2LCJpc3MiOiJraWRzbG9vcCJ9.h70Xq63TvRLJxZZ8-5sxxPTChjRwzNcG9KJ5rnRg66iDZ1HLfouI4W1ED6eJ6lzJqJdIdkL3nKGdXM-ePtXfctd8vGBmm2TBuk4C2fq_zX9R5N7MzHVS1wzbRzD3D-U_tLLY-_JmEV2ECgoajoFpHP2DkUuVA-qu1AubdFDLc9VS9ETbdNtEFQw0eF3x4eEiuT7WVKx3VX-FQLw0IJF0CMlNYSoWAWPxIqG7M5VwzTX1OPwG2eZXpwQ7RozPQWE7Sft1dQt9TvHPkj40xC7UgNB637wTB5-MUxJRNNIrNfcsJHOtro_ZT8JR7GnQWAf24Xmt2oOkFDDT68KVJ0yH2g",
+		Token: "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEzMGNhOWI3LTMyZTMtNDQzNi1hYjhiLThkNDkyYTAzMzYzMyIsImVtYWlsIjoibW95YW5AeW9wbWFpbC5jb20iLCJleHAiOjE2MzI3MTM3MDIsImlzcyI6ImtpZHNsb29wIn0.AUSifGVRSxns41Ok7hIG15iouO7bHAPaiWIXUHz0KeA_E5UwvGlb229eNOgnvkBbQxqShoGNDQoZxRVt5k-L3_OHoiIpS9hwnp8Hx5S6HXMe1YRg8BxqSjl2YGtZhjF6nzcRO477qqalBAPsdKQvXCcyTIGMGyMomp5EyercdrRXCXJ2wg-YFysJ_vuInVmYL1leaf3B80D8qwS6QuHn_jJ5OEOPnzxNn5mlgqtzMyIbB7YeYxalfhWX-Pn2r1YF-n2D4XIcKNsMNbQUlyqxVoTldVUoxMdujyERX6Qi4kxNql3IXxnPGg42zlACFYtC5wr5kTNIiDw9LOSJk2ZB8g",
 	}
 	ro.SetConfig(&redis.Options{Addr: "127.0.0.1:6379"})
 	initQuerier(context.Background())

@@ -22,6 +22,10 @@ type BaseDA struct {
 	dbo.BaseDA
 }
 
+func (BaseDA) getPlaceHolder(length int) string {
+	return strings.TrimRight(strings.Repeat("?,", length), ",")
+}
+
 func (s BaseDA) BatchInsert(ctx context.Context, models ...entity.BatchInsertModeler) (err error) {
 	db, err := dbo.GetDB(ctx)
 	if err != nil {
@@ -36,7 +40,7 @@ func (s BaseDA) BatchInsertTx(ctx context.Context, tx *dbo.DBContext, models ...
 		return
 	}
 	value := models[0]
-	tbName := tx.NewScope(value).TableName()
+	tbName := tx.GetTableName(value)
 
 	var insertCols []string
 	var insertValues []interface{}

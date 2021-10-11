@@ -295,6 +295,7 @@ func (c *MilestoneCondition) GetConditions() ([]string, []interface{}) {
 	if !c.IncludeDeleted {
 		wheres = append(wheres, "delete_at=0")
 	}
+
 	return wheres, params
 }
 
@@ -411,8 +412,9 @@ func (c *MilestoneOutcomeCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if !c.IncludeDeleted {
-		wheres = append(wheres, "delete_at is null")
+		wheres = append(wheres, "COALESCE(delete_at, 0) = 0")
 	}
+
 	return wheres, params
 }
 
@@ -453,32 +455,6 @@ func (mso MilestoneOutcomeSQLDA) DeleteTx(ctx context.Context, tx *dbo.DBContext
 			log.Error(ctx, "DeleteTx: exec del sql failed",
 				log.Err(err),
 				log.Strings("milestone", milestoneIDs),
-				log.String("sql", sql))
-			return err
-		}
-	}
-	return nil
-}
-func (mso MilestoneOutcomeSQLDA) InsertTx(ctx context.Context, tx *dbo.DBContext, milestonesOutcomes []*entity.MilestoneOutcome) error {
-	table := entity.MilestoneOutcome{}.TableName()
-	if len(milestonesOutcomes) > 0 {
-		values := make([][]interface{}, len(milestonesOutcomes))
-		now := time.Now().Unix()
-		for i := range milestonesOutcomes {
-			tm := now + int64(i)
-			values[i] = []interface{}{
-				milestonesOutcomes[i].MilestoneID,
-				milestonesOutcomes[i].OutcomeAncestor,
-				tm,
-				tm,
-			}
-		}
-		sql, results := SQLBatchInsert(table, []string{"milestone_id", "outcome_ancestor", "create_at", "update_at"}, values)
-		err := tx.Exec(sql, results...).Error
-		if err != nil {
-			log.Error(ctx, "InsertTx: exec insert sql failed",
-				log.Err(err),
-				log.Any("milestonesOutcomes", milestonesOutcomes),
 				log.String("sql", sql))
 			return err
 		}

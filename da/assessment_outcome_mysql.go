@@ -2,11 +2,12 @@ package da
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
 )
 
 type IAssessmentOutcomeDA interface {
@@ -33,23 +34,21 @@ type assessmentOutcomeDA struct {
 	dbo.BaseDA
 }
 
-func (*assessmentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentOutcome) error {
+func (as *assessmentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentOutcome) error {
 	if len(items) == 0 {
 		log.Debug(ctx, "batch insert assessment outcome: no items")
 		return nil
 	}
-	var (
-		columns = []string{"id", "assessment_id", "outcome_id", "skip", "none_achieved", "checked"}
-		matrix  [][]interface{}
-	)
+	var models []entity.AssessmentOutcome
 	for _, item := range items {
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		matrix = append(matrix, []interface{}{item.ID, item.AssessmentID, item.OutcomeID, item.Skip, item.NoneAchieved, item.Checked})
+		models = append(models, entity.AssessmentOutcome{ID: item.ID, AssessmentID: item.AssessmentID,
+			OutcomeID: item.OutcomeID, Skip: item.Skip, NoneAchieved: item.NoneAchieved, Checked: item.Checked})
 	}
-	format, values := SQLBatchInsert(entity.AssessmentOutcome{}.TableName(), columns, matrix)
-	if err := tx.Exec(format, values...).Error; err != nil {
+	_, err := as.InsertTx(ctx, tx, &models)
+	if err != nil {
 		log.Error(ctx, "batch insert assessments_outcomes: batch insert failed",
 			log.Err(err),
 			log.Any("items", items),
@@ -60,6 +59,8 @@ func (*assessmentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, 
 }
 
 func (*assessmentOutcomeDA) DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
+	tx.ResetCondition()
+
 	if err := tx.Where("assessment_id", assessmentID).Delete(entity.AssessmentOutcome{}).Error; err != nil {
 		log.Error(ctx, "delete outcomes by id: delete failed from db",
 			log.Err(err),
@@ -71,6 +72,8 @@ func (*assessmentOutcomeDA) DeleteByAssessmentID(ctx context.Context, tx *dbo.DB
 }
 
 func (*assessmentOutcomeDA) UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item *entity.AssessmentOutcome) error {
+	tx.ResetCondition()
+
 	changes := map[string]interface{}{
 		"skip":          item.Skip,
 		"none_achieved": item.NoneAchieved,
@@ -91,6 +94,8 @@ func (*assessmentOutcomeDA) UpdateByAssessmentIDAndOutcomeID(ctx context.Context
 }
 
 func (*assessmentOutcomeDA) UncheckByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
+	tx.ResetCondition()
+
 	changes := map[string]interface{}{
 		"checked": false,
 	}

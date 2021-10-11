@@ -1399,7 +1399,7 @@ func (f *FolderModel) handleMoveFolders(ctx context.Context, tx *dbo.DBContext,
 
 		err = f.updateSubFolderItems(ctx, tx, folders[i],
 			descendantIDs,
-			descendantFolderMap.FolderChildrenPathMap[folders[i].ID])
+			descendantFolderMap.FolderDirPathMap[folders[i].ID])
 		if err != nil {
 			log.Error(ctx, "updateSubFolderItems failed", log.Err(err),
 				log.Strings("ids", descendantIDs),
@@ -1981,8 +1981,9 @@ func (f *FolderModel) getDescendantItemsMapByFolders(ctx context.Context, folder
 		log.Error(ctx, "search folder failed", log.Err(err), log.Strings("path", pathList))
 		return nil, err
 	}
-	folderMap := make(map[string][]*entity.FolderItem)
-	folderPath := make(map[string]entity.Path)
+	folderMap := make(map[string][]*entity.FolderItem, len(folders))
+	folderPath := make(map[string]entity.Path, len(folders))
+	folderDirPath := make(map[string]entity.Path, len(folders))
 	for i := range folders {
 		subFolders := make([]*entity.FolderItem, 0)
 		for j := range items {
@@ -1991,15 +1992,14 @@ func (f *FolderModel) getDescendantItemsMapByFolders(ctx context.Context, folder
 			}
 		}
 		folderMap[folders[i].ID] = subFolders
-
-		// fix NKL-1220: sub folder missing after moved
-		folderPath[folders[i].ID] = folders[i].DirPath
-		// fix NKL-1220: sub folder missing after moved
+		folderPath[folders[i].ID] = folders[i].ChildrenPath()
+		folderDirPath[folders[i].ID] = folders[i].DirPath
 	}
 
 	return &entity.FolderDescendantItemsAndPath{
 		DescendantFoldersMap:  folderMap,
 		FolderChildrenPathMap: folderPath,
+		FolderDirPathMap:      folderDirPath,
 	}, nil
 }
 

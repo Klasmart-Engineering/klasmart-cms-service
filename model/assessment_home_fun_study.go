@@ -800,6 +800,7 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 			OutcomeID:    o.OutcomeID,
 			Skip:         o.Status == entity.HomeFunStudyOutcomeStatusNotAttempted,
 			Checked:      true,
+			NoneAchieved: o.Status == entity.HomeFunStudyOutcomeStatusNotAchieved,
 		}
 		if err := da.GetAssessmentOutcomeDA().UpdateByAssessmentIDAndOutcomeID(ctx, tx, &e); err != nil {
 			log.Error(ctx, "assess home fun study: update assessment outcome failed",

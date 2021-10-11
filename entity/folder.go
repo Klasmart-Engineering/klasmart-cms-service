@@ -225,7 +225,8 @@ type UpdateFolderItemsCountRequest struct {
 
 type FolderDescendantItemsAndPath struct {
 	DescendantFoldersMap  map[string][]*FolderItem
-	FolderChildrenPathMap map[string]Path
+	FolderChildrenPathMap map[string]Path // for example: c is located /a/b/  map[c]Path = /a/b/c
+	FolderDirPathMap      map[string]Path // for example: c is located /a/b/  map[c]Path = /a/b
 }
 
 type Path string

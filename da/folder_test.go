@@ -3,6 +3,7 @@ package da
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/go-redis/redis"
@@ -23,7 +24,8 @@ func initDB() {
 		c.ShowSQL = true
 		c.MaxIdleConns = 2
 		c.MaxOpenConns = 4
-		c.ConnectionString = "root:root@tcp(127.0.0.1:3306)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local"
+		//c.ConnectionString = "root:Passw0rd@tcp(127.0.0.1:3306)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local"
+		c.ConnectionString = os.Getenv("connection_string")
 	})
 	if err != nil {
 		log.Error(context.TODO(), "create dbo failed", log.Err(err))
@@ -159,4 +161,23 @@ func TestBatchUpdatePathPrefix(t *testing.T) {
 		return
 	}
 	t.Log("done")
+}
+
+func TestGorm2TB(t *testing.T) {
+	dbo.WithShowSQL(true)
+	ctx := context.Background()
+	tx := dbo.MustGetDB(ctx)
+	//err := tx.Order("update_at desc").Limit(1).Exec("select * from cms_contents where delete_at=0", &entity.Content{}).Error
+	err := tx.Select("* from cms_contents where delete_at=0").Order("update_at desc").Limit(1).Find(&entity.Content{}).Error
+
+	//err := tx.Select("update cms_contents set delete_at = delete_at").Order("update_at desc").Limit(1).Find(&entity.Content{}).Error
+	//err := tx.Raw("select * from cms_contents where delete_at=0").Order("update_at desc").Limit(1).Find(&entity.Content{}).Error
+
+	//"where  order by "
+	//db = db.Order("update_at desc")
+	//db = db.Limit(1)
+	//err := db.Find(&entity.Content{}).Error
+	if err != nil {
+		t.Fatal(err)
+	}
 }

@@ -53,7 +53,7 @@ func (s *Server) createMilestone(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	err = model.GetMilestoneModel().Create(ctx, op, milestone, utils.SliceDeduplication(data.OutcomeAncestorIDs))
+	err = model.GetMilestoneModel().Create(ctx, op, milestone, utils.StableSliceDeduplication(data.OutcomeAncestorIDs))
 	data.MilestoneID = milestone.ID
 	switch err {
 	case nil:
@@ -167,7 +167,7 @@ func (s *Server) updateMilestone(c *gin.Context) {
 		s.defaultErrorHandler(c, err)
 		return
 	}
-	err = model.GetMilestoneModel().Update(ctx, op, perms, milestone, utils.SliceDeduplication(data.OutcomeAncestorIDs))
+	err = model.GetMilestoneModel().Update(ctx, op, perms, milestone, utils.StableSliceDeduplication(data.OutcomeAncestorIDs))
 	switch err {
 	case constant.ErrOperateNotAllowed:
 		log.Warn(ctx, "updateMilestone: Update failed", log.Any("op", op), log.Any("req", data))

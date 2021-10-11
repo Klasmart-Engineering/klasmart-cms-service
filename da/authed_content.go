@@ -41,21 +41,20 @@ func (ac *AuthedContentDA) BatchAddAuthedContent(ctx context.Context, tx *dbo.DB
 		return nil
 	}
 	createAt := time.Now().Unix()
-	columns := []string{
-		"id", "org_id", "content_id", "from_folder_id", "creator", "create_at", "duration",
-	}
-	var matrix [][]interface{}
+	var models []entity.AuthedContentRecord
 	for _, item := range req {
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		matrix = append(matrix, []interface{}{item.ID, item.OrgID, item.ContentID, item.FromFolderID, item.Creator, createAt, item.Duration})
+		models = append(models, entity.AuthedContentRecord{ID: item.ID, ContentID: item.ContentID,
+			FromFolderID: item.FromFolderID, Creator: item.Creator, CreateAt: createAt,
+			Duration: item.Duration})
 	}
-	format, values := SQLBatchInsert(entity.AuthedContentRecord{}.TableName(), columns, matrix)
-	if err := tx.Exec(format, values...).Error; err != nil {
+	_, err := ac.s.Insert(ctx, &models)
+	if err != nil {
 		log.Error(ctx, "batch insert cms_authed_contents: batch insert failed",
 			log.Err(err),
-			log.Any("items", matrix),
+			log.Any("items", req),
 		)
 		return err
 	}
@@ -63,6 +62,7 @@ func (ac *AuthedContentDA) BatchAddAuthedContent(ctx context.Context, tx *dbo.DB
 }
 func (ac *AuthedContentDA) BatchDeleteAuthedContent(ctx context.Context, tx *dbo.DBContext, orgID string, contentIDs []string) error {
 	now := time.Now().Unix()
+	tx.ResetCondition()
 	err := tx.Model(&entity.AuthedContentRecord{}).Where("org_id = ? and content_id in (?)", orgID, contentIDs).Updates(entity.AuthedContentRecord{DeleteAt: now}).Error
 	if err != nil {
 		log.Error(ctx, "batch delete cms_authed_contents: batch delete failed",
@@ -82,6 +82,7 @@ func (ac *AuthedContentDA) BatchDeleteAuthedContentByOrgs(ctx context.Context, t
 		where = where + " and from_folder_id in (?)"
 		params = append(params, folderIDs)
 	}
+	tx.ResetCondition()
 	//err := tx.Model(&entity.AuthedContentRecord{}).Where("org_id in (?) and content_id in (?)", orgIDs, contentIDs).Updates(entity.AuthedContentRecord{DeleteAt: now}).Error
 	err := tx.Model(&entity.AuthedContentRecord{}).Where(where, params...).Updates(entity.AuthedContentRecord{DeleteAt: now}).Error
 	if err != nil {
@@ -95,6 +96,7 @@ func (ac *AuthedContentDA) BatchDeleteAuthedContentByOrgs(ctx context.Context, t
 	return nil
 }
 func (ac *AuthedContentDA) ReplaceContentID(ctx context.Context, tx *dbo.DBContext, oldContentIDs []string, newContentID string) error {
+	tx.ResetCondition()
 	err := tx.Model(&entity.AuthedContentRecord{}).Where(" content_id in (?)", oldContentIDs).Updates(entity.AuthedContentRecord{ContentID: newContentID}).Error
 	if err != nil {
 		log.Error(ctx, "batch replace cms_authed_contents: replace failed",

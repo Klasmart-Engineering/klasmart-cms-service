@@ -218,7 +218,8 @@ query($user_id: ID!, $permission: ID!) {
 		return false, err
 	}
 	buf := buffer.Buffer{}
-	err = temp.Execute(&buf, orgIDs)
+
+	err = temp.Execute(&buf, utils.SliceDeduplication(orgIDs))
 	if err != nil {
 		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
 		return false, err
@@ -254,7 +255,7 @@ query($user_id: ID!, $permission: ID!) {
 		log.Any("hasPermission", payload))
 
 	for _, v := range payload {
-		if v.CheckAllowed == true {
+		if v.CheckAllowed {
 			return true, nil
 		}
 	}
@@ -283,7 +284,8 @@ query($user_id: ID!, $permission: ID!) {
 		return false, err
 	}
 	buf := buffer.Buffer{}
-	err = temp.Execute(&buf, schoolIDs)
+
+	err = temp.Execute(&buf, utils.SliceDeduplication(schoolIDs))
 	if err != nil {
 		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
 		return false, err
@@ -319,7 +321,7 @@ query($user_id: ID!, $permission: ID!) {
 		log.Any("hasPermission", payload))
 
 	for _, v := range payload {
-		if v.CheckAllowed == true {
+		if v.CheckAllowed {
 			return true, nil
 		}
 	}
