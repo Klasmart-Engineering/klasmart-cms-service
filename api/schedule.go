@@ -543,7 +543,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 		loc := utils.GetTimeLocationByOffset(offset)
 		log.Debug(ctx, "time location", log.Any("location", loc), log.Int("offset", offset))
 		startAt = utils.TodayZeroByTimeStamp(startAt, loc).Unix()
-		condition.StartAtGe = sql.NullInt64{
+		condition.StartAtAndDueAtGe = sql.NullInt64{
 			Int64: startAt,
 			Valid: startAt > 0,
 		}
