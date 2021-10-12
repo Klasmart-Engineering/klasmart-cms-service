@@ -31,16 +31,7 @@ select
 	sr.relation_id as class_id,
 	1 as is_home_fun ,
 	UNIX_TIMESTAMP() - IF(hfs.due_at <= 0,hfs.create_at,hfs.due_at) - 7*24*60*60 as pending_seconds	
-from (
-	select 
-		schedule_id,
-		teacher_ids,
-		status,
-		max(due_at) due_at,
-		max(create_at) create_at 
-	from home_fun_studies	
-	group by schedule_id,teacher_ids,status
-) hfs 
+from  home_fun_studies hfs 
 inner join schedules_relations sr on
 		hfs.schedule_id = sr.schedule_id
 where hfs.status=?
@@ -59,7 +50,7 @@ union
 	sql := fmt.Sprintf(`
 select 	 
 	t.teacher_id,
-	count(distinct t.schedule_id) as count_of_pending_assignment,
+	count(1) as count_of_pending_assignment,
 	avg(if(t.pending_seconds<0,0,t.pending_seconds))/(24*60*60) as  avg_days_of_pending_assignment
 from 
 (
