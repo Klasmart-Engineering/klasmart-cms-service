@@ -113,7 +113,7 @@ func (m *reportModel) GetTeacherLoadReportOfAssignment(ctx context.Context, op *
 		}
 		for _, item := range items {
 			if sc, ok := mCompleteCountStudy[item.TeacherID]; ok {
-				item.CountOfScheduledAssignment += sc.CountOfCompletedAssignment
+				item.CountOfCompletedAssignment += sc.CountOfCompletedAssignment
 				item.CountOfCommentedAssignment += sc.CountOfCommentedAssignment
 			}
 		}
