@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
 
@@ -28,6 +29,23 @@ func (s *Server) getDevelopmental(c *gin.Context) {
 
 	programID := c.Query("program_id")
 	subjectIDQuery := c.Query("subject_ids")
+
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ViewSubjects20115)
+	if err != nil {
+		log.Error(ctx, "getDevelopmental: HasOrganizationPermission failed",
+			log.Any("op", operator),
+			log.String("perm", string(external.ViewSubjects20115)),
+			log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "getDevelopmental: HasOrganizationPermission failed",
+			log.Any("op", operator),
+			log.String("perm", string(external.ViewSubjects20115)))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
+		return
+	}
 
 	if subjectIDQuery == "" {
 		if programID == "" {
