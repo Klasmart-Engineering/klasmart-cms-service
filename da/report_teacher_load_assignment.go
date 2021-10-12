@@ -30,6 +30,7 @@ select
 	? as teacher_id,
 	sr.relation_id as class_id,
 	1 as is_home_fun ,
+	student_id,
 	UNIX_TIMESTAMP() - IF(hfs.due_at <= 0,hfs.create_at,hfs.due_at) - 7*24*60*60 as pending_seconds	
 from  home_fun_studies hfs 
 inner join schedules_relations sr on
@@ -37,7 +38,7 @@ inner join schedules_relations sr on
 where hfs.status=?
 and sr.relation_type = ?
 and JSON_contains(teacher_ids,?) 
-union
+union 
 `
 		args = append(
 			args,
@@ -61,6 +62,7 @@ from
 		sr.relation_id as teacher_id,
 		sr2.relation_id as class_id,
 		0 as is_home_fun,
+		sr3.relation_id as student_id,
 		UNIX_TIMESTAMP() - IF(s.due_at <= 0,s.created_at,s.due_at) - 7*24*60*60  as pending_seconds				 			 
 	from
 		schedules s
