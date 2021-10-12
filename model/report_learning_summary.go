@@ -163,34 +163,35 @@ func (l *learningSummaryReportModel) QueryRemainingFilter(ctx context.Context, t
 	permissionMap := l.mustGetLearningSummaryReportPermissionMap(ctx, operator)
 	logOperatorField := log.Any("operator", operator)
 	permissionMapField := log.Any("permissions", permissionMap)
-	switch t := args.FilterType; {
-	case t == entity.LearningSummaryFilterTypeSchool && permissionMap[external.ReportLearningSummarySchool]:
+	switch  {
+	case args.FilterType == entity.LearningSummaryFilterTypeSchool && permissionMap[external.ReportLearningSummarySchool]:
 		return l.queryRemainingFilterSchool(ctx, tx, operator)
-	case t == entity.LearningSummaryFilterTypeClass:
+	case args.FilterType == entity.LearningSummaryFilterTypeClass:
 		var teacherIDs []string
 		if len(args.TeacherID) > 0 {
 			teacherIDs = append(teacherIDs, args.TeacherID)
 		}
 		return l.queryRemainingFilterClass(ctx, tx, operator, args.SchoolIDs, teacherIDs)
-	case t == entity.LearningSummaryFilterTypeTeacher && permissionMap[external.ReportLearningSummaryTeacher]:
+	case args.FilterType == entity.LearningSummaryFilterTypeTeacher && permissionMap[external.ReportLearningSummaryTeacher]:
 		var classIDs []string
 		if len(args.ClassID) > 0 {
 			classIDs = append(classIDs, args.ClassID)
 		}
 		return l.queryRemainingFilterTeacher(ctx, tx, operator, classIDs)
-	case t == entity.LearningSummaryFilterTypeStudent && permissionMap[external.ReportLearningSummaryStudent]:
+	case args.FilterType == entity.LearningSummaryFilterTypeStudent && permissionMap[external.ReportLearningSummaryStudent]:
 		var classIDs []string
 		if len(args.ClassID) > 0 {
 			classIDs = append(classIDs, args.ClassID)
 		}
 		return l.queryRemainingFilterStudent(ctx, tx, operator, classIDs)
-	case t == entity.LearningSummaryFilterTypeSubject && permissionMap[external.ReportLearningSummmaryOrg]:
+	case args.FilterType == entity.LearningSummaryFilterTypeSubject && permissionMap[external.ReportLearningSummmaryOrg]:
 		return l.queryRemainingFilterSubject(ctx, tx, operator, args)
 	default:
 		log.Error(ctx, "query remaining filter: invalid filter type or wrong permission",
-			logOperatorField, permissionMapField, log.String("filter_type", string(t)))
+			logOperatorField, permissionMapField, log.String("filter_type", args.FilterType.String()))
 		return nil, constant.ErrForbidden
 	}
+
 }
 
 func (l *learningSummaryReportModel) queryRemainingFilterSchool(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator) ([]*entity.QueryLearningSummaryRemainingFilterResultItem, error) {
@@ -545,7 +546,7 @@ func (l *learningSummaryReportModel) batchGetScheduleRelationIDs(ctx context.Con
 	if len(relationTypes) > 0 {
 		cond.RelationTypes.Valid = true
 		for _, r := range relationTypes {
-			cond.RelationTypes.Strings = append(cond.RelationTypes.Strings, string(r))
+			cond.RelationTypes.Strings = append(cond.RelationTypes.Strings, r.String())
 		}
 	}
 	relations, err := GetScheduleRelationModel().Query(ctx, operator, &cond)
@@ -847,9 +848,9 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 		scheduleCondition.ClassTypes.Valid = true
 		switch typo {
 		case entity.LearningSummaryTypeLiveClass:
-			scheduleCondition.ClassTypes.Strings = append(scheduleCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeOnlineClass))
+			scheduleCondition.ClassTypes.Strings = append(scheduleCondition.ClassTypes.Strings, entity.ScheduleClassTypeOnlineClass.String())
 		case entity.LearningSummaryTypeAssignment:
-			scheduleCondition.ClassTypes.Strings = append(scheduleCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeHomework))
+			scheduleCondition.ClassTypes.Strings = append(scheduleCondition.ClassTypes.Strings, entity.ScheduleClassTypeHomework.String())
 		}
 	}
 	if typo.Valid() && typo == entity.LearningSummaryTypeLiveClass {
