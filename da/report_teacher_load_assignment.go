@@ -25,19 +25,28 @@ func (r *ReportDA) GetTeacherLoadAssignmentPendingAssessment(ctx context.Context
 	var args []interface{}
 	for _, teacherID := range req.TeacherIDList {
 		plHomeFun += `
-union
 select 
 	hfs.schedule_id ,
 	? as teacher_id,
 	sr.relation_id as class_id,
 	1 as is_home_fun ,
 	UNIX_TIMESTAMP() - IF(hfs.due_at <= 0,hfs.create_at,hfs.due_at) - 7*24*60*60 as pending_seconds	
-from home_fun_studies hfs 
+from (
+	select 
+		schedule_id,
+		teacher_ids,
+		status,
+		max(due_at) due_at,
+		max(create_at) create_at 
+	from home_fun_studies	
+	group by schedule_id,teacher_ids,status
+) hfs 
 inner join schedules_relations sr on
 		hfs.schedule_id = sr.schedule_id
 where hfs.status=?
 and sr.relation_type = ?
 and JSON_contains(teacher_ids,?) 
+union
 `
 		args = append(
 			args,
@@ -54,6 +63,8 @@ select
 	avg(if(t.pending_seconds<0,0,t.pending_seconds))/(24*60*60) as  avg_days_of_pending_assignment
 from 
 (
+	%s
+
 	select
 		s.id as schedule_id,
 		sr.relation_id as teacher_id,
@@ -77,9 +88,6 @@ from
 	and sr3.relation_type = ?
 	and a2.type=?
 	and a2.status=?
-
-%s
-
 ) t
 
 where t.teacher_id in (%s)
