@@ -148,8 +148,7 @@ select t.schedule_id from
 	inner join assessments a2 on
 		s.id = a2.schedule_id     
 	where sr.relation_type = ?
-	and sr2.relation_type = ?
-	and	a2.type=? 
+	and sr2.relation_type = ?	
 	and a2.status=?
 ) t
  
@@ -165,7 +164,6 @@ and t.complete_time between ? and ?
 		args,
 		entity.ScheduleRelationTypeClassRosterTeacher,
 		entity.ScheduleRelationTypeClassRosterClass,
-		entity.AssessmentTypeStudyH5p,
 		entity.AssessmentStatusComplete,
 	)
 	for _, teacherID := range req.TeacherIDList {
