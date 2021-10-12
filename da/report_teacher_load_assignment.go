@@ -79,7 +79,6 @@ from
 	and sr.relation_type =  ?
 	and sr2.relation_type = ?
 	and sr3.relation_type = ?
-	and a2.type=?
 	and a2.status=?
 ) t
 
@@ -99,7 +98,6 @@ group by t.teacher_id
 		entity.ScheduleRelationTypeClassRosterTeacher,
 		entity.ScheduleRelationTypeClassRosterClass,
 		entity.ScheduleRelationTypeClassRosterStudent,
-		entity.AssessmentTypeStudyH5p,
 		entity.AssessmentStatusInProgress,
 	)
 
