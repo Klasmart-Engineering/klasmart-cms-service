@@ -21,51 +21,39 @@ func NewAssessmentPermissionChecker(operator *entity.Operator) *AssessmentPermis
 }
 
 func (c *AssessmentPermissionChecker) SearchAllPermissions(ctx context.Context) error {
-	if err := c.SearchOrgPermissions(ctx); err != nil {
-		log.Error(ctx, "SearchAllPermissions: SearchOrgPermissions: check org permission failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
+	permissionNames := []external.PermissionName{
+		external.AssessmentViewCompletedAssessments414,
+		external.AssessmentViewInProgressAssessments415,
+
+		external.AssessmentViewOrgCompletedAssessments424,
+		external.AssessmentViewOrgInProgressAssessments425,
+
+		external.AssessmentViewSchoolCompletedAssessments426,
+		external.AssessmentViewSchoolInProgressAssessments427,
+	}
+	permissionMap, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, c.operator, permissionNames)
+	if err != nil {
 		return err
 	}
 
-	if err := c.SearchSchoolPermissions(ctx); err != nil {
-		log.Error(ctx, "SearchAllPermissions: SearchOrgPermissions: check school permission failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
+	if err := c.SearchOrgPermissions(ctx, permissionMap); err != nil {
 		return err
 	}
 
-	if err := c.SearchSelfPermissions(ctx); err != nil {
-		log.Error(ctx, "SearchAllPermissions: SearchSelfPermissions: check self permission failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
+	if err := c.SearchSchoolPermissions(ctx, permissionMap); err != nil {
+		return err
+	}
+
+	if err := c.SearchSelfPermissions(ctx, permissionMap); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (c *AssessmentPermissionChecker) SearchOrgPermissions(ctx context.Context) error {
-	hasP424, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, c.operator, external.AssessmentViewOrgCompletedAssessments424)
-	if err != nil {
-		log.Error(ctx, "SearchOrgPermissions: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 424 failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
-		return err
-	}
-
-	hasP425, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, c.operator, external.AssessmentViewOrgInProgressAssessments425)
-	if err != nil {
-		log.Error(ctx, "SearchOrgPermissions: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 425 failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
-		return err
-	}
+func (c *AssessmentPermissionChecker) SearchOrgPermissions(ctx context.Context, permission map[external.PermissionName]bool) error {
+	hasP424 := permission[external.AssessmentViewOrgCompletedAssessments424]
+	hasP425 := permission[external.AssessmentViewOrgInProgressAssessments425]
 
 	if hasP424 || hasP425 {
 		teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, c.operator, c.operator.OrgID)
@@ -106,24 +94,9 @@ func (c *AssessmentPermissionChecker) SearchOrgPermissions(ctx context.Context) 
 	return nil
 }
 
-func (c *AssessmentPermissionChecker) SearchSchoolPermissions(ctx context.Context) error {
-	hasP426, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, c.operator, external.AssessmentViewSchoolCompletedAssessments426)
-	if err != nil {
-		log.Error(ctx, "SearchSchoolPermissions: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 426 failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
-		return err
-	}
-
-	hasP427, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, c.operator, external.AssessmentViewSchoolInProgressAssessments427)
-	if err != nil {
-		log.Error(ctx, "SearchSchoolPermissions: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 427 failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
-		return err
-	}
+func (c *AssessmentPermissionChecker) SearchSchoolPermissions(ctx context.Context, permission map[external.PermissionName]bool) error {
+	hasP426 := permission[external.AssessmentViewSchoolCompletedAssessments426]
+	hasP427 := permission[external.AssessmentViewSchoolInProgressAssessments427]
 
 	if hasP426 || hasP427 {
 		schools, err := external.GetSchoolServiceProvider().GetByOperator(ctx, c.operator)
@@ -180,23 +153,9 @@ func (c *AssessmentPermissionChecker) SearchSchoolPermissions(ctx context.Contex
 	return nil
 }
 
-func (c *AssessmentPermissionChecker) SearchSelfPermissions(ctx context.Context) error {
-	hasP414, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, c.operator, external.AssessmentViewCompletedAssessments414)
-	if err != nil {
-		log.Error(ctx, "SearchSelfPermissions: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 414 failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
-		return err
-	}
-	hasP415, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, c.operator, external.AssessmentViewInProgressAssessments415)
-	if err != nil {
-		log.Error(ctx, "SearchSelfPermissions: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 415 failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
-		return err
-	}
+func (c *AssessmentPermissionChecker) SearchSelfPermissions(ctx context.Context, permission map[external.PermissionName]bool) error {
+	hasP414 := permission[external.AssessmentViewCompletedAssessments414]
+	hasP415 := permission[external.AssessmentViewInProgressAssessments415]
 
 	if hasP414 || hasP415 {
 		if hasP414 {
