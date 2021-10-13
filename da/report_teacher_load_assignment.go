@@ -25,19 +25,20 @@ func (r *ReportDA) GetTeacherLoadAssignmentPendingAssessment(ctx context.Context
 	var args []interface{}
 	for _, teacherID := range req.TeacherIDList {
 		plHomeFun += `
-union
 select 
 	hfs.schedule_id ,
 	? as teacher_id,
 	sr.relation_id as class_id,
 	1 as is_home_fun ,
+	student_id,
 	UNIX_TIMESTAMP() - IF(hfs.due_at <= 0,hfs.create_at,hfs.due_at) - 7*24*60*60 as pending_seconds	
-from home_fun_studies hfs 
+from  home_fun_studies hfs 
 inner join schedules_relations sr on
 		hfs.schedule_id = sr.schedule_id
 where hfs.status=?
 and sr.relation_type = ?
 and JSON_contains(teacher_ids,?) 
+union 
 `
 		args = append(
 			args,
@@ -50,15 +51,18 @@ and JSON_contains(teacher_ids,?)
 	sql := fmt.Sprintf(`
 select 	 
 	t.teacher_id,
-	count(distinct t.schedule_id) as count_of_pending_assignment,
+	count(1) as count_of_pending_assignment,
 	avg(if(t.pending_seconds<0,0,t.pending_seconds))/(24*60*60) as  avg_days_of_pending_assignment
 from 
 (
+	%s
+
 	select
 		s.id as schedule_id,
 		sr.relation_id as teacher_id,
 		sr2.relation_id as class_id,
 		0 as is_home_fun,
+		sr3.relation_id as student_id,
 		UNIX_TIMESTAMP() - IF(s.due_at <= 0,s.created_at,s.due_at) - 7*24*60*60  as pending_seconds				 			 
 	from
 		schedules s
@@ -75,11 +79,7 @@ from
 	and sr.relation_type =  ?
 	and sr2.relation_type = ?
 	and sr3.relation_type = ?
-	and a2.type=?
 	and a2.status=?
-
-%s
-
 ) t
 
 where t.teacher_id in (%s)
@@ -98,7 +98,6 @@ group by t.teacher_id
 		entity.ScheduleRelationTypeClassRosterTeacher,
 		entity.ScheduleRelationTypeClassRosterClass,
 		entity.ScheduleRelationTypeClassRosterStudent,
-		entity.AssessmentTypeStudyH5p,
 		entity.AssessmentStatusInProgress,
 	)
 
@@ -149,8 +148,7 @@ select t.schedule_id from
 	inner join assessments a2 on
 		s.id = a2.schedule_id     
 	where sr.relation_type = ?
-	and sr2.relation_type = ?
-	and	a2.type=? 
+	and sr2.relation_type = ?	
 	and a2.status=?
 ) t
  
@@ -166,7 +164,6 @@ and t.complete_time between ? and ?
 		args,
 		entity.ScheduleRelationTypeClassRosterTeacher,
 		entity.ScheduleRelationTypeClassRosterClass,
-		entity.AssessmentTypeStudyH5p,
 		entity.AssessmentStatusComplete,
 	)
 	for _, teacherID := range req.TeacherIDList {

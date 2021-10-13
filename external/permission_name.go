@@ -145,5 +145,6 @@ const (
 	ReportLearningSummarySchool  PermissionName = "report_learning_summary_school_651"
 	ReportLearningSummmaryOrg    PermissionName = "report_learning_summary_org_652"
 
+	ViewProgram20111  PermissionName = "view_program_20111"
 	ViewSubjects20115 PermissionName = "view_subjects_20115"
 )

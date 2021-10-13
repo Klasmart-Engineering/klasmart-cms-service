@@ -40,6 +40,10 @@ type LearningSummaryFilter struct {
 
 type LearningSummaryRemainingFilterType string
 
+func (l LearningSummaryRemainingFilterType) String() string {
+	return string(l)
+}
+
 const (
 	LearningSummaryFilterTypeSchool  LearningSummaryRemainingFilterType = "school"
 	LearningSummaryFilterTypeClass   LearningSummaryRemainingFilterType = "class"

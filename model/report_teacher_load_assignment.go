@@ -3,6 +3,8 @@ package model
 import (
 	"context"
 
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -73,6 +75,12 @@ func (m *reportModel) GetTeacherLoadReportOfAssignment(ctx context.Context, op *
 		if err != nil {
 			return
 		}
+		log.Info(
+			ctx,
+			"get room comments by external.GetH5PRoomCommentServiceProvider",
+			log.Any("scheduleIDListForCommentOfStudy", scheduleIDListForCommentOfStudy),
+			log.Any("mStudyComment", mStudyComment),
+		)
 		for _, comments := range mStudyComment {
 			for _, comment := range comments {
 				if comment == nil {
@@ -105,7 +113,7 @@ func (m *reportModel) GetTeacherLoadReportOfAssignment(ctx context.Context, op *
 		}
 		for _, item := range items {
 			if sc, ok := mCompleteCountStudy[item.TeacherID]; ok {
-				item.CountOfScheduledAssignment += sc.CountOfCompletedAssignment
+				item.CountOfCompletedAssignment += sc.CountOfCompletedAssignment
 				item.CountOfCommentedAssignment += sc.CountOfCommentedAssignment
 			}
 		}

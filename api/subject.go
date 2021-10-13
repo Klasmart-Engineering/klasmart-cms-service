@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
 
@@ -23,6 +24,23 @@ func (s *Server) getSubject(c *gin.Context) {
 
 	var result []*external.Subject
 	var err error
+
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ViewSubjects20115)
+	if err != nil {
+		log.Error(ctx, "getSubject: HasOrganizationPermission failed",
+			log.Any("op", operator),
+			log.String("perm", string(external.ViewSubjects20115)),
+			log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "getSubject: HasOrganizationPermission failed",
+			log.Any("op", operator),
+			log.String("perm", string(external.ViewSubjects20115)))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
+		return
+	}
 
 	programID := c.Query("program_id")
 

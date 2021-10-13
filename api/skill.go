@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
 
@@ -26,6 +27,24 @@ func (s *Server) getSkill(c *gin.Context) {
 	var err error
 
 	categoryID := c.Query("developmental_id")
+
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ViewSubjects20115)
+	if err != nil {
+		log.Error(ctx, "getSkill: HasOrganizationPermission failed",
+			log.Any("op", operator),
+			log.String("perm", string(external.ViewSubjects20115)),
+			log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "getSkill: HasOrganizationPermission failed",
+			log.Any("op", operator),
+			log.String("perm", string(external.ViewSubjects20115)))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
+		return
+	}
+
 	if categoryID != "" {
 		subCategories, err = external.GetSubCategoryServiceProvider().GetByCategory(ctx, operator, categoryID)
 	} else {
