@@ -230,8 +230,13 @@ select
 	count(IF(LENGTH(assess_comment)=0,NULL,1))/count(1) as feedback_of_assignment 
 from  home_fun_studies 
 
-where JSON_contains(teacher_ids,?) 
-and complete_at between ? and ?
+where schedule_id in (
+    select 	 	
+        schedule_id  
+    from  home_fun_studies 
+    where JSON_contains(teacher_ids,?) 
+    and complete_at between ? and  ?
+)
 group by schedule_id
 `)
 		args = append(args, teacherID, fmt.Sprintf(`"%s"`, teacherID), startAt, endAt)
