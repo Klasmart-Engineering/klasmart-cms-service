@@ -98,34 +98,30 @@ func (m *reportModel) GetTeacherLoadReportOfAssignment(ctx context.Context, op *
 					continue
 				}
 				for _, teacherComment := range comment.TeacherComments {
-					if teacherComment == nil {
-						continue
-					}
-					if !req.Duration.MustContain(ctx, teacherComment.Date) {
-						continue
-					}
-					if teacherComment.Teacher == nil {
+					if teacherComment == nil || teacherComment.Teacher == nil {
 						continue
 					}
 					teacherID := teacherComment.Teacher.UserID
-					for _, item := range items {
-						if item.TeacherID != teacherID {
-							continue
-						}
-						// 3.1 fill CountOfCompletedAssignment
-						item.CountOfCompletedAssignment++
-					}
-
 					roomAssignment, ok := mAssignment[teacherID]
 					if !ok {
 						mAssignment[teacherID] = &entity.TeacherLoadAssignmentRoomAssignment{
 							RoomID: roomID,
 						}
 					}
-
 					roomAssignment.CountOfCompleteAssignment++
 					if len(teacherComment.Comment) > 0 {
 						roomAssignment.CountOfCommentAssignment++
+					}
+
+					if !req.Duration.MustContain(ctx, teacherComment.Date) {
+						continue
+					}
+					for _, item := range items {
+						if item.TeacherID != teacherID {
+							continue
+						}
+						// 3.1 fill CountOfCompletedAssignment
+						item.CountOfCompletedAssignment++
 					}
 				}
 			}
