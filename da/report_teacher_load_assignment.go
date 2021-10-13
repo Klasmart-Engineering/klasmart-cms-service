@@ -15,6 +15,7 @@ import (
 type ITeacherLoadAssessment interface {
 	GetTeacherLoadAssignmentScheduledCount(ctx context.Context, req *entity.TeacherLoadAssignmentRequest) (res entity.TeacherLoadAssignmentResponseItemSlice, err error)
 	GetTeacherLoadAssignmentCompletedCountOfHomeFun(ctx context.Context, req *entity.TeacherLoadAssignmentRequest) (res entity.TeacherLoadAssignmentResponseItemSlice, err error)
+	GetTeacherLoadAssignmentFeedbackOfHomeFun(ctx context.Context, req *entity.TeacherLoadAssignmentRequest) (res entity.TeacherLoadAssignmentFeedbackSlice, err error)
 	GetTeacherLoadAssignmentScheduleIDListForStudyComment(ctx context.Context, req *entity.TeacherLoadAssignmentRequest) (scheduleIDs []string, err error)
 	GetTeacherLoadAssignmentPendingAssessment(ctx context.Context, req *entity.TeacherLoadAssignmentRequest) (res entity.TeacherLoadAssignmentResponseItemSlice, err error)
 }
@@ -202,6 +203,36 @@ from  home_fun_studies
 
 where JSON_contains(teacher_ids,?) 
 and complete_at between ? and ?
+`)
+		args = append(args, teacherID, fmt.Sprintf(`"%s"`, teacherID), startAt, endAt)
+	}
+	sql := strings.Join(sqlArr, "\n union \n")
+	err = r.QueryRawSQL(ctx, &res, sql, args...)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func (r *ReportDA) GetTeacherLoadAssignmentFeedbackOfHomeFun(ctx context.Context, req *entity.TeacherLoadAssignmentRequest) (res entity.TeacherLoadAssignmentFeedbackSlice, err error) {
+	res = entity.TeacherLoadAssignmentFeedbackSlice{}
+	var sqlArr []string
+	var args []interface{}
+	startAt, endAt, err := req.Duration.Value(ctx)
+	if err != nil {
+		return
+	}
+	for _, teacherID := range req.TeacherIDList {
+		sqlArr = append(sqlArr, `
+select 
+	? as teacher_id,	
+	schedule_id,
+	count(IF(LENGTH(assess_comment)=0,NULL,1))/count(1) as feedback_of_assignment 
+from  home_fun_studies 
+
+where JSON_contains(teacher_ids,?) 
+and complete_at between ? and ?
+group by schedule_id
 `)
 		args = append(args, teacherID, fmt.Sprintf(`"%s"`, teacherID), startAt, endAt)
 	}

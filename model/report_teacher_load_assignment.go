@@ -59,12 +59,22 @@ func (m *reportModel) GetTeacherLoadReportOfAssignment(ctx context.Context, op *
 		for _, item := range items {
 			if sc, ok := mCompleteCount[item.TeacherID]; ok {
 				item.CountOfCompletedAssignment = sc.CountOfCompletedAssignment
-				item.CountOfCommentedAssignment = sc.CountOfCommentedAssignment
+			}
+		}
+
+		var feedbacks entity.TeacherLoadAssignmentFeedbackSlice
+		feedbacks, err = reportDA.GetTeacherLoadAssignmentFeedbackOfHomeFun(ctx, req)
+		if err != nil {
+			return
+		}
+		mFeedback := feedbacks.MapTeacherID()
+		for _, item := range items {
+			if sc, ok := mFeedback[item.TeacherID]; ok {
+				item.Feedbacks = append(item.Feedbacks, sc.FeedbackOfAssignment)
 			}
 		}
 	}
 	if req.ClassTypeList.Contains(constant.ReportClassTypeStudy) {
-		mCompleteCountStudy := map[string]*entity.TeacherLoadAssignmentResponseItem{}
 		var scheduleIDListForCommentOfStudy []string
 		scheduleIDListForCommentOfStudy, err = reportDA.GetTeacherLoadAssignmentScheduleIDListForStudyComment(ctx, req)
 		if err != nil {
@@ -81,7 +91,8 @@ func (m *reportModel) GetTeacherLoadReportOfAssignment(ctx context.Context, op *
 			log.Any("scheduleIDListForCommentOfStudy", scheduleIDListForCommentOfStudy),
 			log.Any("mStudyComment", mStudyComment),
 		)
-		for _, comments := range mStudyComment {
+		for roomID, comments := range mStudyComment {
+			mAssignment := map[string]*entity.TeacherLoadAssignmentRoomAssignment{}
 			for _, comment := range comments {
 				if comment == nil {
 					continue
@@ -97,32 +108,38 @@ func (m *reportModel) GetTeacherLoadReportOfAssignment(ctx context.Context, op *
 						continue
 					}
 					teacherID := teacherComment.Teacher.UserID
-					item, ok := mCompleteCountStudy[teacherID]
-					if !ok {
-						item = &entity.TeacherLoadAssignmentResponseItem{
-							TeacherID: teacherID,
+					for _, item := range items {
+						if item.TeacherID != teacherID {
+							continue
 						}
-						mCompleteCountStudy[teacherID] = item
+						// 3.1 fill CountOfCompletedAssignment
+						item.CountOfCompletedAssignment++
 					}
-					item.CountOfCompletedAssignment++
+
+					roomAssignment, ok := mAssignment[teacherID]
+					if !ok {
+						mAssignment[teacherID] = &entity.TeacherLoadAssignmentRoomAssignment{
+							RoomID: roomID,
+						}
+					}
+
+					roomAssignment.CountOfCompleteAssignment++
 					if len(teacherComment.Comment) > 0 {
-						item.CountOfCommentedAssignment++
+						roomAssignment.CountOfCommentAssignment++
 					}
 				}
 			}
-		}
-		for _, item := range items {
-			if sc, ok := mCompleteCountStudy[item.TeacherID]; ok {
-				item.CountOfCompletedAssignment += sc.CountOfCompletedAssignment
-				item.CountOfCommentedAssignment += sc.CountOfCommentedAssignment
+
+			for _, item := range items {
+				if ra, ok := mAssignment[item.TeacherID]; ok {
+					item.Feedbacks = append(item.Feedbacks, ra.Feedback())
+				}
 			}
 		}
 	}
+	// 3.2 fill FeedbackPercentage
 	for _, item := range items {
-		if item.CountOfCompletedAssignment == 0 {
-			continue
-		}
-		item.FeedbackPercentage = float64(item.CountOfCommentedAssignment) / float64(item.CountOfCompletedAssignment)
+		item.FeedbackPercentage = item.Feedbacks.Avg()
 	}
 
 	// 4. fill CountOfPendingAssignment and AvgDaysOfPendingAssignment
