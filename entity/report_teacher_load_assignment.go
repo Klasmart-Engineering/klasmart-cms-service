@@ -51,7 +51,7 @@ type TeacherLoadAssignmentResponseItem struct {
 	CountOfScheduledAssignment int64        `json:"count_of_scheduled_assignment" gorm:"column:count_of_scheduled_assignment" `
 	CountOfCompletedAssignment int64        `json:"count_of_completed_assignment" gorm:"column:count_of_completed_assignment" `
 	Assignments                []int64      `json:"-" gorm:"column:-" `
-	Feedbacks                  Float64Slice `json:"-"`
+	Feedbacks                  Float64Slice `json:"-" gorm:"column:-" `
 	FeedbackPercentage         float64      `json:"feedback_percentage" gorm:"column:feedback_percentage" `
 	CountOfPendingAssignment   int64        `json:"count_of_pending_assignment" gorm:"column:count_of_pending_assignment" `
 	AvgDaysOfPendingAssignment float64      `json:"avg_days_of_pending_assignment" gorm:"column:avg_days_of_pending_assignment" `
