@@ -240,7 +240,7 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 	if c.AllowTeacherIDAndStatusPairs.Valid {
 		t2 := NewSQLTemplate("")
 		for _, p := range c.AllowTeacherIDAndStatusPairs.Values {
-			t2.Appendf("(attendance_id = ? and assessments.status = ?)", p.TeacherID, p.Status)
+			t2.Appendf("(attendance_id = ? and assessments.status in (?))", p.TeacherID, p.Status)
 		}
 		format, values := t2.Or()
 		format = fmt.Sprintf("exists (select 1 from assessments_attendances "+

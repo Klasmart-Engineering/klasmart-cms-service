@@ -132,8 +132,8 @@ func (c *QueryHomeFunStudyCondition) GetConditions() ([]string, []interface{}) {
 
 	if c.AllowTeacherIDAndStatusPairs.Valid {
 		for _, pair := range c.AllowTeacherIDAndStatusPairs.Values {
-			b.Appendf("((not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status = ?))",
-				pair.TeacherID, pair.TeacherID, string(pair.Status))
+			b.Appendf("((not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status in (?)))",
+				pair.TeacherID, pair.TeacherID, pair.Status)
 		}
 	}
 
