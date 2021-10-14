@@ -112,6 +112,6 @@ func (ra TeacherLoadAssignmentRoomAssignment) Feedback() (fb float64) {
 	if ra.CountOfCompleteAssignment < 1 {
 		return
 	}
-	fb = float64(ra.CountOfCommentAssignment / ra.CountOfCompleteAssignment)
+	fb = float64(ra.CountOfCommentAssignment) / float64(ra.CountOfCompleteAssignment)
 	return
 }
