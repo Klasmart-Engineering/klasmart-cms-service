@@ -131,6 +131,7 @@ func (m *reportModel) GetTeacherLoadReportOfAssignment(ctx context.Context, op *
 					item.Feedbacks = append(item.Feedbacks, ra.Feedback())
 				}
 			}
+			log.Info(ctx, "mAssignment", log.Any("mAssignment", mAssignment))
 		}
 	}
 	// 3.2 fill FeedbackPercentage
