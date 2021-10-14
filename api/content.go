@@ -902,6 +902,26 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 	}
 }
 
+// @Summary queryContentInternal
+// @ID queryContentInternal
+// @Description query content internal
+// @Produce json
+// @Param org query string true "search content under the organization"
+// @Param content_ids query string false "search content id list, separated by commas"
+// @Param content_type query string false "search content type"
+// @Param source_id query string false "search content by source id"
+// @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
+// @Param page_size query int false "content list page size"
+// @Param page query int false "content list page index"
+// @Tags content
+// @Success 200 {object} entity.ContentSimplifiedList
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Router /internal/contents [get]
+func (s *Server) queryContentInternal(c *gin.Context) {
+	//TODO:Finish it
+}
+
 func parseAuthor(c *gin.Context, u *entity.Operator) string {
 	author := c.Query("author")
 	if author == constant.Self {

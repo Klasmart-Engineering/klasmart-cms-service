@@ -484,6 +484,21 @@ type FolderContentInfoWithDetailsResponse struct {
 	ContentList []*FolderContentData `json:"list"`
 }
 
+type ContentSimplifiedList struct {
+	Total       int                  `json:"total"`
+	ContentList []*ContentSimplified `json:"list"`
+}
+
+type ContentSimplified struct {
+	ID            string               `json:"id"`
+	ContentName   string               `json:"content_name"`
+	ContentType   ContentType          `json:"content_type"`
+	AuthorID      string               `json:"author_id"`
+	Data          string               `json:"data"`
+	CreateAt      int64                `json:"create_at"`
+	PublishStatus ContentPublishStatus `json:"publish_status"`
+}
+
 type ContentInfoWithDetails struct {
 	ContentInfo
 	ContentTypeName  string   `json:"content_type_name"`

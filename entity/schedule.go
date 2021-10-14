@@ -555,6 +555,12 @@ type ScheduleSearchView struct {
 	ScheduleBasic
 }
 
+type ScheduleSimplified struct {
+	ID           string `json:"id"`
+	LessonPlanID string `json:"lesson_plan_id"`
+	OrgID        string `json:"org_id"`
+}
+
 type ScheduleShortInfo struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
@@ -626,6 +632,11 @@ func (t ScheduleEditType) Valid() bool {
 type SchedulePageView struct {
 	Total int                   `json:"total"`
 	Data  []*ScheduleSearchView `json:"data"`
+}
+
+type ScheduleSimplifiedPageView struct {
+	Total int                   `json:"total"`
+	Data  []*ScheduleSimplified `json:"data"`
 }
 
 type ScheduleIDsCondition struct {

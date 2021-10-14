@@ -500,6 +500,24 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 	s.defaultErrorHandler(c, err)
 }
 
+// @Summary queryScheduleInternal
+// @ID queryScheduleInternal
+// @Description query schedule internal
+// @Produce json
+// @Param schedule_ids query string false "search schedule id list, separated by commas"
+// @Param order_by query string false "order by" enums(create_at, -create_at, start_at, -start_at)
+// @Param page query integer false "page index, not paging if page <=0"
+// @Param page_size query integer false "records per page, not paging if page_size <= 0"
+// @Tags schedule
+// @Success 200 {object} entity.ScheduleSimplifiedPageView
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /internal/schedules [get]
+func (s *Server) queryScheduleInternal(c *gin.Context) {
+	//TODO:Finish it
+}
+
 // @Summary querySchedule
 // @ID querySchedule
 // @Description query schedule
