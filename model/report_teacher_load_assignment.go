@@ -114,15 +114,14 @@ func (m *reportModel) GetTeacherLoadReportOfAssignment(ctx context.Context, op *
 						roomAssignment.CountOfCommentAssignment++
 					}
 
-					if !req.Duration.MustContain(ctx, teacherComment.Date) {
-						continue
-					}
-					for _, item := range items {
-						if item.TeacherID != teacherID {
-							continue
+					if req.Duration.MustContain(ctx, teacherComment.Date) {
+						for _, item := range items {
+							if item.TeacherID != teacherID {
+								continue
+							}
+							// 3.1 fill CountOfCompletedAssignment
+							item.CountOfCompletedAssignment++
 						}
-						// 3.1 fill CountOfCompletedAssignment
-						item.CountOfCompletedAssignment++
 					}
 				}
 			}
