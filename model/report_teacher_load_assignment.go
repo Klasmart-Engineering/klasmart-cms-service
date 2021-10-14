@@ -131,13 +131,15 @@ func (m *reportModel) GetTeacherLoadReportOfAssignment(ctx context.Context, op *
 					item.Feedbacks = append(item.Feedbacks, ra.Feedback())
 				}
 			}
-			log.Info(ctx, "mAssignment", log.Any("mAssignment", mAssignment))
+			log.Info(ctx, "mAssignment", log.Any("mAssignment", mAssignment), log.Any("items", items))
 		}
 	}
+
 	// 3.2 fill FeedbackPercentage
 	for _, item := range items {
 		item.FeedbackPercentage = item.Feedbacks.Avg()
 	}
+	log.Info(ctx, "fill FeedbackPercentage", log.Any("items", items))
 
 	// 4. fill CountOfPendingAssignment and AvgDaysOfPendingAssignment
 	countPending, err := reportDA.GetTeacherLoadAssignmentPendingAssessment(ctx, req)
