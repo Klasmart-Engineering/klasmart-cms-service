@@ -107,6 +107,7 @@ func (m *reportModel) GetTeacherLoadReportOfAssignment(ctx context.Context, op *
 						mAssignment[teacherID] = &entity.TeacherLoadAssignmentRoomAssignment{
 							RoomID: roomID,
 						}
+						continue
 					}
 					roomAssignment.CountOfCompleteAssignment++
 					if len(teacherComment.Comment) > 0 {
