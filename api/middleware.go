@@ -251,6 +251,10 @@ func (s Server) getNewRelicMiddleware() gin.HandlerFunc {
 		DistributedTracer: struct {
 			Enabled bool
 		}{Enabled: nrCfg.NewRelicDistributedTracingEnabled},
+		SpanEvents: struct {
+			Enabled    bool
+			Attributes newrelic.AttributeDestinationConfig
+		}{Enabled: true},
 	})
 	if err != nil {
 		log.Panic(context.Background(), "failed to init new relic app", log.Any("new_relic_config", nrCfg))
