@@ -9,9 +9,10 @@ type AssignmentRequest struct {
 }
 
 type AssignmentCompletionRate struct {
-	StudentDesignatedSubject    float64 `json:"student_designated_subject"`
-	ClassDesignatedSubject      float64 `json:"class_designated_subject"`
-	StudentNonDesignatedSubject float64 `json:"student_non_designated_subject"`
+	StudentDesignatedSubject    float64   `json:"student_designated_subject"`
+	ClassDesignatedSubject      float64   `json:"class_designated_subject"`
+	StudentNonDesignatedSubject float64   `json:"student_non_designated_subject"`
+	Duration                    TimeRange `json:"duration"`
 }
 
 type AssignmentResponse []AssignmentCompletionRate
