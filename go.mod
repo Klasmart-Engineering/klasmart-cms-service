@@ -33,7 +33,7 @@ require (
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/ugorji/go v1.2.2 // indirect
 	github.com/urfave/cli/v2 v2.3.0
-	gitlab.badanamu.com.cn/calmisland/chlorine v0.1.6
+	gitlab.badanamu.com.cn/calmisland/chlorine v0.1.8
 	gitlab.badanamu.com.cn/calmisland/common-cn v0.17.0
 	gitlab.badanamu.com.cn/calmisland/common-log v0.1.6
 	gitlab.badanamu.com.cn/calmisland/dbo v0.3.0
@@ -42,8 +42,6 @@ require (
 	gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20210813055601-f0a5d22461a0
 	go.etcd.io/etcd v3.3.25+incompatible // indirect
 	go.mongodb.org/mongo-driver v1.7.2
-	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
