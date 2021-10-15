@@ -28,6 +28,8 @@ func NewServer() *Server {
 
 	log.Debug(context.TODO(), "init gin success")
 
+	// new relic middle should insert in the very beginning as the new relic doc says
+	server.engine.Use(server.getNewRelicMiddleware())
 	server.engine.Use(server.logger(), server.recovery(), server.contextStopwatch())
 
 	// CORS
