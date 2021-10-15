@@ -1,7 +1,10 @@
 package api
 
 import (
+	"context"
 	"fmt"
+	newrelic "github.com/newrelic/go-agent"
+	"github.com/newrelic/go-agent/_integrations/nrgin/v1"
 	"net"
 	"net/http"
 	"os"
@@ -236,4 +239,21 @@ func (s Server) contextStopwatch() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+func (s Server) getNewRelicMiddleware() gin.HandlerFunc {
+	nrCfg := &config.Get().NewRelic
+	nrApp, err := newrelic.NewApplication(newrelic.Config{
+		AppName:               nrCfg.NewRelicAppName,
+		License:               nrCfg.NewRelicLicenseKey,
+		Enabled:               true,
+		Labels:                nrCfg.NewRelicLabels,
+		DistributedTracer: struct {
+			Enabled bool
+		}{Enabled: nrCfg.NewRelicDistributedTracingEnabled},
+	})
+	if err != nil {
+		log.Panic(context.Background(), "failed to init new relic app", log.Any("new_relic_config", nrCfg))
+	}
+	return nrgin.Middleware(nrApp)
 }
