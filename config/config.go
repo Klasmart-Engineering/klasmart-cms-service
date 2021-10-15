@@ -161,7 +161,6 @@ type ReportConfig struct {
 
 type NewRelicConfig struct {
 	NewRelicDistributedTracingEnabled bool
-	NewRelicNoConfigFile              bool
 	NewRelicAppName                   string
 	NewRelicLabels                    map[string]string
 	NewRelicLicenseKey                string
@@ -472,7 +471,6 @@ func loadReportConfig(ctx context.Context) {
 
 func loadNewRelicConfig(ctx context.Context) {
 	nr := &config.NewRelic
-	nr.NewRelicNoConfigFile = strings.ToLower(assertGetEnv("NEW_RELIC_NO_CONFIG_FILE")) == "true"
 	nr.NewRelicAppName = assertGetEnv("NEW_RELIC_APP_NAME")
 	nr.NewRelicLicenseKey = assertGetEnv("NEW_RELIC_LICENSE_KEY")
 	nr.NewRelicLabels = make(map[string]string)
