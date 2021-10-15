@@ -12,7 +12,7 @@ import "github.com/gin-gonic/gin"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/student_progress/learn_outcome_achievements [post]
+// @Router /reports/student_progress/learn_outcome_achievement [post]
 func (s *Server) getLearnOutcomeAchievement(c *gin.Context) {
 
 }
