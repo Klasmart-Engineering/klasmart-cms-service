@@ -261,3 +261,15 @@ func (s Server) getNewRelicMiddleware() gin.HandlerFunc {
 	}
 	return nrgin.Middleware(nrApp)
 }
+
+func (s Server) newRelicMiddlewareRectifier() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		defer c.Next()
+		txn := newrelic.FromContext(c)
+		if txn == nil {
+			return
+		}
+		nrCtx := newrelic.NewContext(c.Request.Context(), txn)
+		c.Request = c.Request.WithContext(nrCtx)
+	}
+}
