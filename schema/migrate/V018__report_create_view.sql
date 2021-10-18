@@ -10,9 +10,9 @@ from schedules s
          left join schedules_relations sr on s.id = sr.schedule_id and sr.relation_type = 'Subject'
          left join schedules_relations sr1 on s.id = sr1.schedule_id and sr1.relation_type = 'class_roster_class'
 where s.delete_at = 0
-)
+);
 
--- return m*n rows, if m students assigned to n outcomes
+-- return m*n rows, if m students should achieve n outcomes
 create or replace  view v_assessments_outcomes_students as
 select
     t1.assessment_id,
