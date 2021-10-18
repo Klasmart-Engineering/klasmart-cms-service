@@ -264,12 +264,12 @@ func (s Server) getNewRelicMiddleware() gin.HandlerFunc {
 
 func (s Server) newRelicMiddlewareRectifier() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		defer c.Next()
 		txn := newrelic.FromContext(c)
-		if txn == nil {
-			return
+		if txn != nil {
+			nrCtx := newrelic.NewContext(c.Request.Context(), txn)
+			c.Request = c.Request.WithContext(nrCtx)
+			log.Debug(nrCtx, "txn found", )
 		}
-		nrCtx := newrelic.NewContext(c.Request.Context(), txn)
-		c.Request = c.Request.WithContext(nrCtx)
+		c.Next()
 	}
 }
