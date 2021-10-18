@@ -151,6 +151,8 @@ select t.schedule_id from
 	where sr.relation_type = ?
 	and sr2.relation_type = ?	
 	and a2.status=?
+	and s.class_type=?
+	and s.is_home_fun=?
 ) t
  
 where t.teacher_id in (%s) 
@@ -166,6 +168,8 @@ and t.complete_time between ? and ?
 		entity.ScheduleRelationTypeClassRosterTeacher,
 		entity.ScheduleRelationTypeClassRosterClass,
 		entity.AssessmentStatusComplete,
+		entity.ScheduleClassTypeHomework,
+		0,
 	)
 	for _, teacherID := range req.TeacherIDList {
 		args = append(args, teacherID)
