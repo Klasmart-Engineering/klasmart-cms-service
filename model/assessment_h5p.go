@@ -74,7 +74,9 @@ func (m *assessmentH5P) batchGetRoomMap(ctx context.Context, operator *entity.Op
 			// fill contents
 			assessmentContents := make([]*entity.AssessmentH5PContent, 0, len(u.Scores))
 			for _, s := range u.Scores {
-				assessmentContent := entity.AssessmentH5PContent{}
+				assessmentContent := entity.AssessmentH5PContent{
+					Seen: s.Seen,
+				}
 				if s.Content != nil {
 					assessmentContent.ParentID = s.Content.ParentID
 					assessmentContent.H5PID = s.Content.H5PID
@@ -112,6 +114,7 @@ func (m *assessmentH5P) batchGetRoomMap(ctx context.Context, operator *entity.Op
 					}
 					assessmentContent.TeacherScores = append(assessmentContent.TeacherScores, &item)
 				}
+
 				assessmentContents = append(assessmentContents, &assessmentContent)
 			}
 			assessmentUser.Contents = assessmentContents
@@ -473,7 +476,7 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 					Answer:                      getAssessmentH5P().getAnswer(content),
 					MaxScore:                    getAssessmentH5P().getMaxPossibleScore(content),
 					AchievedScore:               getAssessmentH5P().getAchievedScore(content),
-					Attempted:                   len(content.Answers) > 0 || len(content.Scores) > 0,
+					Attempted:                   content.Seen,
 					IsH5P:                       lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
 					NotApplicableScoring:        !getAssessmentH5P().canScoring(content.ContentType),
 				}
