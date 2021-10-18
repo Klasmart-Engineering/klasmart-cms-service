@@ -1,7 +1,10 @@
 package api
 
 import (
+	"context"
 	"fmt"
+	newrelic "github.com/newrelic/go-agent"
+	"github.com/newrelic/go-agent/_integrations/nrgin/v1"
 	"net"
 	"net/http"
 	"os"
@@ -234,6 +237,39 @@ func (s Server) contextStopwatch() gin.HandlerFunc {
 		ctx := utils.SetupStopwatch(c.Request.Context())
 		c.Request = c.Request.WithContext(ctx)
 
+		c.Next()
+	}
+}
+
+func (s Server) getNewRelicMiddleware() gin.HandlerFunc {
+	nrCfg := &config.Get().NewRelic
+	nrApp, err := newrelic.NewApplication(newrelic.Config{
+		AppName:               nrCfg.NewRelicAppName,
+		License:               nrCfg.NewRelicLicenseKey,
+		Enabled:               true,
+		Labels:                nrCfg.NewRelicLabels,
+		DistributedTracer: struct {
+			Enabled bool
+		}{Enabled: nrCfg.NewRelicDistributedTracingEnabled},
+		SpanEvents: struct {
+			Enabled    bool
+			Attributes newrelic.AttributeDestinationConfig
+		}{Enabled: true},
+	})
+	if err != nil {
+		log.Panic(context.Background(), "failed to init new relic app", log.Any("new_relic_config", nrCfg))
+	}
+	return nrgin.Middleware(nrApp)
+}
+
+func (s Server) newRelicMiddlewareRectifier() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		txn := newrelic.FromContext(c)
+		if txn != nil {
+			nrCtx := newrelic.NewContext(c.Request.Context(), txn)
+			c.Request = c.Request.WithContext(nrCtx)
+			log.Debug(nrCtx, "txn found", )
+		}
 		c.Next()
 	}
 }
