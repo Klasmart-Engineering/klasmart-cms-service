@@ -719,13 +719,8 @@ func (m *assessmentBase) existsAssessmentsByScheduleIDs(ctx context.Context, tx 
 			Strings: scheduleIDs,
 			Valid:   true,
 		},
-	}, entity.Assessment{})
+	})
 	if err != nil {
-		log.Error(ctx, "exists assessments by schedule ids: count failed",
-			log.Err(err),
-			log.Strings("schedule_id", scheduleIDs),
-			log.Any("operator", operator),
-		)
 		return false, nil
 	}
 	if count > 0 {

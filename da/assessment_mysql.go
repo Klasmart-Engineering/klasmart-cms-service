@@ -17,7 +17,7 @@ import (
 
 type IAssessmentDA interface {
 	Query(ctx context.Context, condition *QueryAssessmentConditions) ([]*entity.Assessment, error)
-	CountTx(ctx context.Context, tx *dbo.DBContext, condition *QueryAssessmentConditions, value interface{}) (int, error)
+	CountTx(ctx context.Context, tx *dbo.DBContext, condition *QueryAssessmentConditions) (int, error)
 	Page(ctx context.Context, condition *QueryAssessmentConditions) (int, []*entity.Assessment, error)
 
 	GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error)
@@ -68,8 +68,16 @@ func (a *assessmentDA) Query(ctx context.Context, condition *QueryAssessmentCond
 	return assessments, nil
 }
 
-func (a *assessmentDA) CountTx(ctx context.Context, tx *dbo.DBContext, condition *QueryAssessmentConditions, value interface{}) (int, error) {
-	return a.CountTx(ctx, tx, condition, value)
+func (a *assessmentDA) CountTx(ctx context.Context, tx *dbo.DBContext, condition *QueryAssessmentConditions) (int, error) {
+	count, err := a.BaseDA.CountTx(ctx, tx, condition, entity.Assessment{})
+	if err != nil {
+		log.Error(ctx, "assessments: count failed",
+			log.Err(err),
+			log.Any("condition", condition),
+		)
+		return 0, err
+	}
+	return count, nil
 }
 
 func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error) {
