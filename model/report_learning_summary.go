@@ -995,7 +995,7 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 
 func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, typo entity.LearningSummaryType, filter *entity.LearningSummaryFilter, scheduleIDs []string) ([]*entity.Assessment, error) {
 	// query assessments
-	var assessments []*entity.Assessment
+
 	cond := da.QueryAssessmentConditions{
 		ScheduleIDs: entity.NullStrings{
 			Strings: scheduleIDs,
@@ -1013,7 +1013,9 @@ func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context,
 			Valid:   true,
 		}
 	}
-	if err := da.GetAssessmentDA().Query(ctx, &cond, &assessments); err != nil {
+
+	assessments, err := da.GetAssessmentDA().Query(ctx, &cond)
+	if err != nil {
 		log.Error(ctx, "find related assessments: query assessment attendance relations failed",
 			log.Err(err),
 			log.Strings("schedule_ids", scheduleIDs),
@@ -1021,6 +1023,7 @@ func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context,
 		)
 		return nil, err
 	}
+
 	return assessments, nil
 }
 

@@ -80,8 +80,7 @@ func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operat
 
 	// get assessment list
 	var (
-		assessments []*entity.Assessment
-		cond        = da.QueryAssessmentConditions{
+		cond = da.QueryAssessmentConditions{
 			ClassTypes: entity.NullScheduleClassTypes{
 				Value: args.ClassTypes,
 				Valid: true,
@@ -116,8 +115,8 @@ func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operat
 			}
 		}
 	}
-	log.Debug(ctx, "List: print query cond", log.Any("cond", cond))
-	total, err := da.GetAssessmentDA().PageTx(ctx, tx, &cond, &assessments)
+
+	total, assessments, err := da.GetAssessmentDA().Page(ctx, &cond)
 	if err != nil {
 		log.Error(ctx, "List: da.GetAssessmentDA().QueryTx: query failed",
 			log.Err(err),
@@ -265,8 +264,8 @@ func (m *studyAssessmentModel) Delete(ctx context.Context, tx *dbo.DBContext, op
 	if len(scheduleIDs) == 0 {
 		return nil
 	}
-	var assessments []entity.Assessment
-	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
+
+	assessments, err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
 		ClassTypes: entity.NullScheduleClassTypes{
 			Value: []entity.ScheduleClassType{entity.ScheduleClassTypeHomework},
 			Valid: true,
@@ -279,14 +278,11 @@ func (m *studyAssessmentModel) Delete(ctx context.Context, tx *dbo.DBContext, op
 			Strings: scheduleIDs,
 			Valid:   true,
 		},
-	}, &assessments); err != nil {
-		log.Error(ctx, "DeleteStudy: da.GetAssessmentDA().Query: query failed",
-			log.Err(err),
-			log.Strings("schedule_ids", scheduleIDs),
-			log.Any("operator", operator),
-		)
+	})
+	if err != nil {
 		return err
 	}
+
 	assessmentIDs := make([]string, 0, len(assessments))
 	for _, a := range assessments {
 		assessmentIDs = append(assessmentIDs, a.ID)

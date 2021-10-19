@@ -2,21 +2,24 @@ package da
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/jinzhu/gorm"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type IAssessmentDA interface {
-	dbo.DataAccesser
+	Query(ctx context.Context, condition *QueryAssessmentConditions) ([]*entity.Assessment, error)
+	CountTx(ctx context.Context, tx *dbo.DBContext, condition *QueryAssessmentConditions, value interface{}) (int, error)
+	Page(ctx context.Context, condition *QueryAssessmentConditions) (int, []*entity.Assessment, error)
+
 	GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error)
 	UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error
 	BatchSoftDelete(ctx context.Context, tx *dbo.DBContext, ids []string) error
@@ -39,6 +42,36 @@ type assessmentDA struct {
 	dbo.BaseDA
 }
 
+func (a *assessmentDA) Page(ctx context.Context, condition *QueryAssessmentConditions) (int, []*entity.Assessment, error) {
+	var assessments []*entity.Assessment
+	total, err := a.BaseDA.Page(ctx, condition, &assessments)
+	if err != nil {
+		log.Error(ctx, "Query: query failed",
+			log.Err(err),
+			log.Any("cond", condition),
+		)
+		return 0, nil, err
+	}
+
+	return total, assessments, nil
+}
+
+func (a *assessmentDA) Query(ctx context.Context, condition *QueryAssessmentConditions) ([]*entity.Assessment, error) {
+	var assessments []*entity.Assessment
+	if err := a.BaseDA.Query(ctx, condition, &assessments); err != nil {
+		log.Error(ctx, "Query: query failed",
+			log.Err(err),
+			log.Any("cond", condition),
+		)
+		return nil, err
+	}
+	return assessments, nil
+}
+
+func (a *assessmentDA) CountTx(ctx context.Context, tx *dbo.DBContext, condition *QueryAssessmentConditions, value interface{}) (int, error) {
+	return a.CountTx(ctx, tx, condition, value)
+}
+
 func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error) {
 	tx.ResetCondition()
 
@@ -53,30 +86,27 @@ func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBCont
 		return cacheResult, nil
 	}
 
-	item := entity.Assessment{}
-	if err := tx.Model(entity.Assessment{}).
-		Where(a.filterSoftDeletedTemplate()).
-		Where("id = ?", id).
-		First(&item).
-		Error; err != nil {
+	item := new(entity.Assessment)
+	err = a.GetTx(ctx, tx, id, item)
+	if err != nil {
 		log.Error(ctx, "get assessment: get from db failed",
 			log.Err(err),
 			log.String("id", id),
 		)
-		if gorm.IsRecordNotFoundError(err) {
-			return nil, constant.ErrRecordNotFound
-		}
 		return nil, err
 	}
+	if item.DeleteAt != 0 {
+		return nil, constant.ErrRecordNotFound
+	}
 
-	if err := GetAssessmentRedisDA().SetAssessment(ctx, id, &item); err != nil {
+	if err := GetAssessmentRedisDA().SetAssessment(ctx, id, item); err != nil {
 		log.Warn(ctx, "get assessment exclude soft deleted: cache item failed",
 			log.Err(err),
 			log.String("id", id),
 		)
 	}
 
-	return &item, nil
+	return item, nil
 }
 
 func (a *assessmentDA) UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error {
@@ -169,8 +199,9 @@ type QueryAssessmentConditions struct {
 	CompleteBetween entity.NullTimeRange `json:"complete_between"`
 	ClassType       entity.NullString    `json:"class_type"`
 
-	OrderBy entity.NullAssessmentsOrderBy `json:"order_by"`
-	Pager   dbo.Pager                     `json:"pager"`
+	OrderBy  entity.NullAssessmentsOrderBy `json:"order_by"`
+	Pager    dbo.Pager                     `json:"pager"`
+	DeleteAt sql.NullInt64
 }
 
 type ClassIDsOrTeacherIDs struct {
@@ -184,7 +215,13 @@ type NullClassIDsOrTeacherIDs struct {
 }
 
 func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
-	t := NewSQLTemplate("delete_at = 0")
+	t := NewSQLTemplate("")
+
+	if c.DeleteAt.Valid {
+		t.Appendf("delete_at > 0")
+	} else {
+		t.Appendf("delete_at = 0")
+	}
 
 	if c.IDs.Valid {
 		t.Appendf("id in (?)", c.IDs.Strings)

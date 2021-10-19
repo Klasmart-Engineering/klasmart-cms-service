@@ -70,8 +70,7 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 
 	// get assessment list
 	var (
-		assessments []*entity.Assessment
-		cond        = da.QueryAssessmentConditions{
+		cond = da.QueryAssessmentConditions{
 			OrgID: entity.NullString{
 				String: operator.OrgID,
 				Valid:  true,
@@ -116,7 +115,8 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 			cond.TeacherIDs.Strings = append(cond.TeacherIDs.Strings, item.ID)
 		}
 	}
-	if err := da.GetAssessmentDA().QueryTx(ctx, tx, &cond, &assessments); err != nil {
+	assessments, err := da.GetAssessmentDA().Query(ctx, &cond)
+	if err != nil {
 		log.Error(ctx, "List: da.GetAssessmentDA().QueryTx: query failed",
 			log.Err(err),
 			log.Any("cond", cond),
