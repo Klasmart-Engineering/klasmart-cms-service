@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -13,6 +14,7 @@ import (
 )
 
 type SubCategoryServiceProvider interface {
+	cache.IDataSource
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*SubCategory, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*SubCategory, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -27,6 +29,13 @@ type SubCategory struct {
 	System bool     `json:"system"`
 }
 
+func (n *SubCategory) StringID() string {
+	return n.ID
+}
+func (n *SubCategory) RelatedIDs() []*cache.RelatedEntity {
+	return nil
+}
+
 func GetSubCategoryServiceProvider() SubCategoryServiceProvider {
 	return &AmsSubCategoryService{}
 }
@@ -36,6 +45,23 @@ type AmsSubCategoryService struct{}
 func (s AmsSubCategoryService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*SubCategory, error) {
 	if len(ids) == 0 {
 		return []*SubCategory{}, nil
+	}
+	res := make([]*SubCategory, 0, len(ids))
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (s AmsSubCategoryService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
 	}
 
 	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
@@ -58,7 +84,7 @@ func (s AmsSubCategoryService) BatchGet(ctx context.Context, operator *entity.Op
 		Data: &data,
 	}
 
-	_, err := GetAmsClient().Run(ctx, request, response)
+	_, err = GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get subCategories by ids failed",
 			log.Err(err),
@@ -74,7 +100,7 @@ func (s AmsSubCategoryService) BatchGet(ctx context.Context, operator *entity.Op
 		return nil, response.Errors
 	}
 
-	subCategories := make([]*SubCategory, 0, len(data))
+	subCategories := make([]cache.Object, 0, len(data))
 	for index := range ids {
 		subCategory := data[fmt.Sprintf("q%d", indexMapping[index])]
 		if subCategory == nil {
@@ -262,4 +288,8 @@ func (s AmsSubCategoryService) GetByOrganization(ctx context.Context, operator *
 		log.Any("subcategories", subCategories))
 
 	return subCategories, nil
+}
+
+func (s AmsSubCategoryService) Name() string {
+	return "ams_subcategory_service"
 }

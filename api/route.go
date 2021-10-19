@@ -156,7 +156,6 @@ func (s Server) registeRoute() {
 		reports.POST("/reports/teacher_load/missed_lessons", s.mustLogin, s.listTeacherMissedLessons)
 
 		reports.GET("/reports/learning_summary/time_filter", s.mustLogin, s.queryLearningSummaryTimeFilter)
-		reports.GET("/reports/learning_summary/remaining_filter", s.mustLogin, s.queryLearningSummaryRemainingFilter)
 		reports.GET("/reports/learning_summary/live_classes", s.mustLogin, s.queryLiveClassesSummary)
 		reports.GET("/reports/learning_summary/assignments", s.mustLogin, s.queryAssignmentsSummary)
 
@@ -167,6 +166,10 @@ func (s Server) registeRoute() {
 		reports.POST("/reports/student_usage/classes_assignments_overview", s.mustLogin, s.getClassesAssignmentsOverview)
 		reports.POST("/reports/student_usage/classes_assignments", s.mustLogin, s.getClassesAssignments)
 		reports.POST("/reports/student_usage/classes_assignments/:class_id/unattended", s.mustLogin, s.getClassesAssignmentsUnattended)
+
+		reports.POST("/reports/student_progress/learn_outcome_achievement", s.mustLogin, s.getLearnOutcomeAchievement)
+		reports.POST("/reports/student_progress/class_attendance", s.mustLogin, s.getClassAttendance)
+		reports.POST("/reports/student_progress/assignment_completion", s.mustLogin, s.getAssignmentsCompletion)
 	}
 
 	outcomes := s.engine.Group("/v1")

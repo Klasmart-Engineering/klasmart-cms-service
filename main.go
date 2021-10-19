@@ -3,20 +3,21 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
-
 	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
 	"gitlab.badanamu.com.cn/calmisland/common-cn/common"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/api"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"gitlab.badanamu.com.cn/calmisland/ro"
+	"os"
+	"os/signal"
+	"syscall"
 
 	logger "gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 )
@@ -37,13 +38,33 @@ func initDB() {
 	}
 	dbo.ReplaceGlobal(dboHandler)
 }
+
+func initDataSource() {
+	//init querier
+	ctx := context.Background()
+	engine := cache.GetCacheEngine()
+	engine.SetExpire(ctx, constant.MaxCacheExpire)
+	cache.GetPassiveCacheRefresher().SetUpdateFrequency(constant.MaxCacheExpire, constant.MinCacheExpire)
+
+	engine.AddDataSource(ctx, external.GetUserServiceProvider())
+	engine.AddDataSource(ctx, external.GetTeacherServiceProvider())
+	engine.AddDataSource(ctx, external.GetSubjectServiceProvider())
+	engine.AddDataSource(ctx, external.GetSubCategoryServiceProvider())
+	engine.AddDataSource(ctx, external.GetStudentServiceProvider())
+	engine.AddDataSource(ctx, external.GetSchoolServiceProvider())
+	engine.AddDataSource(ctx, external.GetProgramServiceProvider())
+	engine.AddDataSource(ctx, external.GetOrganizationServiceProvider())
+	engine.AddDataSource(ctx, external.GetGradeServiceProvider())
+	engine.AddDataSource(ctx, external.GetClassServiceProvider())
+	engine.AddDataSource(ctx, external.GetCategoryServiceProvider())
+	engine.AddDataSource(ctx, external.GetAgeServiceProvider())
+}
 func initCache() {
-	//if config.Get().RedisConfig.OpenCache {
 	ro.SetConfig(&redis.Options{
 		Addr:     fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
 		Password: config.Get().RedisConfig.Password,
 	})
-	//}
+	initDataSource()
 }
 
 // @title KidsLoop 2.0 REST API
