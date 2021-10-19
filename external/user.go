@@ -84,6 +84,8 @@ func (s AmsUserService) Get(ctx context.Context, operator *entity.Operator, id s
 
 //TODO:No Test Program
 func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableUser, error) {
+	log.Info(ctx, "Doing BatchGet user",
+		log.Strings("ids", ids))
 	res := make([]*NullableUser, 0, len(ids))
 	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
 	if err != nil {
