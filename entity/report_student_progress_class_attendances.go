@@ -9,9 +9,10 @@ type ClassAttendanceRequest struct {
 }
 
 type ClassAttendanceResponse struct {
-	AttendedCount  int                            `json:"attended_count"`
-	ScheduledCount int                            `json:"scheduled_count"`
-	Items          []*ClassAttendanceResponseItem `json:"items"`
+	RequestStudentID int                            `json:"request_student_id"`
+	AttendedCount    int                            `json:"attended_count"`
+	ScheduledCount   int                            `json:"scheduled_count"`
+	Items            []*ClassAttendanceResponseItem `json:"items"`
 }
 
 type ClassAttendanceResponseItem struct {
