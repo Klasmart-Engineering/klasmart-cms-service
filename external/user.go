@@ -89,6 +89,9 @@ func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator,
 	if err != nil {
 		return nil, err
 	}
+	log.Info(ctx, "BatchGet user success",
+		log.Strings("ids", ids),
+		log.Any("res", res))
 	return res, nil
 }
 
@@ -148,6 +151,9 @@ func (s AmsUserService) BatchGetMap(ctx context.Context, operator *entity.Operat
 	if err != nil {
 		return map[string]*NullableUser{}, err
 	}
+	log.Info(ctx, "BatchGetMap: BatchGet user success",
+		log.Strings("ids", ids),
+		log.Any("users", users))
 
 	dict := make(map[string]*NullableUser, len(users))
 	for _, user := range users {
