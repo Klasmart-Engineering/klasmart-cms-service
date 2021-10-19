@@ -24,4 +24,8 @@ type LearnOutcomeAchievementResponseItem struct {
 	ReAchievedPercentage                       float64 `json:"re_achieved_percentage"`
 	ClassAverageAchievePercent                 float64 `json:"class_average_achieve_percent"`
 	UnSelectedSubjectsAverageAchievePercentage float64 `json:"un_selected_subjects_average_achieve_percentage"`
+
+	FirstAchievedCount int64 `json:"first_achieved_count"`
+	ReAchievedCount    int64 `json:"re_achieved_count"`
+	UnAchievedCount    int64 `json:"un_achieved_count"`
 }

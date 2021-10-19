@@ -244,18 +244,14 @@ func (m *assessmentBase) getAssessmentContentOutcomeMap(ctx context.Context, tx 
 }
 
 func (m *assessmentBase) existsByScheduleID(ctx context.Context, operator *entity.Operator, scheduleID string) (bool, error) {
-	var assessments []*entity.Assessment
 	cond := da.QueryAssessmentConditions{
 		ScheduleIDs: entity.NullStrings{
 			Strings: []string{scheduleID},
 			Valid:   true,
 		},
 	}
-	if err := da.GetAssessmentDA().Query(ctx, &cond, &assessments); err != nil {
-		log.Error(ctx, "existsByScheduleID: da.GetAssessmentDA().Query: query failed",
-			log.Err(err),
-			log.Any("cond", cond),
-		)
+	assessments, err := da.GetAssessmentDA().Query(ctx, &cond)
+	if err != nil {
 		return false, err
 	}
 	return len(assessments) > 0, nil
@@ -723,13 +719,8 @@ func (m *assessmentBase) existsAssessmentsByScheduleIDs(ctx context.Context, tx 
 			Strings: scheduleIDs,
 			Valid:   true,
 		},
-	}, entity.Assessment{})
+	})
 	if err != nil {
-		log.Error(ctx, "exists assessments by schedule ids: count failed",
-			log.Err(err),
-			log.Strings("schedule_id", scheduleIDs),
-			log.Any("operator", operator),
-		)
 		return false, nil
 	}
 	if count > 0 {
@@ -1656,12 +1647,9 @@ func (m *assessmentBase) queryUnifiedAssessments(ctx context.Context, tx *dbo.DB
 		ClassTypes:      classTypes,
 		CompleteBetween: args.CompleteBetween,
 	}
-	var assessments []*entity.Assessment
-	if err := da.GetAssessmentDA().Query(ctx, &assessmentCond, &assessments); err != nil {
-		log.Error(ctx, "query unified assessments: query assessments failed",
-			log.Any("cond", assessmentCond),
-			log.Err(err),
-		)
+
+	assessments, err := da.GetAssessmentDA().Query(ctx, &assessmentCond)
+	if err != nil {
 		return nil, err
 	}
 	for _, a := range assessments {

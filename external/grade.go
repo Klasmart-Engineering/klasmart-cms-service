@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -13,6 +14,7 @@ import (
 )
 
 type GradeServiceProvider interface {
+	cache.IDataSource
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Grade, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Grade, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -27,6 +29,12 @@ type Grade struct {
 	System bool     `json:"system"`
 }
 
+func (n *Grade) StringID() string {
+	return n.ID
+}
+func (n *Grade) RelatedIDs() []*cache.RelatedEntity {
+	return nil
+}
 func GetGradeServiceProvider() GradeServiceProvider {
 	return &AmsGradeService{}
 }
@@ -36,6 +44,24 @@ type AmsGradeService struct{}
 func (s AmsGradeService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Grade, error) {
 	if len(ids) == 0 {
 		return []*Grade{}, nil
+	}
+	res := make([]*Grade, 0, len(ids))
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (s AmsGradeService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
 	}
 
 	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
@@ -58,7 +84,7 @@ func (s AmsGradeService) BatchGet(ctx context.Context, operator *entity.Operator
 		Data: &data,
 	}
 
-	_, err := GetAmsClient().Run(ctx, request, response)
+	_, err = GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get grades by ids failed",
 			log.Err(err),
@@ -74,7 +100,7 @@ func (s AmsGradeService) BatchGet(ctx context.Context, operator *entity.Operator
 		return nil, response.Errors
 	}
 
-	grades := make([]*Grade, 0, len(data))
+	grades := make([]cache.Object, 0, len(data))
 	for index := range ids {
 		grade := data[fmt.Sprintf("q%d", indexMapping[index])]
 		if grade == nil {
@@ -90,7 +116,6 @@ func (s AmsGradeService) BatchGet(ctx context.Context, operator *entity.Operator
 
 	return grades, nil
 }
-
 func (s AmsGradeService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Grade, error) {
 	grades, err := s.BatchGet(ctx, operator, ids)
 	if err != nil {
@@ -262,4 +287,7 @@ func (s AmsGradeService) GetByOrganization(ctx context.Context, operator *entity
 		log.Any("grades", grades))
 
 	return grades, nil
+}
+func (s AmsGradeService) Name() string {
+	return "ams_grade_service"
 }

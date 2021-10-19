@@ -436,20 +436,6 @@ func (s *Server) processScheduleDueDate(c *gin.Context, input *entity.ProcessSch
 	var day int64
 	var result = new(entity.ProcessScheduleDueAtView)
 	switch input.ClassType {
-	case entity.ScheduleClassTypeTask:
-		result.StartAt = input.StartAt
-		result.EndAt = input.EndAt
-		if input.DueAt <= 0 {
-			result.DueAt = 0
-			return result, true
-		}
-		day = utils.GetTimeDiffToDayByTimeStamp(input.EndAt, input.DueAt, input.Location)
-		if day < 0 {
-			log.Info(ctx, "schedule dueAt is invalid", log.Int64("now", now), log.Any("input", input))
-			c.JSON(http.StatusBadRequest, L(ScheduleMessageDueDateEarlierEndDate))
-			return nil, false
-		}
-		result.DueAt = utils.TodayEndByTimeStamp(input.DueAt, input.Location).Unix()
 	case entity.ScheduleClassTypeHomework:
 		if input.DueAt <= 0 {
 			result.DueAt = 0
@@ -508,7 +494,7 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 // @Param teacher_name query string false "teacher name"
 // @Param time_zone_offset query integer true "time zone offset"
 // @Param start_at query integer false "search schedules by start_at"
-// @Param order_by query string false "order by" enums(create_at, -create_at, start_at, -start_at)
+// @Param order_by query string false "order by" enums(create_at, -create_at, start_at, -start_at, schedule_at)
 // @Param page query integer false "page index, not paging if page <=0"
 // @Param page_size query integer false "records per page, not paging if page_size <= 0"
 // @Tags schedule
@@ -523,6 +509,10 @@ func (s *Server) querySchedule(c *gin.Context) {
 	condition := new(da.ScheduleCondition)
 	condition.OrderBy = da.NewScheduleOrderBy(c.Query("order_by"))
 	condition.Pager = utils.GetDboPager(c.Query("page"), c.Query("page_size"))
+	condition.OrgID = sql.NullString{
+		String: op.OrgID,
+		Valid:  true,
+	}
 	startAtStr := c.Query("start_at")
 	if strings.TrimSpace(startAtStr) != "" {
 		startAt, err := strconv.ParseInt(startAtStr, 10, 64)

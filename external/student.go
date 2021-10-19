@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
 	"sync"
 
@@ -14,6 +15,7 @@ import (
 )
 
 type StudentServiceProvider interface {
+	cache.IDataSource
 	Get(ctx context.Context, operator *entity.Operator, id string) (*Student, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableStudent, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableStudent, error)
@@ -30,8 +32,15 @@ type Student struct {
 }
 
 type NullableStudent struct {
-	Valid bool `json:"-"`
+	Valid bool `json:"valid"`
 	*Student
+}
+
+func (n *NullableStudent) StringID() string {
+	return n.Student.ID
+}
+func (n *NullableStudent) RelatedIDs() []*cache.RelatedEntity {
+	return nil
 }
 
 var (
@@ -66,13 +75,30 @@ func (s AmsStudentService) BatchGet(ctx context.Context, operator *entity.Operat
 	if len(ids) == 0 {
 		return []*NullableStudent{}, nil
 	}
+	res := make([]*NullableStudent, 0, len(ids))
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (s AmsStudentService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
+	}
 
 	users, err := GetUserServiceProvider().BatchGet(ctx, operator, ids)
 	if err != nil {
 		return nil, err
 	}
 
-	students := make([]*NullableStudent, len(users))
+	students := make([]cache.Object, len(users))
 	for index, user := range users {
 		students[index] = &NullableStudent{
 			Valid: user.Valid,
@@ -214,4 +240,7 @@ func (s AmsStudentService) Query(ctx context.Context, operator *entity.Operator,
 
 func (s AmsStudentService) FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error) {
 	return GetUserServiceProvider().FilterByPermission(ctx, operator, userIDs, permissionName)
+}
+func (s AmsStudentService) Name() string {
+	return "ams_student_service"
 }

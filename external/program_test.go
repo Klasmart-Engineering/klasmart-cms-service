@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"testing"
+	"time"
 )
 
 func TestAmsProgramService_BatchGet(t *testing.T) {
@@ -24,6 +25,7 @@ func TestAmsProgramService_BatchGet(t *testing.T) {
 			return
 		}
 	}
+	time.Sleep(time.Second)
 }
 
 func TestAmsProgramService_GetByOrganization(t *testing.T) {
