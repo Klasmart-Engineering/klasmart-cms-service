@@ -35,7 +35,7 @@ type Teacher struct {
 }
 
 type NullableTeacher struct {
-	Valid bool `json:"-"`
+	Valid bool `json:"valid"`
 	*Teacher
 }
 

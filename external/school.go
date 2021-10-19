@@ -36,7 +36,7 @@ type School struct {
 }
 
 type NullableSchool struct {
-	Valid bool `json:"-"`
+	Valid bool `json:"valid"`
 	*School
 }
 

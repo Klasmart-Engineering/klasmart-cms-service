@@ -36,7 +36,7 @@ type Organization struct {
 
 type NullableOrganization struct {
 	Organization
-	Valid bool `json:"-"`
+	Valid bool `json:"valid"`
 }
 
 func (n *NullableOrganization) StringID() string {
