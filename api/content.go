@@ -906,7 +906,7 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 // @ID queryContentInternal
 // @Description query content internal
 // @Produce json
-// @Param org_id query string true "search content under the organization"
+// @Param org_id query string false "search content under the organization"
 // @Param content_ids query string false "search content id list, separated by commas"
 // @Param content_type query int false "search content type, 1 for materials & 2 for plans"
 // @Param source_id query string false "search content by source id"
