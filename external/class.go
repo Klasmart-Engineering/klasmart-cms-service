@@ -38,7 +38,7 @@ type Class struct {
 
 type NullableClass struct {
 	Class
-	Valid bool `json:"-"`
+	Valid bool `json:"valid"`
 }
 
 func (n *NullableClass) StringID() string {
