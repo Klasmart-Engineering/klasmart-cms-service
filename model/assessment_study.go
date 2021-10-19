@@ -153,7 +153,7 @@ func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operat
 	for _, v := range views {
 		roomIDs = append(roomIDs, v.RoomID)
 	}
-	roomMap, err := getAssessmentH5P().batchGetRoomMap(ctx, operator, roomIDs, false)
+	roomMap, err := getAssessmentH5P().batchGetRoomMap(ctx, operator, roomIDs)
 	if err != nil {
 		log.Error(ctx, "list h5p assessments: get room user scores map failed",
 			log.Err(err),
@@ -202,7 +202,7 @@ func (m *studyAssessmentModel) BatchCheckAnyoneAttempted(ctx context.Context, tx
 	if len(roomIDs) == 0 {
 		return map[string]bool{}, nil
 	}
-	roomMap, err := getAssessmentH5P().batchGetRoomMap(ctx, operator, roomIDs, false)
+	roomMap, err := getAssessmentH5P().batchGetRoomMap(ctx, operator, roomIDs)
 	if err != nil {
 		return nil, err
 	}

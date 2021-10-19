@@ -21,7 +21,7 @@ func getAssessmentH5P() *assessmentH5P {
 	return &assessmentH5P{}
 }
 
-func (m *assessmentH5P) batchGetRoomMap(ctx context.Context, operator *entity.Operator, roomIDs []string, includeComment bool) (map[string]*entity.AssessmentH5PRoom, error) {
+func (m *assessmentH5P) batchGetRoomMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]*entity.AssessmentH5PRoom, error) {
 	// batch get room score map
 	roomScoreMap, err := external.GetH5PRoomScoreServiceProvider().BatchGet(ctx, operator, roomIDs)
 	if err != nil {
@@ -31,21 +31,6 @@ func (m *assessmentH5P) batchGetRoomMap(ctx context.Context, operator *entity.Op
 			log.Any("operator", operator),
 		)
 		return nil, err
-	}
-
-	// batch get room comment map
-	var roomCommentMap map[string]map[string][]string
-	if includeComment {
-		roomCommentMap, err = m.batchGetRoomCommentMap(ctx, operator, roomIDs)
-		if err != nil {
-			log.Error(ctx, "batch get room map: batch get comments failed",
-				log.Err(err),
-				log.Strings("room_ids", roomIDs),
-				log.Bool("include_comment", includeComment),
-				log.Any("operator", operator),
-			)
-			return nil, err
-		}
 	}
 
 	// mapping
@@ -61,14 +46,6 @@ func (m *assessmentH5P) batchGetRoomMap(ctx context.Context, operator *entity.Op
 			// fill user id
 			if u.User != nil {
 				assessmentUser.UserID = u.User.UserID
-			}
-
-			// fill comment
-			if includeComment && roomCommentMap[roomID] != nil && assessmentUser.UserID != "" {
-				comments := roomCommentMap[roomID][assessmentUser.UserID]
-				if len(comments) > 0 {
-					assessmentUser.Comment = comments[len(comments)-1]
-				}
 			}
 
 			// fill contents
@@ -223,8 +200,9 @@ func (m *assessmentH5P) getContentsMapByContentID(user *entity.AssessmentH5PUser
 }
 
 func (m *assessmentH5P) getStudentViewItems(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, view *entity.AssessmentView) ([]*entity.AssessmentStudentViewH5PItem, error) {
+	var roomIDs = []string{view.RoomID}
 	// get room
-	roomMap, err := m.batchGetRoomMap(ctx, operator, []string{view.RoomID}, true)
+	roomMap, err := m.batchGetRoomMap(ctx, operator, roomIDs)
 	if err != nil {
 		log.Error(ctx, "get student view items: batch get room map failed",
 			log.Err(err),
@@ -242,6 +220,18 @@ func (m *assessmentH5P) getStudentViewItems(ctx context.Context, operator *entit
 	// batch get students lesson materials map
 	studentLessonMaterialsMap, err := m.batchGetStudentViewH5PLessonMaterialsMap(ctx, operator, tx, view, room)
 
+	// get room comments
+	var roomCommentMap map[string]map[string][]string
+	roomCommentMap, err = m.batchGetRoomCommentMap(ctx, operator, roomIDs)
+	if err != nil {
+		log.Error(ctx, "batch get comments failed",
+			log.Err(err),
+			log.Strings("room_ids", roomIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+
 	// assembly result
 	result := make([]*entity.AssessmentStudentViewH5PItem, 0, len(view.Students))
 	for _, s := range view.Students {
@@ -251,16 +241,12 @@ func (m *assessmentH5P) getStudentViewItems(ctx context.Context, operator *entit
 		}
 
 		// fill comment
-		user := getAssessmentH5P().getUserMap(room)[s.ID]
-		if user != nil {
-			newItem.Comment = user.Comment
-		} else {
-			log.Warn(ctx, "get h5p student view items: not found user from h5p room",
-				log.String("room_id", view.RoomID),
-				log.Any("not_found_user_id", s.ID),
-				log.Any("room", room),
-				log.Any("view", view),
-			)
+		if roomComment, ok := roomCommentMap[view.RoomID]; ok {
+			if comments, ok := roomComment[s.ID]; ok {
+				if len(comments) > 0 {
+					newItem.Comment = comments[len(comments)-1]
+				}
+			}
 		}
 
 		// fill lesson materials
