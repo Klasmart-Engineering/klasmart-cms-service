@@ -32,7 +32,6 @@ const (
 //Live (online class)
 //Class (offline class)
 //Study (homework)
-//Task (task)
 type LiveClassType string
 
 const (
@@ -40,7 +39,6 @@ const (
 	LiveClassTypeLive    LiveClassType = "live"
 	LiveClassTypeClass   LiveClassType = "class"
 	LiveClassTypeStudy   LiveClassType = "study"
-	LiveClassTypeTask    LiveClassType = "task"
 )
 
 type LiveTokenInfo struct {
