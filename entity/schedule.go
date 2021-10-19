@@ -211,7 +211,9 @@ const (
 
 func (s ScheduleClassType) Valid() bool {
 	switch s {
-	case ScheduleClassTypeOnlineClass, ScheduleClassTypeOfflineClass, ScheduleClassTypeHomework, ScheduleClassTypeTask:
+	case ScheduleClassTypeOnlineClass, ScheduleClassTypeOfflineClass, ScheduleClassTypeHomework:
+		// remove
+		// ScheduleClassTypeTask:
 		return true
 	default:
 		return false
@@ -226,8 +228,9 @@ func (s ScheduleClassType) ToLabel() ScheduleClassTypeLabel {
 		return ScheduleClassTypeLabelOfflineClass
 	case ScheduleClassTypeHomework:
 		return ScheduleClassTypeLabelHomework
-	case ScheduleClassTypeTask:
-		return ScheduleClassTypeLabelTask
+		// remove
+		// case ScheduleClassTypeTask:
+		// 	return ScheduleClassTypeLabelTask
 	}
 	return ScheduleClassTypeLabelInvalid
 }
@@ -268,8 +271,9 @@ func (s ScheduleClassType) ConvertToLiveClassType() LiveClassType {
 		return LiveClassTypeClass
 	case ScheduleClassTypeHomework:
 		return LiveClassTypeStudy
-	case ScheduleClassTypeTask:
-		return LiveClassTypeTask
+		// remove
+	// case ScheduleClassTypeTask:
+	// 	return LiveClassTypeTask
 	default:
 		return LiveClassTypeInvalid
 	}
@@ -324,7 +328,9 @@ func (s ScheduleStatus) Valid() bool {
 func (s ScheduleStatus) GetScheduleStatus(input ScheduleStatusInput) ScheduleStatus {
 	status := s
 	switch input.ClassType {
-	case ScheduleClassTypeHomework, ScheduleClassTypeTask:
+	case ScheduleClassTypeHomework:
+		// remove
+		// ScheduleClassTypeTask:
 		if input.DueAt > 0 {
 			endAt := utils.TodayEndByTimeStamp(input.DueAt, time.Local).Unix()
 			if endAt < time.Now().Unix() {

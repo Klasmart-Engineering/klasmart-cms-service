@@ -32,31 +32,45 @@ var (
 )
 
 type IScheduleModel interface {
+	// schedule operation
 	Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
 	Update(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error)
 	Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error
+
 	QueryByCondition(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error)
 	QueryScheduledDatesByCondition(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]string, error)
 	Page(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition) (int, []*entity.ScheduleSearchView, error)
+
 	GetByID(ctx context.Context, operator *entity.Operator, id string) (*entity.ScheduleDetailsView, error)
+
 	ConflictDetection(ctx context.Context, op *entity.Operator, input *entity.ScheduleConflictInput) (*entity.ScheduleConflictView, error)
-	GetOrgClassIDsByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string, orgID string) ([]string, error)
+	// remove
+	// GetOrgClassIDsByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string, orgID string) ([]string, error)
+	// move to external.User
 	GetTeacherByName(ctx context.Context, operator *entity.Operator, OrgID, name string) ([]*external.Teacher, error)
-	ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool
+	// remove
+	// ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool
 	ExistScheduleByLessonPlanID(ctx context.Context, lessonPlanID string) (bool, error)
 	ExistScheduleByID(ctx context.Context, id string) (bool, error)
 	GetPlainByID(ctx context.Context, id string) (*entity.SchedulePlain, error)
 	UpdateScheduleStatus(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string, status entity.ScheduleStatus) error
-	GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error)
+	// remove
+	// GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error)
+	// todo queryScheduleIDs
 	GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *entity.ScheduleIDsCondition) ([]string, error)
 	GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, orgID string) ([]string, error)
+	// todo queryScheduleIDs
+	GetRosterClassNotStartScheduleIDs(ctx context.Context, rosterClassID string, userIDs []string) ([]string, error)
+	// move to other
 	VerifyLessonPlanAuthed(ctx context.Context, operator *entity.Operator, lessonPlanID string) (bool, error)
 	UpdateScheduleShowOption(ctx context.Context, op *entity.Operator, scheduleID string, option entity.ScheduleShowOption) (string, error)
+	// schedule_filter
 	GetPrograms(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
 	GetSubjects(ctx context.Context, op *entity.Operator, programID string) ([]*entity.ScheduleShortInfo, error)
 	GetClassTypes(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
-	GetRosterClassNotStartScheduleIDs(ctx context.Context, rosterClassID string, userIDs []string) ([]string, error)
+
 	GetLearningOutcomeIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]string, error)
+
 	GetScheduleViewByID(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleViewDetail, error)
 	GetSubjectsBySubjectIDs(ctx context.Context, op *entity.Operator, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error)
 	GetVariableDataByIDs(ctx context.Context, op *entity.Operator, ids []string, include *entity.ScheduleInclude) ([]*entity.ScheduleVariable, error)
@@ -121,46 +135,47 @@ func (s *scheduleModel) UpdateScheduleShowOption(ctx context.Context, op *entity
 	return schedule.ID, nil
 }
 
-func (s *scheduleModel) GetOrgClassIDsByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string, orgID string) ([]string, error) {
-	userClassInfos, err := external.GetClassServiceProvider().GetByUserIDs(ctx, operator, userIDs)
-	if err != nil {
-		log.Error(ctx, "GetMyOrgClassIDs:GetClassServiceProvider.GetByUserID error",
-			log.Err(err),
-			log.String("org", orgID),
-			log.Strings("userIDs", userIDs))
-		return nil, err
-	}
+// TODO remove unused
+// func (s *scheduleModel) GetOrgClassIDsByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string, orgID string) ([]string, error) {
+// 	userClassInfos, err := external.GetClassServiceProvider().GetByUserIDs(ctx, operator, userIDs)
+// 	if err != nil {
+// 		log.Error(ctx, "GetMyOrgClassIDs:GetClassServiceProvider.GetByUserID error",
+// 			log.Err(err),
+// 			log.String("org", orgID),
+// 			log.Strings("userIDs", userIDs))
+// 		return nil, err
+// 	}
 
-	myClassIDs := make([]string, 0)
-	for _, classInfos := range userClassInfos {
-		for _, item := range classInfos {
-			myClassIDs = append(myClassIDs, item.ID)
-		}
-	}
-	orgClassInfoMap, err := external.GetClassServiceProvider().GetByOrganizationIDs(ctx, operator, []string{orgID})
-	if err != nil {
-		log.Error(ctx, "GetMyOrgClassIDs:GetClassServiceProvider.GetByOrganizationIDs error",
-			log.Err(err),
-			log.Strings("userIDs", userIDs),
-			log.String("orgID", orgID),
-		)
-		return nil, err
-	}
-	orgClassInfos := orgClassInfoMap[orgID]
-	orgClassIDs := make([]string, len(orgClassInfos))
-	for i, item := range orgClassInfos {
-		orgClassIDs[i] = item.ID
-	}
-	result := utils.IntersectAndDeduplicateStrSlice(myClassIDs, orgClassIDs)
-	log.Debug(ctx, "my org class ids",
-		log.String("orgID", orgID),
-		log.Strings("userIDs", userIDs),
-		log.Strings("myClassIDs", myClassIDs),
-		log.Strings("orgClassIDs", orgClassIDs),
-		log.Strings("result", result),
-	)
-	return result, nil
-}
+// 	myClassIDs := make([]string, 0)
+// 	for _, classInfos := range userClassInfos {
+// 		for _, item := range classInfos {
+// 			myClassIDs = append(myClassIDs, item.ID)
+// 		}
+// 	}
+// 	orgClassInfoMap, err := external.GetClassServiceProvider().GetByOrganizationIDs(ctx, operator, []string{orgID})
+// 	if err != nil {
+// 		log.Error(ctx, "GetMyOrgClassIDs:GetClassServiceProvider.GetByOrganizationIDs error",
+// 			log.Err(err),
+// 			log.Strings("userIDs", userIDs),
+// 			log.String("orgID", orgID),
+// 		)
+// 		return nil, err
+// 	}
+// 	orgClassInfos := orgClassInfoMap[orgID]
+// 	orgClassIDs := make([]string, len(orgClassInfos))
+// 	for i, item := range orgClassInfos {
+// 		orgClassIDs[i] = item.ID
+// 	}
+// 	result := utils.IntersectAndDeduplicateStrSlice(myClassIDs, orgClassIDs)
+// 	log.Debug(ctx, "my org class ids",
+// 		log.String("orgID", orgID),
+// 		log.Strings("userIDs", userIDs),
+// 		log.Strings("myClassIDs", myClassIDs),
+// 		log.Strings("orgClassIDs", orgClassIDs),
+// 		log.Strings("result", result),
+// 	)
+// 	return result, nil
+// }
 
 func (s *scheduleModel) getRepeatResult(ctx context.Context, startAt int64, endAt int64, options *entity.RepeatOptions, location *time.Location) ([]*RepeatBaseTimeStamp, error) {
 	if options == nil || !options.Type.Valid() {
@@ -376,6 +391,7 @@ func (s *scheduleModel) ConflictDetection(ctx context.Context, op *entity.Operat
 	return result, constant.ErrConflict
 }
 
+// remove
 func (s *scheduleModel) ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool {
 	_, exist := storage.DefaultStorage().ExistFile(ctx, storage.ScheduleAttachmentStoragePartition, attachmentPath)
 	if !exist {
@@ -2487,47 +2503,48 @@ func (s *scheduleModel) UpdateScheduleStatus(ctx context.Context, tx *dbo.DBCont
 	return nil
 }
 
-func (s *scheduleModel) GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error) {
-	lessonPlanIDs, err := da.GetScheduleDA().GetLessonPlanIDsByCondition(ctx, tx, condition)
-	if err != nil {
-		logger.Error(ctx, "GetLessonPlanByCondition:get lessonPlanIDs error",
-			log.Err(err),
-			log.Any("condition", condition),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	latestIDs, err := GetContentModel().GetLatestContentIDByIDList(ctx, tx, lessonPlanIDs)
-	if err != nil {
-		logger.Error(ctx, "GetLessonPlanByCondition:get latest lessonPlanIDs error",
-			log.Err(err),
-			log.Any("condition", condition),
-			log.Any("operator", operator),
-			log.Strings("lessonPlanIDs", lessonPlanIDs),
-			log.Strings("latestIDs", latestIDs),
-		)
-		return nil, err
-	}
-	latestIDs = utils.SliceDeduplication(latestIDs)
-	lessonPlanInfos, err := GetContentModel().GetContentNameByIDList(ctx, tx, latestIDs)
-	if err != nil {
-		logger.Error(ctx, "GetLessonPlanByCondition:get lessonPlan info error",
-			log.Err(err),
-			log.Strings("lessonPlanIDs", lessonPlanIDs),
-			log.Strings("latestIDs", latestIDs),
-			log.Any("condition", condition),
-			log.Any("operator", operator),
-		)
-	}
-	result := make([]*entity.ScheduleShortInfo, len(lessonPlanInfos))
-	for i, item := range lessonPlanInfos {
-		result[i] = &entity.ScheduleShortInfo{
-			ID:   item.ID,
-			Name: item.Name,
-		}
-	}
-	return result, nil
-}
+// remove
+// func (s *scheduleModel) GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error) {
+// 	lessonPlanIDs, err := da.GetScheduleDA().GetLessonPlanIDsByCondition(ctx, tx, condition)
+// 	if err != nil {
+// 		logger.Error(ctx, "GetLessonPlanByCondition:get lessonPlanIDs error",
+// 			log.Err(err),
+// 			log.Any("condition", condition),
+// 			log.Any("operator", operator),
+// 		)
+// 		return nil, err
+// 	}
+// 	latestIDs, err := GetContentModel().GetLatestContentIDByIDList(ctx, tx, lessonPlanIDs)
+// 	if err != nil {
+// 		logger.Error(ctx, "GetLessonPlanByCondition:get latest lessonPlanIDs error",
+// 			log.Err(err),
+// 			log.Any("condition", condition),
+// 			log.Any("operator", operator),
+// 			log.Strings("lessonPlanIDs", lessonPlanIDs),
+// 			log.Strings("latestIDs", latestIDs),
+// 		)
+// 		return nil, err
+// 	}
+// 	latestIDs = utils.SliceDeduplication(latestIDs)
+// 	lessonPlanInfos, err := GetContentModel().GetContentNameByIDList(ctx, tx, latestIDs)
+// 	if err != nil {
+// 		logger.Error(ctx, "GetLessonPlanByCondition:get lessonPlan info error",
+// 			log.Err(err),
+// 			log.Strings("lessonPlanIDs", lessonPlanIDs),
+// 			log.Strings("latestIDs", latestIDs),
+// 			log.Any("condition", condition),
+// 			log.Any("operator", operator),
+// 		)
+// 	}
+// 	result := make([]*entity.ScheduleShortInfo, len(lessonPlanInfos))
+// 	for i, item := range lessonPlanInfos {
+// 		result[i] = &entity.ScheduleShortInfo{
+// 			ID:   item.ID,
+// 			Name: item.Name,
+// 		}
+// 	}
+// 	return result, nil
+// }
 
 func (s *scheduleModel) GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *entity.ScheduleIDsCondition) ([]string, error) {
 	lessonPlanPastIDs, err := GetContentModel().GetPastContentIDByID(ctx, tx, condition.LessonPlanID)
