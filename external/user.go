@@ -43,7 +43,7 @@ type User struct {
 }
 
 type NullableUser struct {
-	Valid bool `json:"-"`
+	Valid bool `json:"valid"`
 	*User
 }
 
