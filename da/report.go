@@ -8,6 +8,8 @@ type IReportDA interface {
 	DataAccessor
 	ITeacherLoadAssessment
 	ITeacherLoadLesson
+
+	IStudentProgressLearnOutcomeAchievement
 }
 type ReportDA struct {
 	BaseDA

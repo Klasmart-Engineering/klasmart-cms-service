@@ -29,3 +29,11 @@ type LearnOutcomeAchievementResponseItem struct {
 	ReAchievedCount    int64 `json:"re_achieved_count"`
 	UnAchievedCount    int64 `json:"un_achieved_count"`
 }
+
+type StudentProgressLearnOutcomeCount struct {
+	StudentID          string `json:"student_id" gorm:"column:student_id" `
+	SubjectID          string `json:"subject_id" gorm:"column:subject_id" `
+	CompletedCount     int64  `json:"completed_count" gorm:"column:completed_count" `
+	AchievedCount      int64  `json:"achieved_count" gorm:"column:achieved_count" `
+	FirstAchievedCount int64  `json:"first_achieved_count" gorm:"column:first_achieved_count" `
+}
