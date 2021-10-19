@@ -221,8 +221,7 @@ func (m *assessmentH5P) getStudentViewItems(ctx context.Context, operator *entit
 	studentLessonMaterialsMap, err := m.batchGetStudentViewH5PLessonMaterialsMap(ctx, operator, tx, view, room)
 
 	// get room comments
-	var roomCommentMap map[string]map[string][]string
-	roomCommentMap, err = m.batchGetRoomCommentMap(ctx, operator, roomIDs)
+	roomCommentMap, err := m.batchGetRoomCommentMap(ctx, operator, roomIDs)
 	if err != nil {
 		log.Error(ctx, "batch get comments failed",
 			log.Err(err),
