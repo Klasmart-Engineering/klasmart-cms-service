@@ -1358,7 +1358,7 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 		return nil, err
 	}
 
-	assessments, err := GetAssessmentModel().Query(ctx, op, dbo.MustGetDB(ctx), &da.QueryAssessmentConditions{
+	assessments, err := GetAssessmentModel().Query(ctx, op, &da.QueryAssessmentConditions{
 		ScheduleIDs: entity.NullStrings{
 			Strings: scheduleIDs,
 			Valid:   len(scheduleIDs) > 0,
@@ -1856,7 +1856,7 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 			}
 		}
 	} else {
-		assessments, err := GetAssessmentModel().Query(ctx, operator, dbo.MustGetDB(ctx), &da.QueryAssessmentConditions{
+		assessments, err := GetAssessmentModel().Query(ctx, operator, &da.QueryAssessmentConditions{
 			ScheduleIDs: entity.NullStrings{
 				Strings: []string{result.ID},
 				Valid:   true,
@@ -2961,7 +2961,7 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 			}
 		}
 	} else {
-		assessments, err := GetAssessmentModel().Query(ctx, op, dbo.MustGetDB(ctx), &da.QueryAssessmentConditions{
+		assessments, err := GetAssessmentModel().Query(ctx, op, &da.QueryAssessmentConditions{
 			ScheduleIDs: entity.NullStrings{
 				Strings: []string{schedule.ID},
 				Valid:   true,

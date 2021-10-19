@@ -33,7 +33,7 @@ func GetAssessmentModel() IAssessmentModel {
 }
 
 type IAssessmentModel interface {
-	Query(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, conditions *da.QueryAssessmentConditions) ([]*entity.Assessment, error)
+	Query(ctx context.Context, operator *entity.Operator, conditions *da.QueryAssessmentConditions) ([]*entity.Assessment, error)
 	Summary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsSummaryArgs) (*entity.AssessmentsSummary, error)
 	StudentQuery(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, conditions *entity.StudentQueryAssessmentConditions) (int, []*entity.StudentAssessment, error)
 }
@@ -42,14 +42,9 @@ type assessmentModel struct {
 	assessmentBase
 }
 
-func (m *assessmentModel) Query(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, conditions *da.QueryAssessmentConditions) ([]*entity.Assessment, error) {
-	var r []*entity.Assessment
-	if err := da.GetAssessmentDA().QueryTx(ctx, tx, conditions, &r); err != nil {
-		log.Error(ctx, "query assessments failed",
-			log.Err(err),
-			log.Any("conditions", conditions),
-			log.Any("operator", operator),
-		)
+func (m *assessmentModel) Query(ctx context.Context, operator *entity.Operator, conditions *da.QueryAssessmentConditions) ([]*entity.Assessment, error) {
+	r, err := da.GetAssessmentDA().Query(ctx, conditions)
+	if err != nil {
 		return nil, err
 	}
 	return r, nil
@@ -74,8 +69,7 @@ func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operat
 
 	// get assessment list
 	var (
-		assessments []*entity.Assessment
-		cond        = da.QueryAssessmentConditions{
+		cond = da.QueryAssessmentConditions{
 			OrgID: entity.NullString{
 				String: operator.OrgID,
 				Valid:  true,
@@ -119,7 +113,8 @@ func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operat
 		}
 	}
 
-	if err := da.GetAssessmentDA().QueryTx(ctx, tx, &cond, &assessments); err != nil {
+	assessments, err := da.GetAssessmentDA().Query(ctx, &cond)
+	if err != nil {
 		log.Error(ctx, "summary: query assessments failed",
 			log.Err(err),
 			log.Any("cond", cond),
@@ -257,7 +252,7 @@ func (m *assessmentModel) studentsAssessmentQuery(ctx context.Context,
 		OrderBy:                      orderBy,
 		Pager:                        utils.GetDboPager(condition.Page, condition.PageSize),
 	}
-	total, err := da.GetAssessmentDA().PageTx(ctx, tx, conditions, &r)
+	total, r, err := da.GetAssessmentDA().Page(ctx, conditions)
 	if err != nil {
 		log.Error(ctx, "StudentQuery:GetAssessmentDA.QueryTx failed",
 			log.Err(err),
