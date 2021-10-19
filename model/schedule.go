@@ -793,11 +793,6 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 			log.Any("viewData", viewData))
 		return "", err
 	}
-	if viewData.ClassType == entity.ScheduleClassTypeTask {
-		viewData.LessonPlanID = ""
-		viewData.ProgramID = ""
-		viewData.SubjectIDs = nil
-	}
 
 	schedule, err := viewData.ToSchedule(ctx)
 	schedule.CreatedID = op.UserID
@@ -948,7 +943,7 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 		}
 	}
 	switch schedule.ClassType {
-	case entity.ScheduleClassTypeHomework, entity.ScheduleClassTypeTask:
+	case entity.ScheduleClassTypeHomework:
 		if schedule.DueAt > 0 {
 			now := time.Now().Unix()
 			dueAtEnd := utils.TodayEndByTimeStamp(schedule.DueAt, time.Local).Unix()
@@ -1003,12 +998,6 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 			log.Err(err),
 			log.Any("viewData", viewData))
 		return "", err
-	}
-
-	if viewData.ClassType == entity.ScheduleClassTypeTask {
-		viewData.LessonPlanID = ""
-		viewData.ProgramID = ""
-		viewData.SubjectIDs = nil
 	}
 
 	// update schedule
@@ -2361,9 +2350,6 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 		}
 	}
 
-	if v.ClassType == entity.ScheduleClassTypeTask {
-		return nil
-	}
 	// subject
 	if len(v.SubjectIDs) != 0 {
 		_, err = external.GetSubjectServiceProvider().BatchGet(ctx, operator, v.SubjectIDs)
