@@ -8,7 +8,11 @@ type ClassAttendanceRequest struct {
 	Durations               []TimeRange `json:"durations" binding:"gt=0"`
 }
 
-type ClassAttendanceResponse []*ClassAttendanceResponseItem
+type ClassAttendanceResponse struct {
+	AttendedCount  int                            `json:"attendedCount"`
+	ScheduledCount int                            `json:"scheduledCount"`
+	Items          []*ClassAttendanceResponseItem `json:"items"`
+}
 
 type ClassAttendanceResponseItem struct {
 	Duration TimeRange `json:"duration"`
