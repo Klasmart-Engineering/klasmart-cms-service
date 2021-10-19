@@ -34,6 +34,8 @@ type IReportModel interface {
 	ListTeacherLoadLessons(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadLessonArgs) ([]*entity.TeacherLoadLesson, error)
 	SummaryTeacherLoadLessons(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadLessonArgs) (*entity.TeacherLoadLessonSummary, error)
 	MissedLessonsList(ctx context.Context, request *entity.TeacherLoadMissedLessonsRequest) (response *entity.TeacherLoadMissedLessonsResponse, err error)
+
+	GetAssignmentCompletion(ctx context.Context, op *entity.Operator, args *entity.AssignmentRequest) (entity.AssignmentResponse, error)
 }
 
 var (
