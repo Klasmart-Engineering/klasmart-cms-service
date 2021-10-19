@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
 	"sync"
 
@@ -14,6 +15,7 @@ import (
 )
 
 type TeacherServiceProvider interface {
+	cache.IDataSource
 	Get(ctx context.Context, operator *entity.Operator, id string) (*Teacher, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableTeacher, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableTeacher, error)
@@ -35,6 +37,13 @@ type Teacher struct {
 type NullableTeacher struct {
 	Valid bool `json:"-"`
 	*Teacher
+}
+
+func (n *NullableTeacher) StringID() string {
+	return n.Teacher.ID
+}
+func (n *NullableTeacher) RelatedIDs() []*cache.RelatedEntity {
+	return nil
 }
 
 var (
@@ -69,13 +78,29 @@ func (s AmsTeacherService) BatchGet(ctx context.Context, operator *entity.Operat
 	if len(ids) == 0 {
 		return []*NullableTeacher{}, nil
 	}
+	res := make([]*NullableTeacher, 0, len(ids))
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+func (s AmsTeacherService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
+	}
 
 	users, err := GetUserServiceProvider().BatchGet(ctx, operator, ids)
 	if err != nil {
 		return nil, err
 	}
 
-	teachers := make([]*NullableTeacher, len(users))
+	teachers := make([]cache.Object, len(users))
 	for index, user := range users {
 		teachers[index] = &NullableTeacher{
 			Valid: user.Valid,
@@ -374,4 +399,8 @@ func (s AmsTeacherService) Query(ctx context.Context, operator *entity.Operator,
 
 func (s AmsTeacherService) FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error) {
 	return GetUserServiceProvider().FilterByPermission(ctx, operator, userIDs, permissionName)
+}
+
+func (s AmsTeacherService) Name() string {
+	return "ams_teacher_service"
 }

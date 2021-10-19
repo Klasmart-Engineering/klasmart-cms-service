@@ -2,7 +2,9 @@ package external
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
 	"sync"
 
@@ -13,7 +15,13 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
+var (
+	ErrNoOperatorInOptions       = errors.New("no operator in options")
+	ErrInvalidOpteratorInOptions = errors.New("invalid operator in options")
+)
+
 type UserServiceProvider interface {
+	cache.IDataSource
 	Get(ctx context.Context, operator *entity.Operator, id string) (*User, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableUser, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableUser, error)
@@ -37,6 +45,13 @@ type User struct {
 type NullableUser struct {
 	Valid bool `json:"-"`
 	*User
+}
+
+func (n *NullableUser) StringID() string {
+	return n.User.ID
+}
+func (n *NullableUser) RelatedIDs() []*cache.RelatedEntity {
+	return nil
 }
 
 var (
@@ -69,8 +84,22 @@ func (s AmsUserService) Get(ctx context.Context, operator *entity.Operator, id s
 
 //TODO:No Test Program
 func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableUser, error) {
+	res := make([]*NullableUser, 0, len(ids))
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (s AmsUserService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
 	if len(ids) == 0 {
-		return []*NullableUser{}, nil
+		return nil, nil
+	}
+
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
 	}
 
 	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
@@ -92,13 +121,13 @@ func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator,
 		Data: &data,
 	}
 
-	_, err := GetAmsClient().Run(ctx, request, response)
+	_, err = GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get users by ids failed", log.Err(err), log.Strings("ids", ids))
 		return nil, err
 	}
 
-	users := make([]*NullableUser, 0, len(data))
+	users := make([]cache.Object, 0, len(data))
 	for index := range ids {
 		user := data[fmt.Sprintf("q%d", indexMapping[index])]
 		users = append(users, &NullableUser{
@@ -388,4 +417,21 @@ func (s AmsUserService) GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Ope
 		result = append(result, item)
 	}
 	return result, nil
+}
+
+func (s AmsUserService) Name() string {
+	return "ams_user_service"
+}
+
+func optionsWithOperator(ctx context.Context, options ...interface{}) (*entity.Operator, error) {
+	if len(options) < 1 {
+		return nil, ErrNoOperatorInOptions
+	}
+	operator, ok := options[0].(*entity.Operator)
+	if !ok {
+		log.Error(ctx, "invalid options",
+			log.Any("options", options))
+		return nil, ErrInvalidOpteratorInOptions
+	}
+	return operator, nil
 }

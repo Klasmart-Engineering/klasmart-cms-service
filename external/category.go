@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -13,6 +14,7 @@ import (
 )
 
 type CategoryServiceProvider interface {
+	cache.IDataSource
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Category, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Category, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -28,6 +30,12 @@ type Category struct {
 	System bool     `json:"system"`
 }
 
+func (n *Category) StringID() string {
+	return n.ID
+}
+func (n *Category) RelatedIDs() []*cache.RelatedEntity {
+	return nil
+}
 func GetCategoryServiceProvider() CategoryServiceProvider {
 	return &AmsCategoryService{}
 }
@@ -37,6 +45,23 @@ type AmsCategoryService struct{}
 func (s AmsCategoryService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Category, error) {
 	if len(ids) == 0 {
 		return []*Category{}, nil
+	}
+
+	res := make([]*Category, 0, len(ids))
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+func (s AmsCategoryService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
 	}
 
 	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
@@ -59,7 +84,7 @@ func (s AmsCategoryService) BatchGet(ctx context.Context, operator *entity.Opera
 		Data: &data,
 	}
 
-	_, err := GetAmsClient().Run(ctx, request, response)
+	_, err = GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get categories by ids failed",
 			log.Err(err),
@@ -75,7 +100,7 @@ func (s AmsCategoryService) BatchGet(ctx context.Context, operator *entity.Opera
 		return nil, response.Errors
 	}
 
-	categories := make([]*Category, 0, len(data))
+	categories := make([]cache.Object, 0, len(data))
 	for index := range ids {
 		category := data[fmt.Sprintf("q%d", indexMapping[index])]
 		if category == nil {
@@ -351,4 +376,7 @@ func (s AmsCategoryService) GetBySubjects(ctx context.Context, operator *entity.
 		log.Any("categories", result))
 
 	return result, nil
+}
+func (s AmsCategoryService) Name() string {
+	return "ams_category_service"
 }

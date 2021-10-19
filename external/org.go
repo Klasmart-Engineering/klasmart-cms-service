@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
 	"text/template"
 
@@ -16,6 +17,7 @@ import (
 )
 
 type OrganizationServiceProvider interface {
+	cache.IDataSource
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableOrganization, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableOrganization, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -37,6 +39,13 @@ type NullableOrganization struct {
 	Valid bool `json:"-"`
 }
 
+func (n *NullableOrganization) StringID() string {
+	return n.Organization.ID
+}
+func (n *NullableOrganization) RelatedIDs() []*cache.RelatedEntity {
+	return nil
+}
+
 func GetOrganizationServiceProvider() OrganizationServiceProvider {
 	return &AmsOrganizationService{}
 }
@@ -46,6 +55,24 @@ type AmsOrganizationService struct{}
 func (s AmsOrganizationService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableOrganization, error) {
 	if len(ids) == 0 {
 		return []*NullableOrganization{}, nil
+	}
+
+	res := make([]*NullableOrganization, 0, len(ids))
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (s AmsOrganizationService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
 	}
 
 	q := `query orgs($orgIDs: [ID!]){
@@ -66,7 +93,7 @@ func (s AmsOrganizationService) BatchGet(ctx context.Context, operator *entity.O
 			Organizations []*Organization `json:"organizations"`
 		}{Organizations: payload},
 	}
-	_, err := GetAmsClient().Run(ctx, req, &res)
+	_, err = GetAmsClient().Run(ctx, req, &res)
 	if err != nil {
 		log.Error(ctx, "Run error", log.String("q", q), log.Any("res", res), log.Err(err))
 		return nil, err
@@ -75,7 +102,7 @@ func (s AmsOrganizationService) BatchGet(ctx context.Context, operator *entity.O
 		log.Error(ctx, "Res error", log.String("q", q), log.Any("res", res), log.Err(res.Errors))
 		return nil, res.Errors
 	}
-	nullableOrganizations := make([]*NullableOrganization, len(ids))
+	nullableOrganizations := make([]cache.Object, len(ids))
 	for index := range ids {
 		if payload[indexMapping[index]] == nil {
 			nullableOrganizations[index] = &NullableOrganization{Valid: false}
@@ -90,7 +117,6 @@ func (s AmsOrganizationService) BatchGet(ctx context.Context, operator *entity.O
 
 	return nullableOrganizations, nil
 }
-
 func (s AmsOrganizationService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableOrganization, error) {
 	organizations, err := s.BatchGet(ctx, operator, ids)
 	if err != nil {
@@ -415,4 +441,8 @@ func (s AmsOrganizationService) GetByUserID(ctx context.Context, operator *entit
 		log.Any("orgs", orgs))
 
 	return orgs, nil
+}
+
+func (s AmsOrganizationService) Name() string {
+	return "ams_org_service"
 }
