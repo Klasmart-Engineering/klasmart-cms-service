@@ -6,7 +6,7 @@ import (
 )
 
 type StudentUsageRecord struct {
-	ClassType         string     `json:"class_type"  gorm:"column:class_type"  enums:"live,class,study,home fun" `
+	ClassType         string     `json:"class_type"  gorm:"column:class_type"  enums:"live,class,study,home fun,task" `
 	RoomID            string     `json:"room_id" gorm:"column:room_id" `
 	LessonMaterialUrl string     `json:"lesson_material_url"  gorm:"column:lesson_material_url"  `
 	ContentType       string     `json:"content_type"  gorm:"column:content_type"   enums:"h5p, audio, video, image, document"`

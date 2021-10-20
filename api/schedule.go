@@ -436,6 +436,20 @@ func (s *Server) processScheduleDueDate(c *gin.Context, input *entity.ProcessSch
 	var day int64
 	var result = new(entity.ProcessScheduleDueAtView)
 	switch input.ClassType {
+	case entity.ScheduleClassTypeTask:
+		result.StartAt = input.StartAt
+		result.EndAt = input.EndAt
+		if input.DueAt <= 0 {
+			result.DueAt = 0
+			return result, true
+		}
+		day = utils.GetTimeDiffToDayByTimeStamp(input.EndAt, input.DueAt, input.Location)
+		if day < 0 {
+			log.Info(ctx, "schedule dueAt is invalid", log.Int64("now", now), log.Any("input", input))
+			c.JSON(http.StatusBadRequest, L(ScheduleMessageDueDateEarlierEndDate))
+			return nil, false
+		}
+		result.DueAt = utils.TodayEndByTimeStamp(input.DueAt, input.Location).Unix()
 	case entity.ScheduleClassTypeHomework:
 		if input.DueAt <= 0 {
 			result.DueAt = 0
