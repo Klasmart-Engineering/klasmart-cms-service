@@ -9,21 +9,22 @@ type AssignmentRequest struct {
 }
 
 type AssignmentCompletionRate struct {
+	StudentID                   string    `json:"student_id"`
+	StudentCompleteAssignment   int64     `json:"student_complete_assignment"`
+	StudentTotalAssignment      int64     `json:"student_total_assignment"`
 	StudentDesignatedSubject    float64   `json:"student_designated_subject"`
 	ClassDesignatedSubject      float64   `json:"class_designated_subject"`
 	StudentNonDesignatedSubject float64   `json:"student_non_designated_subject"`
 	Duration                    TimeRange `json:"duration"`
-	StudentCompleteAssignment   int64     `json:"student_complete_assignment"`
-	StudentTotalAssignment      int64     `json:"student_total_assignment"`
 }
 
 type AssignmentResponse []*AssignmentCompletionRate
 
 type StudentAssignmentStatus struct {
-	ScheduleID string `json:"schedule_id" gorm:"column:id"`
-	ClassID    string `json:"class_id" gorm:"column:class_id"`
-	StudentID  string `json:"student_id" gorm:"student_id"`
-	SubjectID  string `json:"subject_id" gorm:"subject_id"`
-	Attended   bool   `json:"attended" gorm:"finish_counts"`
-	CreateAt   int64  `json:"create_at" gorm:"created_at"`
+	ClassID   string `json:"class_id" gorm:"column:class_id"`
+	StudentID string `json:"student_id" gorm:"column:student_id"`
+	SubjectID string `json:"subject_id" gorm:"column:subject_id"`
+	Total     int64  `json:"total" gorm:"column:total"`
+	Finish    int64  `json:"finish" gorm:"column:finish"`
+	Duration  string `json:"duration" gorm:"column:duration"`
 }
