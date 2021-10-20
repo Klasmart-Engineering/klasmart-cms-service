@@ -16,6 +16,12 @@ func (m *reportModel) GetStudentProgressLearnOutcomeAchievement(ctx context.Cont
 		StudentAchievedCounts:                 map[string]entity.Float64Slice{},
 		UnselectSubjectsStudentAchievedCounts: map[string]entity.Float64Slice{},
 	}
+	for _, duration := range req.Durations {
+		res.Items = append(res.Items, &entity.LearnOutcomeAchievementResponseItem{
+			Duration:                   duration,
+			StudentAchievedPercentages: map[string]entity.Float64Slice{},
+		})
+	}
 	counts, err := da.GetReportDA().GetStudentProgressLearnOutcomeCountByStudentAndSubject(ctx, req)
 	if err != nil {
 		return
@@ -46,6 +52,7 @@ func (m *reportModel) GetStudentProgressLearnOutcomeAchievement(ctx context.Cont
 	for _, item := range res.Items {
 		item.FirstAchievedPercentage = item.FirstAchievedPercentages.Avg()
 		item.ReAchievedPercentage = item.ReAchievedPercentages.Avg()
+		item.UnSelectedSubjectsAverageAchievedPercentage = item.UnSelectedSubjectsAchievedPercentages.Avg()
 
 		classAchievedPercentages := entity.Float64Slice{}
 		for _, s := range item.StudentAchievedPercentages {

@@ -14,11 +14,14 @@ type IStudentProgressLearnOutcomeAchievement interface {
 func (r *ReportDA) GetStudentProgressLearnOutcomeCountByStudentAndSubject(ctx context.Context, req *entity.LearnOutcomeAchievementRequest) (res []*entity.StudentProgressLearnOutcomeCount, err error) {
 	res = []*entity.StudentProgressLearnOutcomeCount{}
 
-	plDuration := `end as duration`
+	plDuration := ``
 	for _, duration := range req.Durations {
 		min, max, _ := duration.Value(ctx)
-		plDuration = fmt.Sprintf(`case when a.complete_time > %d and a.complete_time < %d THEN '%s' `, min, max, duration) + plDuration
+		plDuration = fmt.Sprintf(`
+when a.complete_time > %d and a.complete_time < %d THEN '%s' 
+`, min, max, duration) + plDuration
 	}
+	plDuration = fmt.Sprintf(`case %s end as duration`, plDuration)
 
 	sql := fmt.Sprintf(`
 select 

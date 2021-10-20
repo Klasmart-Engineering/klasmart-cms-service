@@ -28,11 +28,6 @@ func (s *LearnOutcomeAchievementResponse) GetItem(tr TimeRange) (item *LearnOutc
 			return
 		}
 	}
-	item = &LearnOutcomeAchievementResponseItem{
-		Duration:                   tr,
-		StudentAchievedPercentages: map[string]Float64Slice{},
-	}
-	s.Items = append(s.Items, item)
 	return
 }
 
