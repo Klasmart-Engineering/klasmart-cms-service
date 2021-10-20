@@ -57,10 +57,12 @@ from
 where 
  t.status=?
  and t.class_id=?
-
+ and t.subject_id in (?)
 group by t.student_id,t.subject_id,t.duration
 `, plDuration)
 	args := []interface{}{entity.AssessmentStatusComplete, req.ClassID}
+	args = append(args, append(req.SelectedSubjectIDList, req.UnSelectedSubjectIDList...))
+
 	err = r.QueryRawSQL(ctx, &res, sql, args...)
 	if err != nil {
 		return
