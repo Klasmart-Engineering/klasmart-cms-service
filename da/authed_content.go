@@ -46,7 +46,7 @@ func (ac *AuthedContentDA) BatchAddAuthedContent(ctx context.Context, tx *dbo.DB
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		models = append(models, entity.AuthedContentRecord{ID: item.ID, ContentID: item.ContentID,
+		models = append(models, entity.AuthedContentRecord{ID: item.ID, ContentID: item.ContentID,OrgID: item.OrgID,
 			FromFolderID: item.FromFolderID, Creator: item.Creator, CreateAt: createAt,
 			Duration: item.Duration})
 	}
