@@ -9,31 +9,56 @@ type LearnOutcomeAchievementRequest struct {
 }
 
 type LearnOutcomeAchievementResponse struct {
-	FirstAchievedCount                    int64 `json:"first_achieved_count"`
-	ReAchievedCount                       int64 `json:"re_achieved_count"`
-	ClassAverageAchievedCount             int64 `json:"class_average_achieved_count"`
-	UnSelectedSubjectsAverageAchieveCount int64 `json:"un_selected_subjects_average_achieve_count"`
+	Request                               *LearnOutcomeAchievementRequest `json:"request"`
+	FirstAchievedCount                    int64                           `json:"first_achieved_count"`
+	ReAchievedCount                       int64                           `json:"re_achieved_count"`
+	ClassAverageAchievedCount             float64                         `json:"class_average_achieved_count"`
+	UnSelectedSubjectsAverageAchieveCount float64                         `json:"un_selected_subjects_average_achieve_count"`
 
-	Items []*LearnOutcomeAchievementResponseItem `json:"items"`
+	Items                                 LearnOutcomeAchievementResponseItemSlice `json:"items"`
+	StudentAchievedCounts                 map[string]Float64Slice                  `json:"-"`
+	UnselectSubjectsStudentAchievedCounts map[string]Float64Slice                  `json:"-"`
+}
+type LearnOutcomeAchievementResponseItemSlice []*LearnOutcomeAchievementResponseItem
+
+func (s *LearnOutcomeAchievementResponse) GetItem(tr TimeRange) (item *LearnOutcomeAchievementResponseItem) {
+	for _, responseItem := range s.Items {
+		if responseItem.Duration == tr {
+			item = responseItem
+			return
+		}
+	}
+	item = &LearnOutcomeAchievementResponseItem{
+		Duration:                   tr,
+		StudentAchievedPercentages: map[string]Float64Slice{},
+	}
+	s.Items = append(s.Items, item)
+	return
 }
 
 type LearnOutcomeAchievementResponseItem struct {
 	Duration TimeRange `json:"duration"`
 
-	FirstAchievedPercentage                    float64 `json:"first_achieved_percentage"`
-	ReAchievedPercentage                       float64 `json:"re_achieved_percentage"`
-	ClassAverageAchievePercent                 float64 `json:"class_average_achieve_percent"`
-	UnSelectedSubjectsAverageAchievePercentage float64 `json:"un_selected_subjects_average_achieve_percentage"`
+	FirstAchievedPercentage                     float64 `json:"first_achieved_percentage"`
+	ReAchievedPercentage                        float64 `json:"re_achieved_percentage"`
+	ClassAverageAchievedPercentage              float64 `json:"class_average_achieved_percentage"`
+	UnSelectedSubjectsAverageAchievedPercentage float64 `json:"un_selected_subjects_average_achieved_percentage"`
 
 	FirstAchievedCount int64 `json:"first_achieved_count"`
 	ReAchievedCount    int64 `json:"re_achieved_count"`
 	UnAchievedCount    int64 `json:"un_achieved_count"`
+
+	FirstAchievedPercentages              Float64Slice            `json:"-"`
+	ReAchievedPercentages                 Float64Slice            `json:"-"`
+	StudentAchievedPercentages            map[string]Float64Slice `json:"-"`
+	UnSelectedSubjectsAchievedPercentages Float64Slice            `json:"-"`
 }
 
 type StudentProgressLearnOutcomeCount struct {
-	StudentID          string `json:"student_id" gorm:"column:student_id" `
-	SubjectID          string `json:"subject_id" gorm:"column:subject_id" `
-	CompletedCount     int64  `json:"completed_count" gorm:"column:completed_count" `
-	AchievedCount      int64  `json:"achieved_count" gorm:"column:achieved_count" `
-	FirstAchievedCount int64  `json:"first_achieved_count" gorm:"column:first_achieved_count" `
+	StudentID          string    `json:"student_id" gorm:"column:student_id" `
+	SubjectID          string    `json:"subject_id" gorm:"column:subject_id" `
+	CompletedCount     int64     `json:"completed_count" gorm:"column:completed_count" `
+	AchievedCount      int64     `json:"achieved_count" gorm:"column:achieved_count" `
+	FirstAchievedCount int64     `json:"first_achieved_count" gorm:"column:first_achieved_count" `
+	Duration           TimeRange `json:"duration" gorm:"column:duration" `
 }
