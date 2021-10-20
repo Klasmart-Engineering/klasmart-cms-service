@@ -32,6 +32,22 @@ func GetAssessmentModel() IAssessmentModel {
 	return assessmentModelInstance
 }
 
+type AssessmentMaker struct {
+	Study   IStudyAssessmentModel
+	HomeFun IHomeFunStudyModel
+	Live    IClassAndLiveAssessmentModel
+	Class   IClassAndLiveAssessmentModel
+}
+
+func NewAssessmentMaker() *AssessmentMaker {
+	return &AssessmentMaker{
+		Study:   GetStudyAssessmentModel(),
+		HomeFun: GetHomeFunStudyModel(),
+		Live:    GetClassAndLiveAssessmentModel(),
+		Class:   GetClassAndLiveAssessmentModel(),
+	}
+}
+
 type IAssessmentModel interface {
 	Query(ctx context.Context, operator *entity.Operator, conditions *da.QueryAssessmentConditions) ([]*entity.Assessment, error)
 	Summary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsSummaryArgs) (*entity.AssessmentsSummary, error)

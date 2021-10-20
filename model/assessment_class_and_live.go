@@ -48,7 +48,7 @@ type classAndLiveAssessmentModel struct {
 }
 
 func (m *classAndLiveAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetail, error) {
-	return m.assessmentBase.getDetail(ctx, tx, operator, id)
+	return m.assessmentBase.getDetail(ctx, operator, id)
 }
 
 func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error) {
@@ -130,7 +130,7 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 
 	// convert to assessment view
 	var views []*entity.AssessmentView
-	if views, err = m.toViews(ctx, tx, operator, assessments, entity.ConvertToViewsOptions{
+	if views, err = m.toViews(ctx, operator, assessments, entity.ConvertToViewsOptions{
 		CheckedStudents:  sql.NullBool{Bool: true, Valid: true},
 		EnableProgram:    true,
 		EnableSubjects:   true,

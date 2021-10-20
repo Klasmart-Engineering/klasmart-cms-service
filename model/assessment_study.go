@@ -46,7 +46,7 @@ type studyAssessmentModel struct {
 }
 
 func (m *studyAssessmentModel) GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.AssessmentDetail, error) {
-	return m.assessmentBase.getDetail(ctx, tx, operator, id)
+	return m.assessmentBase.getDetail(ctx, operator, id)
 }
 
 func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args *entity.ListStudyAssessmentsArgs) (*entity.ListStudyAssessmentsResult, error) {
@@ -129,21 +129,12 @@ func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operat
 
 	// convert to assessment view
 	var views []*entity.AssessmentView
-	if views, err = m.toViews(ctx, tx, operator, assessments, entity.ConvertToViewsOptions{
+	if views, err = m.toViews(ctx, operator, assessments, entity.ConvertToViewsOptions{
 		CheckedStudents:  sql.NullBool{Bool: true, Valid: true},
-		EnableProgram:    true,
-		EnableSubjects:   true,
 		EnableTeachers:   true,
-		EnableStudents:   true,
 		EnableClass:      true,
 		EnableLessonPlan: true,
 	}); err != nil {
-		log.Error(ctx, "List: GetAssessmentUtils().toViews: get failed",
-			log.Err(err),
-			log.Any("assessments", assessments),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
 		return nil, err
 	}
 
