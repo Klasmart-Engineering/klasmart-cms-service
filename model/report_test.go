@@ -29,4 +29,5 @@ func TestClassAttendance(t *testing.T) {
 	response, err := GetReportModel().ClassAttendanceStatistics(ctx, &request)
 	fmt.Println(err)
 	fmt.Println(response.Items[0].ClassAverageAttendancePercentage)
+	fmt.Println(response.Items[0].AttendedCount)
 }

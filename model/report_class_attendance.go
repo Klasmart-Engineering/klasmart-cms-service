@@ -57,11 +57,13 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, request *en
 			}
 		}
 		classAttendanceResponseItem.Duration = duration
-		classAttendanceResponseItem.AttendancePercentage = float64(studentSelectSubjectAttendanceCount) / float64(studentSelectSubjectCount)
-		classAttendanceResponseItem.UnSelectedSubjectsAverageAttendancePercentage = float64(studentUnSelectSubjectAttendanceCount) / float64(studentUnSelectSubjectCount)
-		classAttendanceResponseItem.ClassAverageAttendancePercentage = float64(classSelectSubjectAttendanceCount) / float64(classSelectSubjectCount)
 		classAttendanceResponseItem.AttendedCount = studentSelectSubjectAttendanceCount + studentUnSelectSubjectAttendanceCount
 		classAttendanceResponseItem.ScheduledCount = studentSelectSubjectCount + studentUnSelectSubjectCount
+		if studentSelectSubjectCount >0 && studentUnSelectSubjectCount>0 &&classSelectSubjectCount>0{
+			classAttendanceResponseItem.AttendancePercentage = float64(studentSelectSubjectAttendanceCount) / float64(studentSelectSubjectCount)
+			classAttendanceResponseItem.UnSelectedSubjectsAverageAttendancePercentage = float64(studentUnSelectSubjectAttendanceCount) / float64(studentUnSelectSubjectCount)
+			classAttendanceResponseItem.ClassAverageAttendancePercentage = float64(classSelectSubjectAttendanceCount) / float64(classSelectSubjectCount)
+		}
 		//reset
 		classSelectSubjectCount = 0
 		classSelectSubjectAttendanceCount = 0
