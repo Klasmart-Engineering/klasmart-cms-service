@@ -8,12 +8,16 @@ type ClassAttendanceRequest struct {
 	Durations               []TimeRange `json:"durations" binding:"gt=0"`
 }
 
-type ClassAttendanceResponse []*ClassAttendanceResponseItem
+type ClassAttendanceResponse struct {
+	RequestStudentID string                         `json:"request_student_id"`
+	AttendedCount    int                            `json:"attended_count"`
+	ScheduledCount   int                            `json:"scheduled_count"`
+	Items            []*ClassAttendanceResponseItem `json:"items"`
+}
 
 type ClassAttendanceResponseItem struct {
-	Duration TimeRange `json:"duration"`
-
-	AttendancePercentage                          float64 `json:"attendance_percentage"`
-	ClassAverageAttendancePercentage              float64 `json:"class_average_attendance_percentage"`
-	UnSelectedSubjectsAverageAttendancePercentage float64 `json:"un_selected_subjects_average_attendance_percentage"`
+	Duration                                      TimeRange `json:"duration"`
+	AttendancePercentage                          float64   `json:"attendance_percentage"`
+	ClassAverageAttendancePercentage              float64   `json:"class_average_attendance_percentage"`
+	UnSelectedSubjectsAverageAttendancePercentage float64   `json:"un_selected_subjects_average_attendance_percentage"`
 }
