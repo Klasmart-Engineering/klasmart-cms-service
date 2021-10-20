@@ -72,6 +72,8 @@ func (s AmsStudentService) Get(ctx context.Context, operator *entity.Operator, i
 }
 
 func (s AmsStudentService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableStudent, error) {
+	log.Info(ctx, "Doing BatchGet student",
+		log.Strings("ids", ids))
 	if len(ids) == 0 {
 		return []*NullableStudent{}, nil
 	}
@@ -80,6 +82,9 @@ func (s AmsStudentService) BatchGet(ctx context.Context, operator *entity.Operat
 	if err != nil {
 		return nil, err
 	}
+	log.Info(ctx, "BatchGet students success",
+		log.Strings("ids", ids),
+		log.Any("res", res))
 
 	return res, nil
 }
@@ -117,7 +122,9 @@ func (s AmsStudentService) BatchGetMap(ctx context.Context, operator *entity.Ope
 	if err != nil {
 		return map[string]*NullableStudent{}, err
 	}
-
+	log.Info(ctx, "BatchGetMap.BatchGet students success",
+		log.Strings("ids", ids),
+		log.Any("students", students))
 	dict := make(map[string]*NullableStudent, len(students))
 	for _, student := range students {
 		if students[0].Student == nil || !student.Valid {
@@ -125,6 +132,9 @@ func (s AmsStudentService) BatchGetMap(ctx context.Context, operator *entity.Ope
 		}
 		dict[student.ID] = student
 	}
+	log.Info(ctx, "BatchGetMap.BatchGet students map success",
+		log.Strings("ids", ids),
+		log.Any("dict", dict))
 
 	return dict, nil
 }
