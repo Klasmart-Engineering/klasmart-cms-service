@@ -10,8 +10,6 @@ type ClassAttendanceRequest struct {
 
 type ClassAttendanceResponse struct {
 	RequestStudentID string                         `json:"request_student_id"`
-	AttendedCount    int                            `json:"attended_count"`
-	ScheduledCount   int                            `json:"scheduled_count"`
 	Items            []*ClassAttendanceResponseItem `json:"items"`
 }
 
@@ -20,4 +18,19 @@ type ClassAttendanceResponseItem struct {
 	AttendancePercentage                          float64   `json:"attendance_percentage"`
 	ClassAverageAttendancePercentage              float64   `json:"class_average_attendance_percentage"`
 	UnSelectedSubjectsAverageAttendancePercentage float64   `json:"un_selected_subjects_average_attendance_percentage"`
+	AttendedCount                                 int       `json:"attended_count"`
+	ScheduledCount                                int       `json:"scheduled_count"`
+}
+
+type ClassAttendance struct {
+	ClassID      string `gorm:"column:class_id" json:"class_id"`
+	SubjectID    string `gorm:"column:subject_id" json:"subject_id"`
+	StudentID    string `gorm:"column:student_id" json:"student_id"`
+	IsAttendance bool   `gorm:"column:is_attendance" json:"is_attendance"`
+}
+
+type ClassAttendanceQueryParameters struct {
+	ClassID    string
+	SubjectIDS []string
+	Duration   TimeRange
 }

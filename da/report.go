@@ -10,6 +10,7 @@ type IReportDA interface {
 	ITeacherLoadLesson
 	IStudentProgressAssignment
 	IStudentProgressLearnOutcomeAchievement
+	IClassAttendance
 }
 type ReportDA struct {
 	BaseDA

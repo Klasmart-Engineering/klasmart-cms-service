@@ -207,6 +207,7 @@ const (
 	ScheduleClassTypeOfflineClass ScheduleClassType = "OfflineClass"
 	ScheduleClassTypeHomework     ScheduleClassType = "Homework"
 	ScheduleClassTypeTask         ScheduleClassType = "Task"
+	ScheduleClassTypeSubject      ScheduleClassType = "Subject"
 )
 
 func (s ScheduleClassType) Valid() bool {
