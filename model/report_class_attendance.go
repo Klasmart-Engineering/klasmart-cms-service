@@ -44,14 +44,12 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, request *en
 					studentSelectSubjectAttendanceCount++
 				}
 			}
-			//when subject select all,don't statistics student attendance other subject
-			if len(request.UnSelectedSubjectIDList) == 0 {
-				if classAttendance.StudentID == request.StudentID &&
-					utils.ContainsStr(request.UnSelectedSubjectIDList, classAttendance.SubjectID) {
-					studentUnSelectSubjectCount++
-					if classAttendance.IsAttendance {
-						studentUnSelectSubjectAttendanceCount++
-					}
+			//when subject not select all,statistics student attendance other subject
+			if len(request.UnSelectedSubjectIDList) != 0 && classAttendance.StudentID == request.StudentID &&
+				utils.ContainsStr(request.UnSelectedSubjectIDList, classAttendance.SubjectID) {
+				studentUnSelectSubjectCount++
+				if classAttendance.IsAttendance {
+					studentUnSelectSubjectAttendanceCount++
 				}
 			}
 		}
