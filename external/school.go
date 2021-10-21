@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
 	"sync"
 
@@ -16,6 +17,7 @@ import (
 )
 
 type SchoolServiceProvider interface {
+	cache.IDataSource
 	Get(ctx context.Context, operator *entity.Operator, id string) (*School, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableSchool, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableSchool, error)
@@ -34,8 +36,15 @@ type School struct {
 }
 
 type NullableSchool struct {
-	Valid bool `json:"-"`
+	Valid bool `json:"valid"`
 	*School
+}
+
+func (n *NullableSchool) StringID() string {
+	return n.School.ID
+}
+func (n *NullableSchool) RelatedIDs() []*cache.RelatedEntity {
+	return nil
 }
 
 var (
@@ -70,6 +79,23 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operato
 	if len(ids) == 0 {
 		return []*NullableSchool{}, nil
 	}
+	res := make([]*NullableSchool, 0, len(ids))
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (s AmsSchoolService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
+	}
 
 	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
 
@@ -92,7 +118,7 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operato
 		Data: &data,
 	}
 
-	_, err := GetAmsClient().Run(ctx, request, response)
+	_, err = GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get schools by ids failed",
 			log.Err(err),
@@ -100,7 +126,7 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operato
 		return nil, err
 	}
 
-	schools := make([]*NullableSchool, 0, len(data))
+	schools := make([]cache.Object, 0, len(data))
 	for index := range ids {
 		school := data[fmt.Sprintf("q%d", indexMapping[index])]
 		schools = append(schools, &NullableSchool{
@@ -594,4 +620,7 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 		log.Any("schools", schools))
 
 	return schools, nil
+}
+func (s AmsSchoolService) Name() string {
+	return "ams_school_service"
 }

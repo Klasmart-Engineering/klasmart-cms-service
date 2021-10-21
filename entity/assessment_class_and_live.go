@@ -239,8 +239,8 @@ type QueryAssessmentsArgs struct {
 }
 
 type AssessmentAllowTeacherIDAndStatusPair struct {
-	TeacherID string           `json:"teacher_id"`
-	Status    AssessmentStatus `json:"status"`
+	TeacherID string             `json:"teacher_id"`
+	Status    []AssessmentStatus `json:"status"`
 }
 
 type NullAssessmentAllowTeacherIDAndStatusPairs struct {

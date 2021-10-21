@@ -58,8 +58,8 @@ func initRedis() {
 
 func TestMain(m *testing.M) {
 	fmt.Println("begin test")
-	initDB()
-	initRedis()
+	//initDB()
+	//initRedis()
 	m.Run()
 	fmt.Println("end test")
 }
