@@ -390,8 +390,6 @@ gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13 h1:HpobiNbKIrm2oPaHPn
 gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13/go.mod h1:F55wOSQZy1MNmhVZJsHRlnIDkqDtireSDdgbhXwC0Lw=
 gitlab.badanamu.com.cn/calmisland/imq v0.2.18 h1:QqF9DBu+SLFN6jGRtrir1eb6ky8oiAhuTqMGV1cXX7U=
 gitlab.badanamu.com.cn/calmisland/imq v0.2.18/go.mod h1:XT8W2EF64qASU6WQu4IoWGgzCwN1rQpapieif3cyLxs=
-gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.10 h1:I9oxjPdJ3KyIvq9BcMM/wLyFiSe+/Zyl6F26K1ccUD4=
-gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.10/go.mod h1:da+6n0qK29lteGPCJtRwBjyMW2unuZzNS60EJdlNxXM=
 gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.12 h1:MzuURJTka2RaJ6ue63leUwapVPx5qc2EksOx33WU/Vw=
 gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.12/go.mod h1:da+6n0qK29lteGPCJtRwBjyMW2unuZzNS60EJdlNxXM=
 gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.13 h1:lIWpB1pL3ygiPtvXQr4UHKpRmX1iUwa0VwczxDfvhk4=
