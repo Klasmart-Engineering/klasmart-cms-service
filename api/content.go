@@ -909,6 +909,7 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 // @Param org_id query string false "search content under the organization"
 // @Param content_ids query string false "search content id list, separated by commas"
 // @Param content_type query int false "search content type, 1 for materials & 2 for plans"
+// @Param plan_id query string false "search materials from lesson_plan"
 // @Param source_id query string false "search content by source id"
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
 // @Param page_size query int false "content list page size"
@@ -919,7 +920,19 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Router /internal/contents [get]
 func (s *Server) queryContentInternal(c *gin.Context) {
-	//TODO:Finish it
+	ctx := c.Request.Context()
+	condition := s.queryContentInternalCondition(c)
+
+	total, content, err := model.GetContentModel().SearchSimplifyContentInternal(ctx, dbo.MustGetDB(ctx), &condition)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, &entity.ContentSimplifiedList{
+			Total:       total,
+			ContentList: content,
+		})
+	default:
+		s.defaultErrorHandler(c, err)
+	}
 }
 
 func parseAuthor(c *gin.Context, u *entity.Operator) string {
@@ -978,6 +991,22 @@ func (s *Server) filterPublishedContent(c *gin.Context, condition *entity.Conten
 		return true
 	}
 	return false
+}
+
+func (s *Server) queryContentInternalCondition(c *gin.Context) entity.ContentInternalConditionRequest {
+	contentIDsStr := c.Query("content_ids")
+	var contentIDs []string
+	if contentIDsStr != "" {
+		contentIDs = strings.Split(strings.TrimSpace(contentIDsStr), constant.StringArraySeparator)
+	}
+	contentType, _ := strconv.Atoi(c.Query("content_type"))
+	return entity.ContentInternalConditionRequest{
+		IDs:          contentIDs,
+		OrgID:        c.Query("org_id"),
+		ContentType:  contentType,
+		PlanID:       c.Query("plan_id"),
+		DataSourceID: c.Query("source_id"),
+	}
 }
 
 func (s *Server) queryContentCondition(c *gin.Context, op *entity.Operator) entity.ContentConditionRequest {

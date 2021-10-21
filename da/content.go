@@ -146,10 +146,9 @@ func GetContentConditionByInternalCondition(s ContentCondition) *ContentConditio
 }
 
 type ContentConditionInternal struct {
-	IDS         entity.NullStrings `json:"ids"`
-	Name        string             `json:"name"`
-	ContentType []int              `json:"content_type"`
-	//Scope         []string `json:"scope"`
+	IDS                entity.NullStrings `json:"ids"`
+	Name               string             `json:"name"`
+	ContentType        []int              `json:"content_type"`
 	VisibilitySettings []string           `json:"visibility_settings"`
 	PublishStatus      []string           `json:"publish_status"`
 	Author             string             `json:"author"`
@@ -168,6 +167,8 @@ type ContentConditionInternal struct {
 	AuthedOrgID entity.NullStrings `json:"authed_org_ids"`
 	OrderBy     ContentOrderBy     `json:"order_by"`
 	Pager       utils.Pager
+
+	DataSourceID string `json:"data_source_id"`
 
 	JoinUserIDList []string `json:"join_user_id_list"`
 }
@@ -198,6 +199,10 @@ func (s *ContentConditionInternal) GetConditions() ([]string, []interface{}) {
 	if s.ContentName != "" {
 		conditions = append(conditions, "content_name LIKE ?")
 		params = append(params, s.ContentName)
+	}
+	if s.DataSourceID != "" {
+		conditions = append(conditions, "data->.$source = ?")
+		params = append(params, s.DataSourceID)
 	}
 
 	if len(s.Program) > 0 {

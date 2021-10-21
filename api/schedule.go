@@ -515,7 +515,31 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /internal/schedules [get]
 func (s *Server) queryScheduleInternal(c *gin.Context) {
-	//TODO:Finish it
+	ctx := c.Request.Context()
+	scheduleIDsStr := c.Query("schedule_ids")
+	scheduleIDs := strings.Split(strings.TrimSpace(scheduleIDsStr), constant.StringArraySeparator)
+	if scheduleIDsStr == "" || len(scheduleIDs) < 1 {
+		c.JSON(http.StatusBadRequest, &entity.ScheduleSimplifiedPageView{
+			Total: 0,
+			Data:  nil,
+		})
+		return
+	}
+	total, data, err := model.GetScheduleModel().QueryByConditionInternal(ctx, &da.ScheduleCondition{
+		IDs: entity.NullStrings{
+			Valid:   scheduleIDs != nil,
+			Strings: scheduleIDs,
+		},
+	})
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, &entity.ScheduleSimplifiedPageView{
+			Total: total,
+			Data:  data,
+		})
+	default:
+		s.defaultErrorHandler(c, err)
+	}
 }
 
 // @Summary querySchedule

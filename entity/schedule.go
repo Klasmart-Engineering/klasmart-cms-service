@@ -310,6 +310,14 @@ type Schedule struct {
 	DeleteAt        int64             `gorm:"column:delete_at;type:bigint" json:"delete_at"`
 }
 
+func (s *Schedule) ToScheduleSimplified() *ScheduleSimplified {
+	return &ScheduleSimplified{
+		ID:           s.ID,
+		LessonPlanID: s.LessonPlanID,
+		OrgID:        s.OrgID,
+	}
+}
+
 type ScheduleStatus string
 
 func (s ScheduleStatus) Valid() bool {

@@ -330,6 +330,12 @@ func (s Server) registeRoute() {
 	{
 		studentUsageReport.POST("/event", s.addStudentUsageRecordEvent)
 	}
+
+	internal := s.engine.Group("/v1/internal")
+	{
+		internal.GET("/contents", s.queryContentInternal)
+		internal.GET("/schedules", s.queryScheduleInternal)
+	}
 }
 
 // Ping godoc
