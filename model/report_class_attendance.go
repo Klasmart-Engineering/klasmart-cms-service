@@ -48,21 +48,30 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, request *en
 					studentSelectSubjectAttendanceCount++
 				}
 			}
-			if classAttendance.StudentID == request.StudentID &&
-				isExistInArray(classAttendance.SubjectID, request.UnSelectedSubjectIDList) {
-				studentUnSelectSubjectCount++
-				if classAttendance.IsAttendance {
-					studentUnSelectSubjectAttendanceCount++
+			if len(request.UnSelectedSubjectIDList) == 0 {
+				if classAttendance.StudentID == request.StudentID &&
+					isExistInArray(classAttendance.SubjectID, request.UnSelectedSubjectIDList) {
+					studentUnSelectSubjectCount++
+					if classAttendance.IsAttendance {
+						studentUnSelectSubjectAttendanceCount++
+					}
 				}
 			}
 		}
 		classAttendanceResponseItem.Duration = duration
 		classAttendanceResponseItem.AttendedCount = studentSelectSubjectAttendanceCount + studentUnSelectSubjectAttendanceCount
 		classAttendanceResponseItem.ScheduledCount = studentSelectSubjectCount + studentUnSelectSubjectCount
-		if studentSelectSubjectCount >0 && studentUnSelectSubjectCount>0 &&classSelectSubjectCount>0{
-			classAttendanceResponseItem.AttendancePercentage = float64(studentSelectSubjectAttendanceCount) / float64(studentSelectSubjectCount)
-			classAttendanceResponseItem.UnSelectedSubjectsAverageAttendancePercentage = float64(studentUnSelectSubjectAttendanceCount) / float64(studentUnSelectSubjectCount)
-			classAttendanceResponseItem.ClassAverageAttendancePercentage = float64(classSelectSubjectAttendanceCount) / float64(classSelectSubjectCount)
+		if len(request.UnSelectedSubjectIDList) == 0 {
+			if studentSelectSubjectCount > 0 && classSelectSubjectCount > 0 {
+				classAttendanceResponseItem.AttendancePercentage = float64(studentSelectSubjectAttendanceCount) / float64(studentSelectSubjectCount)
+				classAttendanceResponseItem.ClassAverageAttendancePercentage = float64(classSelectSubjectAttendanceCount) / float64(classSelectSubjectCount)
+			}
+		} else {
+			if studentSelectSubjectCount > 0 && studentUnSelectSubjectCount > 0 && classSelectSubjectCount > 0 {
+				classAttendanceResponseItem.AttendancePercentage = float64(studentSelectSubjectAttendanceCount) / float64(studentSelectSubjectCount)
+				classAttendanceResponseItem.UnSelectedSubjectsAverageAttendancePercentage = float64(studentUnSelectSubjectAttendanceCount) / float64(studentUnSelectSubjectCount)
+				classAttendanceResponseItem.ClassAverageAttendancePercentage = float64(classSelectSubjectAttendanceCount) / float64(classSelectSubjectCount)
+			}
 		}
 		//reset
 		classSelectSubjectCount = 0
