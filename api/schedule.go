@@ -521,7 +521,6 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 // @Router /internal/schedules [get]
 func (s *Server) queryScheduleInternal(c *gin.Context) {
 	ctx := c.Request.Context()
-	scheduleIDsStr := c.Query("schedule_ids")
 	condition, err := s.buildInternalScheduleCondition(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, &entity.ScheduleSimplifiedPageView{
