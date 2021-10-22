@@ -1,6 +1,14 @@
 package api
 
-import "github.com/gin-gonic/gin"
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+)
 
 // @Summary  getLearnOutcomeAchievement
 // @Tags reports/studentProgress
@@ -14,5 +22,37 @@ import "github.com/gin-gonic/gin"
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/student_progress/learn_outcome_achievement [post]
 func (s *Server) getLearnOutcomeAchievement(c *gin.Context) {
+	ctx := c.Request.Context()
+	var err error
+	defer func() {
+		if err == nil {
+			return
+		}
+		switch err {
+		case constant.ErrInvalidArgs:
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		default:
+			s.defaultErrorHandler(c, err)
+		}
+	}()
+	op := s.getOperator(c)
+	req := entity.LearnOutcomeAchievementRequest{}
+	err = c.ShouldBindJSON(&req)
+	if err != nil {
+		log.Error(ctx, "invalid request", log.Err(err))
+		err = constant.ErrInvalidArgs
+		return
+	}
+	for _, duration := range req.Durations {
+		_, _, err = duration.Value(ctx)
+		if err != nil {
+			return
+		}
+	}
 
+	res, err := model.GetReportModel().GetStudentProgressLearnOutcomeAchievement(ctx, op, &req)
+	if err != nil {
+		return
+	}
+	c.JSON(http.StatusOK, res)
 }
