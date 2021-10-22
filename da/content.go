@@ -201,7 +201,7 @@ func (s *ContentConditionInternal) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.ContentName)
 	}
 	if s.DataSourceID != "" {
-		conditions = append(conditions, "data->.$source = ?")
+		conditions = append(conditions, "data->'$.source' = ?")
 		params = append(params, s.DataSourceID)
 	}
 
