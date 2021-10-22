@@ -1381,10 +1381,9 @@ func (s *Server) buildInternalScheduleCondition(c *gin.Context) (*da.ScheduleCon
 	scheduleIDsStr := c.Query("schedule_ids")
 	scheduleIDs := strings.Split(strings.TrimSpace(scheduleIDsStr), constant.StringArraySeparator)
 	if scheduleIDsStr == "" || len(scheduleIDs) < 1 {
-		log.Warn(ctx, "empty condition", log.Any("ids", scheduleIDsStr))
+		log.Warn(c.Request.Context(), "empty condition", log.Any("ids", scheduleIDsStr))
 		return nil, ErrEmptyCondition
 	}
-	scheduleIDs := strings.Split(strings.TrimSpace(scheduleIDsStr), constant.StringArraySeparator)
 	return &da.ScheduleCondition{
 		IDs: entity.NullStrings{
 			Valid:   scheduleIDs != nil,
