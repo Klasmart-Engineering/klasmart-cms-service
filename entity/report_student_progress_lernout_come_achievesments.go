@@ -1,6 +1,7 @@
 package entity
 
 type LearnOutcomeAchievementRequest struct {
+	SchoolID                string      `json:"school_id" binding:"required"`
 	ClassID                 string      `json:"class_id" binding:"required"`
 	StudentID               string      `json:"student_id" binding:"required"`
 	SelectedSubjectIDList   []string    `json:"selected_subject_id_list" binding:"gt=0"`
