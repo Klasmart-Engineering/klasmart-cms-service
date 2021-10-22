@@ -36,7 +36,7 @@ type IReportModel interface {
 
 	GetAssignmentCompletion(ctx context.Context, op *entity.Operator, args *entity.AssignmentRequest) (entity.AssignmentResponse, error)
 	GetStudentProgressLearnOutcomeAchievement(ctx context.Context, op *entity.Operator, req *entity.LearnOutcomeAchievementRequest) (res *entity.LearnOutcomeAchievementResponse, err error)
-	ClassAttendanceStatistics(ctx context.Context, request *entity.ClassAttendanceRequest) (response *entity.ClassAttendanceResponse, err error)
+	ClassAttendanceStatistics(ctx context.Context, op *entity.Operator, request *entity.ClassAttendanceRequest) (response *entity.ClassAttendanceResponse, err error)
 }
 
 var (

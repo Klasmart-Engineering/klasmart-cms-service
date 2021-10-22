@@ -1,11 +1,12 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 // @Summary  getClassAttendance
@@ -21,6 +22,7 @@ import (
 // @Router /reports/student_progress/class_attendance [post]
 func (s *Server) getClassAttendance(c *gin.Context) {
 	ctx := c.Request.Context()
+	op := s.getOperator(c)
 	var request entity.ClassAttendanceRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
@@ -30,7 +32,13 @@ func (s *Server) getClassAttendance(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	result, err := model.GetReportModel().ClassAttendanceStatistics(ctx, &request)
+	err = s.checkPermissionForReportStudentProgress(ctx, op, request.ClassID, request.StudentID)
+	if err != nil {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
+
+	result, err := model.GetReportModel().ClassAttendanceStatistics(ctx, op, &request)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)

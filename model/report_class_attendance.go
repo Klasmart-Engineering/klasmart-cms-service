@@ -2,12 +2,13 @@ package model
 
 import (
 	"context"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
-func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, request *entity.ClassAttendanceRequest) (response *entity.ClassAttendanceResponse, err error) {
+func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, op *entity.Operator, request *entity.ClassAttendanceRequest) (response *entity.ClassAttendanceResponse, err error) {
 	response = new(entity.ClassAttendanceResponse)
 	response.RequestStudentID = request.StudentID
 	for _, duration := range request.Durations {
