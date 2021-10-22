@@ -552,6 +552,7 @@ type ScheduleSearchView struct {
 	ID      string `json:"id"`
 	StartAt int64  `json:"start_at"`
 	EndAt   int64  `json:"end_at"`
+	DueAt   int64  `json:"due_at"`
 	Title   string `json:"title"`
 	ScheduleBasic
 }

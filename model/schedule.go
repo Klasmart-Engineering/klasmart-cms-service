@@ -1310,7 +1310,9 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 			StartAt: item.StartAt,
 			Title:   item.Title,
 			EndAt:   item.EndAt,
+			DueAt:   item.DueAt,
 		}
+
 		if v, ok := basicInfo[item.ID]; ok {
 			viewData.ScheduleBasic = *v
 		}
