@@ -9,9 +9,7 @@ import (
 
 func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, request *entity.ClassAttendanceRequest) (response *entity.ClassAttendanceResponse, err error) {
 	response = new(entity.ClassAttendanceResponse)
-	classAttendanceResponseItem := new(entity.ClassAttendanceResponseItem)
 	response.RequestStudentID = request.StudentID
-	response.Items = append(response.Items, classAttendanceResponseItem)
 	for _, duration := range request.Durations {
 		queryParameters := new(entity.ClassAttendanceQueryParameters)
 		queryParameters.ClassID = request.ClassID
@@ -53,6 +51,7 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, request *en
 				}
 			}
 		}
+		classAttendanceResponseItem := new(entity.ClassAttendanceResponseItem)
 		classAttendanceResponseItem.Duration = duration
 		classAttendanceResponseItem.AttendedCount = studentSelectSubjectAttendanceCount + studentUnSelectSubjectAttendanceCount
 		classAttendanceResponseItem.ScheduledCount = studentSelectSubjectCount + studentUnSelectSubjectCount
@@ -65,6 +64,7 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, request *en
 			classAttendanceResponseItem.UnSelectedSubjectsAverageAttendancePercentage = float64(studentUnSelectSubjectAttendanceCount) / float64(studentUnSelectSubjectCount)
 			classAttendanceResponseItem.ClassAverageAttendancePercentage = float64(classSelectSubjectAttendanceCount) / float64(classSelectSubjectCount)
 		}
+		response.Items = append(response.Items, classAttendanceResponseItem)
 	}
 	return
 }

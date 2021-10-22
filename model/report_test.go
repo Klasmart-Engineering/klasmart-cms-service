@@ -18,7 +18,6 @@ func TestLessoons(t *testing.T) {
 
 }
 
-
 func TestClassAttendance(t *testing.T) {
 	ctx := context.Background()
 	request := entity.ClassAttendanceRequest{ClassID: "0a29685b-73dd-4225-b40f-cf27b89ba50a",
@@ -28,6 +27,6 @@ func TestClassAttendance(t *testing.T) {
 		Durations:               []entity.TimeRange{"1633924080-1634528880", "1633232880-1633837680"}}
 	response, err := GetReportModel().ClassAttendanceStatistics(ctx, &request)
 	fmt.Println(err)
-	fmt.Println(response.Items[0].ClassAverageAttendancePercentage)
-	fmt.Println(response.Items[0].AttendedCount)
+	fmt.Println(response.Items[0].Duration, response.Items[0].ClassAverageAttendancePercentage)
+	fmt.Println(response.Items[1].Duration, response.Items[1].ClassAverageAttendancePercentage)
 }
