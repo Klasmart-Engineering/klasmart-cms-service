@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -17,6 +18,10 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+)
+
+var (
+	ErrEmptyCondition = errors.New("empty search condition")
 )
 
 // @Summary updateSchedule
@@ -517,20 +522,16 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 func (s *Server) queryScheduleInternal(c *gin.Context) {
 	ctx := c.Request.Context()
 	scheduleIDsStr := c.Query("schedule_ids")
-	scheduleIDs := strings.Split(strings.TrimSpace(scheduleIDsStr), constant.StringArraySeparator)
-	if scheduleIDsStr == "" || len(scheduleIDs) < 1 {
+	condition, err := s.buildInternalScheduleCondition(c)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, &entity.ScheduleSimplifiedPageView{
 			Total: 0,
 			Data:  nil,
 		})
 		return
 	}
-	total, data, err := model.GetScheduleModel().QueryByConditionInternal(ctx, &da.ScheduleCondition{
-		IDs: entity.NullStrings{
-			Valid:   scheduleIDs != nil,
-			Strings: scheduleIDs,
-		},
-	})
+
+	total, data, err := model.GetScheduleModel().QueryByConditionInternal(ctx, condition)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, &entity.ScheduleSimplifiedPageView{
@@ -1374,4 +1375,20 @@ func (s *Server) getScheduleTimeViewList(c *gin.Context) {
 	default:
 		s.defaultErrorHandler(c, err)
 	}
+}
+
+func (s *Server) buildInternalScheduleCondition(c *gin.Context) (*da.ScheduleCondition, error) {
+	scheduleIDsStr := c.Query("schedule_ids")
+	scheduleIDs := strings.Split(strings.TrimSpace(scheduleIDsStr), constant.StringArraySeparator)
+	if scheduleIDsStr == "" || len(scheduleIDs) < 1 {
+		log.Warn(ctx, "empty condition", log.Any("ids", scheduleIDsStr))
+		return nil, ErrEmptyCondition
+	}
+	scheduleIDs := strings.Split(strings.TrimSpace(scheduleIDsStr), constant.StringArraySeparator)
+	return &da.ScheduleCondition{
+		IDs: entity.NullStrings{
+			Valid:   scheduleIDs != nil,
+			Strings: scheduleIDs,
+		},
+	}, nil
 }
