@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -17,6 +18,10 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+)
+
+var (
+	ErrEmptyCondition = errors.New("empty search condition")
 )
 
 // @Summary updateSchedule
@@ -498,6 +503,43 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 	}
 	log.Error(ctx, "get schedule by id error", log.Err(err), log.Any("id", id))
 	s.defaultErrorHandler(c, err)
+}
+
+// @Summary queryScheduleInternal
+// @ID queryScheduleInternal
+// @Description query schedule internal
+// @Produce json
+// @Param schedule_ids query string false "search schedule id list, separated by commas"
+// @Param order_by query string false "order by" enums(create_at, -create_at, start_at, -start_at)
+// @Param page query integer false "page index, not paging if page <=0"
+// @Param page_size query integer false "records per page, not paging if page_size <= 0"
+// @Tags schedule
+// @Success 200 {object} entity.ScheduleSimplifiedPageView
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /internal/schedules [get]
+func (s *Server) queryScheduleInternal(c *gin.Context) {
+	ctx := c.Request.Context()
+	condition, err := s.buildInternalScheduleCondition(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, &entity.ScheduleSimplifiedPageView{
+			Total: 0,
+			Data:  nil,
+		})
+		return
+	}
+
+	total, data, err := model.GetScheduleModel().QueryByConditionInternal(ctx, condition)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, &entity.ScheduleSimplifiedPageView{
+			Total: total,
+			Data:  data,
+		})
+	default:
+		s.defaultErrorHandler(c, err)
+	}
 }
 
 // @Summary querySchedule
@@ -1336,4 +1378,19 @@ func (s *Server) getScheduleTimeViewList(c *gin.Context) {
 	default:
 		s.defaultErrorHandler(c, err)
 	}
+}
+
+func (s *Server) buildInternalScheduleCondition(c *gin.Context) (*da.ScheduleCondition, error) {
+	scheduleIDsStr := c.Query("schedule_ids")
+	scheduleIDs := strings.Split(strings.TrimSpace(scheduleIDsStr), constant.StringArraySeparator)
+	if scheduleIDsStr == "" || len(scheduleIDs) < 1 {
+		log.Warn(c.Request.Context(), "empty condition", log.Any("ids", scheduleIDsStr))
+		return nil, ErrEmptyCondition
+	}
+	return &da.ScheduleCondition{
+		IDs: entity.NullStrings{
+			Valid:   scheduleIDs != nil,
+			Strings: scheduleIDs,
+		},
+	}, nil
 }

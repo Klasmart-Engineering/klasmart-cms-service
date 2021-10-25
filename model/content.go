@@ -126,6 +126,8 @@ type IContentModel interface {
 	ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 
+	SearchSimplifyContentInternal(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentInternalConditionRequest) (int, []*entity.ContentSimplified, error)
+
 	GetContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	GetVisibleContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	ContentDataCount(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentStatisticsInfo, error)
@@ -2125,6 +2127,68 @@ func (cm *ContentModel) CountUserFolderContent(ctx context.Context, tx *dbo.DBCo
 	}
 	return total, nil
 }
+
+func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentInternalConditionRequest) (int, []*entity.ContentSimplified, error) {
+	//get material ids from plan if condition contains plan id
+	if condition.PlanID != "" {
+		plan, err := da.GetContentDA().GetContentByID(ctx, tx, condition.PlanID)
+		if err != nil {
+			log.Error(ctx, "get plan failed", log.Err(err),
+				log.String("plan_id", condition.PlanID),
+				log.Any("condition", condition))
+			return 0, nil, err
+		}
+		if plan.ContentType != entity.ContentTypePlan {
+			log.Error(ctx, "content data parse failed",
+				log.Any("plan", plan))
+			return 0, nil, ErrInvalidContentType
+		}
+		cd, err := cm.CreateContentData(ctx, entity.ContentTypePlan, plan.Data)
+		if err != nil {
+			log.Error(ctx, "content data parse failed",
+				log.Err(err),
+				log.Any("plan", plan))
+			return 0, nil, err
+		}
+		planData, ok := cd.(*LessonData)
+		if !ok {
+			log.Error(ctx, "content data parse failed",
+				log.Any("obj", cd),
+				log.String("data", plan.Data),
+			)
+			return 0, nil, ErrInvalidContentType
+		}
+		materialIDs := planData.SubContentIDs(ctx)
+		//Add material IDs
+		condition.IDs = append(condition.IDs, materialIDs...)
+	}
+	if condition.ContentType != 0 {
+		condition.ContentType = entity.ContentTypeMaterial
+	}
+	cdt := &da.ContentConditionInternal{
+		IDS: entity.NullStrings{
+			Valid:   condition.IDs != nil,
+			Strings: condition.IDs,
+		},
+		Org:          condition.OrgID,
+		ContentType:  []int{condition.ContentType},
+		DataSourceID: condition.DataSourceID,
+	}
+	total, data, err := da.GetContentDA().SearchContentInternal(ctx, tx, cdt)
+	if err != nil {
+		log.Error(ctx, "search content internal failed",
+			log.Err(err),
+			log.Any("condition", cdt))
+		return 0, nil, err
+	}
+	res := make([]*entity.ContentSimplified, len(data))
+	for i := range data {
+		res[i] = data[i].ToContentSimplified()
+	}
+
+	return total, res, nil
+}
+
 func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error) {
 	searchUserIDs := cm.getRelatedUserID(ctx, condition.Name, user)
 	err := cm.filterRootPath(ctx, condition, entity.OwnerTypeOrganization, user)
