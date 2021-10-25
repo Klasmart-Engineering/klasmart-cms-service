@@ -1,5 +1,11 @@
 package entity
 
+import (
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+)
+
 const (
 	AssessmentTypeClass        AssessmentType = "class"
 	AssessmentTypeLive         AssessmentType = "live"
@@ -257,3 +263,55 @@ const (
 	AssessmentContentTypeLessonPlan     AssessmentContentType = "lesson_plan"
 	AssessmentContentTypeLessonMaterial AssessmentContentType = "lesson_material"
 )
+
+type AssessmentView2 struct {
+	*Assessment
+	Schedule        *Schedule                   `json:"schedule"`
+	RoomID          string                      `json:"room_id"`
+	Program         AssessmentProgram           `json:"program"`
+	Subjects        []*AssessmentSubject        `json:"subjects"`
+	Teachers        []*AssessmentTeacher        `json:"teachers"`
+	Students        []*AssessmentStudent        `json:"students"`
+	Class           AssessmentClass             `json:"class"`
+	LessonPlan      *AssessmentLessonPlan       `json:"lesson_plan"`
+	LessonMaterials []*AssessmentLessonMaterial `json:"lesson_materials"`
+}
+
+type AssessmentInput struct {
+	AssessmentIDs dbo.NullStrings
+	ScheduleIDs   dbo.NullStrings
+
+	ClassIDs dbo.NullStrings
+	UserIDs  dbo.NullStrings
+
+	ProgramIDs dbo.NullStrings
+	SubjectIDs dbo.NullStrings
+}
+type AssessmentUser struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type AssessmentOutput struct {
+	AssessmentIDs map[string]*Assessment
+	ScheduleIDs   map[string]*Schedule
+
+	ClassIDs map[string]*AssessmentClass
+	UserIDs  map[string]*AssessmentUser
+
+	ProgramIDs map[string]*AssessmentProgram
+	SubjectIDs map[string]*AssessmentSubject
+}
+
+type IAssessmentPart interface {
+	Accept(*AssessmentInput) (*AssessmentOutput, error)
+}
+
+type ClassPart struct {
+}
+
+func (ClassPart) Accept(input *AssessmentInput) (*AssessmentOutput, error) {
+	if input.ClassIDs.Valid {
+		external.GetClassServiceProvider().BatchGet()
+	}
+}

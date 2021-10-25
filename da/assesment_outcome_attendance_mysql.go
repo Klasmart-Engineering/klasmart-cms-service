@@ -43,6 +43,11 @@ func (d *outcomeAttendanceDA) BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Co
 		Where("assessment_id = ?", assessmentID).
 		Where("outcome_id in (?)", outcomeIDs).
 		Find(&items).Error; err != nil {
+		log.Error(ctx, "Get: BatchGetByAssessmentIDAndOutcomeIDs: batch get failed",
+			log.Err(err),
+			log.Strings("outcome_ids", outcomeIDs),
+			log.String("assessment_id", assessmentID),
+		)
 		return nil, err
 	}
 	return items, nil

@@ -204,11 +204,6 @@ func (m *assessmentH5P) getStudentViewItems(ctx context.Context, operator *entit
 	// get room
 	roomMap, err := m.batchGetRoomMap(ctx, operator, roomIDs)
 	if err != nil {
-		log.Error(ctx, "get student view items: batch get room map failed",
-			log.Err(err),
-			log.String("room_id", view.RoomID),
-			log.Any("view", view),
-		)
 		return nil, err
 	}
 	room := roomMap[view.RoomID]
@@ -223,11 +218,6 @@ func (m *assessmentH5P) getStudentViewItems(ctx context.Context, operator *entit
 	// get room comments
 	roomCommentMap, err := m.batchGetRoomCommentMap(ctx, operator, roomIDs)
 	if err != nil {
-		log.Error(ctx, "batch get comments failed",
-			log.Err(err),
-			log.Strings("room_ids", roomIDs),
-			log.Any("operator", operator),
-		)
 		return nil, err
 	}
 
