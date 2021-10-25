@@ -166,6 +166,11 @@ type NewRelicConfig struct {
 	NewRelicLicenseKey                string
 }
 
+func (c NewRelicConfig) Enable() bool {
+	return strings.TrimSpace(c.NewRelicAppName) != "" &&
+		strings.TrimSpace(c.NewRelicLicenseKey) != ""
+}
+
 func assertGetEnv(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
@@ -470,15 +475,16 @@ func loadReportConfig(ctx context.Context) {
 }
 
 func loadNewRelicConfig(ctx context.Context) {
+	// all newRelic config are optional
 	nr := &config.NewRelic
-	nr.NewRelicAppName = assertGetEnv("NEW_RELIC_APP_NAME")
-	nr.NewRelicLicenseKey = assertGetEnv("NEW_RELIC_LICENSE_KEY")
+	nr.NewRelicAppName = os.Getenv("NEW_RELIC_APP_NAME")
+	nr.NewRelicLicenseKey = os.Getenv("NEW_RELIC_LICENSE_KEY")
 	nr.NewRelicLabels = make(map[string]string)
 	nr.NewRelicDistributedTracingEnabled = strings.ToLower(
-		assertGetEnv("NEW_RELIC_DISTRIBUTED_TRACING_ENABLED")) == "true"
+		os.Getenv("NEW_RELIC_DISTRIBUTED_TRACING_ENABLED")) == "true"
 
 	// rawLabels format: "key1:val1;key2:val2;key3:val3"
-	rawLabels := assertGetEnv("NEW_RELIC_LABELS")
+	rawLabels := os.Getenv("NEW_RELIC_LABELS")
 	for _, label := range strings.Split(rawLabels, ";") {
 		kv := strings.Split(strings.TrimSpace(label), ":")
 		key := strings.TrimSpace(kv[0])
