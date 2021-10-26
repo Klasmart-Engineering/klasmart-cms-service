@@ -53,8 +53,6 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 	}
 	view = views[0]
 
-	log.Debug(ctx, "getDetail: view", log.Any("view", view))
-
 	// fill result
 	result := entity.AssessmentDetail{
 		ID:           view.ID,
