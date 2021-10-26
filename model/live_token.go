@@ -295,10 +295,9 @@ func (s *liveTokenModel) GetMaterials(ctx context.Context, op *entity.Operator, 
 		return nil, err
 	}
 
-	contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), latestContentID[0], op, ignorePermissionFilter)
-	log.Debug(ctx, "content data", log.Any("contentList", contentList))
+	latestSubContentMap, err := GetContentModel().GetContentsSubContentsMapByIDList(ctx, dbo.MustGetDB(ctx), latestContentID, op)
 	if err == dbo.ErrRecordNotFound {
-		log.Error(ctx, "getMaterials:get content sub by id not found",
+		log.Error(ctx, "getMaterials:get latest content sub by id not found",
 			log.Err(err),
 			log.Any("input", input))
 		return nil, constant.ErrRecordNotFound
@@ -310,8 +309,16 @@ func (s *liveTokenModel) GetMaterials(ctx context.Context, op *entity.Operator, 
 		return nil, err
 	}
 
-	materials := make([]*entity.LiveMaterial, 0, len(contentList))
-	for _, item := range contentList {
+	subContentList, ok := latestSubContentMap[input.ContentID]
+	if !ok {
+		log.Error(ctx, "getMaterials:get latest content sub by id not found",
+			log.Err(err),
+			log.Any("input", input))
+		return nil, constant.ErrRecordNotFound
+	}
+
+	materials := make([]*entity.LiveMaterial, 0, len(subContentList))
+	for _, item := range subContentList {
 		if item == nil {
 			continue
 		}
@@ -321,6 +328,7 @@ func (s *liveTokenModel) GetMaterials(ctx context.Context, op *entity.Operator, 
 			ContentData: item.Data,
 			Name:        item.Name,
 		}
+
 		mData, ok := item.Data.(*MaterialData)
 		if !ok {
 			log.Debug(ctx, "content data convert material data error", log.Any("item", item))

@@ -115,14 +115,6 @@ func FilterStrings(source []string, whitelist, blacklist []string) []string {
 	return result
 }
 
-func ContainsStr(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
-}
 func ContainsInt(s []int, e int) bool {
 	for _, a := range s {
 		if a == e {
@@ -171,14 +163,25 @@ func ParseURLQueryArray(s string) []string {
 	return SliceDeduplicationExcludeEmpty(strings.Split(s, ","))
 }
 
-func HasIntersection(ss1, ss2 []string) bool {
-	for _, s1 := range ss1 {
-		for _, s2 := range ss2 {
-			if s1 == s2 {
-				return true
-			}
+// Returns whether the given string slice contains a given string.
+func ContainsString(list []string, elem string) bool {
+	for _, t := range list {
+		if t == elem {
+			return true
 		}
 	}
+
+	return false
+}
+
+// Returns whether the given string slice contains any of the following strings.
+func ContainsAnyString(list []string, elems ...string) bool {
+	for _, e := range elems {
+		if ContainsString(list, e) {
+			return true
+		}
+	}
+
 	return false
 }
 
