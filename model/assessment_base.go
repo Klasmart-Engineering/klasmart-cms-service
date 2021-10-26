@@ -696,6 +696,7 @@ type AssessmentMaterialData struct {
 }
 
 func (m *assessmentBase) batchGetLessonMaterialDataMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) (map[string]*AssessmentMaterialData, error) {
+	log.Debug(ctx, "assessmentBase.batchGetLessonMaterialDataMap", log.Strings("contentIDs", ids))
 	lessonMaterials, err := GetContentModel().GetContentByIDList(ctx, tx, ids, operator)
 	if err != nil {
 		log.Error(ctx, "get lesson material source map: get contents faield",
@@ -724,6 +725,8 @@ func (m *assessmentBase) batchGetLessonMaterialDataMap(ctx context.Context, tx *
 			result[lm.ID] = item
 		}
 	}
+
+	log.Debug(ctx, "assessmentBase.batchGetLessonMaterialDataMap", log.Any("result", result))
 	return result, nil
 }
 
