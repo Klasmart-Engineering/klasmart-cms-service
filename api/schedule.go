@@ -257,10 +257,11 @@ func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditVa
 	input.ParticipantsTeacherIDs = utils.SliceDeduplicationExcludeEmpty(input.ParticipantsTeacherIDs)
 	input.ParticipantsStudentIDs = utils.SliceDeduplicationExcludeEmpty(input.ParticipantsStudentIDs)
 
+	// if a user is both a student and a teacher, he/she is considered to be a teacher
 	input.ClassRosterStudentIDs = utils.ExcludeStrings(input.ClassRosterStudentIDs, input.ClassRosterTeacherIDs)
 	input.ParticipantsStudentIDs = utils.ExcludeStrings(input.ParticipantsStudentIDs, input.ParticipantsTeacherIDs)
 
-	// Students and teachers must exist
+	// students and teachers must exist
 	if (len(input.ClassRosterTeacherIDs) == 0 &&
 		len(input.ParticipantsTeacherIDs) == 0) ||
 		(len(input.ClassRosterStudentIDs) == 0 &&
@@ -269,6 +270,17 @@ func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditVa
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return constant.ErrInvalidArgs
 	}
+
+	// if a user is both a class roster and a participants, throw error
+	if utils.ContainsAnyString(input.ClassRosterStudentIDs, input.ParticipantsStudentIDs...) ||
+		utils.ContainsAnyString(input.ClassRosterTeacherIDs, input.ParticipantsTeacherIDs...) {
+		log.Error(ctx, "data is invalid, class roster and participants user cannot overlap",
+			log.Any("input", input),
+			log.Any("op", op))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return constant.ErrInvalidArgs
+	}
+
 	if !input.ClassType.Valid() {
 		log.Info(ctx, "add schedule: invalid class type", log.Any("input", input))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))

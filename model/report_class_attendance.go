@@ -29,7 +29,7 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, op *entity.
 		var studentUnSelectSubjectAttendanceCount int
 		for _, classAttendance := range classAttendanceList {
 			// statistics class average attendance selected subject
-			if utils.ContainsStr(request.SelectedSubjectIDList, classAttendance.SubjectID) {
+			if utils.ContainsString(request.SelectedSubjectIDList, classAttendance.SubjectID) {
 				classSelectSubjectCount++
 				if classAttendance.IsAttendance {
 					classSelectSubjectAttendanceCount++
@@ -37,7 +37,7 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, op *entity.
 			}
 			//statistics student attendance selected subject
 			if classAttendance.StudentID == request.StudentID &&
-				utils.ContainsStr(request.SelectedSubjectIDList, classAttendance.SubjectID) {
+				utils.ContainsString(request.SelectedSubjectIDList, classAttendance.SubjectID) {
 				studentSelectSubjectCount++
 				if classAttendance.IsAttendance {
 					studentSelectSubjectAttendanceCount++
@@ -45,7 +45,7 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, op *entity.
 			}
 			//when subject not select all,statistics student attendance other subject
 			if len(request.UnSelectedSubjectIDList) != 0 && classAttendance.StudentID == request.StudentID &&
-				utils.ContainsStr(request.UnSelectedSubjectIDList, classAttendance.SubjectID) {
+				utils.ContainsString(request.UnSelectedSubjectIDList, classAttendance.SubjectID) {
 				studentUnSelectSubjectCount++
 				if classAttendance.IsAttendance {
 					studentUnSelectSubjectAttendanceCount++
