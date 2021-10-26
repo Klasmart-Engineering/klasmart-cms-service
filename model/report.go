@@ -370,7 +370,7 @@ func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 				)
 				continue
 			}
-			if utils.ContainsStr(o.Categories, category.ID) {
+			if utils.ContainsString(o.Categories, category.ID) {
 				c.AchievedItems = append(c.AchievedItems, o.Name)
 			}
 		}
@@ -383,7 +383,7 @@ func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 				)
 				continue
 			}
-			if utils.ContainsStr(o.Categories, category.ID) {
+			if utils.ContainsString(o.Categories, category.ID) {
 				c.NotAchievedItems = append(c.NotAchievedItems, o.Name)
 			}
 		}
@@ -396,7 +396,7 @@ func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 				)
 				continue
 			}
-			if utils.ContainsStr(o.Categories, category.ID) {
+			if utils.ContainsString(o.Categories, category.ID) {
 				c.NotAttemptedItems = append(c.NotAttemptedItems, o.Name)
 			}
 		}
