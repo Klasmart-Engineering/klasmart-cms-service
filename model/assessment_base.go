@@ -722,6 +722,9 @@ func (m *assessmentBase) batchGetLessonMaterialDataMap(ctx context.Context, tx *
 				FileType: v.FileType,
 				Source:   v.Source,
 			}
+			if item.LatestID == "" {
+				item.LatestID = lm.ID
+			}
 			result[lm.ID] = item
 		}
 	}
