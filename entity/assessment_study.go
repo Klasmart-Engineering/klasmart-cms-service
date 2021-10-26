@@ -72,6 +72,7 @@ type AssessmentH5PContent struct {
 	Scores        []float64                    `json:"scores"`
 	Children      []*AssessmentH5PContent      `json:"children"`
 	Seen          bool                         `json:"seen"`
+	LatestID      string                       `json:"-"`
 }
 
 type AssessmentH5PAnswer struct {

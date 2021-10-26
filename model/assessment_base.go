@@ -511,7 +511,7 @@ func (m *assessmentBase) toViews(ctx context.Context, tx *dbo.DBContext, operato
 			case entity.ContentTypeMaterial:
 				data := lessonMaterialSourceMap[c.ContentID]
 				if data == nil {
-					data = &MaterialData{}
+					data = &AssessmentMaterialData{}
 				}
 				assessmentLessonMaterialsMap[c.AssessmentID] = append(assessmentLessonMaterialsMap[c.AssessmentID], &entity.AssessmentLessonMaterial{
 					ID:       c.ContentID,
@@ -520,6 +520,7 @@ func (m *assessmentBase) toViews(ctx context.Context, tx *dbo.DBContext, operato
 					Comment:  c.ContentComment,
 					Source:   string(data.Source),
 					Checked:  c.Checked,
+					LatestID: data.LatestID,
 				})
 			}
 		}
@@ -688,7 +689,13 @@ func (m *assessmentBase) batchGetLatestLessonPlanMap(ctx context.Context, tx *db
 	return result, nil
 }
 
-func (m *assessmentBase) batchGetLessonMaterialDataMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) (map[string]*MaterialData, error) {
+type AssessmentMaterialData struct {
+	LatestID string
+	FileType entity.FileType
+	Source   SourceID
+}
+
+func (m *assessmentBase) batchGetLessonMaterialDataMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) (map[string]*AssessmentMaterialData, error) {
 	lessonMaterials, err := GetContentModel().GetContentByIDList(ctx, tx, ids, operator)
 	if err != nil {
 		log.Error(ctx, "get lesson material source map: get contents faield",
@@ -697,7 +704,7 @@ func (m *assessmentBase) batchGetLessonMaterialDataMap(ctx context.Context, tx *
 		)
 		return nil, err
 	}
-	result := make(map[string]*MaterialData, len(lessonMaterials))
+	result := make(map[string]*AssessmentMaterialData, len(lessonMaterials))
 	for _, lm := range lessonMaterials {
 		data, err := GetContentModel().CreateContentData(ctx, lm.ContentType, lm.Data)
 		if err != nil {
@@ -709,7 +716,12 @@ func (m *assessmentBase) batchGetLessonMaterialDataMap(ctx context.Context, tx *
 		}
 		switch v := data.(type) {
 		case *MaterialData:
-			result[lm.ID] = v
+			item := &AssessmentMaterialData{
+				LatestID: lm.LatestID,
+				FileType: v.FileType,
+				Source:   v.Source,
+			}
+			result[lm.ID] = item
 		}
 	}
 	return result, nil
