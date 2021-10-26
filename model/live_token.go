@@ -287,15 +287,7 @@ func (s *liveTokenModel) isTeacherByPermission(ctx context.Context, op *entity.O
 }
 
 func (s *liveTokenModel) GetMaterials(ctx context.Context, op *entity.Operator, input *entity.MaterialInput, ignorePermissionFilter bool) ([]*entity.LiveMaterial, error) {
-	latestContentID, err := GetContentModel().GetLatestContentIDByIDList(ctx, dbo.MustGetDB(ctx), []string{input.ContentID})
-	if err != nil || len(latestContentID) == 0 {
-		log.Error(ctx, "getMaterials:get latest content id error",
-			log.Err(err),
-			log.Any("input", input.ContentID))
-		return nil, err
-	}
-
-	contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), latestContentID[0], op, ignorePermissionFilter)
+	contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), input.ContentID, op, ignorePermissionFilter)
 	log.Debug(ctx, "content data", log.Any("contentList", contentList))
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "getMaterials:get content sub by id not found",
