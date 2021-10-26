@@ -15,7 +15,9 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
-type assessmentH5P struct{}
+type assessmentH5P struct {
+	assessmentBase
+}
 
 func getAssessmentH5P() *assessmentH5P {
 	return &assessmentH5P{}
@@ -33,6 +35,7 @@ func (m *assessmentH5P) batchGetRoomMap(ctx context.Context, operator *entity.Op
 		return nil, err
 	}
 
+	contentIDMap := make(map[string]struct{})
 	// mapping
 	result := make(map[string]*entity.AssessmentH5PRoom, len(roomScoreMap))
 	for roomID, users := range roomScoreMap {
@@ -61,6 +64,7 @@ func (m *assessmentH5P) batchGetRoomMap(ctx context.Context, operator *entity.Op
 					assessmentContent.ContentID = s.Content.ContentID
 					assessmentContent.ContentName = s.Content.Name
 					assessmentContent.ContentType = s.Content.Type
+					contentIDMap[assessmentContent.ContentID] = struct{}{}
 				}
 				if s.Score != nil {
 					assessmentContent.Scores = s.Score.Scores
@@ -105,12 +109,25 @@ func (m *assessmentH5P) batchGetRoomMap(ctx context.Context, operator *entity.Op
 		result[roomID] = &room
 	}
 
+	contentIDs := make([]string, 0, len(contentIDMap))
+	for key, _ := range contentIDMap {
+		contentIDs = append(contentIDs, key)
+	}
+
+	LessonMaterialMap, err := m.assessmentBase.batchGetLessonMaterialDataMap(ctx, dbo.MustGetDB(ctx), operator, contentIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	// fill ordered id
 	latestOrderedID := 1
 	for _, r := range result {
 		for _, u := range r.Users {
 			for _, c := range u.Contents {
 				c.OrderedID = latestOrderedID
+				if materialItem, ok := LessonMaterialMap[c.ContentID]; ok {
+					c.LatestID = materialItem.LatestID
+				}
 				latestOrderedID++
 			}
 		}
@@ -276,7 +293,7 @@ func (m *assessmentH5P) getKeyedH5PContentsTemplateMap(room *entity.AssessmentH5
 			if c.ContentID != contentID {
 				continue
 			}
-			key := m.generateH5PContentKey(c.ContentID, c.SubH5PID)
+			key := m.generateH5PContentKey(c.LatestID, c.SubH5PID)
 			keyedH5PContentsMap[key] = append(keyedH5PContentsMap[key], c)
 		}
 	}
@@ -294,7 +311,7 @@ func (m *assessmentH5P) getKeyedUserH5PContentsMap(room *entity.AssessmentH5PRoo
 			if c == nil || c.ContentID == "" {
 				continue
 			}
-			key := m.generateUserH5PContentKey(c.ContentID, c.SubH5PID, u.UserID)
+			key := m.generateUserH5PContentKey(c.LatestID, c.SubH5PID, u.UserID)
 			keyedUserH5PContentsMap[key] = c
 		}
 	}
@@ -408,7 +425,7 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 	result := map[string][]*entity.AssessmentStudentViewH5PLessonMaterial{}
 	for _, s := range view.Students {
 		for lmIndex, lm := range view.LessonMaterials {
-			keyedH5PContentsTemplateMap := m.getKeyedH5PContentsTemplateMap(room, lm.ID)
+			keyedH5PContentsTemplateMap := m.getKeyedH5PContentsTemplateMap(room, lm.LatestID)
 			log.Debug(ctx, "generateUserH5PContentKey: keyedH5PContentsTemplateMap", log.Any("keyedH5PContentsTemplateMap", keyedH5PContentsTemplateMap))
 			var contents []*entity.AssessmentH5PContent
 			for _, keyedContents := range keyedH5PContentsTemplateMap {
@@ -417,7 +434,7 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 				}
 				findUserContent := false
 				for _, c := range keyedContents {
-					userContent := keyedUserH5PContentsMap[m.generateUserH5PContentKey(c.ContentID, c.SubH5PID, s.ID)]
+					userContent := keyedUserH5PContentsMap[m.generateUserH5PContentKey(c.LatestID, c.SubH5PID, s.ID)]
 					if userContent != nil {
 						findUserContent = true
 						contents = append(contents, userContent)
@@ -886,13 +903,13 @@ func (m *assessmentH5P) calcRoomCompleteRate(ctx context.Context, room *entity.A
 				continue
 			}
 			var contents []*entity.AssessmentH5PContent
-			for _, keyedContents := range m.getKeyedH5PContentsTemplateMap(room, lm.ID) {
+			for _, keyedContents := range m.getKeyedH5PContentsTemplateMap(room, lm.LatestID) {
 				if len(keyedContents) == 0 {
 					continue
 				}
 				findUserContent := false
 				for _, c := range keyedContents {
-					userContent := keyedUserH5PContentsMap[m.generateUserH5PContentKey(c.ContentID, c.SubH5PID, s.ID)]
+					userContent := keyedUserH5PContentsMap[m.generateUserH5PContentKey(c.LatestID, c.SubH5PID, s.ID)]
 					if userContent != nil {
 						findUserContent = true
 						contents = append(contents, userContent)
@@ -924,7 +941,7 @@ func (m *assessmentH5P) calcRoomCompleteRate(ctx context.Context, room *entity.A
 					)
 					continue
 				}
-				if len(content.Answers) > 0 || len(content.Scores) > 0 {
+				if content.Seen {
 					attempted++
 				}
 				total++
