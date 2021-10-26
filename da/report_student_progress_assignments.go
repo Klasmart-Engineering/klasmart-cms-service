@@ -75,18 +75,17 @@ from
     schedules
     on sss.schedule_id=schedules.id
 where
-      (${durationCondition}) 
+	schedules.class_type='${Homework}'
+	and (delete_at=0 or delete_at is null)
+	and (${durationCondition}) 
 group by class_id, student_id, subject_id, duration
 `
-
-	//schedules.class_type='${Homework}'
-	//and (delete_at=0 or delete_at is null)
 
 	sql = strings.Replace(sql, "${NoCategory}", "", -1)
 	sql = strings.Replace(sql, "${class_roster_class}", entity.ScheduleRelationTypeClassRosterClass.String(), -1)
 	sql = strings.Replace(sql, "${Subject}", entity.ScheduleRelationTypeSubject.String(), -1)
 	sql = strings.Replace(sql, "${class_roster_student}", entity.ScheduleRelationTypeClassRosterStudent.String(), -1)
-	sql = strings.Replace(sql, "${Homework}", entity.ScheduleClassTypeOnlineClass.String(), -1)
+	sql = strings.Replace(sql, "${Homework}", entity.ScheduleClassTypeHomework.String(), -1)
 
 	durationFields, durationCondition, err := r.durationFieldAndCondition(ctx, args.Durations)
 	if err != nil {
