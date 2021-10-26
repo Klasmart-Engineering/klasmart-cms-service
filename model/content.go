@@ -2162,8 +2162,9 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 		//Add material IDs
 		condition.IDs = append(condition.IDs, materialIDs...)
 	}
-	if condition.ContentType != 0 {
-		condition.ContentType = entity.ContentTypeMaterial
+	contentTypes := []int{condition.ContentType}
+	if condition.ContentType == 0 {
+		contentTypes = []int{entity.ContentTypeMaterial, entity.ContentTypePlan}
 	}
 	cdt := &da.ContentConditionInternal{
 		IDS: entity.NullStrings{
@@ -2171,7 +2172,7 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 			Strings: condition.IDs,
 		},
 		Org:          condition.OrgID,
-		ContentType:  []int{condition.ContentType},
+		ContentType:  contentTypes,
 		DataSourceID: condition.DataSourceID,
 	}
 	total, data, err := da.GetContentDA().SearchContentInternal(ctx, tx, cdt)
