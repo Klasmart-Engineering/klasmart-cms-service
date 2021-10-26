@@ -289,7 +289,7 @@ func (m *assessmentH5P) getKeyedH5PContentsTemplateMap(room *entity.AssessmentH5
 			if c == nil || c.ContentID == "" {
 				continue
 			}
-			if c.ContentID != contentID {
+			if c.LatestID != contentID {
 				continue
 			}
 			key := m.generateH5PContentKey(c.LatestID, c.SubH5PID)
@@ -449,6 +449,7 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 						SubH5PID:    c.SubH5PID,
 						ContentID:   c.ContentID,
 						ContentName: c.ContentName,
+						LatestID:    c.LatestID,
 					}
 					contents = append(contents, &newContent)
 				}
