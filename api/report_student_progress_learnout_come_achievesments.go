@@ -160,6 +160,12 @@ func (s *Server) checkPermissionForReportStudentProgress(ctx context.Context, op
 		}
 	}
 
+	if permissions[external.ReportStudentProgressReportStudent] {
+		if studentID == op.UserID {
+			return
+		}
+	}
+
 	log.Info(ctx, "no permission for checkPermissionForReportStudentProgress",
 		log.Any("op", op),
 		log.Any("class_id", classID),
