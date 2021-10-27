@@ -44,6 +44,7 @@ func (sb *sqlBuilder) Build(ctx context.Context) (sql string, args []interface{}
 		var args1 []interface{}
 		data[plKey], args1, err = sb1.Build(ctx)
 		if err != nil {
+			log.Error(ctx, "sqlBuilder build failed", log.Err(err), log.Any("sb", sb1), log.Any("data", data))
 			return
 		}
 		args = append(args, args1...)
