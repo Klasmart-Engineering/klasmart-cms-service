@@ -267,8 +267,8 @@ func (ocm OutcomeModel) Get(ctx context.Context, operator *entity.Operator, outc
 				log.String("outcome_id", outcomeID))
 			return err
 		}
-		ocm.FillRelation(ctx, outcome, outcomeRelations)
 
+		ocm.FillRelation(ctx, outcome, outcomeRelations)
 		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
 			OutcomeAncestor: sql.NullString{String: outcome.AncestorID, Valid: true},
 		})
@@ -1519,14 +1519,14 @@ func (ocm OutcomeModel) fillRelation(ctx context.Context, operator *entity.Opera
 				log.Any("outcomes", outcomes))
 			return err
 		}
-		for i := range outcomes {
+		for _, outcome := range outcomes {
 			var temp []*entity.OutcomeRelation
-			for j := range outcomeRelations {
-				if outcomeRelations[i].MasterID == outcomes[j].ID {
-					temp = append(temp, outcomeRelations[i])
+			for _, outcomeRelation := range outcomeRelations {
+				if outcomeRelation.MasterID == outcome.ID {
+					temp = append(temp, outcomeRelation)
 				}
 			}
-			ocm.FillRelation(ctx, outcomes[i], temp)
+			ocm.FillRelation(ctx, outcome, temp)
 		}
 	}
 	return nil
