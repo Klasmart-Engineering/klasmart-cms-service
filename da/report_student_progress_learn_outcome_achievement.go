@@ -86,9 +86,10 @@ left join (
 		min(complete_time) as first_achieve_time  
 		from 
 	({{.sbStudentAchieveOutcome}}) t1
-	where t1.is_student_achieved =1 and ({{.sbCondDuration}})
+	where t1.is_student_achieved =1 
 	group by t1.outcome_id ,t1.student_id 
 ) t2 on t2.outcome_id = t0.outcome_id  and t2.student_id=t0.student_id
+where ({{.sbCondDuration}})
 `)
 	plDuration := ``
 	condDurations := []string{}
@@ -96,7 +97,7 @@ left join (
 		min, max, _ := duration.Value(ctx)
 		plDuration = fmt.Sprintf(`
 		when t0.complete_time >= %d and t0.complete_time < %d THEN '%s'`, min, max, duration) + plDuration
-		condDurations = append(condDurations, fmt.Sprintf("(t1.complete_time >= %d and t1.complete_time < %d)", min, max))
+		condDurations = append(condDurations, fmt.Sprintf("(t0.complete_time >= %d and t0.complete_time < %d)", min, max))
 	}
 
 	sbPlDuration := NewSqlBuilder(ctx, fmt.Sprintf(`case %s end as duration`, plDuration))
