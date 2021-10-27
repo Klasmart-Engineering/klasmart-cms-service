@@ -5,6 +5,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 // First-Level: key is duration, value is student map
@@ -38,10 +39,16 @@ func (t *reportModel) GetAssignmentCompletion(ctx context.Context, op *entity.Op
 
 	mapResult := t.convertToTriLevelMap(results)
 
+	log.Debug(ctx, "GetAssignmentCompletion: average_raw",
+		log.Any("args", args),
+		log.Any("results", mapResult))
+
 	res := make([]*entity.AssignmentCompletionRate, len(args.Durations))
 
 	for i, v := range args.Durations {
-		_, rate, finish, total := t.calculateStudentSubjectAverage(ctx, mapResult, string(v), args.StudentID, args.SelectedSubjectIDList)
+		selected := utils.SliceDeduplication(args.SelectedSubjectIDList)
+		unSelected := utils.SliceDeduplication(args.UnSelectedSubjectIDList)
+		_, rate, finish, total := t.calculateStudentSubjectAverage(ctx, mapResult, string(v), args.StudentID, selected)
 
 		averageRate := &entity.AssignmentCompletionRate{
 			StudentID:                 args.StudentID,
@@ -51,8 +58,8 @@ func (t *reportModel) GetAssignmentCompletion(ctx context.Context, op *entity.Op
 			Duration:                  v,
 		}
 
-		_, averageRate.ClassDesignatedSubject = t.calculateClassDesignedSubjectAverage(ctx, mapResult, string(v), args.SelectedSubjectIDList)
-		_, averageRate.StudentNonDesignatedSubject, _, _ = t.calculateStudentSubjectAverage(ctx, mapResult, string(v), args.StudentID, args.UnSelectedSubjectIDList)
+		_, averageRate.ClassDesignatedSubject = t.calculateClassDesignedSubjectAverage(ctx, mapResult, string(v), selected)
+		_, averageRate.StudentNonDesignatedSubject, _, _ = t.calculateStudentSubjectAverage(ctx, mapResult, string(v), args.StudentID, unSelected)
 
 		res[i] = averageRate
 	}
@@ -89,13 +96,11 @@ func (t *reportModel) calculateStudentSubjectAverage(ctx context.Context, raw ma
 	} else {
 		log.Debug(ctx, "student_average",
 			log.String("duration", duration),
-			log.String("student_id", studentID),
-			log.Strings("subject_ids", subjectIDs),
-			log.Any("raw", raw))
+			log.String("student_id", studentID))
 		return false, 0, sumFinishCount, sumTotalCount
 	}
 
-	log.Debug(ctx, "student_average",
+	log.Debug(ctx, "student_average---",
 		log.String("duration", duration),
 		log.String("student_id", studentID),
 		log.Float64("rate_sum", sum),
@@ -130,13 +135,11 @@ func (t *reportModel) calculateClassDesignedSubjectAverage(ctx context.Context, 
 		}
 	} else {
 		log.Debug(ctx, "class_average",
-			log.String("duration", duration),
-			log.Strings("subject_ids", subjectIDs),
-			log.Any("raw", raw))
+			log.String("duration", duration))
 		return false, 0
 	}
 
-	log.Debug(ctx, "class_average",
+	log.Debug(ctx, "class_average---",
 		log.Float64("rate_sum", sum),
 		log.Int("rate_count", count))
 	if count <= 0 {
