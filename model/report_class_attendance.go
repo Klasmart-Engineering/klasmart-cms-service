@@ -54,13 +54,15 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, op *entity.
 		}
 		classAttendanceResponseItem := new(entity.ClassAttendanceResponseItem)
 		classAttendanceResponseItem.Duration = duration
-		classAttendanceResponseItem.AttendedCount = studentSelectSubjectAttendanceCount + studentUnSelectSubjectAttendanceCount
-		classAttendanceResponseItem.ScheduledCount = studentSelectSubjectCount + studentUnSelectSubjectCount
 		// when select subject all , calculate only attendancePercentage,classAverageAttendancePercentage
 		if len(request.UnSelectedSubjectIDList) == 0 && studentSelectSubjectCount > 0 && classSelectSubjectCount > 0 {
 			classAttendanceResponseItem.AttendancePercentage = float64(studentSelectSubjectAttendanceCount) / float64(studentSelectSubjectCount)
 			classAttendanceResponseItem.ClassAverageAttendancePercentage = float64(classSelectSubjectAttendanceCount) / float64(classSelectSubjectCount)
+			classAttendanceResponseItem.AttendedCount = studentSelectSubjectAttendanceCount + studentUnSelectSubjectAttendanceCount
+			classAttendanceResponseItem.ScheduledCount = studentSelectSubjectCount + studentUnSelectSubjectCount
 		} else if studentSelectSubjectCount > 0 && studentUnSelectSubjectCount > 0 && classSelectSubjectCount > 0 {
+			classAttendanceResponseItem.AttendedCount = studentSelectSubjectAttendanceCount
+			classAttendanceResponseItem.ScheduledCount = studentSelectSubjectCount
 			classAttendanceResponseItem.AttendancePercentage = float64(studentSelectSubjectAttendanceCount) / float64(studentSelectSubjectCount)
 			classAttendanceResponseItem.UnSelectedSubjectsAverageAttendancePercentage = float64(studentUnSelectSubjectAttendanceCount) / float64(studentUnSelectSubjectCount)
 			classAttendanceResponseItem.ClassAverageAttendancePercentage = float64(classSelectSubjectAttendanceCount) / float64(classSelectSubjectCount)
