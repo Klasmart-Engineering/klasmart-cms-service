@@ -42,6 +42,7 @@ var (
 	ErrHasLocked         = errors.New("has locked")
 	ErrOverflow          = errors.New("over flow")
 	ErrOutOfDate         = errors.New("out of date")
+	ErrSqlBuilderFailed  = errors.New("sql builder failed")
 )
 
 const (
