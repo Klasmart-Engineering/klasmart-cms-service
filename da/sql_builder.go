@@ -1,0 +1,65 @@
+package da
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"regexp"
+	"text/template"
+)
+
+type sqlBuilder struct {
+	Sql          string
+	PlaceHolders map[string]*sqlBuilder
+	Args         []interface{}
+}
+
+func (sb *sqlBuilder) Build(ctx context.Context) (sql string, args []interface{}, err error) {
+	tp, err := template.New("").Parse(sb.Sql)
+	if err != nil {
+		return
+	}
+
+	data := map[string]string{}
+	args = sb.Args
+
+	reg := regexp.MustCompile(`\{\{\.([A-Za-z0-9_]+)\}\}`)
+	plKeys := reg.FindAllStringSubmatch(sb.Sql, -1)
+	for _, subPlKeys := range plKeys {
+		if len(subPlKeys) < 2 {
+			continue
+		}
+		plKey := subPlKeys[1]
+		sb1, ok := sb.PlaceHolders[plKey]
+		if !ok {
+			err = errors.New("placeHolderKey not found")
+			return
+		}
+		var args1 []interface{}
+		data[plKey], args1, err = sb1.Build(ctx)
+		if err != nil {
+			return
+		}
+		args = append(args, args1...)
+	}
+	bf := new(bytes.Buffer)
+	err = tp.Execute(bf, data)
+	if err != nil {
+		return
+	}
+	sql = bf.String()
+	return
+}
+
+func NewSqlBuilder(ctx context.Context, sql string, args ...interface{}) (sb *sqlBuilder) {
+	sb = &sqlBuilder{
+		Sql:          sql,
+		Args:         args,
+		PlaceHolders: map[string]*sqlBuilder{},
+	}
+	return
+}
+func (sb *sqlBuilder) Replace(ctx context.Context, placeHolderKey string, sb1 *sqlBuilder) *sqlBuilder {
+	sb.PlaceHolders[placeHolderKey] = sb1
+	return sb
+}
