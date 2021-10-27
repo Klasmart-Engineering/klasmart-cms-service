@@ -1,7 +1,7 @@
 package entity
 
 type Relation struct {
-	ID           string       `gorm:"column:id;primary_key"`
+	ID           int64        `gorm:"column:id;primary_key"`
 	MasterID     string       `gorm:"column:master_id"`
 	MasterType   RelationType `gorm:"column:master_type"`
 	RelationID   string       `gorm:"column:relation_id"`

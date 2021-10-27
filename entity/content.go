@@ -293,6 +293,17 @@ type Content struct {
 	DeleteAt int64 `gorm:"type:bigint;column:delete_at"`
 }
 
+func (c *Content) ToContentSimplified() *ContentSimplified {
+	return &ContentSimplified{
+		ID:            c.ID,
+		ContentName:   c.Name,
+		ContentType:   c.ContentType,
+		AuthorID:      c.Author,
+		Data:          c.Data,
+		CreateAt:      c.CreateAt,
+		PublishStatus: c.PublishStatus,
+	}
+}
 func (u Content) UpdateExpress() string {
 	tags := getDynamoTags(u)
 	updateExpressParts := make([]string, 0)
@@ -373,6 +384,14 @@ type ContentVisibilitySettings struct {
 	VisibilitySettings []string `json:"visibility_settings"`
 }
 
+type ContentInternalConditionRequest struct {
+	IDs          []string `json:"ids"`
+	OrgID        string   `json:"org_id"`
+	ContentType  int      `json:"content_type"`
+	PlanID       string   `json:"plan_id"`
+	DataSourceID string   `json:"source_id"`
+}
+
 type ContentConditionRequest struct {
 	Name               string   `json:"name"`
 	ContentType        []int    `json:"content_type"`
@@ -384,6 +403,7 @@ type ContentConditionRequest struct {
 	SourceType         string   `json:"source_type"`
 	DirPath            string   `json:"dir_path"`
 	ContentName        string   `json:"content_name"`
+	DataSourceID       string   `json:"data_source_id"`
 
 	//AuthedContentFlag bool           `json:"authed_content"`
 	AuthedOrgID NullStrings `json:"authed_org_ids"`
@@ -482,6 +502,22 @@ type ContentInfoWithDetailsResponse struct {
 type FolderContentInfoWithDetailsResponse struct {
 	Total       int                  `json:"total"`
 	ContentList []*FolderContentData `json:"list"`
+}
+
+type ContentSimplifiedList struct {
+	Total       int                  `json:"total"`
+	ContentList []*ContentSimplified `json:"list"`
+}
+
+type ContentSimplified struct {
+	ID          string `json:"id"`
+	ContentName string `json:"content_name"`
+
+	ContentType   ContentType          `json:"content_type"`
+	AuthorID      string               `json:"author_id"`
+	Data          string               `json:"data"`
+	CreateAt      int64                `json:"create_at"`
+	PublishStatus ContentPublishStatus `json:"publish_status"`
 }
 
 type ContentInfoWithDetails struct {

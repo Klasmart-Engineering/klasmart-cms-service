@@ -1,11 +1,12 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 // @Summary  getAssignmentsCompletion
@@ -31,6 +32,11 @@ func (s *Server) getAssignmentsCompletion(c *gin.Context) {
 			log.Err(err),
 			log.Any("request", request))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	err = s.checkPermissionForReportStudentProgress(ctx, op, request.ClassID, request.StudentID)
+	if err != nil {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
 	result, err := model.GetReportModel().GetAssignmentCompletion(ctx, op, &request)

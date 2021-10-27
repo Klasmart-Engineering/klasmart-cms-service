@@ -3,6 +3,7 @@ package da
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
@@ -15,11 +16,13 @@ func (r *ReportDA) GetStudentProgressLearnOutcomeCountByStudentAndSubject(ctx co
 	res = []*entity.StudentProgressLearnOutcomeCount{}
 
 	plDuration := ``
+	condDurations := []string{}
 	for _, duration := range req.Durations {
 		min, max, _ := duration.Value(ctx)
 		plDuration = fmt.Sprintf(`
-when a.complete_time > %d and a.complete_time < %d THEN '%s' 
+when a.complete_time >= %d and a.complete_time < %d THEN '%s' 
 `, min, max, duration) + plDuration
+		condDurations = append(condDurations, fmt.Sprintf("(a.complete_time >= %d and a.complete_time < %d)", min, max))
 	}
 	plDuration = fmt.Sprintf(`case %s end as duration`, plDuration)
 
@@ -52,6 +55,7 @@ from
 		and vsofa.outcome_id = vaos.outcome_id 
 	left join v_schedules_subjects vss on vss.schedule_id = a.schedule_id 
 	where a.delete_at=0
+	and (%s)
 ) t 
 
 where 
@@ -59,7 +63,7 @@ where
  and t.class_id=?
  and t.subject_id in (?)
 group by t.student_id,t.subject_id,t.duration
-`, plDuration)
+`, plDuration, strings.Join(condDurations, " or "))
 	args := []interface{}{entity.AssessmentStatusComplete, req.ClassID}
 	args = append(args, append(req.SelectedSubjectIDList, req.UnSelectedSubjectIDList...))
 

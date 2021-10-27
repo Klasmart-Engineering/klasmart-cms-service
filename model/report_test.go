@@ -3,8 +3,9 @@ package model
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"testing"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 func TestLessoons(t *testing.T) {
@@ -18,7 +19,6 @@ func TestLessoons(t *testing.T) {
 
 }
 
-
 func TestClassAttendance(t *testing.T) {
 	ctx := context.Background()
 	request := entity.ClassAttendanceRequest{ClassID: "0a29685b-73dd-4225-b40f-cf27b89ba50a",
@@ -26,8 +26,8 @@ func TestClassAttendance(t *testing.T) {
 		SelectedSubjectIDList:   []string{"20d6ca2f-13df-4a7a-8dcb-955908db7baa", "5e9a201e-9c2f-4a92-bb6f-1ccf8177bb71"},
 		UnSelectedSubjectIDList: []string{"1b622730-1135-43aa-b956-786365561f21", "19d8ebc4-7703-4d73-a44d-76052f729e40"},
 		Durations:               []entity.TimeRange{"1633924080-1634528880", "1633232880-1633837680"}}
-	response, err := GetReportModel().ClassAttendanceStatistics(ctx, &request)
+	response, err := GetReportModel().ClassAttendanceStatistics(ctx, nil, &request)
 	fmt.Println(err)
-	fmt.Println(response.Items[0].ClassAverageAttendancePercentage)
-	fmt.Println(response.Items[0].AttendedCount)
+	fmt.Println(response.Items[0].Duration, response.Items[0].ClassAverageAttendancePercentage)
+	fmt.Println(response.Items[1].Duration, response.Items[1].ClassAverageAttendancePercentage)
 }

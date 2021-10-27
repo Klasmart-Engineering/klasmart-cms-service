@@ -117,7 +117,7 @@ func (tcs TeacherClassWithStudent) CountClassAndStudent(ctx context.Context, cla
 	classIDs := make([]string, 0, len(classIDList))
 	studentIDs := make([]string, 0)
 	for _, class := range tcs.ClassesTeaching {
-		if !utils.ContainsStr(classIDList, class.ClassID) {
+		if !utils.ContainsString(classIDList, class.ClassID) {
 			continue
 		}
 		classIDs = append(classIDs, class.ClassID)
