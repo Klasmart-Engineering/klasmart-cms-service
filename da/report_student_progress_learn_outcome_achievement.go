@@ -52,15 +52,16 @@ left join outcomes_attendances oa
 inner join assessments a on
             a.id = t1.assessment_id and a.status ='complete'  
 left join v_schedules_subjects vss on vss.schedule_id =a.schedule_id 
+
 union all 
 
 select 
 	ao.assessment_id ,
 	ao.outcome_id ,
-	hfs.student_id ,
-	vss.subject_id ,
+	hfs.student_id ,	
 	vss.class_id ,
 	hfs.complete_at as complete_time,
+	vss.subject_id ,
 	IF (EXISTS (select * from outcomes_attendances oa where oa.assessment_id =ao.assessment_id and oa.outcome_id=ao.outcome_id and oa.attendance_id=hfs.student_id),1,0) as is_student_achieved
 from home_fun_studies hfs 
 inner join assessments_outcomes ao on ao.assessment_id =hfs.id 
