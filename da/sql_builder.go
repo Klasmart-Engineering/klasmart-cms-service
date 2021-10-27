@@ -3,9 +3,12 @@ package da
 import (
 	"bytes"
 	"context"
-	"errors"
 	"regexp"
 	"text/template"
+
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
 type sqlBuilder struct {
@@ -17,6 +20,8 @@ type sqlBuilder struct {
 func (sb *sqlBuilder) Build(ctx context.Context) (sql string, args []interface{}, err error) {
 	tp, err := template.New("").Parse(sb.Sql)
 	if err != nil {
+		log.Error(ctx, "sqlBuilder build failed", log.Err(err), log.Any("sb", sb))
+		err = constant.ErrSqlBuilderFailed
 		return
 	}
 
@@ -32,7 +37,8 @@ func (sb *sqlBuilder) Build(ctx context.Context) (sql string, args []interface{}
 		plKey := subPlKeys[1]
 		sb1, ok := sb.PlaceHolders[plKey]
 		if !ok {
-			err = errors.New("placeHolderKey not found")
+			log.Error(ctx, "sqlBuilder build placeHolderKey not found", log.Any("plKey", plKey), log.Err(err), log.Any("sb", sb))
+			err = constant.ErrSqlBuilderFailed
 			return
 		}
 		var args1 []interface{}
@@ -45,6 +51,8 @@ func (sb *sqlBuilder) Build(ctx context.Context) (sql string, args []interface{}
 	bf := new(bytes.Buffer)
 	err = tp.Execute(bf, data)
 	if err != nil {
+		log.Error(ctx, "sqlBuilder build Execute failed", log.Err(err), log.Any("sb", sb), log.Any("data", data))
+		err = constant.ErrSqlBuilderFailed
 		return
 	}
 	sql = bf.String()
