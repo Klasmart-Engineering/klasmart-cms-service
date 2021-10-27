@@ -227,9 +227,6 @@ func (m *assessmentH5P) getStudentViewItems(ctx context.Context, operator *entit
 		)
 		return nil, err
 	}
-
-	log.Debug(ctx, "getStudentViewItems: roomMap", log.Any("roomMap", roomMap))
-
 	room := roomMap[view.RoomID]
 	if room == nil {
 		log.Debug(ctx, "get student view items: not found room", log.String("room_id", view.RoomID))
@@ -328,9 +325,6 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 	view *entity.AssessmentView,
 	room *entity.AssessmentH5PRoom,
 ) (map[string][]*entity.AssessmentStudentViewH5PLessonMaterial, error) {
-
-	log.Debug(ctx, "generateUserH5PContentKey: view", log.Any("view", view))
-
 	// get assessment outcomes
 	assessmentOutcomes, err := m.getAssessmentOutcomes(ctx, view.ID)
 	if err != nil {
@@ -418,14 +412,11 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 	// get keyed user h5p contents map
 	keyedUserH5PContentsMap := m.getKeyedUserH5PContentsMap(room)
 
-	log.Debug(ctx, "generateUserH5PContentKey: keyedUserH5PContentsMap", log.Any("keyedUserH5PContentsMap", keyedUserH5PContentsMap))
-
 	// assembly result
 	result := map[string][]*entity.AssessmentStudentViewH5PLessonMaterial{}
 	for _, s := range view.Students {
 		for lmIndex, lm := range view.LessonMaterials {
 			keyedH5PContentsTemplateMap := m.getKeyedH5PContentsTemplateMap(room, lm.LatestID)
-			log.Debug(ctx, "generateUserH5PContentKey: keyedH5PContentsTemplateMap", log.Any("keyedH5PContentsTemplateMap", keyedH5PContentsTemplateMap))
 			var contents []*entity.AssessmentH5PContent
 			for _, keyedContents := range keyedH5PContentsTemplateMap {
 				if len(keyedContents) == 0 {
@@ -454,9 +445,6 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 					contents = append(contents, &newContent)
 				}
 			}
-
-			log.Debug(ctx, "generateUserH5PContentKey: contents", log.Any("contents", contents))
-
 			if len(contents) == 0 {
 				newLessonMaterial := entity.AssessmentStudentViewH5PLessonMaterial{
 					LessonMaterialOrderedNumber: lmIndex,
