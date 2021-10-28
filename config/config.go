@@ -48,6 +48,7 @@ type Config struct {
 	ShowInternalErrorType bool                  `json:"show_internal_error_type"`
 	User                  UserConfig            `json:"user" yaml:"user"`
 	Report                ReportConfig          `json:"report" yaml:"report"`
+	NewRelic              NewRelicConfig        `json:"new_relic" yaml:"new_relic"`
 }
 
 var config *Config
@@ -158,6 +159,18 @@ type ReportConfig struct {
 	PublicKey string `json:"report_public_key" yaml:"report_public_key"`
 }
 
+type NewRelicConfig struct {
+	NewRelicDistributedTracingEnabled bool
+	NewRelicAppName                   string
+	NewRelicLabels                    map[string]string
+	NewRelicLicenseKey                string
+}
+
+func (c NewRelicConfig) Enable() bool {
+	return strings.TrimSpace(c.NewRelicAppName) != "" &&
+		strings.TrimSpace(c.NewRelicLicenseKey) != ""
+}
+
 func assertGetEnv(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
@@ -184,6 +197,7 @@ func LoadEnvConfig() {
 	loadShowInternalErrorTypeConfig(ctx)
 	loadUserConfig(ctx)
 	loadReportConfig(ctx)
+	loadNewRelicConfig(ctx)
 }
 
 func loadShowInternalErrorTypeConfig(ctx context.Context) {
@@ -458,6 +472,25 @@ func loadUserConfig(ctx context.Context) {
 
 func loadReportConfig(ctx context.Context) {
 	// config.Report.PublicKey = assertGetEnv("student_usage_report_public_key")
+}
+
+func loadNewRelicConfig(ctx context.Context) {
+	// all newRelic config are optional
+	nr := &config.NewRelic
+	nr.NewRelicAppName = os.Getenv("NEW_RELIC_APP_NAME")
+	nr.NewRelicLicenseKey = os.Getenv("NEW_RELIC_LICENSE_KEY")
+	nr.NewRelicLabels = make(map[string]string)
+	nr.NewRelicDistributedTracingEnabled = strings.ToLower(
+		os.Getenv("NEW_RELIC_DISTRIBUTED_TRACING_ENABLED")) == "true"
+
+	// rawLabels format: "key1:val1;key2:val2;key3:val3"
+	rawLabels := os.Getenv("NEW_RELIC_LABELS")
+	for _, label := range strings.Split(rawLabels, ";") {
+		kv := strings.Split(strings.TrimSpace(label), ":")
+		key := strings.TrimSpace(kv[0])
+		val := strings.TrimSpace(kv[1])
+		nr.NewRelicLabels[key] = val
+	}
 }
 
 func Get() *Config {

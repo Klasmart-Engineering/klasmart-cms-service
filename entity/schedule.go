@@ -311,6 +311,14 @@ type Schedule struct {
 	DeleteAt        int64             `gorm:"column:delete_at;type:bigint" json:"delete_at"`
 }
 
+func (s *Schedule) ToScheduleSimplified() *ScheduleSimplified {
+	return &ScheduleSimplified{
+		ID:           s.ID,
+		LessonPlanID: s.LessonPlanID,
+		OrgID:        s.OrgID,
+	}
+}
+
 type ScheduleStatus string
 
 func (s ScheduleStatus) Valid() bool {
@@ -552,8 +560,15 @@ type ScheduleSearchView struct {
 	ID      string `json:"id"`
 	StartAt int64  `json:"start_at"`
 	EndAt   int64  `json:"end_at"`
+	DueAt   int64  `json:"due_at"`
 	Title   string `json:"title"`
 	ScheduleBasic
+}
+
+type ScheduleSimplified struct {
+	ID           string `json:"id"`
+	LessonPlanID string `json:"lesson_plan_id"`
+	OrgID        string `json:"org_id"`
 }
 
 type ScheduleShortInfo struct {
@@ -627,6 +642,11 @@ func (t ScheduleEditType) Valid() bool {
 type SchedulePageView struct {
 	Total int                   `json:"total"`
 	Data  []*ScheduleSearchView `json:"data"`
+}
+
+type ScheduleSimplifiedPageView struct {
+	Total int                   `json:"total"`
+	Data  []*ScheduleSimplified `json:"data"`
 }
 
 type ScheduleIDsCondition struct {

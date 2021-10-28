@@ -172,6 +172,9 @@ func (s *scheduleRelationModel) GetUsers(ctx context.Context, op *entity.Operato
 	if err != nil {
 		return nil, err
 	}
+	log.Info(ctx, "external.GetUserServiceProvider().BatchGetMap",
+		log.Strings("userIDs", userIDs),
+		log.Any("userMap", userMap))
 
 	result.Teachers = make([]*entity.ScheduleShortInfo, 0, len(teacherIDs))
 	for _, id := range teacherIDs {

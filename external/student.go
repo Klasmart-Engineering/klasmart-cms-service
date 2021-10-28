@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
 	"sync"
 
@@ -14,6 +15,7 @@ import (
 )
 
 type StudentServiceProvider interface {
+	cache.IDataSource
 	Get(ctx context.Context, operator *entity.Operator, id string) (*Student, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableStudent, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableStudent, error)
@@ -30,8 +32,15 @@ type Student struct {
 }
 
 type NullableStudent struct {
-	Valid bool `json:"-"`
+	Valid bool `json:"valid"`
 	*Student
+}
+
+func (n *NullableStudent) StringID() string {
+	return n.Student.ID
+}
+func (n *NullableStudent) RelatedIDs() []*cache.RelatedEntity {
+	return nil
 }
 
 var (
@@ -63,8 +72,30 @@ func (s AmsStudentService) Get(ctx context.Context, operator *entity.Operator, i
 }
 
 func (s AmsStudentService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableStudent, error) {
+	log.Info(ctx, "Doing BatchGet student",
+		log.Strings("ids", ids))
 	if len(ids) == 0 {
 		return []*NullableStudent{}, nil
+	}
+	res := make([]*NullableStudent, 0, len(ids))
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
+	if err != nil {
+		return nil, err
+	}
+	log.Info(ctx, "BatchGet students success",
+		log.Strings("ids", ids),
+		log.Any("res", res))
+
+	return res, nil
+}
+
+func (s AmsStudentService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
 	}
 
 	users, err := GetUserServiceProvider().BatchGet(ctx, operator, ids)
@@ -72,7 +103,7 @@ func (s AmsStudentService) BatchGet(ctx context.Context, operator *entity.Operat
 		return nil, err
 	}
 
-	students := make([]*NullableStudent, len(users))
+	students := make([]cache.Object, len(users))
 	for index, user := range users {
 		students[index] = &NullableStudent{
 			Valid: user.Valid,
@@ -91,7 +122,9 @@ func (s AmsStudentService) BatchGetMap(ctx context.Context, operator *entity.Ope
 	if err != nil {
 		return map[string]*NullableStudent{}, err
 	}
-
+	log.Info(ctx, "BatchGetMap.BatchGet students success",
+		log.Strings("ids", ids),
+		log.Any("students", students))
 	dict := make(map[string]*NullableStudent, len(students))
 	for _, student := range students {
 		if students[0].Student == nil || !student.Valid {
@@ -99,6 +132,9 @@ func (s AmsStudentService) BatchGetMap(ctx context.Context, operator *entity.Ope
 		}
 		dict[student.ID] = student
 	}
+	log.Info(ctx, "BatchGetMap.BatchGet students map success",
+		log.Strings("ids", ids),
+		log.Any("dict", dict))
 
 	return dict, nil
 }
@@ -214,4 +250,7 @@ func (s AmsStudentService) Query(ctx context.Context, operator *entity.Operator,
 
 func (s AmsStudentService) FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error) {
 	return GetUserServiceProvider().FilterByPermission(ctx, operator, userIDs, permissionName)
+}
+func (s AmsStudentService) Name() string {
+	return "ams_student_service"
 }

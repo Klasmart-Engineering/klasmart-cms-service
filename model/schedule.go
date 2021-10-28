@@ -67,6 +67,8 @@ type IScheduleModel interface {
 	// without permission check, internal function call
 	QueryUnsafe(ctx context.Context, condition *entity.ScheduleQueryCondition) ([]*entity.Schedule, error)
 	QueryScheduleTimeView(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]*entity.ScheduleTimeView, error)
+
+	QueryByConditionInternal(ctx context.Context, condition *da.ScheduleCondition) (int, []*entity.ScheduleSimplified, error)
 }
 
 type scheduleModel struct {
@@ -1310,7 +1312,9 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 			StartAt: item.StartAt,
 			Title:   item.Title,
 			EndAt:   item.EndAt,
+			DueAt:   item.DueAt,
 		}
+
 		if v, ok := basicInfo[item.ID]; ok {
 			viewData.ScheduleBasic = *v
 		}
@@ -1369,7 +1373,7 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 		return nil, err
 	}
 
-	assessments, err := GetAssessmentModel().Query(ctx, op, dbo.MustGetDB(ctx), &da.QueryAssessmentConditions{
+	assessments, err := GetAssessmentModel().Query(ctx, op, &da.QueryAssessmentConditions{
 		ScheduleIDs: entity.NullStrings{
 			Strings: scheduleIDs,
 			Valid:   len(scheduleIDs) > 0,
@@ -1474,6 +1478,20 @@ func (s *scheduleModel) QueryByDB(ctx context.Context, op *entity.Operator, cond
 	}
 
 	return scheduleList, nil
+}
+
+func (s *scheduleModel) QueryByConditionInternal(ctx context.Context, condition *da.ScheduleCondition) (int, []*entity.ScheduleSimplified, error) {
+	var scheduleList []*entity.Schedule
+	total, err := da.GetScheduleDA().Page(ctx, condition, &scheduleList)
+	if err != nil {
+		log.Error(ctx, "schedule query error", log.Err(err), log.Any("condition", condition))
+		return 0, nil, err
+	}
+	res := make([]*entity.ScheduleSimplified, len(scheduleList))
+	for i := range scheduleList {
+		res[i] = scheduleList[i].ToScheduleSimplified()
+	}
+	return total, res, nil
 }
 
 func (s *scheduleModel) QueryByCondition(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error) {
@@ -1867,7 +1885,7 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 			}
 		}
 	} else {
-		assessments, err := GetAssessmentModel().Query(ctx, operator, dbo.MustGetDB(ctx), &da.QueryAssessmentConditions{
+		assessments, err := GetAssessmentModel().Query(ctx, operator, &da.QueryAssessmentConditions{
 			ScheduleIDs: entity.NullStrings{
 				Strings: []string{result.ID},
 				Valid:   true,
@@ -2975,7 +2993,7 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 			}
 		}
 	} else {
-		assessments, err := GetAssessmentModel().Query(ctx, op, dbo.MustGetDB(ctx), &da.QueryAssessmentConditions{
+		assessments, err := GetAssessmentModel().Query(ctx, op, &da.QueryAssessmentConditions{
 			ScheduleIDs: entity.NullStrings{
 				Strings: []string{schedule.ID},
 				Valid:   true,

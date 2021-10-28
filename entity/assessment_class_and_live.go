@@ -132,6 +132,7 @@ type AssessmentLessonMaterial struct {
 	Comment  string   `json:"comment"`
 	Source   string   `json:"source"`
 	Checked  bool     `json:"checked"`
+	LatestID string   `json:"latest_id"`
 }
 
 type AssessmentExternalLessonPlan struct {
@@ -239,8 +240,8 @@ type QueryAssessmentsArgs struct {
 }
 
 type AssessmentAllowTeacherIDAndStatusPair struct {
-	TeacherID string           `json:"teacher_id"`
-	Status    AssessmentStatus `json:"status"`
+	TeacherID string             `json:"teacher_id"`
+	Status    []AssessmentStatus `json:"status"`
 }
 
 type NullAssessmentAllowTeacherIDAndStatusPairs struct {

@@ -30,7 +30,7 @@ func (m *reportModel) GetStudentProgressLearnOutcomeAchievement(ctx context.Cont
 	for _, c := range counts {
 		item := res.GetItem(c.Duration)
 		if c.StudentID == req.StudentID {
-			if utils.ContainsStr(req.SelectedSubjectIDList, c.SubjectID) {
+			if utils.ContainsString(req.SelectedSubjectIDList, c.SubjectID) {
 				item.FirstAchievedCount += c.FirstAchievedCount
 				item.ReAchievedCount += c.AchievedCount - c.FirstAchievedCount
 				item.UnAchievedCount += c.CompletedCount - c.AchievedCount
@@ -45,7 +45,7 @@ func (m *reportModel) GetStudentProgressLearnOutcomeAchievement(ctx context.Cont
 		}
 
 		item.StudentAchievedPercentages[c.StudentID] = append(item.StudentAchievedPercentages[c.StudentID], float64(c.AchievedCount)/float64(c.CompletedCount))
-		if utils.ContainsStr(req.SelectedSubjectIDList, c.SubjectID) {
+		if utils.ContainsString(req.SelectedSubjectIDList, c.SubjectID) {
 			res.StudentAchievedCounts[c.StudentID] = append(res.StudentAchievedCounts[c.StudentID], float64(c.AchievedCount))
 		}
 	}
