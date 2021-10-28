@@ -24,14 +24,13 @@ select
     a.complete_time ,
     vss.subject_id ,    
     if(oa.id is null,0,1) as is_student_achieved
-from
-    (
+from (
         SELECT
             DISTINCT assessment_id,
                      outcome_id
         FROM
             assessments_outcomes
-    ) t1
+) t1
 INNER JOIN (
         SELECT
             assessment_id,
@@ -41,10 +40,8 @@ INNER JOIN (
         WHERE
                 checked = 1
           AND origin = 'class_roaster'
-          AND role = 'student'
-          and attendance_id=?
-    ) t2 
-   ON	t1.assessment_id = t2.assessment_id
+          AND role = 'student'          
+) t2  ON	t1.assessment_id = t2.assessment_id
 left join outcomes_attendances oa
 	on t1.assessment_id = oa.assessment_id
     and t1.outcome_id = oa.outcome_id
@@ -52,6 +49,7 @@ left join outcomes_attendances oa
 inner join assessments a on
             a.id = t1.assessment_id and a.status ='complete'  
 left join v_schedules_subjects vss on vss.schedule_id =a.schedule_id 
+where vss.class_id =?
 
 union all 
 
@@ -66,7 +64,7 @@ select
 from home_fun_studies hfs 
 inner join assessments_outcomes ao on ao.assessment_id =hfs.id 
 left join v_schedules_subjects vss on vss.schedule_id =hfs.schedule_id 
-where hfs.student_id =?`, req.StudentID, req.StudentID)
+where vss.class_id =?`, req.ClassID, req.ClassID)
 	sbStudentFirstAchieveOutcome := NewSqlBuilder(ctx, `
 select 
 	t0.assessment_id,
@@ -78,14 +76,17 @@ select
 	t2.first_achieve_time,
 	is_student_achieved,
 	{{.sbPlDuration}}	
-from ({{.sbStudentAchieveOutcome}}) t0 
+from (
+	{{.sbStudentAchieveOutcome}}
+) t0 
 left join (
 	select 
 		t1.outcome_id ,
 		t1.student_id,
 		min(complete_time) as first_achieve_time  
-		from 
-	({{.sbStudentAchieveOutcome}}) t1
+	from (
+			{{.sbStudentAchieveOutcome}}
+	) t1
 	where t1.is_student_achieved =1 
 	group by t1.outcome_id ,t1.student_id 
 ) t2 on t2.outcome_id = t0.outcome_id  and t2.student_id=t0.student_id
@@ -115,16 +116,16 @@ select
 	count(1) as completed_count,
 	sum(t.is_student_achieved) as achieved_count,
 	sum(if(t.complete_time=t.first_achieve_time,1,0)) as first_achieved_count
-from ({{.sbStudentFirstAchieveOutcome}}) t 
-
+from (
+	{{.sbStudentFirstAchieveOutcome}}
+) t 
 {{.sbCondition}}
 group by t.student_id,t.subject_id,t.duration
 `)
 
 	sbCondition := NewSqlBuilder(ctx, `
-	where
- t.class_id=?
- and t.subject_id in (?)
+where t.class_id=?
+and t.subject_id in (?)
 `, req.ClassID, append(req.SelectedSubjectIDList, req.UnSelectedSubjectIDList...))
 	sb.Replace(ctx, "sbStudentFirstAchieveOutcome", sbStudentFirstAchieveOutcome).
 		Replace(ctx, "sbCondition", sbCondition)
