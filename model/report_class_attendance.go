@@ -20,7 +20,7 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, op *entity.
 		if err != nil {
 			return nil, err
 		}
-		//map key is class id
+		//map key is subject id
 		studentSelectSubjectTotalMap := make(map[string]int)
 		studentSelectSubjectAttendanceTotalMap := make(map[string]int)
 		studentUnSelectSubjectTotalMap := make(map[string]int)
