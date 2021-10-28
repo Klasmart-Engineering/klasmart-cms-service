@@ -20,7 +20,7 @@ type feedbackAssignmentDA struct {
 }
 
 func (s *feedbackAssignmentDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, assignments []*entity.FeedbackAssignment) (int64, error) {
-	_, err := s.Insert(ctx, &assignments)
+	_, err := s.InsertTx(ctx, dbContext, &assignments)
 	if err != nil {
 		logger.Error(ctx, "batch insert feedbackAssignment: batch insert failed", log.Any("assignments", assignments), log.Err(err))
 		return 0, err

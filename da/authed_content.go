@@ -55,7 +55,7 @@ func (ac *AuthedContentDA) BatchAddAuthedContent(ctx context.Context, tx *dbo.DB
 			CreateAt:     createAt,
 			Duration:     item.Duration})
 	}
-	_, err := ac.s.Insert(ctx, &models)
+	_, err := ac.s.InsertTx(ctx, tx, &models)
 	if err != nil {
 		log.Error(ctx, "batch insert cms_authed_contents: batch insert failed",
 			log.Err(err),
