@@ -22,11 +22,11 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, op *entity.
 			return nil, err
 		}
 		// map key is student id
-		var studentSelectSubjectTotalMap map[string]int
-		var studentSelectSubjectAttendanceTotalMap map[string]int
-		var studentUnSelectSubjectTotalMap map[string]int
-		var studentUnSelectSubjectAttendanceTotalMap map[string]int
-		var classStudentSelectSubjectAttendanceRateMap map[string]float64
+		studentSelectSubjectTotalMap := make(map[string]int)
+		studentSelectSubjectAttendanceTotalMap := make(map[string]int)
+		studentUnSelectSubjectTotalMap := make(map[string]int)
+		studentUnSelectSubjectAttendanceTotalMap := make(map[string]int)
+		classStudentSelectSubjectAttendanceRateMap := make(map[string]float64)
 		var classStudentSelectSubjectAttendanceTotalRate float64
 		for _, classAttendance := range classAttendanceList {
 			//statistics student attendance selected subject
