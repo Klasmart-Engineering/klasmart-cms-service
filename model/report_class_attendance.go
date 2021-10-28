@@ -30,7 +30,7 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, op *entity.
 		var classStudentSelectSubjectAttendanceTotalRate float64
 		for _, classAttendance := range classAttendanceList {
 			//statistics student attendance selected subject
-			if utils.ContainsStr(request.SelectedSubjectIDList, classAttendance.SubjectID) {
+			if utils.ContainsString(request.SelectedSubjectIDList, classAttendance.SubjectID) {
 				studentSelectSubjectTotalMap[classAttendance.StudentID] = studentSelectSubjectTotalMap[classAttendance.StudentID] + 1
 				if classAttendance.IsAttendance {
 					studentSelectSubjectAttendanceTotalMap[classAttendance.StudentID] = studentSelectSubjectAttendanceTotalMap[classAttendance.StudentID] + 1
@@ -38,7 +38,7 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, op *entity.
 			}
 			//when subject not select all,statistics student attendance other subject
 			if len(request.UnSelectedSubjectIDList) != 0 &&
-				utils.ContainsStr(request.UnSelectedSubjectIDList, classAttendance.SubjectID) {
+				utils.ContainsString(request.UnSelectedSubjectIDList, classAttendance.SubjectID) {
 				studentUnSelectSubjectTotalMap[classAttendance.StudentID] = studentUnSelectSubjectTotalMap[classAttendance.StudentID] + 1
 				if classAttendance.IsAttendance {
 					studentUnSelectSubjectAttendanceTotalMap[classAttendance.StudentID] = studentUnSelectSubjectAttendanceTotalMap[classAttendance.StudentID] + 1
