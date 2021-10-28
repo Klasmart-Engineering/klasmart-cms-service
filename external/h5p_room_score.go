@@ -153,6 +153,7 @@ fragment scoresByUser on Room {
 			family_name
 		}
 		scores {
+			seen
 			content {
 				parent_id
 				content_id

@@ -57,6 +57,13 @@ type TeacherLoadAssignmentResponseItem struct {
 }
 type Float64Slice []float64
 
+func (fs Float64Slice) Sum() (sum float64) {
+	for _, f := range fs {
+		sum += f
+	}
+	return
+}
+
 func (fs Float64Slice) Avg() (avg float64) {
 	if len(fs) < 1 {
 		return

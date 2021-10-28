@@ -244,10 +244,10 @@ func (s Server) contextStopwatch() gin.HandlerFunc {
 func (s Server) getNewRelicMiddleware() gin.HandlerFunc {
 	nrCfg := &config.Get().NewRelic
 	nrApp, err := newrelic.NewApplication(newrelic.Config{
-		AppName:               nrCfg.NewRelicAppName,
-		License:               nrCfg.NewRelicLicenseKey,
-		Enabled:               true,
-		Labels:                nrCfg.NewRelicLabels,
+		AppName: nrCfg.NewRelicAppName,
+		License: nrCfg.NewRelicLicenseKey,
+		Enabled: true,
+		Labels:  nrCfg.NewRelicLabels,
 		DistributedTracer: struct {
 			Enabled bool
 		}{Enabled: nrCfg.NewRelicDistributedTracingEnabled},
@@ -268,7 +268,7 @@ func (s Server) newRelicMiddlewareRectifier() gin.HandlerFunc {
 		if txn != nil {
 			nrCtx := newrelic.NewContext(c.Request.Context(), txn)
 			c.Request = c.Request.WithContext(nrCtx)
-			log.Debug(nrCtx, "txn found", )
+			log.Debug(nrCtx, "txn found")
 		}
 		c.Next()
 	}

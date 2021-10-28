@@ -21,117 +21,74 @@ func NewAssessmentPermissionChecker(operator *entity.Operator) *AssessmentPermis
 }
 
 func (c *AssessmentPermissionChecker) SearchAllPermissions(ctx context.Context) error {
-	if err := c.SearchOrgPermissions(ctx); err != nil {
-		log.Error(ctx, "SearchAllPermissions: SearchOrgPermissions: check org permission failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
+	permissionNames := []external.PermissionName{
+		external.AssessmentViewCompletedAssessments414,
+		external.AssessmentViewInProgressAssessments415,
+
+		external.AssessmentViewOrgCompletedAssessments424,
+		external.AssessmentViewOrgInProgressAssessments425,
+
+		external.AssessmentViewSchoolCompletedAssessments426,
+		external.AssessmentViewSchoolInProgressAssessments427,
+	}
+	permissionMap, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, c.operator, permissionNames)
+	if err != nil {
 		return err
 	}
 
-	if err := c.SearchSchoolPermissions(ctx); err != nil {
-		log.Error(ctx, "SearchAllPermissions: SearchOrgPermissions: check school permission failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
+	if err := c.SearchOrgPermissions(ctx, permissionMap); err != nil {
 		return err
 	}
 
-	if err := c.SearchSelfPermissions(ctx); err != nil {
-		log.Error(ctx, "SearchAllPermissions: SearchSelfPermissions: check self permission failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
+	if err := c.SearchSchoolPermissions(ctx, permissionMap); err != nil {
+		return err
+	}
+
+	if err := c.SearchSelfPermissions(ctx, permissionMap); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (c *AssessmentPermissionChecker) SearchOrgPermissions(ctx context.Context) error {
-	hasP424, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, c.operator, external.AssessmentViewOrgCompletedAssessments424)
-	if err != nil {
-		log.Error(ctx, "SearchOrgPermissions: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 424 failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
-		return err
-	}
+func (c *AssessmentPermissionChecker) SearchOrgPermissions(ctx context.Context, permission map[external.PermissionName]bool) error {
+	c.allowStatusComplete = permission[external.AssessmentViewOrgCompletedAssessments424]
+	c.allowStatusInProgress = permission[external.AssessmentViewOrgInProgressAssessments425]
 
-	hasP425, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, c.operator, external.AssessmentViewOrgInProgressAssessments425)
-	if err != nil {
-		log.Error(ctx, "SearchOrgPermissions: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 425 failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
-		return err
-	}
-
-	if hasP424 || hasP425 {
+	if c.allowStatusComplete || c.allowStatusInProgress {
 		teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, c.operator, c.operator.OrgID)
 		if err != nil {
-			log.Error(ctx, "SearchOrgPermissions: external.GetTeacherServiceProvider().GetByOrganization: get teachers failed",
-				log.Err(err),
-				log.Any("c", c),
-			)
 			return err
 		}
-		var teacherIDs []string
+
 		for _, teacher := range teachers {
-			teacherIDs = append(teacherIDs, teacher.ID)
-		}
-		c.allowTeacherIDs = append(c.allowTeacherIDs, teacherIDs...)
+			c.allowTeacherIDs = append(c.allowTeacherIDs, teacher.ID)
 
-		if hasP424 {
-			c.allowStatusComplete = true
-			for _, teacherID := range teacherIDs {
-				c.allowPairs = append(c.allowPairs, &entity.AssessmentAllowTeacherIDAndStatusPair{
-					TeacherID: teacherID,
-					Status:    entity.AssessmentStatusComplete,
-				})
+			paris := &entity.AssessmentAllowTeacherIDAndStatusPair{
+				TeacherID: teacher.ID,
 			}
-		}
 
-		if hasP425 {
-			c.allowStatusInProgress = true
-			for _, teacherID := range teacherIDs {
-				c.allowPairs = append(c.allowPairs, &entity.AssessmentAllowTeacherIDAndStatusPair{
-					TeacherID: teacherID,
-					Status:    entity.AssessmentStatusInProgress,
-				})
+			if c.allowStatusComplete {
+				paris.Status = append(paris.Status, entity.AssessmentStatusComplete)
 			}
+			if c.allowStatusInProgress {
+				paris.Status = append(paris.Status, entity.AssessmentStatusInProgress)
+			}
+
+			c.allowPairs = append(c.allowPairs, paris)
 		}
 	}
 
 	return nil
 }
 
-func (c *AssessmentPermissionChecker) SearchSchoolPermissions(ctx context.Context) error {
-	hasP426, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, c.operator, external.AssessmentViewSchoolCompletedAssessments426)
-	if err != nil {
-		log.Error(ctx, "SearchSchoolPermissions: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 426 failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
-		return err
-	}
+func (c *AssessmentPermissionChecker) SearchSchoolPermissions(ctx context.Context, permission map[external.PermissionName]bool) error {
+	c.allowStatusComplete = permission[external.AssessmentViewSchoolCompletedAssessments426]
+	c.allowStatusInProgress = permission[external.AssessmentViewSchoolInProgressAssessments427]
 
-	hasP427, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, c.operator, external.AssessmentViewSchoolInProgressAssessments427)
-	if err != nil {
-		log.Error(ctx, "SearchSchoolPermissions: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 427 failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
-		return err
-	}
-
-	if hasP426 || hasP427 {
+	if c.allowStatusComplete || c.allowStatusInProgress {
 		schools, err := external.GetSchoolServiceProvider().GetByOperator(ctx, c.operator)
 		if err != nil {
-			log.Error(ctx, "SearchSchoolPermissions: external.GetSchoolServiceProvider().GetByOperator: get schools failed",
-				log.Err(err),
-				log.Any("c", c),
-			)
 			return err
 		}
 		var schoolIDs []string
@@ -140,39 +97,31 @@ func (c *AssessmentPermissionChecker) SearchSchoolPermissions(ctx context.Contex
 		}
 		schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, c.operator, schoolIDs)
 		if err != nil {
-			log.Error(ctx, "SearchSchoolPermissions: external.GetTeacherServiceProvider().GetBySchools: get teachers failed",
-				log.Err(err),
-				log.Any("c", c),
-				log.Any("school_ids", schoolIDs),
-			)
 			return err
 		}
 
-		var teacherIDs []string
+		var teacherMap = make(map[string]struct{})
 		for _, teachers := range schoolID2TeachersMap {
 			for _, teacher := range teachers {
-				teacherIDs = append(teacherIDs, teacher.ID)
-			}
-		}
-		c.allowTeacherIDs = append(c.allowTeacherIDs, teacherIDs...)
+				if _, ok := teacherMap[teacher.ID]; ok {
+					continue
+				}
 
-		if hasP426 {
-			c.allowStatusComplete = true
-			for _, teacherID := range c.allowTeacherIDs {
-				c.allowPairs = append(c.allowPairs, &entity.AssessmentAllowTeacherIDAndStatusPair{
-					TeacherID: teacherID,
-					Status:    entity.AssessmentStatusComplete,
-				})
-			}
-		}
+				teacherMap[teacher.ID] = struct{}{}
+				c.allowTeacherIDs = append(c.allowTeacherIDs, teacher.ID)
 
-		if hasP427 {
-			c.allowStatusInProgress = true
-			for _, teacherID := range teacherIDs {
-				c.allowPairs = append(c.allowPairs, &entity.AssessmentAllowTeacherIDAndStatusPair{
-					TeacherID: teacherID,
-					Status:    entity.AssessmentStatusInProgress,
-				})
+				paris := &entity.AssessmentAllowTeacherIDAndStatusPair{
+					TeacherID: teacher.ID,
+				}
+
+				if c.allowStatusComplete {
+					paris.Status = append(paris.Status, entity.AssessmentStatusComplete)
+				}
+				if c.allowStatusInProgress {
+					paris.Status = append(paris.Status, entity.AssessmentStatusInProgress)
+				}
+
+				c.allowPairs = append(c.allowPairs, paris)
 			}
 		}
 	}
@@ -180,39 +129,23 @@ func (c *AssessmentPermissionChecker) SearchSchoolPermissions(ctx context.Contex
 	return nil
 }
 
-func (c *AssessmentPermissionChecker) SearchSelfPermissions(ctx context.Context) error {
-	hasP414, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, c.operator, external.AssessmentViewCompletedAssessments414)
-	if err != nil {
-		log.Error(ctx, "SearchSelfPermissions: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 414 failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
-		return err
-	}
-	hasP415, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, c.operator, external.AssessmentViewInProgressAssessments415)
-	if err != nil {
-		log.Error(ctx, "SearchSelfPermissions: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 415 failed",
-			log.Err(err),
-			log.Any("c", c),
-		)
-		return err
-	}
+func (c *AssessmentPermissionChecker) SearchSelfPermissions(ctx context.Context, permission map[external.PermissionName]bool) error {
+	c.allowStatusComplete = permission[external.AssessmentViewCompletedAssessments414]
+	c.allowStatusInProgress = permission[external.AssessmentViewInProgressAssessments415]
 
-	if hasP414 || hasP415 {
-		if hasP414 {
-			c.allowStatusComplete = true
-			c.allowPairs = append(c.allowPairs, &entity.AssessmentAllowTeacherIDAndStatusPair{
-				TeacherID: c.operator.UserID,
-				Status:    entity.AssessmentStatusComplete,
-			})
+	if c.allowStatusComplete || c.allowStatusInProgress {
+		paris := &entity.AssessmentAllowTeacherIDAndStatusPair{
+			TeacherID: c.operator.UserID,
 		}
-		if hasP415 {
-			c.allowStatusInProgress = true
-			c.allowPairs = append(c.allowPairs, &entity.AssessmentAllowTeacherIDAndStatusPair{
-				TeacherID: c.operator.UserID,
-				Status:    entity.AssessmentStatusInProgress,
-			})
+
+		if c.allowStatusComplete {
+			paris.Status = append(paris.Status, entity.AssessmentStatusComplete)
 		}
+		if c.allowStatusInProgress {
+			paris.Status = append(paris.Status, entity.AssessmentStatusInProgress)
+		}
+
+		c.allowPairs = append(c.allowPairs, paris)
 		c.allowTeacherIDs = append(c.allowTeacherIDs, c.operator.UserID)
 	}
 
@@ -226,44 +159,11 @@ func (c *AssessmentPermissionChecker) AllowTeacherIDs() []string {
 func (c *AssessmentPermissionChecker) AllowPairs() []*entity.AssessmentAllowTeacherIDAndStatusPair {
 	var result []*entity.AssessmentAllowTeacherIDAndStatusPair
 
-	m := map[string]*struct {
-		allowStatusInProgress bool
-		allowStatusComplete   bool
-	}{}
-	for _, pair := range c.allowPairs {
-		if m[pair.TeacherID] == nil {
-			m[pair.TeacherID] = &struct {
-				allowStatusInProgress bool
-				allowStatusComplete   bool
-			}{}
-		}
-		switch pair.Status {
-		case entity.AssessmentStatusComplete:
-			m[pair.TeacherID].allowStatusComplete = true
-		case entity.AssessmentStatusInProgress:
-			m[pair.TeacherID].allowStatusInProgress = true
-		}
-	}
-
-	for teacherID, statuses := range m {
-		if statuses.allowStatusInProgress && statuses.allowStatusComplete {
+	for _, item := range c.allowPairs {
+		if len(item.Status) != 1 {
 			continue
 		}
-		if !statuses.allowStatusInProgress && !statuses.allowStatusComplete {
-			continue
-		}
-		if statuses.allowStatusComplete {
-			result = append(result, &entity.AssessmentAllowTeacherIDAndStatusPair{
-				TeacherID: teacherID,
-				Status:    entity.AssessmentStatusComplete,
-			})
-		}
-		if statuses.allowStatusInProgress {
-			result = append(result, &entity.AssessmentAllowTeacherIDAndStatusPair{
-				TeacherID: teacherID,
-				Status:    entity.AssessmentStatusInProgress,
-			})
-		}
+		result = append(result, item)
 	}
 
 	return result

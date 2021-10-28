@@ -14,7 +14,10 @@ type ClassesAssignmentsSQLDA struct {
 }
 
 func (c ClassesAssignmentsSQLDA) BatchInsertTx(ctx context.Context, tx *dbo.DBContext, records []*entity.ClassesAssignmentsRecords) error {
-	_,err := c.BaseDA.InsertTx(ctx,tx,records)
+	if len(records) == 0 {
+		return nil
+	}
+	_, err := c.BaseDA.InsertTx(ctx, tx, records)
 	if err != nil {
 		log.Error(ctx, "BatchInsertTx: classes_assignments failed",
 			log.Any("record", records))

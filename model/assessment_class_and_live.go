@@ -61,7 +61,7 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 		return nil, err
 	}
 	if !checker.CheckStatus(args.Status.Value) {
-		log.Error(ctx, "list outcome assessments: check status failed",
+		log.Info(ctx, "list outcome assessments: check status failed",
 			log.Any("args", args),
 			log.Any("checker", checker),
 		)
@@ -70,8 +70,7 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 
 	// get assessment list
 	var (
-		assessments []*entity.Assessment
-		cond        = da.QueryAssessmentConditions{
+		cond = da.QueryAssessmentConditions{
 			OrgID: entity.NullString{
 				String: operator.OrgID,
 				Valid:  true,
@@ -103,13 +102,6 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 	}
 	if args.TeacherName.Valid {
 		if teachers, err = external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.TeacherName.String); err != nil {
-			log.Error(ctx, "List: external.GetTeacherServiceProvider().Query: query failed",
-				log.Err(err),
-				log.String("org_id", operator.OrgID),
-				log.String("teacher_name", args.TeacherName.String),
-				log.Any("args", args),
-				log.Any("operator", operator),
-			)
 			return nil, err
 		}
 		log.Debug(ctx, "List: external.GetTeacherServiceProvider().Query: query success",
@@ -123,7 +115,8 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 			cond.TeacherIDs.Strings = append(cond.TeacherIDs.Strings, item.ID)
 		}
 	}
-	if err := da.GetAssessmentDA().QueryTx(ctx, tx, &cond, &assessments); err != nil {
+	assessments, err := da.GetAssessmentDA().Query(ctx, &cond)
+	if err != nil {
 		log.Error(ctx, "List: da.GetAssessmentDA().QueryTx: query failed",
 			log.Err(err),
 			log.Any("cond", cond),
@@ -132,21 +125,8 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 		)
 		return nil, err
 	}
-	if len(assessments) == 0 {
-		return nil, nil
-	}
 
-	// get assessment list total
-	var total int
-	if total, err = da.GetAssessmentDA().CountTx(ctx, tx, &cond, &entity.Assessment{}); err != nil {
-		log.Error(ctx, "List: da.GetAssessmentDA().CountTx: count failed",
-			log.Err(err),
-			log.Any("args", args),
-			log.Any("cond", cond),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
+	total := len(assessments)
 
 	// convert to assessment view
 	var views []*entity.AssessmentView
@@ -157,12 +137,6 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 		EnableTeachers:   true,
 		EnableLessonPlan: true,
 	}); err != nil {
-		log.Error(ctx, "List: GetAssessmentUtils().toViews: get failed",
-			log.Err(err),
-			log.Any("assessments", assessments),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
 		return nil, err
 	}
 
@@ -244,7 +218,7 @@ func (m *classAndLiveAssessmentModel) PrepareAddArgs(ctx context.Context, tx *db
 
 	// check class type
 	if schedule.ClassType != entity.ScheduleClassTypeOnlineClass && schedule.ClassType != entity.ScheduleClassTypeOfflineClass {
-		log.Error(ctx, "add class and live assessment: invalid schedule class type",
+		log.Warn(ctx, "add class and live assessment: invalid schedule class type",
 			log.String("class_type", string(schedule.ClassType)),
 			log.Any("schedule", schedule),
 			log.Any("args", args),
