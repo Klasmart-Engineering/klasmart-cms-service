@@ -20,7 +20,7 @@ type ContentPropertyDA struct {
 }
 
 func (c *ContentPropertyDA) BatchAdd(ctx context.Context, tx *dbo.DBContext, co []*entity.ContentProperty) error {
-	_, err := c.s.Insert(ctx, &co)
+	_, err := c.s.InsertTx(ctx, tx, &co)
 	if err != nil {
 		log.Error(ctx, "db exec sql error\"",
 			log.Err(err),
