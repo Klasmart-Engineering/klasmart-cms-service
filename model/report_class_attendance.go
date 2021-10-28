@@ -21,51 +21,53 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, op *entity.
 		if err != nil {
 			return nil, err
 		}
-		var classSelectSubjectCount int
-		var classSelectSubjectAttendanceCount int
-		var studentSelectSubjectCount int
-		var studentSelectSubjectAttendanceCount int
-		var studentUnSelectSubjectCount int
-		var studentUnSelectSubjectAttendanceCount int
+		// map key is student id
+		var studentSelectSubjectTotalMap map[string]int
+		var studentSelectSubjectAttendanceTotalMap map[string]int
+		var studentUnSelectSubjectTotalMap map[string]int
+		var studentUnSelectSubjectAttendanceTotalMap map[string]int
+		var classStudentSelectSubjectAttendanceRateMap map[string]float64
+		var classStudentSelectSubjectAttendanceTotalRate float64
 		for _, classAttendance := range classAttendanceList {
-			// statistics class average attendance selected subject
-			if utils.ContainsStr(request.SelectedSubjectIDList, classAttendance.SubjectID) {
-				classSelectSubjectCount++
-				if classAttendance.IsAttendance {
-					classSelectSubjectAttendanceCount++
-				}
-			}
 			//statistics student attendance selected subject
-			if classAttendance.StudentID == request.StudentID &&
-				utils.ContainsStr(request.SelectedSubjectIDList, classAttendance.SubjectID) {
-				studentSelectSubjectCount++
+			if utils.ContainsStr(request.SelectedSubjectIDList, classAttendance.SubjectID) {
+				studentSelectSubjectTotalMap[classAttendance.StudentID] = studentSelectSubjectTotalMap[classAttendance.StudentID] + 1
 				if classAttendance.IsAttendance {
-					studentSelectSubjectAttendanceCount++
+					studentSelectSubjectAttendanceTotalMap[classAttendance.StudentID] = studentSelectSubjectAttendanceTotalMap[classAttendance.StudentID] + 1
 				}
 			}
 			//when subject not select all,statistics student attendance other subject
-			if len(request.UnSelectedSubjectIDList) != 0 && classAttendance.StudentID == request.StudentID &&
+			if len(request.UnSelectedSubjectIDList) != 0 &&
 				utils.ContainsStr(request.UnSelectedSubjectIDList, classAttendance.SubjectID) {
-				studentUnSelectSubjectCount++
+				studentUnSelectSubjectTotalMap[classAttendance.StudentID] = studentUnSelectSubjectTotalMap[classAttendance.StudentID] + 1
 				if classAttendance.IsAttendance {
-					studentUnSelectSubjectAttendanceCount++
+					studentUnSelectSubjectAttendanceTotalMap[classAttendance.StudentID] = studentUnSelectSubjectAttendanceTotalMap[classAttendance.StudentID] + 1
 				}
 			}
+
+		}
+		// statistics the average attendance rate of students in this class under this subject
+		for k, v := range studentSelectSubjectTotalMap {
+			classStudentSelectSubjectAttendanceRateMap[k] = float64(studentSelectSubjectAttendanceTotalMap[k]) / float64(v)
+		}
+
+		for _, v := range classStudentSelectSubjectAttendanceRateMap {
+			classStudentSelectSubjectAttendanceTotalRate = classStudentSelectSubjectAttendanceTotalRate + v
 		}
 		classAttendanceResponseItem := new(entity.ClassAttendanceResponseItem)
 		classAttendanceResponseItem.Duration = duration
 		// when select subject all , calculate only attendancePercentage,classAverageAttendancePercentage
-		if len(request.UnSelectedSubjectIDList) == 0 && studentSelectSubjectCount > 0 && classSelectSubjectCount > 0 {
-			classAttendanceResponseItem.AttendancePercentage = float64(studentSelectSubjectAttendanceCount) / float64(studentSelectSubjectCount)
-			classAttendanceResponseItem.ClassAverageAttendancePercentage = float64(classSelectSubjectAttendanceCount) / float64(classSelectSubjectCount)
-			classAttendanceResponseItem.AttendedCount = studentSelectSubjectAttendanceCount + studentUnSelectSubjectAttendanceCount
-			classAttendanceResponseItem.ScheduledCount = studentSelectSubjectCount + studentUnSelectSubjectCount
-		} else if studentSelectSubjectCount > 0 && studentUnSelectSubjectCount > 0 && classSelectSubjectCount > 0 {
-			classAttendanceResponseItem.AttendedCount = studentSelectSubjectAttendanceCount
-			classAttendanceResponseItem.ScheduledCount = studentSelectSubjectCount
-			classAttendanceResponseItem.AttendancePercentage = float64(studentSelectSubjectAttendanceCount) / float64(studentSelectSubjectCount)
-			classAttendanceResponseItem.UnSelectedSubjectsAverageAttendancePercentage = float64(studentUnSelectSubjectAttendanceCount) / float64(studentUnSelectSubjectCount)
-			classAttendanceResponseItem.ClassAverageAttendancePercentage = float64(classSelectSubjectAttendanceCount) / float64(classSelectSubjectCount)
+		if len(request.UnSelectedSubjectIDList) == 0 && len(classStudentSelectSubjectAttendanceRateMap) > 0 {
+			classAttendanceResponseItem.AttendancePercentage = classStudentSelectSubjectAttendanceRateMap[request.StudentID]
+			classAttendanceResponseItem.ClassAverageAttendancePercentage = classStudentSelectSubjectAttendanceTotalRate / float64(len(classStudentSelectSubjectAttendanceRateMap))
+			classAttendanceResponseItem.AttendedCount = studentSelectSubjectAttendanceTotalMap[request.StudentID] + studentUnSelectSubjectAttendanceTotalMap[request.StudentID]
+			classAttendanceResponseItem.ScheduledCount = studentSelectSubjectTotalMap[request.StudentID] + studentUnSelectSubjectTotalMap[request.StudentID]
+		} else if len(classStudentSelectSubjectAttendanceRateMap) > 0 && studentUnSelectSubjectTotalMap[request.StudentID] > 0 {
+			classAttendanceResponseItem.AttendedCount = studentSelectSubjectAttendanceTotalMap[request.StudentID] + studentUnSelectSubjectAttendanceTotalMap[request.StudentID]
+			classAttendanceResponseItem.ScheduledCount = studentSelectSubjectTotalMap[request.StudentID] + studentUnSelectSubjectTotalMap[request.StudentID]
+			classAttendanceResponseItem.AttendancePercentage = classStudentSelectSubjectAttendanceRateMap[request.StudentID]
+			classAttendanceResponseItem.UnSelectedSubjectsAverageAttendancePercentage = float64(studentUnSelectSubjectAttendanceTotalMap[request.StudentID]) / float64(studentUnSelectSubjectTotalMap[request.StudentID])
+			classAttendanceResponseItem.ClassAverageAttendancePercentage = classStudentSelectSubjectAttendanceTotalRate / float64(len(classStudentSelectSubjectAttendanceRateMap))
 		}
 		response.Items = append(response.Items, classAttendanceResponseItem)
 	}
