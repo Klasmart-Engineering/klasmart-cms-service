@@ -39,13 +39,12 @@ func (m *reportModel) GetStudentProgressLearnOutcomeAchievement(ctx context.Cont
 				item.ReAchievedPercentages = append(item.ReAchievedPercentages, float64(c.AchievedCount-c.FirstAchievedCount)/float64(c.CompletedCount))
 			} else {
 				item.UnSelectedSubjectsAchievedPercentages = append(item.UnSelectedSubjectsAchievedPercentages, float64(c.AchievedCount)/float64(c.CompletedCount))
-
 				res.UnselectSubjectsStudentAchievedCounts[c.StudentID] = append(res.UnselectSubjectsStudentAchievedCounts[c.StudentID], float64(c.AchievedCount))
 			}
 		}
 
-		item.StudentAchievedPercentages[c.StudentID] = append(item.StudentAchievedPercentages[c.StudentID], float64(c.AchievedCount)/float64(c.CompletedCount))
 		if utils.ContainsString(req.SelectedSubjectIDList, c.SubjectID) {
+			item.StudentAchievedPercentages[c.StudentID] = append(item.StudentAchievedPercentages[c.StudentID], float64(c.AchievedCount)/float64(c.CompletedCount))
 			res.StudentAchievedCounts[c.StudentID] = append(res.StudentAchievedCounts[c.StudentID], float64(c.AchievedCount))
 		}
 	}
