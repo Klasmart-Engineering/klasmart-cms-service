@@ -2989,6 +2989,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	var outcomeDictionary map[string]*entity.Outcome
+	var outcomeSortIDs []string
 	if includeOutcomes {
 		outcomeMap := make(map[string]bool)
 		outcomeIDs := make([]string, 0)
@@ -3003,20 +3004,12 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			}
 		}
 
-		outcomeDictionary = make(map[string]*entity.Outcome, len(outcomeIDs))
-		outcomeEntities, err := GetOutcomeModel().GetLatestOutcomes(ctx, user, dbo.MustGetDB(ctx), &entity.OutcomeCondition{
-			IDs:     outcomeIDs,
-			OrderBy: entity.OutcomeOrderByName,
-		})
+		outcomeDictionary, outcomeSortIDs, err = GetOutcomeModel().GetLatestOutcomes(ctx, user, dbo.MustGetDB(ctx), outcomeIDs)
 		if err != nil {
 			log.Warn(ctx, "get latest outcomes entity failed",
 				log.Err(err),
 				log.Strings("ids", outcomeIDs),
 				log.String("uid", user.UserID))
-		} else {
-			for _, outcome := range outcomeEntities {
-				outcomeDictionary[outcome.ID] = outcome
-			}
 		}
 	}
 
@@ -3070,13 +3063,10 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		}
 
 		if includeOutcomes {
-			for _, id := range contentList[i].Outcomes {
-				outcome, found := outcomeDictionary[id]
-				if !found {
-					continue
+			for _, id := range outcomeSortIDs {
+				if utils.ContainsString(contentList[i].Outcomes, id) && outcomeDictionary != nil {
+					contentDetailsList[i].OutcomeEntities = append(contentDetailsList[i].OutcomeEntities, outcomeDictionary[id])
 				}
-
-				contentDetailsList[i].OutcomeEntities = append(contentDetailsList[i].OutcomeEntities, outcome)
 			}
 		}
 	}

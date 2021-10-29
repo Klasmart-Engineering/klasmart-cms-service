@@ -38,8 +38,7 @@ type IOutcomeModel interface {
 	SearchPublished(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
 
 	GetByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
-	GetLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
-	GetLatestOutcomes(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, conditionIDs *entity.OutcomeCondition) ([]*entity.Outcome, error)
+	GetLatestOutcomes(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, []string, error)
 	Approve(ctx context.Context, operator *entity.Operator, outcomeID string) error
 	Reject(ctx context.Context, operator *entity.Operator, outcomeID string, reason string) error
 
@@ -1349,59 +1348,71 @@ func (ocm OutcomeModel) GetByIDs(ctx context.Context, operator *entity.Operator,
 	return outcomes, nil
 }
 
-func (ocm OutcomeModel) GetLatestOutcomes(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, conditionIDs *entity.OutcomeCondition) (outcomes []*entity.Outcome, err error) {
-	cond1 := da.OutcomeCondition{
-		IDs: dbo.NullStrings{Strings: conditionIDs.IDs, Valid: true},
+// map key is outcome id from outcomeIDs, []string is original outcome id order by name asc
+func (ocm OutcomeModel) GetLatestOutcomes(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, []string, error) {
+	result := make(map[string]*entity.Outcome, len(outcomeIDs))
+	var sortedOutcomeID []string
+	var outcomes []*entity.Outcome
+	outcomeCondition := &da.OutcomeCondition{
+		IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
 	}
-	total, otcs1, err1 := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &cond1)
-	if err1 != nil {
-		log.Error(ctx, "GetLatestOutcomes: SearchOutcome failed",
-			log.Err(err1),
-			log.String("op", operator.UserID),
-			log.Any("condition", conditionIDs))
-		return nil, err1
+
+	err := da.GetOutcomeDA().QueryTx(ctx, tx, outcomeCondition, &outcomes)
+	if err != nil {
+		log.Error(ctx, "da.GetOutcomeDA().QueryTx error",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("outcomeCondition", outcomeCondition))
+		return nil, nil, err
 	}
-	if total == 0 {
-		log.Debug(ctx, "GetLatestOutcomes: SearchOutcome return empty",
-			log.String("op", operator.UserID),
-			log.Any("condition", conditionIDs))
-		outcomes = []*entity.Outcome{}
-		return
+
+	if len(outcomes) == 0 {
+		log.Debug(ctx, "outcome not found", log.Any("outcomeCondition", outcomeCondition))
+		return result, sortedOutcomeID, nil
 	}
-	cond2 := da.OutcomeCondition{
-		OrderBy: da.NewOrderBy(conditionIDs.OrderBy),
+
+	latestOutcomeIDs := make([]string, len(outcomes))
+	for i, v := range outcomes {
+		latestOutcomeIDs[i] = v.LatestID
 	}
-	for _, o := range otcs1 {
-		cond2.IDs.Strings = append(cond2.IDs.Strings, o.LatestID)
+	latestOutcomeCondition := &da.OutcomeCondition{
+		IDs:     dbo.NullStrings{Strings: latestOutcomeIDs, Valid: true},
+		OrderBy: da.OrderByName,
 	}
-	cond2.IDs.Valid = true
-	total, otcs2, err1 := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &cond2)
-	if err1 != nil {
-		log.Error(ctx, "GetLatestByIDs: SearchOutcome failed",
-			log.Err(err1),
-			log.String("op", operator.UserID),
-			log.Strings("outcome_ids", cond2.IDs.Strings))
-		return nil, err1
+	var latestOutcomes []*entity.Outcome
+	err = da.GetOutcomeDA().QueryTx(ctx, tx, latestOutcomeCondition, &latestOutcomes)
+	if err != nil {
+		log.Error(ctx, "da.GetOutcomeDA().QueryTx error",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("latestOutcomeCondition", latestOutcomeCondition))
+		return nil, nil, err
 	}
-	if total == 0 {
-		log.Debug(ctx, "GetLatestByIDs: SearchOutcome return empty",
-			log.String("op", operator.UserID),
-			log.Strings("outcome_ids", cond2.IDs.Strings))
-		outcomes = []*entity.Outcome{}
-		return
+
+	if len(latestOutcomes) == 0 {
+		log.Debug(ctx, "latest outcome not found", log.Any("latestOutcomeCondition", latestOutcomeCondition))
+		return result, sortedOutcomeID, nil
 	}
-	outcomes = otcs2
-	err1 = ocm.fillRelation(ctx, operator, tx, outcomes)
-	if err1 != nil {
-		log.Error(ctx, "GetLatestByIDs: fillRelation failed",
-			log.Err(err1),
-			log.String("op", operator.UserID))
-		return nil, err1
+
+	err = ocm.fillRelation(ctx, operator, tx, latestOutcomes)
+	if err != nil {
+		log.Error(ctx, "ocm.fillRelation failed",
+			log.Err(err),
+			log.Any("latestOutcomes", latestOutcomes))
+		return nil, nil, err
 	}
-	return
-}
-func (ocm OutcomeModel) GetLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error) {
-	return ocm.GetLatestOutcomes(ctx, operator, tx, &entity.OutcomeCondition{IDs: outcomeIDs})
+
+	for _, latestOutcome := range latestOutcomes {
+		for _, outcome := range outcomes {
+			if outcome.LatestID == latestOutcome.ID {
+				sortedOutcomeID = append(sortedOutcomeID, outcome.ID)
+				result[outcome.ID] = latestOutcome
+				break
+			}
+		}
+	}
+
+	return result, sortedOutcomeID, nil
 }
 
 func (ocm OutcomeModel) GetLatestByIDsMapResult(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (latests map[string]*entity.Outcome, err error) {
