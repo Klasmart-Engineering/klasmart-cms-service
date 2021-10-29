@@ -14,7 +14,7 @@ func (m *reportModel) GetStudentProgressLearnOutcomeAchievement(ctx context.Cont
 	res = &entity.LearnOutcomeAchievementResponse{
 		Request:                               req,
 		StudentAchievedCounts:                 map[string]entity.Float64Slice{},
-		UnselectSubjectsStudentAchievedCounts: map[string]entity.Float64Slice{},
+		UnselectSubjectsStudentAchievedCounts: entity.Float64Slice{},
 	}
 	for _, duration := range req.Durations {
 		res.Items = append(res.Items, &entity.LearnOutcomeAchievementResponseItem{
@@ -39,13 +39,12 @@ func (m *reportModel) GetStudentProgressLearnOutcomeAchievement(ctx context.Cont
 				item.ReAchievedPercentages = append(item.ReAchievedPercentages, float64(c.AchievedCount-c.FirstAchievedCount)/float64(c.CompletedCount))
 			} else {
 				item.UnSelectedSubjectsAchievedPercentages = append(item.UnSelectedSubjectsAchievedPercentages, float64(c.AchievedCount)/float64(c.CompletedCount))
-
-				res.UnselectSubjectsStudentAchievedCounts[c.StudentID] = append(res.UnselectSubjectsStudentAchievedCounts[c.StudentID], float64(c.AchievedCount))
+				res.UnselectSubjectsStudentAchievedCounts = append(res.UnselectSubjectsStudentAchievedCounts, float64(c.AchievedCount))
 			}
 		}
 
-		item.StudentAchievedPercentages[c.StudentID] = append(item.StudentAchievedPercentages[c.StudentID], float64(c.AchievedCount)/float64(c.CompletedCount))
 		if utils.ContainsString(req.SelectedSubjectIDList, c.SubjectID) {
+			item.StudentAchievedPercentages[c.StudentID] = append(item.StudentAchievedPercentages[c.StudentID], float64(c.AchievedCount)/float64(c.CompletedCount))
 			res.StudentAchievedCounts[c.StudentID] = append(res.StudentAchievedCounts[c.StudentID], float64(c.AchievedCount))
 		}
 	}
@@ -69,12 +68,7 @@ func (m *reportModel) GetStudentProgressLearnOutcomeAchievement(ctx context.Cont
 		classAchievedCount = append(classAchievedCount, s.Sum())
 	}
 	res.ClassAverageAchievedCount = classAchievedCount.Avg()
-
-	unselectSubjectsClassAchievedCount := entity.Float64Slice{}
-	for _, s := range res.UnselectSubjectsStudentAchievedCounts {
-		unselectSubjectsClassAchievedCount = append(unselectSubjectsClassAchievedCount, s.Sum())
-	}
-	res.UnSelectedSubjectsAverageAchieveCount = unselectSubjectsClassAchievedCount.Avg()
+	res.UnSelectedSubjectsAverageAchieveCount = res.UnselectSubjectsStudentAchievedCounts.Avg()
 
 	return
 }
