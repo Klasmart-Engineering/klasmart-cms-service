@@ -14,7 +14,7 @@ func (m *reportModel) GetStudentProgressLearnOutcomeAchievement(ctx context.Cont
 	res = &entity.LearnOutcomeAchievementResponse{
 		Request:                               req,
 		StudentAchievedCounts:                 map[string]entity.Float64Slice{},
-		UnselectSubjectsStudentAchievedCounts: map[string]entity.Float64Slice{},
+		UnselectSubjectsStudentAchievedCounts: entity.Float64Slice{},
 	}
 	for _, duration := range req.Durations {
 		res.Items = append(res.Items, &entity.LearnOutcomeAchievementResponseItem{
