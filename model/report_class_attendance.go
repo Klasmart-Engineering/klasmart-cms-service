@@ -36,13 +36,16 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, op *entity.
 		var studentAttendanceCount int
 		var studentScheduleCount int
 		for _, classAttendance := range classAttendanceList {
-			//statistics  all subject total and attendance
-			classSelectSubjectTotalMap[classAttendance.SubjectID] = classSelectSubjectTotalMap[classAttendance.SubjectID] + 1
-			if classAttendance.IsAttendance {
-				classSelectSubjectAttendanceTotalMap[classAttendance.SubjectID] = classSelectSubjectAttendanceTotalMap[classAttendance.SubjectID] + 1
-			}
-			//statistics  selected subject total,attendance,
 			for _, selectSubject := range request.SelectedSubjectIDList {
+				//statistics  all student selected subject total and attendance
+				if selectSubject == classAttendance.SubjectID {
+					classSelectSubjectTotalMap[classAttendance.SubjectID] = classSelectSubjectTotalMap[classAttendance.SubjectID] + 1
+					if classAttendance.IsAttendance {
+						classSelectSubjectAttendanceTotalMap[classAttendance.SubjectID] = classSelectSubjectAttendanceTotalMap[classAttendance.SubjectID] + 1
+					}
+				}
+
+				//statistics this student selected subject total,attendance
 				if classAttendance.StudentID == request.StudentID && selectSubject == classAttendance.SubjectID {
 					studentScheduleCount = studentScheduleCount + 1
 					studentSelectSubjectTotalMap[classAttendance.SubjectID] = studentSelectSubjectTotalMap[classAttendance.SubjectID] + 1
@@ -52,7 +55,7 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, op *entity.
 					}
 				}
 			}
-			//statistics  unSelected subject total and attendance
+			//statistics this student unSelected subject total and attendance
 			for _, unSelectSubject := range request.UnSelectedSubjectIDList {
 				if classAttendance.StudentID == request.StudentID && unSelectSubject == classAttendance.SubjectID {
 					studentUnSelectSubjectTotalMap[classAttendance.SubjectID] = studentUnSelectSubjectTotalMap[classAttendance.SubjectID] + 1
