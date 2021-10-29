@@ -759,14 +759,15 @@ func (ocm OutcomeModel) Lock(ctx context.Context, operator *entity.Operator, out
 		}
 		for i := range outcomeRelations {
 			outcomeRelations[i].MasterID = newVersion.ID
+			outcomeRelations[i].ID = 0
 		}
 
 		_, err = da.GetOutcomeRelationDA().InsertInBatchesTx(ctx, tx, outcomeRelations, len(outcomeRelations))
 		if err != nil {
 			log.Error(ctx, "Lock: InsertInBatchesTx failed",
-				log.String("op", operator.UserID),
-				log.String("outcome_id", outcomeID),
-				log.Any("outcome", newVersion))
+				log.Err(err),
+				log.Any("op", operator),
+				log.Any("outcomeRelations", outcomeRelations))
 			return err
 		}
 		return nil
