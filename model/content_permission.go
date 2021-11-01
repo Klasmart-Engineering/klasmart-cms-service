@@ -540,8 +540,8 @@ func (c *ContentPermissionMySchoolModel) getVisibilitySettingsType(ctx context.C
 			containsOrg = true
 		} else {
 			containsSchools = true
-			if !utils.ContainsStr(schoolInfo.MySchool, visibilitySettings[i]) {
-				if utils.ContainsStr(schoolInfo.AllSchool, visibilitySettings[i]) {
+			if !utils.ContainsString(schoolInfo.MySchool, visibilitySettings[i]) {
+				if utils.ContainsString(schoolInfo.AllSchool, visibilitySettings[i]) {
 					//contains other schools in org
 					containsOtherSchools = true
 				} else {
@@ -593,8 +593,8 @@ func (c *ContentPermissionMySchoolModel) getViewVisibilitySettingsType(ctx conte
 			containsOrg = true
 		} else {
 			containsSchools = true
-			if !utils.ContainsStr(schoolInfo.MySchool, visibilitySettings[i]) {
-				if utils.ContainsStr(schoolInfo.AllSchool, visibilitySettings[i]) {
+			if !utils.ContainsString(schoolInfo.MySchool, visibilitySettings[i]) {
+				if utils.ContainsString(schoolInfo.AllSchool, visibilitySettings[i]) {
 					//contains other schools in org
 					containsOtherSchools = true
 				} else {

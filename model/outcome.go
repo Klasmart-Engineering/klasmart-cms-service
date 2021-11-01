@@ -38,8 +38,7 @@ type IOutcomeModel interface {
 	SearchPublished(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
 
 	GetByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
-	GetLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
-	GetLatestOutcomes(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, conditionIDs *entity.OutcomeCondition) ([]*entity.Outcome, error)
+	GetLatestOutcomes(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, []string, error)
 	Approve(ctx context.Context, operator *entity.Operator, outcomeID string) error
 	Reject(ctx context.Context, operator *entity.Operator, outcomeID string, reason string) error
 
@@ -220,13 +219,17 @@ func (ocm OutcomeModel) Create(ctx context.Context, operator *entity.Operator, o
 				log.Any("outcome", outcome))
 			return err
 		}
-		err = da.GetOutcomeRelationDA().InsertTx(ctx, tx, ocm.CollectRelation(outcome))
+
+		outcomeRelations := ocm.CollectRelation(outcome)
+		_, err = da.GetOutcomeRelationDA().InsertInBatchesTx(ctx, tx, outcomeRelations, len(outcomeRelations))
 		if err != nil {
-			log.Error(ctx, "Create: InsertTx failed",
-				log.String("op", operator.UserID),
-				log.Any("outcome", outcome))
+			log.Error(ctx, "Create: InsertInBatchesTx failed",
+				log.Any("op", operator),
+				log.Any("outcome", outcome),
+				log.Any("outcomeRelations", outcomeRelations))
 			return err
 		}
+
 		return nil
 	})
 	ocm.RemoveShortcode(ctx, operator, outcome.Shortcode)
@@ -252,18 +255,19 @@ func (ocm OutcomeModel) Get(ctx context.Context, operator *entity.Operator, outc
 				log.String("outcome_id", outcomeID))
 			return err
 		}
-		relations, err := da.GetOutcomeRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
+		var outcomeRelations []*entity.OutcomeRelation
+		err = da.GetOutcomeRelationDA().QueryTx(ctx, tx, &da.RelationCondition{
 			MasterIDs:  dbo.NullStrings{Strings: []string{outcomeID}, Valid: true},
 			MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
-		})
+		}, &outcomeRelations)
 		if err != nil {
-			log.Error(ctx, "Get: SearchTx failed",
+			log.Error(ctx, "Get: QueryTx failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
 			return err
 		}
-		ocm.FillRelation(ctx, outcome, relations)
 
+		ocm.FillRelation(ctx, outcome, outcomeRelations)
 		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
 			OutcomeAncestor: sql.NullString{String: outcome.AncestorID, Valid: true},
 		})
@@ -417,6 +421,7 @@ func (ocm OutcomeModel) Update(ctx context.Context, operator *entity.Operator, o
 				log.Any("data", outcome))
 			return err
 		}
+
 		err = da.GetOutcomeRelationDA().DeleteTx(ctx, tx, []string{outcome.ID})
 		if err != nil {
 			log.Error(ctx, "Update: DeleteTx failed",
@@ -424,11 +429,14 @@ func (ocm OutcomeModel) Update(ctx context.Context, operator *entity.Operator, o
 				log.Any("outcome", outcome))
 			return err
 		}
-		err = da.GetOutcomeRelationDA().InsertTx(ctx, tx, ocm.CollectRelation(outcome))
+
+		outcomeRelations := ocm.CollectRelation(outcome)
+		_, err = da.GetOutcomeRelationDA().InsertInBatchesTx(ctx, tx, outcomeRelations, len(outcomeRelations))
 		if err != nil {
-			log.Error(ctx, "Update: InsertTx failed",
-				log.String("op", operator.UserID),
-				log.Any("outcome", outcome))
+			log.Error(ctx, "Update: InsertInBatchesTx failed",
+				log.Any("op", operator),
+				log.Any("outcome", outcome),
+				log.Any("outcomeRelations", outcomeRelations))
 			return err
 		}
 		return nil
@@ -571,12 +579,13 @@ func (ocm OutcomeModel) search(ctx context.Context, op *entity.Operator, tx *dbo
 		}
 	}
 
-	relations, err := da.GetOutcomeRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
+	var outcomeRelations []*entity.OutcomeRelation
+	err = da.GetOutcomeRelationDA().QueryTx(ctx, tx, &da.RelationCondition{
 		MasterIDs:  dbo.NullStrings{Strings: outcomeIDs, Valid: true},
 		MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
-	})
+	}, &outcomeRelations)
 	if err != nil {
-		log.Error(ctx, "Search: SearchTx failed",
+		log.Error(ctx, "Search: QueryTx failed",
 			log.Err(err),
 			log.Any("op", op),
 			log.Strings("outcome", outcomeIDs))
@@ -603,12 +612,12 @@ func (ocm OutcomeModel) search(ctx context.Context, op *entity.Operator, tx *dbo
 		}
 	}
 
-	outcomeRelations := make(map[string][]*entity.Relation)
-	for i := range relations {
-		outcomeRelations[relations[i].MasterID] = append(outcomeRelations[relations[i].MasterID], relations[i])
+	outcomeRelationsMap := make(map[string][]*entity.OutcomeRelation)
+	for i := range outcomeRelations {
+		outcomeRelationsMap[outcomeRelations[i].MasterID] = append(outcomeRelationsMap[outcomeRelations[i].MasterID], outcomeRelations[i])
 	}
 	for _, outcome := range outcomes {
-		ocm.FillRelation(ctx, outcome, outcomeRelations[outcome.ID])
+		ocm.FillRelation(ctx, outcome, outcomeRelationsMap[outcome.ID])
 		outcome.EditingOutcome = lockedChildrenMap[outcome.ID]
 	}
 
@@ -735,26 +744,29 @@ func (ocm OutcomeModel) Lock(ctx context.Context, operator *entity.Operator, out
 				log.Any("outcome", newVersion))
 			return err
 		}
-		relations, err := da.GetOutcomeRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
+		var outcomeRelations []*entity.OutcomeRelation
+		err = da.GetOutcomeRelationDA().QueryTx(ctx, tx, &da.RelationCondition{
 			MasterIDs:  dbo.NullStrings{Strings: []string{outcome.ID}, Valid: true},
 			MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
-		})
+		}, &outcomeRelations)
 		if err != nil {
-			log.Error(ctx, "Lock: SearchTx failed",
+			log.Error(ctx, "Lock: QueryTx failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID),
 				log.Any("outcome", newVersion))
 			return err
 		}
-		for i := range relations {
-			relations[i].MasterID = newVersion.ID
+		for i := range outcomeRelations {
+			outcomeRelations[i].MasterID = newVersion.ID
+			outcomeRelations[i].ID = 0
 		}
-		err = da.GetOutcomeRelationDA().InsertTx(ctx, tx, relations)
+
+		_, err = da.GetOutcomeRelationDA().InsertInBatchesTx(ctx, tx, outcomeRelations, len(outcomeRelations))
 		if err != nil {
-			log.Error(ctx, "Lock: InsertTx failed",
-				log.String("op", operator.UserID),
-				log.String("outcome_id", outcomeID),
-				log.Any("outcome", newVersion))
+			log.Error(ctx, "Lock: InsertInBatchesTx failed",
+				log.Err(err),
+				log.Any("op", operator),
+				log.Any("outcomeRelations", outcomeRelations))
 			return err
 		}
 		return nil
@@ -1336,59 +1348,71 @@ func (ocm OutcomeModel) GetByIDs(ctx context.Context, operator *entity.Operator,
 	return outcomes, nil
 }
 
-func (ocm OutcomeModel) GetLatestOutcomes(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, conditionIDs *entity.OutcomeCondition) (outcomes []*entity.Outcome, err error) {
-	cond1 := da.OutcomeCondition{
-		IDs: dbo.NullStrings{Strings: conditionIDs.IDs, Valid: true},
+// map key is outcome id from outcomeIDs, []string is original outcome id order by name asc
+func (ocm OutcomeModel) GetLatestOutcomes(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, []string, error) {
+	result := make(map[string]*entity.Outcome, len(outcomeIDs))
+	var sortedOutcomeID []string
+	var outcomes []*entity.Outcome
+	outcomeCondition := &da.OutcomeCondition{
+		IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
 	}
-	total, otcs1, err1 := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &cond1)
-	if err1 != nil {
-		log.Error(ctx, "GetLatestOutcomes: SearchOutcome failed",
-			log.Err(err1),
-			log.String("op", operator.UserID),
-			log.Any("condition", conditionIDs))
-		return nil, err1
+
+	err := da.GetOutcomeDA().QueryTx(ctx, tx, outcomeCondition, &outcomes)
+	if err != nil {
+		log.Error(ctx, "da.GetOutcomeDA().QueryTx error",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("outcomeCondition", outcomeCondition))
+		return nil, nil, err
 	}
-	if total == 0 {
-		log.Debug(ctx, "GetLatestOutcomes: SearchOutcome return empty",
-			log.String("op", operator.UserID),
-			log.Any("condition", conditionIDs))
-		outcomes = []*entity.Outcome{}
-		return
+
+	if len(outcomes) == 0 {
+		log.Debug(ctx, "outcome not found", log.Any("outcomeCondition", outcomeCondition))
+		return result, sortedOutcomeID, nil
 	}
-	cond2 := da.OutcomeCondition{
-		OrderBy: da.NewOrderBy(conditionIDs.OrderBy),
+
+	latestOutcomeIDs := make([]string, len(outcomes))
+	for i, v := range outcomes {
+		latestOutcomeIDs[i] = v.LatestID
 	}
-	for _, o := range otcs1 {
-		cond2.IDs.Strings = append(cond2.IDs.Strings, o.LatestID)
+	latestOutcomeCondition := &da.OutcomeCondition{
+		IDs:     dbo.NullStrings{Strings: latestOutcomeIDs, Valid: true},
+		OrderBy: da.OrderByName,
 	}
-	cond2.IDs.Valid = true
-	total, otcs2, err1 := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &cond2)
-	if err1 != nil {
-		log.Error(ctx, "GetLatestByIDs: SearchOutcome failed",
-			log.Err(err1),
-			log.String("op", operator.UserID),
-			log.Strings("outcome_ids", cond2.IDs.Strings))
-		return nil, err1
+	var latestOutcomes []*entity.Outcome
+	err = da.GetOutcomeDA().QueryTx(ctx, tx, latestOutcomeCondition, &latestOutcomes)
+	if err != nil {
+		log.Error(ctx, "da.GetOutcomeDA().QueryTx error",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("latestOutcomeCondition", latestOutcomeCondition))
+		return nil, nil, err
 	}
-	if total == 0 {
-		log.Debug(ctx, "GetLatestByIDs: SearchOutcome return empty",
-			log.String("op", operator.UserID),
-			log.Strings("outcome_ids", cond2.IDs.Strings))
-		outcomes = []*entity.Outcome{}
-		return
+
+	if len(latestOutcomes) == 0 {
+		log.Debug(ctx, "latest outcome not found", log.Any("latestOutcomeCondition", latestOutcomeCondition))
+		return result, sortedOutcomeID, nil
 	}
-	outcomes = otcs2
-	err1 = ocm.fillRelation(ctx, operator, tx, outcomes)
-	if err1 != nil {
-		log.Error(ctx, "GetLatestByIDs: fillRelation failed",
-			log.Err(err1),
-			log.String("op", operator.UserID))
-		return nil, err1
+
+	err = ocm.fillRelation(ctx, operator, tx, latestOutcomes)
+	if err != nil {
+		log.Error(ctx, "ocm.fillRelation failed",
+			log.Err(err),
+			log.Any("latestOutcomes", latestOutcomes))
+		return nil, nil, err
 	}
-	return
-}
-func (ocm OutcomeModel) GetLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error) {
-	return ocm.GetLatestOutcomes(ctx, operator, tx, &entity.OutcomeCondition{IDs: outcomeIDs})
+
+	for _, latestOutcome := range latestOutcomes {
+		for _, outcome := range outcomes {
+			if outcome.LatestID == latestOutcome.ID {
+				sortedOutcomeID = append(sortedOutcomeID, outcome.ID)
+				result[outcome.ID] = latestOutcome
+				break
+			}
+		}
+	}
+
+	return result, sortedOutcomeID, nil
 }
 
 func (ocm OutcomeModel) GetLatestByIDsMapResult(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (latests map[string]*entity.Outcome, err error) {
@@ -1494,26 +1518,27 @@ func (ocm OutcomeModel) fillRelation(ctx context.Context, operator *entity.Opera
 		for i := range outcomes {
 			masterIDs[i] = outcomes[i].ID
 		}
-		relations, err := da.GetOutcomeRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
+
+		var outcomeRelations []*entity.OutcomeRelation
+		err := da.GetOutcomeRelationDA().QueryTx(ctx, tx, &da.RelationCondition{
 			MasterIDs:  dbo.NullStrings{Strings: masterIDs, Valid: true},
 			MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
-		})
+		}, &outcomeRelations)
 		if err != nil {
-			log.Error(ctx, "fillRelation: Search failed",
+			log.Error(ctx, "fillRelation: Query failed",
 				log.Err(err),
 				log.String("op", operator.UserID),
 				log.Any("outcomes", outcomes))
 			return err
 		}
-		for j := range outcomes {
-			var outcomeRelations []*entity.Relation
-			for i := range relations {
-				if relations[i].MasterID == outcomes[j].ID {
-					outcomeRelations = append(outcomeRelations, relations[i])
-					break
+		for _, outcome := range outcomes {
+			var temp []*entity.OutcomeRelation
+			for _, outcomeRelation := range outcomeRelations {
+				if outcomeRelation.MasterID == outcome.ID {
+					temp = append(temp, outcomeRelation)
 				}
 			}
-			ocm.FillRelation(ctx, outcomes[j], outcomeRelations)
+			ocm.FillRelation(ctx, outcome, temp)
 		}
 	}
 	return nil
@@ -1730,72 +1755,72 @@ func GetOutcomeModel() IOutcomeModel {
 	return _outcomeModel
 }
 
-func (ocm OutcomeModel) CollectRelation(oc *entity.Outcome) []*entity.Relation {
-	relations := make([]*entity.Relation, 0, len(oc.Programs)+len(oc.Subjects)+len(oc.Categories)+len(oc.Subcategories)+len(oc.Grades)+len(oc.Ages))
+func (ocm OutcomeModel) CollectRelation(oc *entity.Outcome) []*entity.OutcomeRelation {
+	outcomeRelations := make([]*entity.OutcomeRelation, 0, len(oc.Programs)+len(oc.Subjects)+len(oc.Categories)+len(oc.Subcategories)+len(oc.Grades)+len(oc.Ages))
 	for i := range oc.Programs {
-		relation := entity.Relation{
+		outcomeRelation := entity.OutcomeRelation{
 			MasterID:     oc.ID,
 			MasterType:   entity.OutcomeType,
 			RelationID:   oc.Programs[i],
 			RelationType: entity.ProgramType,
 		}
-		relations = append(relations, &relation)
+		outcomeRelations = append(outcomeRelations, &outcomeRelation)
 	}
 
 	for i := range oc.Subjects {
-		relation := entity.Relation{
+		outcomeRelation := entity.OutcomeRelation{
 			MasterID:     oc.ID,
 			MasterType:   entity.OutcomeType,
 			RelationID:   oc.Subjects[i],
 			RelationType: entity.SubjectType,
 		}
-		relations = append(relations, &relation)
+		outcomeRelations = append(outcomeRelations, &outcomeRelation)
 	}
 
 	for i := range oc.Categories {
-		relation := entity.Relation{
+		outcomeRelation := entity.OutcomeRelation{
 			MasterID:     oc.ID,
 			MasterType:   entity.OutcomeType,
 			RelationID:   oc.Categories[i],
 			RelationType: entity.CategoryType,
 		}
-		relations = append(relations, &relation)
+		outcomeRelations = append(outcomeRelations, &outcomeRelation)
 	}
 
 	for i := range oc.Subcategories {
-		relation := entity.Relation{
+		outcomeRelation := entity.OutcomeRelation{
 			MasterID:     oc.ID,
 			MasterType:   entity.OutcomeType,
 			RelationID:   oc.Subcategories[i],
 			RelationType: entity.SubcategoryType,
 		}
-		relations = append(relations, &relation)
+		outcomeRelations = append(outcomeRelations, &outcomeRelation)
 	}
 
 	for i := range oc.Grades {
-		relation := entity.Relation{
+		outcomeRelation := entity.OutcomeRelation{
 			MasterID:     oc.ID,
 			MasterType:   entity.OutcomeType,
 			RelationID:   oc.Grades[i],
 			RelationType: entity.GradeType,
 		}
-		relations = append(relations, &relation)
+		outcomeRelations = append(outcomeRelations, &outcomeRelation)
 	}
 
 	for i := range oc.Ages {
-		relation := entity.Relation{
+		outcomeRelation := entity.OutcomeRelation{
 			MasterID:     oc.ID,
 			MasterType:   entity.OutcomeType,
 			RelationID:   oc.Ages[i],
 			RelationType: entity.AgeType,
 		}
-		relations = append(relations, &relation)
+		outcomeRelations = append(outcomeRelations, &outcomeRelation)
 	}
-	return relations
+	return outcomeRelations
 }
 
 // TODO: Kyle: outcome relation data sync check
-func (ocm OutcomeModel) FillRelation(ctx context.Context, oc *entity.Outcome, relations []*entity.Relation) {
+func (ocm OutcomeModel) FillRelation(ctx context.Context, oc *entity.Outcome, relations []*entity.OutcomeRelation) {
 	log.Debug(ctx, "fill relation",
 		log.Any("outcome", oc),
 		log.Any("relations", relations),

@@ -2,11 +2,21 @@ package external
 
 // APStatus academic profile status
 type APStatus string
+type JoinType string
 
 const (
 	Active   APStatus = "active"
 	Inactive APStatus = "inactive"
 )
+
+const (
+	IsTeaching JoinType = "teaching"
+	IsStudy    JoinType = "studying"
+)
+
+func (j JoinType) string() string {
+	return string(j)
+}
 
 func (s APStatus) String() string {
 	return string(s)

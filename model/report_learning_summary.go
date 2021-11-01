@@ -581,7 +581,7 @@ func (l *learningSummaryReportModel) findRelatedSchedules(ctx context.Context, t
 		}
 		filterSchedules := make([]*entity.Schedule, 0, len(schedules))
 		for _, s := range schedules {
-			if utils.ContainsStr(filterScheduleIDs, s.ID) {
+			if utils.ContainsString(filterScheduleIDs, s.ID) {
 				filterSchedules = append(filterSchedules, s)
 			}
 		}
