@@ -596,7 +596,7 @@ type ScheduleLessonPlanMaterial struct {
 	Name string `json:"name"`
 }
 
-type ScheduleVerify struct {
+type ScheduleVerifyInput struct {
 	ClassID      string
 	SubjectIDs   []string
 	ProgramID    string
@@ -660,6 +660,7 @@ type ScheduleConflictView struct {
 	ParticipantsTeachers []ScheduleConflictUserView `json:"participants_teachers"`
 	ParticipantsStudents []ScheduleConflictUserView `json:"participants_students"`
 }
+
 type ScheduleConflictUserView struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
