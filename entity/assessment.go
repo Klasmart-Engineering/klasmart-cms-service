@@ -1,7 +1,12 @@
 package entity
 
 import (
+	"context"
+	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"time"
 )
 
 const (
@@ -19,6 +24,33 @@ type AssessmentScheduleType struct {
 }
 
 type AssessmentType string
+
+type GetAssessmentTypeInput struct {
+	ScheduleType ScheduleClassType
+	IsHomeFun    bool
+}
+
+func GetAssessmentTypeByScheduleType(ctx context.Context, input GetAssessmentTypeInput) (AssessmentType, error) {
+	var result AssessmentType
+
+	switch input.ScheduleType {
+	case ScheduleClassTypeHomework:
+		if input.IsHomeFun {
+			result = AssessmentTypeHomeFunStudy
+		} else {
+			result = AssessmentTypeStudy
+		}
+	case ScheduleClassTypeOfflineClass:
+		result = AssessmentTypeClass
+	case ScheduleClassTypeOnlineClass:
+		result = AssessmentTypeLive
+	default:
+		log.Error(ctx, "GetAssessmentTypeByScheduleType error", log.Any("input", input))
+		return "", constant.ErrInvalidArgs
+	}
+
+	return result, nil
+}
 
 func (a AssessmentType) ToScheduleClassType() AssessmentScheduleType {
 	switch a {
@@ -50,6 +82,30 @@ func (a AssessmentType) Valid() bool {
 
 func (a AssessmentType) String() string {
 	return string(a)
+}
+
+type GenerateAssessmentTitleInput struct {
+	ClassName    string
+	ScheduleName string
+	ClassEndTime int64
+}
+
+func (a AssessmentType) Title(ctx context.Context, input GenerateAssessmentTitleInput) (string, error) {
+	var title string
+	if input.ClassName == "" {
+		input.ClassName = constant.AssessmentNoClass
+	}
+
+	switch a {
+	case AssessmentTypeClass, AssessmentTypeLive:
+		title = fmt.Sprintf("%s-%s-%s", time.Unix(input.ClassEndTime, 0).Format("20060102"), input.ClassName, input.ScheduleName)
+	case AssessmentTypeStudy, AssessmentTypeHomeFunStudy:
+		title = fmt.Sprintf("%s-%s", input.ClassName, input.ScheduleName)
+	default:
+		log.Error(ctx, "get assessment title error", log.Any("input", input))
+		return "", constant.ErrInvalidArgs
+	}
+	return title, nil
 }
 
 type NullAssessmentTypes struct {
@@ -129,6 +185,15 @@ type AddAssessmentArgs struct {
 	ClassLength   int                 `json:"class_length"`
 	ClassEndTime  int64               `json:"class_end_time"`
 	Attendances   []*ScheduleRelation `json:"attendances"`
+}
+
+type AssessmentAddInput struct {
+	ScheduleID string `json:"schedule_id"`
+	//LessonPlanID string   `json:"lesson_plan_id"`
+	//ClassID      string   `json:"class_id"`
+	ClassLength  int      `json:"class_length"`
+	ClassEndTime int64    `json:"class_end_time"`
+	Attendances  []string `json:"attendances"`
 }
 
 type BatchAddAssessmentSuperArgs struct {
@@ -309,5 +374,5 @@ type ClassPart struct {
 }
 
 func (ClassPart) Accept(input *AssessmentInput) (*AssessmentOutput, error) {
-	return nil,nil
+	return nil, nil
 }

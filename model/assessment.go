@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"sync"
-
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -13,6 +11,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"sync"
 )
 
 var (
@@ -27,35 +26,96 @@ var (
 
 func GetAssessmentModel() IAssessmentModel {
 	assessmentModelInstanceOnce.Do(func() {
-		assessmentModelInstance = &assessmentModel{}
+		assessmentModelInstance = &assessmentModel{
+			AmsServices:           external.GetAmsServices(),
+			ScheduleModel:         GetScheduleModel(),
+			ScheduleRelationModel: GetScheduleRelationModel(),
+		}
 	})
 	return assessmentModelInstance
-}
-
-type AssessmentMaker struct {
-	Study   IStudyAssessmentModel
-	HomeFun IHomeFunStudyModel
-	Live    IClassAndLiveAssessmentModel
-	Class   IClassAndLiveAssessmentModel
-}
-
-func NewAssessmentMaker() *AssessmentMaker {
-	return &AssessmentMaker{
-		Study:   GetStudyAssessmentModel(),
-		HomeFun: GetHomeFunStudyModel(),
-		Live:    GetClassAndLiveAssessmentModel(),
-		Class:   GetClassAndLiveAssessmentModel(),
-	}
 }
 
 type IAssessmentModel interface {
 	Query(ctx context.Context, operator *entity.Operator, conditions *da.QueryAssessmentConditions) ([]*entity.Assessment, error)
 	Summary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsSummaryArgs) (*entity.AssessmentsSummary, error)
 	StudentQuery(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, conditions *entity.StudentQueryAssessmentConditions) (int, []*entity.StudentAssessment, error)
+
+	PrepareAddInput(ctx context.Context, operator *entity.Operator, input []*entity.AssessmentAddInput) (*entity.BatchAddAssessmentSuperArgs, error)
+	BatchAddTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input []*entity.AssessmentAddInput) error
 }
 
 type assessmentModel struct {
 	assessmentBase
+	AmsServices           external.AmsServices
+	ScheduleModel         IScheduleModel
+	ScheduleRelationModel IScheduleRelationModel
+}
+
+func (m *assessmentModel) PrepareAddInput(ctx context.Context, operator *entity.Operator, input []*entity.AssessmentAddInput) (*entity.BatchAddAssessmentSuperArgs, error) {
+	scheduleIDs := make([]string, len(input))
+	inputMap := make(map[string]*entity.AssessmentAddInput)
+	for i, item := range input {
+		scheduleIDs[i] = item.ScheduleID
+		inputMap[item.ScheduleID] = item
+	}
+	schedules, err := m.ScheduleModel.GetVariableDataByIDs(ctx, operator, scheduleIDs, &entity.ScheduleInclude{
+		ClassRosterClass: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	noneHomefunSchedules := make([]*entity.AddAssessmentArgs, 0, len(schedules))
+	homefunSchedules := make([]*entity.AddAssessmentArgs, 0, len(schedules))
+
+	for _, item := range schedules {
+		assessmentType, err := entity.GetAssessmentTypeByScheduleType(ctx, entity.GetAssessmentTypeInput{
+			ScheduleType: item.ClassType,
+			IsHomeFun:    item.IsHomeFun,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		inputMapItem, ok := inputMap[item.ID]
+		if !ok {
+			return nil, constant.ErrInvalidArgs
+		}
+
+		var className string
+		if item.ClassRosterClass != nil {
+			className = item.ClassRosterClass.Name
+		}
+		title, err := assessmentType.Title(ctx, entity.GenerateAssessmentTitleInput{
+			ClassName:    className,
+			ScheduleName: item.Schedule.Title,
+			ClassEndTime: inputMapItem.ClassEndTime,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		if assessmentType == entity.AssessmentTypeHomeFunStudy {
+			homefunSchedules = append(homefunSchedules, &entity.AddAssessmentArgs{
+				Title:         title,
+				ScheduleID:    "",
+				ScheduleTitle: "",
+				LessonPlanID:  "",
+				ClassID:       "",
+				ClassLength:   0,
+				ClassEndTime:  0,
+				Attendances:   nil,
+			})
+		} else {
+			noneHomefunSchedules = append(noneHomefunSchedules, &entity.AddAssessmentArgs{})
+		}
+	}
+
+	return nil, nil
+}
+
+func (m *assessmentModel) BatchAddTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input []*entity.AssessmentAddInput) error {
+	return nil
 }
 
 func (m *assessmentModel) Query(ctx context.Context, operator *entity.Operator, conditions *da.QueryAssessmentConditions) ([]*entity.Assessment, error) {
@@ -103,7 +163,7 @@ func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operat
 		teachers []*external.Teacher
 	)
 	if args.TeacherName.Valid {
-		if teachers, err = external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.TeacherName.String); err != nil {
+		if teachers, err = m.AmsServices.TeacherService.Query(ctx, operator, operator.OrgID, args.TeacherName.String); err != nil {
 			log.Error(ctx, "List: external.GetTeacherServiceProvider().Query: query failed",
 				log.Err(err),
 				log.String("org_id", operator.OrgID),
@@ -752,7 +812,7 @@ func (m *assessmentModel) queryTeacherMap(ctx context.Context,
 	}
 
 	//query teacher info
-	teacherInfoMap, err := external.GetUserServiceProvider().BatchGetMap(ctx, operator, teacherIDs)
+	teacherInfoMap, err := m.AmsServices.UserService.BatchGetMap(ctx, operator, teacherIDs)
 	if err != nil {
 		log.Error(ctx, "GetTeacherServiceProvider.BatchGetNameMap failed",
 			log.Err(err),

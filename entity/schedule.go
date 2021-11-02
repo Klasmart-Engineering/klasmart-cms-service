@@ -582,12 +582,14 @@ type SchedulePlain struct {
 
 type ScheduleVariable struct {
 	*Schedule
-	RoomID   string               `json:"room_id"`
-	Subjects []*ScheduleShortInfo `json:"subjects"`
+	RoomID           string               `json:"room_id"`
+	Subjects         []*ScheduleShortInfo `json:"subjects"`
+	ClassRosterClass *ScheduleShortInfo   `json:"subjects"`
 }
 
 type ScheduleInclude struct {
-	Subject bool
+	Subject          bool
+	ClassRosterClass bool
 }
 
 type ScheduleBasic struct {

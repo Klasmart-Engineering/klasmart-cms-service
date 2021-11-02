@@ -28,6 +28,7 @@ type IScheduleRelationModel interface {
 	GetSubjectIDs(ctx context.Context, scheduleID string) ([]string, error)
 	GetSubjectsByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]*entity.ScheduleShortInfo, error)
 	GetOutcomeIDs(ctx context.Context, scheduleID string) ([]string, error)
+	GetClassRosterMap(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]*entity.ScheduleShortInfo, error)
 }
 
 type scheduleRelationModel struct {
@@ -401,4 +402,46 @@ func (s *scheduleRelationModel) GetOutcomeIDs(ctx context.Context, scheduleID st
 	}
 
 	return outcomeIDs, nil
+}
+
+func (s *scheduleRelationModel) GetClassRosterMap(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
+	condition := &da.ScheduleRelationCondition{
+		ScheduleIDs: entity.NullStrings{
+			Strings: scheduleIDs,
+			Valid:   true,
+		},
+		RelationType: sql.NullString{
+			String: string(entity.ScheduleRelationTypeClassRosterClass),
+			Valid:  true,
+		},
+	}
+	var classRelations []*entity.ScheduleRelation
+	err := da.GetScheduleRelationDA().Query(ctx, condition, &classRelations)
+	if err != nil {
+		log.Error(ctx, "GetClassRosters error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
+		return nil, err
+	}
+
+	classIDs := make([]string, len(classRelations))
+	scheduleClassMap := make(map[string]string, len(classRelations))
+	for i, item := range classRelations {
+		classIDs[i] = item.RelationID
+		scheduleClassMap[item.ScheduleID] = item.RelationID
+	}
+	classMap, err := external.GetClassServiceProvider().BatchGetMap(ctx, op, classIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]*entity.ScheduleShortInfo, len(classRelations))
+	for _, item := range classRelations {
+		if classInfo, ok := classMap[scheduleClassMap[item.ScheduleID]]; ok {
+			result[item.ScheduleID] = &entity.ScheduleShortInfo{
+				ID:   classInfo.ID,
+				Name: classInfo.Name,
+			}
+		}
+	}
+
+	return result, nil
 }

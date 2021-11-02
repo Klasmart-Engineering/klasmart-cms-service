@@ -19,7 +19,8 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
-type assessmentBase struct{}
+type assessmentBase struct {
+}
 
 func (m *assessmentBase) getDetail(ctx context.Context, operator *entity.Operator, id string) (*entity.AssessmentDetail, error) {
 	assessment, err := da.GetAssessmentDA().GetByID(ctx, id)

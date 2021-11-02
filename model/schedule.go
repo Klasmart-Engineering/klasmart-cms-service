@@ -2725,6 +2725,15 @@ func (s *scheduleModel) GetVariableDataByIDs(ctx context.Context, op *entity.Ope
 			item.Subjects = scheduleSubjectMap[item.ID]
 		}
 	}
+	if include.ClassRosterClass {
+		scheduleClassMap, err := GetScheduleRelationModel().GetClassRosterMap(ctx, op, ids)
+		if err != nil {
+			return nil, err
+		}
+		for _, item := range result {
+			item.ClassRosterClass = scheduleClassMap[item.ID]
+		}
+	}
 
 	return result, nil
 }
