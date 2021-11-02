@@ -50,7 +50,7 @@ order by s3.class_id,s3.subject_id
 		OnlineClass        string
 	}{
 		ClassRosterClass:   entity.ScheduleRelationTypeClassRosterClass.String(),
-		Subject:            entity.ScheduleClassTypeSubject.String(),
+		Subject:            entity.ScheduleRelationTypeSubject.String(),
 		ClassRosterStudent: entity.ScheduleRelationTypeClassRosterStudent.String(),
 		OnlineClass:        entity.ScheduleClassTypeOnlineClass.String(),
 	}
