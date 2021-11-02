@@ -2,8 +2,6 @@ package entity
 
 import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
-
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
 
 const (
@@ -311,7 +309,5 @@ type ClassPart struct {
 }
 
 func (ClassPart) Accept(input *AssessmentInput) (*AssessmentOutput, error) {
-	if input.ClassIDs.Valid {
-		external.GetClassServiceProvider().BatchGet()
-	}
+	return nil,nil
 }

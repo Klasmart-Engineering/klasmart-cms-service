@@ -1721,12 +1721,3 @@ func (m *assessmentBase) toViews(ctx context.Context, operator *entity.Operator,
 
 	return result, nil
 }
-
-func (m *assessmentBase) toViews2(ctx context.Context, assessmentIDs []string) {
-	assessment, err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
-		IDs: entity.NullStrings{
-			Strings: assessmentIDs,
-			Valid:   true,
-		},
-	})
-}
