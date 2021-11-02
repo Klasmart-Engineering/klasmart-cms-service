@@ -24,6 +24,10 @@ type assessmentBase struct{}
 func (m *assessmentBase) getDetail(ctx context.Context, operator *entity.Operator, id string) (*entity.AssessmentDetail, error) {
 	assessment, err := da.GetAssessmentDA().GetByID(ctx, id)
 	if err != nil {
+		log.Error(ctx, "Get: da.GetAssessmentDA().GetExcludeSoftDeleted: get failed",
+			log.Err(err),
+			log.String("assessment_id", id),
+		)
 		return nil, err
 	}
 
@@ -32,7 +36,6 @@ func (m *assessmentBase) getDetail(ctx context.Context, operator *entity.Operato
 		views []*entity.AssessmentView
 		view  *entity.AssessmentView
 	)
-
 	if views, err = m.toViews(ctx, operator, []*entity.Assessment{assessment}, entity.ConvertToViewsOptions{
 		EnableProgram:    true,
 		EnableSubjects:   true,
@@ -41,6 +44,11 @@ func (m *assessmentBase) getDetail(ctx context.Context, operator *entity.Operato
 		EnableClass:      true,
 		EnableLessonPlan: true,
 	}); err != nil {
+		log.Error(ctx, "Get: GetAssessmentUtils().toViews: get failed",
+			log.Err(err),
+			log.String("assessment_id", id),
+			log.Any("operator", operator),
+		)
 		return nil, err
 	}
 	view = views[0]
@@ -72,8 +80,13 @@ func (m *assessmentBase) getDetail(ctx context.Context, operator *entity.Operato
 	}
 	var currentContentOutcomeMap map[string][]string
 	if len(contentIDs) > 0 {
-		assessmentContentOutcomeMap, err := m.getAssessmentContentOutcomeMap(ctx, dbo.MustGetDB(ctx), []string{id}, contentIDs)
+		assessmentContentOutcomeMap, err := m.getAssessmentContentOutcomeMap(ctx, []string{id}, contentIDs)
 		if err != nil {
+			log.Error(ctx, "Get: m.getAssessmentContentOutcomeMap: get failed",
+				log.Err(err),
+				log.String("assessment_id", id),
+				log.Strings("content_ids", contentIDs),
+			)
 			return nil, err
 		}
 		currentContentOutcomeMap = assessmentContentOutcomeMap[id]
@@ -135,8 +148,14 @@ func (m *assessmentBase) getDetail(ctx context.Context, operator *entity.Operato
 			outcomeAttendances      = make([]*entity.OutcomeAttendance, 0, len(outcomeIDs))
 			outcomeAttendanceIDsMap = make(map[string][]string, len(outcomeIDs))
 		)
-		outcomeAttendances, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, dbo.MustGetDB(ctx), id, outcomeIDs)
+		outcomeAttendances, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, id, outcomeIDs)
 		if err != nil {
+			log.Error(ctx, "Get: da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs: batch get failed",
+				log.Err(err),
+				log.Strings("outcome_ids", outcomeIDs),
+				log.String("assessment_id", id),
+				log.Any("operator", operator),
+			)
 			return nil, err
 		}
 		for _, item := range outcomeAttendances {
@@ -146,6 +165,12 @@ func (m *assessmentBase) getDetail(ctx context.Context, operator *entity.Operato
 		// batch get outcome content types map
 		outcomeContentTypesMap, err := m.batchGetOutcomeContentTypesMap(ctx, id, outcomeIDs)
 		if err != nil {
+			log.Error(ctx, "get assessment detail: batch get outcome content types map",
+				log.Err(err),
+				log.Strings("outcome_ids", outcomeIDs),
+				log.String("assessment_id", id),
+				log.Any("operator", operator),
+			)
 			return nil, err
 		}
 
@@ -174,6 +199,11 @@ func (m *assessmentBase) getDetail(ctx context.Context, operator *entity.Operato
 	if view.Schedule.ClassType != entity.ScheduleClassTypeOfflineClass {
 		result.StudentViewItems, err = getAssessmentH5P().getStudentViewItems(ctx, operator, view)
 		if err != nil {
+			log.Error(ctx, "get assessment detail: get student view items failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Any("view", view),
+			)
 			return nil, err
 		}
 	}
@@ -181,7 +211,7 @@ func (m *assessmentBase) getDetail(ctx context.Context, operator *entity.Operato
 	return &result, nil
 }
 
-func (m *assessmentBase) getAssessmentContentOutcomeMap(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string, contentIDs []string) (map[string]map[string][]string, error) {
+func (m *assessmentBase) getAssessmentContentOutcomeMap(ctx context.Context, assessmentIDs []string, contentIDs []string) (map[string]map[string][]string, error) {
 	var assessmentContentOutcomes []*entity.AssessmentContentOutcome
 	cond := da.QueryAssessmentContentOutcomeConditions{
 		AssessmentIDs: entity.NullStrings{
@@ -193,7 +223,7 @@ func (m *assessmentBase) getAssessmentContentOutcomeMap(ctx context.Context, tx 
 			Valid:   true,
 		},
 	}
-	if err := da.GetAssessmentContentOutcomeDA().QueryTx(ctx, tx, &cond, &assessmentContentOutcomes); err != nil {
+	if err := da.GetAssessmentContentOutcomeDA().Query(ctx, &cond, &assessmentContentOutcomes); err != nil {
 		log.Error(ctx, "getAssessmentContentOutcomeMap: da.GetAssessmentContentOutcomeDA().QueryTx: get failed",
 			log.Err(err),
 			log.Any("cond", cond),
@@ -277,6 +307,309 @@ func (m *assessmentBase) checkEditPermission(ctx context.Context, operator *enti
 	return nil
 }
 
+func (m *assessmentBase) toViews(ctx context.Context, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error) {
+	if len(assessments) == 0 {
+		return nil, nil
+	}
+
+	var (
+		err           error
+		assessmentIDs []string
+		scheduleIDs   []string
+		schedules     []*entity.ScheduleVariable
+		scheduleMap   = map[string]*entity.ScheduleVariable{}
+	)
+	for _, a := range assessments {
+		assessmentIDs = append(assessmentIDs, a.ID)
+		scheduleIDs = append(scheduleIDs, a.ScheduleID)
+	}
+	if schedules, err = GetScheduleModel().GetVariableDataByIDs(ctx, operator, scheduleIDs, &entity.ScheduleInclude{Subject: true}); err != nil {
+		log.Error(ctx, "toViews: GetScheduleModel().GetVariableDataByIDs: get failed",
+			log.Err(err),
+			log.Strings("assessment_ids", assessmentIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	for _, s := range schedules {
+		scheduleMap[s.ID] = s
+	}
+
+	// fill program
+	var programNameMap map[string]string
+	if options.EnableProgram {
+		programIDs := make([]string, 0, len(schedules))
+		for _, s := range schedules {
+			programIDs = append(programIDs, s.ProgramID)
+		}
+		programNameMap, err = external.GetProgramServiceProvider().BatchGetNameMap(ctx, operator, programIDs)
+		if err != nil {
+			log.Error(ctx, "toViews: external.GetProgramServiceProvider().BatchGetNameMap: get failed",
+				log.Err(err),
+				log.Strings("assessment_ids", assessmentIDs),
+				log.Strings("program_ids", programIDs),
+				log.Any("operator", operator),
+			)
+			return nil, err
+		}
+	}
+
+	// fill teachers
+	var (
+		teacherNameMap        map[string]string
+		assessmentTeachersMap map[string][]*entity.AssessmentAttendance
+	)
+	if options.EnableTeachers {
+		var (
+			assessmentAttendances []*entity.AssessmentAttendance
+			teacherIDs            []string
+		)
+		assessmentTeachersMap = map[string][]*entity.AssessmentAttendance{}
+		if err := da.GetAssessmentAttendanceDA().Query(ctx, &da.QueryAssessmentAttendanceConditions{
+			AssessmentIDs: entity.NullStrings{
+				Strings: assessmentIDs,
+				Valid:   true,
+			},
+			Role: entity.NullAssessmentAttendanceRole{
+				Value: entity.AssessmentAttendanceRoleTeacher,
+				Valid: true,
+			},
+		}, &assessmentAttendances); err != nil {
+			log.Error(ctx, "toViews: da.GetAssessmentAttendanceDA().QueryTx: query failed",
+				log.Err(err),
+				log.Strings("assessment_ids", assessmentIDs),
+				log.Any("operator", operator),
+			)
+			return nil, err
+		}
+		sort.Sort(AssessmentAttendanceOrderByOrigin(assessmentAttendances))
+		for _, a := range assessmentAttendances {
+			teacherIDs = append(teacherIDs, a.AttendanceID)
+			assessmentTeachersMap[a.AssessmentID] = append(assessmentTeachersMap[a.AssessmentID], a)
+		}
+		if teacherNameMap, err = external.GetTeacherServiceProvider().BatchGetNameMap(ctx, operator, teacherIDs); err != nil {
+			log.Error(ctx, "toViews: external.GetTeacherServiceProvider().BatchGetNameMap: get failed",
+				log.Err(err),
+				log.Strings("teacher_ids", teacherIDs),
+				log.Strings("assessment_ids", assessmentIDs),
+				log.Any("operator", operator),
+			)
+			return nil, err
+		}
+	}
+
+	// fill students
+	var (
+		studentNameMap        map[string]string
+		assessmentStudentsMap map[string][]*entity.AssessmentAttendance
+	)
+	if options.EnableStudents {
+		var (
+			assessmentAttendances []*entity.AssessmentAttendance
+			studentIDs            []string
+		)
+		assessmentStudentsMap = map[string][]*entity.AssessmentAttendance{}
+		if err := da.GetAssessmentAttendanceDA().Query(ctx, &da.QueryAssessmentAttendanceConditions{
+			AssessmentIDs: entity.NullStrings{
+				Strings: assessmentIDs,
+				Valid:   true,
+			},
+			Role: entity.NullAssessmentAttendanceRole{
+				Value: entity.AssessmentAttendanceRoleStudent,
+				Valid: true,
+			},
+		}, &assessmentAttendances); err != nil {
+			log.Error(ctx, "toViews: da.GetAssessmentAttendanceDA().QueryTx: query failed",
+				log.Err(err),
+				log.Strings("assessment_ids", assessmentIDs),
+				log.Any("operator", operator),
+			)
+			return nil, err
+		}
+		sort.Sort(AssessmentAttendanceOrderByOrigin(assessmentAttendances))
+		for _, a := range assessmentAttendances {
+			if !options.CheckedStudents.Valid || options.CheckedStudents.Bool == a.Checked {
+				studentIDs = append(studentIDs, a.AttendanceID)
+				assessmentStudentsMap[a.AssessmentID] = append(assessmentStudentsMap[a.AssessmentID], a)
+			}
+		}
+		if studentNameMap, err = external.GetStudentServiceProvider().BatchGetNameMap(ctx, operator, studentIDs); err != nil {
+			log.Error(ctx, "toViews: external.GetStudentServiceProvider().BatchGetNameMap: get failed",
+				log.Err(err),
+				log.Strings("student_ids", studentIDs),
+				log.Strings("assessment_ids", assessmentIDs),
+				log.Any("operator", operator),
+			)
+			return nil, err
+		}
+	}
+
+	// fill class
+	var classNameMap map[string]string
+	if options.EnableClass {
+		var classIDs []string
+		for _, s := range schedules {
+			classIDs = append(classIDs, s.ClassID)
+		}
+		classNameMap, err = external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, classIDs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// fill lesson plan
+	var (
+		assessmentLessonPlanMap      map[string]*entity.AssessmentLessonPlan
+		assessmentLessonMaterialsMap map[string][]*entity.AssessmentLessonMaterial
+		sortedLessonMaterialIDsMap   map[string][]string
+	)
+	if options.EnableLessonPlan {
+		var contents []*entity.AssessmentContent
+		err := da.GetAssessmentContentDA().Query(ctx, &da.QueryAssessmentContentConditions{
+			AssessmentIDs: entity.NullStrings{
+				Strings: assessmentIDs,
+				Valid:   true,
+			},
+		}, &contents)
+		if err != nil {
+			log.Error(ctx, "convert to views: query assessment content failed",
+				log.Err(err),
+				log.Strings("assessment_ids", assessmentIDs),
+			)
+			return nil, err
+		}
+		assessmentLessonPlanMap = map[string]*entity.AssessmentLessonPlan{}
+		assessmentLessonMaterialsMap = map[string][]*entity.AssessmentLessonMaterial{}
+
+		var lessonMaterialIDs []string
+		for _, c := range contents {
+			switch c.ContentType {
+			case entity.ContentTypeMaterial:
+				lessonMaterialIDs = append(lessonMaterialIDs, c.ContentID)
+			}
+		}
+		lessonMaterialSourceMap, err := m.batchGetLessonMaterialDataMap(ctx, operator, lessonMaterialIDs)
+		if err != nil {
+			log.Error(ctx, "to views: get lesson material source map failed",
+				log.Err(err),
+				log.Strings("lesson_material_ids", lessonMaterialIDs),
+			)
+			return nil, err
+		}
+
+		var lessonPlanIDs []string
+		for _, c := range contents {
+			switch c.ContentType {
+			case entity.ContentTypePlan:
+				lessonPlanIDs = append(lessonPlanIDs, c.ContentID)
+				assessmentLessonPlanMap[c.AssessmentID] = &entity.AssessmentLessonPlan{
+					ID:   c.ContentID,
+					Name: c.ContentName,
+				}
+			case entity.ContentTypeMaterial:
+				data := lessonMaterialSourceMap[c.ContentID]
+				if data == nil {
+					data = &AssessmentMaterialData{}
+				}
+				assessmentLessonMaterialsMap[c.AssessmentID] = append(assessmentLessonMaterialsMap[c.AssessmentID], &entity.AssessmentLessonMaterial{
+					ID:       c.ContentID,
+					Name:     c.ContentName,
+					FileType: data.FileType,
+					Comment:  c.ContentComment,
+					Source:   string(data.Source),
+					Checked:  c.Checked,
+					LatestID: data.LatestID,
+				})
+			}
+		}
+
+		sortedLessonMaterialIDsMap, err = m.getSortedLessonMaterialIDsMap(ctx, dbo.MustGetDB(ctx), operator, lessonPlanIDs)
+		if err != nil {
+			log.Error(ctx, "to assessment views: get sorted lesson material ids map failed",
+				log.Err(err),
+				log.Strings("lesson_plan_ids", lessonPlanIDs),
+			)
+			return nil, err
+		}
+		log.Debug(ctx, "to assessment views: get sorted lesson material ids map",
+			log.Strings("lesson_plan_ids", lessonPlanIDs),
+			log.Any("sorted_lesson_material_ids_map", sortedLessonMaterialIDsMap),
+		)
+	}
+
+	var result []*entity.AssessmentView
+	for _, a := range assessments {
+		var (
+			v = entity.AssessmentView{Assessment: a}
+			s = scheduleMap[a.ScheduleID]
+		)
+		if s == nil {
+			log.Warn(ctx, "List: not found schedule", log.Any("assessment", a))
+			continue
+		}
+		v.Schedule = s.Schedule
+		v.RoomID = s.RoomID
+		if options.EnableProgram {
+			v.Program = entity.AssessmentProgram{
+				ID:   s.ProgramID,
+				Name: programNameMap[s.ProgramID],
+			}
+		}
+		if options.EnableSubjects {
+			for _, subject := range s.Subjects {
+				v.Subjects = append(v.Subjects, &entity.AssessmentSubject{
+					ID:   subject.ID,
+					Name: subject.Name,
+				})
+			}
+		}
+		if options.EnableTeachers {
+			for _, t := range assessmentTeachersMap[a.ID] {
+				v.Teachers = append(v.Teachers, &entity.AssessmentTeacher{
+					ID:   t.AttendanceID,
+					Name: teacherNameMap[t.AttendanceID],
+				})
+			}
+		}
+		if options.EnableStudents {
+			for _, s := range assessmentStudentsMap[a.ID] {
+				v.Students = append(v.Students, &entity.AssessmentStudent{
+					ID:      s.AttendanceID,
+					Name:    studentNameMap[s.AttendanceID],
+					Checked: s.Checked,
+				})
+			}
+		}
+		if options.EnableClass {
+			v.Class = entity.AssessmentClass{
+				ID:   s.ClassID,
+				Name: classNameMap[s.ClassID],
+			}
+		}
+		if options.EnableLessonPlan {
+			lp := assessmentLessonPlanMap[a.ID]
+			v.LessonPlan = lp
+			var sortLessonMaterialIDs []string
+			if lp != nil {
+				sortLessonMaterialIDs = sortedLessonMaterialIDsMap[lp.ID]
+			}
+			lms := assessmentLessonMaterialsMap[a.ID]
+			m.sortedByLessonMaterialIDs(lms, sortLessonMaterialIDs)
+			v.LessonMaterials = lms
+		}
+		result = append(result, &v)
+	}
+
+	log.Debug(ctx, "convert assessments to views",
+		log.Any("result", result),
+		log.Any("operator", operator),
+		log.Any("assessments", assessments),
+		log.Any("options", options),
+	)
+
+	return result, nil
+}
+
 func (m *assessmentBase) batchGetLatestLessonPlanMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) (map[string]*entity.AssessmentExternalLessonPlan, error) {
 	lessonPlanIDs = utils.SliceDeduplication(lessonPlanIDs)
 
@@ -354,22 +687,47 @@ func (m *assessmentBase) batchGetLatestLessonPlanMap(ctx context.Context, tx *db
 	return result, nil
 }
 
-func (m *assessmentBase) batchGetLessonMaterialDataMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*MaterialData, error) {
+type AssessmentMaterialData struct {
+	LatestID string
+	FileType entity.FileType
+	Source   SourceID
+}
+
+func (m *assessmentBase) batchGetLessonMaterialDataMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*AssessmentMaterialData, error) {
+	log.Debug(ctx, "assessmentBase.batchGetLessonMaterialDataMap", log.Strings("contentIDs", ids))
 	lessonMaterials, err := GetContentModel().GetContentByIDList(ctx, dbo.MustGetDB(ctx), ids, operator)
 	if err != nil {
+		log.Error(ctx, "get lesson material source map: get contents faield",
+			log.Err(err),
+			log.Strings("ids", ids),
+		)
 		return nil, err
 	}
-	result := make(map[string]*MaterialData, len(lessonMaterials))
+	result := make(map[string]*AssessmentMaterialData, len(lessonMaterials))
 	for _, lm := range lessonMaterials {
 		data, err := GetContentModel().CreateContentData(ctx, lm.ContentType, lm.Data)
 		if err != nil {
+			log.Error(ctx, "get lesson material source map: create content data failed",
+				log.Err(err),
+				log.Any("content", lm),
+			)
 			return nil, err
 		}
 		switch v := data.(type) {
 		case *MaterialData:
-			result[lm.ID] = v
+			item := &AssessmentMaterialData{
+				LatestID: lm.LatestID,
+				FileType: v.FileType,
+				Source:   v.Source,
+			}
+			if item.LatestID == "" {
+				item.LatestID = lm.ID
+			}
+			result[lm.ID] = item
 		}
 	}
+
+	log.Debug(ctx, "assessmentBase.batchGetLessonMaterialDataMap", log.Any("result", result))
 	return result, nil
 }
 
@@ -1243,12 +1601,16 @@ func (m *assessmentBase) updateStudentViewItems(ctx context.Context, tx *dbo.DBC
 	return nil
 }
 
-func (m *assessmentBase) getSortedLessonMaterialIDsMap(ctx context.Context, operator *entity.Operator, lessonPlanIDs []string) (map[string][]string, error) {
+func (m *assessmentBase) getSortedLessonMaterialIDsMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) (map[string][]string, error) {
 	if len(lessonPlanIDs) == 0 {
 		return map[string][]string{}, nil
 	}
-	contentMap, err := GetContentModel().GetContentsSubContentsMapByIDList(ctx, dbo.MustGetDB(ctx), lessonPlanIDs, operator)
+	contentMap, err := GetContentModel().GetContentsSubContentsMapByIDList(ctx, tx, lessonPlanIDs, operator)
 	if err != nil {
+		log.Error(ctx, "get sorted content ids: get content map failed",
+			log.Err(err),
+			log.Strings("ids", lessonPlanIDs),
+		)
 		return nil, err
 	}
 	r := make(map[string][]string, len(contentMap))
@@ -1451,273 +1813,6 @@ func (m *assessmentBase) batchGetOutcomeContentTypesMap(ctx context.Context, ass
 			result[outcomeID] = finalContentTypes
 		}
 	}
-
-	return result, nil
-}
-
-func (m *assessmentBase) toViews(ctx context.Context, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error) {
-	if len(assessments) == 0 {
-		return nil, nil
-	}
-
-	var (
-		err           error
-		assessmentIDs []string
-		scheduleIDs   []string
-		schedules     []*entity.ScheduleVariable
-		scheduleMap   = map[string]*entity.ScheduleVariable{}
-	)
-	for _, a := range assessments {
-		assessmentIDs = append(assessmentIDs, a.ID)
-		scheduleIDs = append(scheduleIDs, a.ScheduleID)
-	}
-	if schedules, err = GetScheduleModel().GetVariableDataByIDs(ctx, operator, scheduleIDs, &entity.ScheduleInclude{Subject: true}); err != nil {
-		return nil, err
-	}
-	for _, s := range schedules {
-		scheduleMap[s.ID] = s
-	}
-
-	// fill program
-	var programNameMap map[string]string
-	if options.EnableProgram {
-		programIDs := make([]string, 0, len(schedules))
-		for _, s := range schedules {
-			programIDs = append(programIDs, s.ProgramID)
-		}
-		programNameMap, err = external.GetProgramServiceProvider().BatchGetNameMap(ctx, operator, programIDs)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// fill teachers
-	var (
-		teacherNameMap        map[string]string
-		assessmentTeachersMap map[string][]*entity.AssessmentAttendance
-	)
-	if options.EnableTeachers {
-		var (
-			assessmentAttendances []*entity.AssessmentAttendance
-			teacherIDs            []string
-		)
-		assessmentTeachersMap = map[string][]*entity.AssessmentAttendance{}
-		if err := da.GetAssessmentAttendanceDA().Query(ctx, &da.QueryAssessmentAttendanceConditions{
-			AssessmentIDs: entity.NullStrings{
-				Strings: assessmentIDs,
-				Valid:   true,
-			},
-			Role: entity.NullAssessmentAttendanceRole{
-				Value: entity.AssessmentAttendanceRoleTeacher,
-				Valid: true,
-			},
-		}, &assessmentAttendances); err != nil {
-			log.Error(ctx, "toViews: da.GetAssessmentAttendanceDA().QueryTx: query failed",
-				log.Err(err),
-				log.Strings("assessment_ids", assessmentIDs),
-				log.Any("operator", operator),
-			)
-			return nil, err
-		}
-		sort.Sort(AssessmentAttendanceOrderByOrigin(assessmentAttendances))
-		for _, a := range assessmentAttendances {
-			teacherIDs = append(teacherIDs, a.AttendanceID)
-			assessmentTeachersMap[a.AssessmentID] = append(assessmentTeachersMap[a.AssessmentID], a)
-		}
-		if teacherNameMap, err = external.GetTeacherServiceProvider().BatchGetNameMap(ctx, operator, teacherIDs); err != nil {
-			return nil, err
-		}
-	}
-
-	// fill students
-	var (
-		studentNameMap        map[string]string
-		assessmentStudentsMap map[string][]*entity.AssessmentAttendance
-	)
-	if options.EnableStudents {
-		var (
-			assessmentAttendances []*entity.AssessmentAttendance
-			studentIDs            []string
-		)
-		assessmentStudentsMap = map[string][]*entity.AssessmentAttendance{}
-		if err := da.GetAssessmentAttendanceDA().Query(ctx, &da.QueryAssessmentAttendanceConditions{
-			AssessmentIDs: entity.NullStrings{
-				Strings: assessmentIDs,
-				Valid:   true,
-			},
-			Role: entity.NullAssessmentAttendanceRole{
-				Value: entity.AssessmentAttendanceRoleStudent,
-				Valid: true,
-			},
-		}, &assessmentAttendances); err != nil {
-			log.Error(ctx, "toViews: da.GetAssessmentAttendanceDA().QueryTx: query failed",
-				log.Err(err),
-				log.Strings("assessment_ids", assessmentIDs),
-				log.Any("operator", operator),
-			)
-			return nil, err
-		}
-		sort.Sort(AssessmentAttendanceOrderByOrigin(assessmentAttendances))
-		for _, a := range assessmentAttendances {
-			if !options.CheckedStudents.Valid || options.CheckedStudents.Bool == a.Checked {
-				studentIDs = append(studentIDs, a.AttendanceID)
-				assessmentStudentsMap[a.AssessmentID] = append(assessmentStudentsMap[a.AssessmentID], a)
-			}
-		}
-		if studentNameMap, err = external.GetStudentServiceProvider().BatchGetNameMap(ctx, operator, studentIDs); err != nil {
-			return nil, err
-		}
-	}
-
-	// fill class
-	var classNameMap map[string]string
-	if options.EnableClass {
-		var classIDs []string
-		for _, s := range schedules {
-			classIDs = append(classIDs, s.ClassID)
-		}
-		classNameMap, err = external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, classIDs)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// fill lesson plan
-	var (
-		assessmentLessonPlanMap      map[string]*entity.AssessmentLessonPlan
-		assessmentLessonMaterialsMap map[string][]*entity.AssessmentLessonMaterial
-		sortedLessonMaterialIDsMap   map[string][]string
-	)
-	if options.EnableLessonPlan {
-		var contents []*entity.AssessmentContent
-		err := da.GetAssessmentContentDA().Query(ctx, &da.QueryAssessmentContentConditions{
-			AssessmentIDs: entity.NullStrings{
-				Strings: assessmentIDs,
-				Valid:   true,
-			},
-		}, &contents)
-		if err != nil {
-			log.Error(ctx, "convert to views: query assessment content failed",
-				log.Err(err),
-				log.Strings("assessment_ids", assessmentIDs),
-			)
-			return nil, err
-		}
-		assessmentLessonPlanMap = map[string]*entity.AssessmentLessonPlan{}
-		assessmentLessonMaterialsMap = map[string][]*entity.AssessmentLessonMaterial{}
-
-		var lessonMaterialIDs []string
-		for _, c := range contents {
-			switch c.ContentType {
-			case entity.ContentTypeMaterial:
-				lessonMaterialIDs = append(lessonMaterialIDs, c.ContentID)
-			}
-		}
-		lessonMaterialSourceMap, err := m.batchGetLessonMaterialDataMap(ctx, operator, lessonMaterialIDs)
-		if err != nil {
-			return nil, err
-		}
-
-		var lessonPlanIDs []string
-		for _, c := range contents {
-			switch c.ContentType {
-			case entity.ContentTypePlan:
-				lessonPlanIDs = append(lessonPlanIDs, c.ContentID)
-				assessmentLessonPlanMap[c.AssessmentID] = &entity.AssessmentLessonPlan{
-					ID:   c.ContentID,
-					Name: c.ContentName,
-				}
-			case entity.ContentTypeMaterial:
-				data := lessonMaterialSourceMap[c.ContentID]
-				if data == nil {
-					data = &MaterialData{}
-				}
-				assessmentLessonMaterialsMap[c.AssessmentID] = append(assessmentLessonMaterialsMap[c.AssessmentID], &entity.AssessmentLessonMaterial{
-					ID:       c.ContentID,
-					Name:     c.ContentName,
-					FileType: data.FileType,
-					Comment:  c.ContentComment,
-					Source:   string(data.Source),
-					Checked:  c.Checked,
-				})
-			}
-		}
-
-		sortedLessonMaterialIDsMap, err = m.getSortedLessonMaterialIDsMap(ctx, operator, lessonPlanIDs)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	var result []*entity.AssessmentView
-	for _, a := range assessments {
-		var (
-			v = entity.AssessmentView{Assessment: a}
-			s = scheduleMap[a.ScheduleID]
-		)
-		if s == nil {
-			log.Warn(ctx, "List: not found schedule", log.Any("assessment", a))
-			continue
-		}
-		v.Schedule = s.Schedule
-		v.RoomID = s.RoomID
-		if options.EnableProgram {
-			v.Program = entity.AssessmentProgram{
-				ID:   s.ProgramID,
-				Name: programNameMap[s.ProgramID],
-			}
-		}
-		if options.EnableSubjects {
-			for _, subject := range s.Subjects {
-				v.Subjects = append(v.Subjects, &entity.AssessmentSubject{
-					ID:   subject.ID,
-					Name: subject.Name,
-				})
-			}
-		}
-		if options.EnableTeachers {
-			for _, t := range assessmentTeachersMap[a.ID] {
-				v.Teachers = append(v.Teachers, &entity.AssessmentTeacher{
-					ID:   t.AttendanceID,
-					Name: teacherNameMap[t.AttendanceID],
-				})
-			}
-		}
-		if options.EnableStudents {
-			for _, s := range assessmentStudentsMap[a.ID] {
-				v.Students = append(v.Students, &entity.AssessmentStudent{
-					ID:      s.AttendanceID,
-					Name:    studentNameMap[s.AttendanceID],
-					Checked: s.Checked,
-				})
-			}
-		}
-		if options.EnableClass {
-			v.Class = entity.AssessmentClass{
-				ID:   s.ClassID,
-				Name: classNameMap[s.ClassID],
-			}
-		}
-		if options.EnableLessonPlan {
-			lp := assessmentLessonPlanMap[a.ID]
-			v.LessonPlan = lp
-			var sortLessonMaterialIDs []string
-			if lp != nil {
-				sortLessonMaterialIDs = sortedLessonMaterialIDsMap[lp.ID]
-			}
-			lms := assessmentLessonMaterialsMap[a.ID]
-			m.sortedByLessonMaterialIDs(lms, sortLessonMaterialIDs)
-			v.LessonMaterials = lms
-		}
-		result = append(result, &v)
-	}
-
-	log.Debug(ctx, "convert assessments to views",
-		log.Any("result", result),
-		log.Any("operator", operator),
-		log.Any("assessments", assessments),
-		log.Any("options", options),
-	)
 
 	return result, nil
 }

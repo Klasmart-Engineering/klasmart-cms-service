@@ -172,6 +172,7 @@ func (c *ContentModel) BatchConvertContentObj(ctx context.Context, tx *dbo.DBCon
 			Version:            obj.Version,
 			CreatedAt:          obj.CreateAt,
 			UpdatedAt:          obj.UpdateAt,
+			LatestID:           obj.LatestID,
 		}
 		res = append(res, cm)
 	}

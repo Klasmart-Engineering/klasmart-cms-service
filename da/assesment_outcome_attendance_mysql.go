@@ -12,7 +12,7 @@ import (
 
 type IOutcomeAttendanceDA interface {
 	dbo.DataAccesser
-	BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) ([]*entity.OutcomeAttendance, error)
+	BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Context, assessmentID string, outcomeIDs []string) ([]*entity.OutcomeAttendance, error)
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.OutcomeAttendance) error
 	BatchDeleteByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) error
 	BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.OutcomeAttendance, error)
@@ -35,7 +35,8 @@ type outcomeAttendanceDA struct {
 	dbo.BaseDA
 }
 
-func (d *outcomeAttendanceDA) BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) ([]*entity.OutcomeAttendance, error) {
+func (d *outcomeAttendanceDA) BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Context, assessmentID string, outcomeIDs []string) ([]*entity.OutcomeAttendance, error) {
+	tx:=dbo.MustGetDB(ctx)
 	tx.ResetCondition()
 
 	var items []*entity.OutcomeAttendance

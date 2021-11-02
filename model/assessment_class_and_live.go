@@ -218,7 +218,7 @@ func (m *classAndLiveAssessmentModel) PrepareAddArgs(ctx context.Context, tx *db
 
 	// check class type
 	if schedule.ClassType != entity.ScheduleClassTypeOnlineClass && schedule.ClassType != entity.ScheduleClassTypeOfflineClass {
-		log.Error(ctx, "add class and live assessment: invalid schedule class type",
+		log.Warn(ctx, "add class and live assessment: invalid schedule class type",
 			log.String("class_type", string(schedule.ClassType)),
 			log.Any("schedule", schedule),
 			log.Any("args", args),

@@ -46,11 +46,16 @@ func (ac *AuthedContentDA) BatchAddAuthedContent(ctx context.Context, tx *dbo.DB
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		models = append(models, entity.AuthedContentRecord{ID: item.ID, ContentID: item.ContentID,
-			FromFolderID: item.FromFolderID, Creator: item.Creator, CreateAt: createAt,
-			Duration: item.Duration})
+		models = append(models, entity.AuthedContentRecord{
+			ID:           item.ID,
+			ContentID:    item.ContentID,
+			OrgID:        item.OrgID,
+			FromFolderID: item.FromFolderID,
+			Creator:      item.Creator,
+			CreateAt:     createAt,
+			Duration:     item.Duration})
 	}
-	_, err := ac.s.Insert(ctx, &models)
+	_, err := ac.s.InsertTx(ctx, tx, &models)
 	if err != nil {
 		log.Error(ctx, "batch insert cms_authed_contents: batch insert failed",
 			log.Err(err),

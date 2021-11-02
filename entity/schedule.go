@@ -206,11 +206,13 @@ const (
 	ScheduleClassTypeOnlineClass  ScheduleClassType = "OnlineClass"
 	ScheduleClassTypeOfflineClass ScheduleClassType = "OfflineClass"
 	ScheduleClassTypeHomework     ScheduleClassType = "Homework"
+	ScheduleClassTypeTask         ScheduleClassType = "Task"
+	ScheduleClassTypeSubject      ScheduleClassType = "Subject"
 )
 
 func (s ScheduleClassType) Valid() bool {
 	switch s {
-	case ScheduleClassTypeOnlineClass, ScheduleClassTypeOfflineClass, ScheduleClassTypeHomework:
+	case ScheduleClassTypeOnlineClass, ScheduleClassTypeOfflineClass, ScheduleClassTypeHomework, ScheduleClassTypeTask:
 		return true
 	default:
 		return false
@@ -225,6 +227,8 @@ func (s ScheduleClassType) ToLabel() ScheduleClassTypeLabel {
 		return ScheduleClassTypeLabelOfflineClass
 	case ScheduleClassTypeHomework:
 		return ScheduleClassTypeLabelHomework
+	case ScheduleClassTypeTask:
+		return ScheduleClassTypeLabelTask
 	}
 	return ScheduleClassTypeLabelInvalid
 }
@@ -246,6 +250,7 @@ const (
 	ScheduleClassTypeLabelOnlineClass  ScheduleClassTypeLabel = "schedule_detail_online_class"
 	ScheduleClassTypeLabelOfflineClass ScheduleClassTypeLabel = "schedule_detail_offline_class"
 	ScheduleClassTypeLabelHomework     ScheduleClassTypeLabel = "schedule_detail_homework"
+	ScheduleClassTypeLabelTask         ScheduleClassTypeLabel = "schedule_detail_task"
 )
 
 func (s ScheduleClassTypeLabel) String() string {
@@ -255,6 +260,7 @@ func (s ScheduleClassTypeLabel) String() string {
 //Live (online class)
 //Class (offline class)
 //Study (homework)
+//Task (task)
 func (s ScheduleClassType) ConvertToLiveClassType() LiveClassType {
 	switch s {
 	case ScheduleClassTypeOnlineClass:
@@ -263,6 +269,8 @@ func (s ScheduleClassType) ConvertToLiveClassType() LiveClassType {
 		return LiveClassTypeClass
 	case ScheduleClassTypeHomework:
 		return LiveClassTypeStudy
+	case ScheduleClassTypeTask:
+		return LiveClassTypeTask
 	default:
 		return LiveClassTypeInvalid
 	}
@@ -303,6 +311,14 @@ type Schedule struct {
 	DeleteAt        int64             `gorm:"column:delete_at;type:bigint" json:"delete_at"`
 }
 
+func (s *Schedule) ToScheduleSimplified() *ScheduleSimplified {
+	return &ScheduleSimplified{
+		ID:           s.ID,
+		LessonPlanID: s.LessonPlanID,
+		OrgID:        s.OrgID,
+	}
+}
+
 type ScheduleStatus string
 
 func (s ScheduleStatus) Valid() bool {
@@ -317,7 +333,7 @@ func (s ScheduleStatus) Valid() bool {
 func (s ScheduleStatus) GetScheduleStatus(input ScheduleStatusInput) ScheduleStatus {
 	status := s
 	switch input.ClassType {
-	case ScheduleClassTypeHomework:
+	case ScheduleClassTypeHomework, ScheduleClassTypeTask:
 		if input.DueAt > 0 {
 			endAt := utils.TodayEndByTimeStamp(input.DueAt, time.Local).Unix()
 			if endAt < time.Now().Unix() {
@@ -366,7 +382,7 @@ type ScheduleAddView struct {
 	EndAt                  int64             `json:"end_at"`
 	SubjectIDs             []string          `json:"subject_ids"`
 	ProgramID              string            `json:"program_id"`
-	ClassType              ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework"`
+	ClassType              ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
 	DueAt                  int64             `json:"due_at"`
 	Description            string            `json:"description"`
 	Attachment             ScheduleShortInfo `json:"attachment"`
@@ -450,7 +466,7 @@ type ScheduleListView struct {
 	EndAt              int64             `json:"end_at"`
 	IsRepeat           bool              `json:"is_repeat"`
 	LessonPlanID       string            `json:"lesson_plan_id"`
-	ClassType          ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework"`
+	ClassType          ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
 	ClassTypeLabel     ScheduleShortInfo `json:"class_type_label"`
 	Status             ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
 	ClassID            string            `json:"class_id"`
@@ -474,7 +490,7 @@ type ScheduleDetailsView struct {
 	OrgID                string                        `json:"org_id"`
 	StartAt              int64                         `json:"start_at"`
 	EndAt                int64                         `json:"end_at"`
-	ClassType            ScheduleClassType             `json:"class_type" enums:"OnlineClass,OfflineClass,Homework"`
+	ClassType            ScheduleClassType             `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
 	ClassTypeLabel       ScheduleShortInfo             `json:"class_type_label"`
 	DueAt                int64                         `json:"due_at"`
 	Description          string                        `json:"description"`
@@ -544,8 +560,15 @@ type ScheduleSearchView struct {
 	ID      string `json:"id"`
 	StartAt int64  `json:"start_at"`
 	EndAt   int64  `json:"end_at"`
+	DueAt   int64  `json:"due_at"`
 	Title   string `json:"title"`
 	ScheduleBasic
+}
+
+type ScheduleSimplified struct {
+	ID           string `json:"id"`
+	LessonPlanID string `json:"lesson_plan_id"`
+	OrgID        string `json:"org_id"`
 }
 
 type ScheduleShortInfo struct {
@@ -619,6 +642,11 @@ func (t ScheduleEditType) Valid() bool {
 type SchedulePageView struct {
 	Total int                   `json:"total"`
 	Data  []*ScheduleSearchView `json:"data"`
+}
+
+type ScheduleSimplifiedPageView struct {
+	Total int                   `json:"total"`
+	Data  []*ScheduleSimplified `json:"data"`
 }
 
 type ScheduleIDsCondition struct {
@@ -826,7 +854,7 @@ type ScheduleTimeView struct {
 	StartAt   int64             `json:"start_at"`
 	EndAt     int64             `json:"end_at"`
 	DueAt     int64             `json:"due_at"`
-	ClassType ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework"`
+	ClassType ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
 	Status    ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
 	ClassID   string            `json:"class_id"`
 }

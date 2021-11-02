@@ -28,13 +28,19 @@ func NewServer() *Server {
 
 	log.Debug(context.TODO(), "init gin success")
 
-	// New Relic middle should insert in the very beginning as the new relic doc says.
-	// And newRelicMiddlewareRectifier retrieve the txn applied by previous new relic middleware,
-	// and then apply this txn to context of c.Request. Why do this is because there are a lot of
-	// code in this repo use `ctx := c.Request.Context()`, which cause to the txn be lost,
-	// (txn was applied to c, not context on c.Request). So we also need to apply txn to the
-	// context of c.Request, the second middleware: newRelicMiddlewareRectifier do this.
-	server.engine.Use(server.getNewRelicMiddleware(), server.newRelicMiddlewareRectifier())
+	if config.Get().NewRelic.Enable() {
+		// New Relic middle should insert in the very beginning as the new relic doc says.
+		// And newRelicMiddlewareRectifier retrieve the txn applied by previous new relic middleware,
+		// and then apply this txn to context of c.Request. Why do this is because there are a lot of
+		// code in this repo use `ctx := c.Request.Context()`, which cause to the txn be lost,
+		// (txn was applied to c, not context on c.Request). So we also need to apply txn to the
+		// context of c.Request, the second middleware: newRelicMiddlewareRectifier do this.
+		server.engine.Use(server.getNewRelicMiddleware(), server.newRelicMiddlewareRectifier())
+		log.Info(context.TODO(), "new relic plugin enabled")
+	} else {
+		log.Warn(context.TODO(), "new relic plugin disabled because the necessary environment variables are missing!")
+	}
+
 	server.engine.Use(server.logger(), server.recovery(), server.contextStopwatch())
 
 	// CORS

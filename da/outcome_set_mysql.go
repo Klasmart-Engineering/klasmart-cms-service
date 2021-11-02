@@ -220,7 +220,7 @@ func (o SetSQLDA) BindOutcomeSet(ctx context.Context, op *entity.Operator, tx *d
 		models = append(models, entity.OutcomeSet{OutcomeID: outcomeSets[i].OutcomeID,
 			SetID: outcomeSets[i].SetID, CreateAt: now + int64(i), UpdateAt: now + int64(i)})
 	}
-	_, err := o.Insert(ctx, &models)
+	_, err := o.InsertTx(ctx, tx, &models)
 	if err != nil {
 		log.Error(ctx, "BindOutcomeSet: failed",
 			log.Err(err),

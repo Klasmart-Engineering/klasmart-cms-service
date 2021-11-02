@@ -31,9 +31,10 @@ type ClassServiceProvider interface {
 }
 
 type Class struct {
-	ID     string   `json:"id"`
-	Name   string   `json:"name"`
-	Status APStatus `json:"status"`
+	ID       string   `json:"id"`
+	Name     string   `json:"name"`
+	Status   APStatus `json:"status"`
+	JoinType JoinType `json:"join_type"`
 }
 
 type NullableClass struct {
@@ -277,6 +278,13 @@ func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Oper
 					log.Error(ctx, "classes not found", log.Strings("pageUserIDs", pageUserIDs), log.String("id", userID))
 					cerr <- constant.ErrRecordNotFound
 					return
+				}
+
+				for _, c := range query.ClassesTeaching {
+					c.JoinType = IsTeaching
+				}
+				for _, c := range query.ClassesStudying {
+					c.JoinType = IsStudy
 				}
 
 				allClasses := append(query.ClassesTeaching, query.ClassesStudying...)

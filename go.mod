@@ -19,8 +19,6 @@ require (
 	github.com/jinzhu/gorm v1.9.16
 	github.com/kr/text v0.2.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
-	github.com/lib/pq v1.5.2 // indirect
-	github.com/mattn/go-sqlite3 v2.0.1+incompatible // indirect
 	github.com/newrelic/go-agent v3.15.0+incompatible
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/onsi/ginkgo v1.14.0 // indirect
@@ -39,7 +37,7 @@ require (
 	gitlab.badanamu.com.cn/calmisland/dbo v0.3.0
 	gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13
 	gitlab.badanamu.com.cn/calmisland/imq v0.2.18
-	gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.12
+	gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.13
 	gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20210813055601-f0a5d22461a0
 	go.etcd.io/etcd v3.3.25+incompatible // indirect
 	go.mongodb.org/mongo-driver v1.7.2

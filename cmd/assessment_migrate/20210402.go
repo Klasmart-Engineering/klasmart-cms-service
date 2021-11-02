@@ -53,7 +53,7 @@ func handleTeacherIDs(ctx context.Context, tx *dbo.DBContext) error {
 			}
 		}
 
-		_, err := dbo.BaseDA{}.Insert(ctx, &models)
+		_, err := dbo.BaseDA{}.InsertTx(ctx, tx, &models)
 		if err != nil {
 			return err
 		}
