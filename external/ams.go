@@ -74,7 +74,7 @@ func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorin
 
 var (
 	amsServices     AmsServices
-	amsServicesOnce = sync.Once{}
+	amsServicesOnce sync.Once
 )
 
 type AmsServices struct {
