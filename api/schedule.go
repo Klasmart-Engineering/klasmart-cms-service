@@ -1358,9 +1358,9 @@ func (s *Server) postScheduledDates(c *gin.Context) {
 // @Description get schedule time view list without relation info
 // @Accept json
 // @Produce json
-// @Param queryData body entity.ScheduleTimeViewQuery true "schedule time view data to query"
+// @Param queryData body entity.ScheduleTimeViewListRequest true "schedule time view data to query"
 // @Tags schedule
-// @Success 200 {object} entity.ScheduleTimeView
+// @Success 200 {object} entity.ScheduleTimeViewListResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -1369,20 +1369,23 @@ func (s *Server) getScheduleTimeViewList(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
 
-	data := new(entity.ScheduleTimeViewQuery)
-	if err := c.ShouldBind(data); err != nil {
-		log.Error(ctx, "getScheduleList: should bind body failed", log.Err(err))
+	requestBody := new(entity.ScheduleTimeViewListRequest)
+	if err := c.ShouldBindJSON(requestBody); err != nil {
+		log.Error(ctx, "c.ShouldBindJSON error", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
-	loc := utils.GetTimeLocationByOffset(data.TimeZoneOffset)
-	log.Info(ctx, "getScheduleList: time_zone_offset", log.Any("data", data), log.Any("loc", loc))
+	loc := utils.GetTimeLocationByOffset(requestBody.TimeZoneOffset)
+	log.Debug(ctx, "utils.GetTimeLocationByOffset", log.Any("loc", loc), log.Any("TimeZoneOffset", requestBody.TimeZoneOffset))
 
-	result, err := model.GetScheduleModel().QueryScheduleTimeView(ctx, data, op, loc)
+	total, result, err := model.GetScheduleModel().QueryScheduleTimeView(ctx, requestBody, op, loc)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, result)
+		c.JSON(http.StatusOK, &entity.ScheduleTimeViewListResponse{
+			Total: total,
+			Data:  result,
+		})
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
 	case constant.ErrInvalidArgs:

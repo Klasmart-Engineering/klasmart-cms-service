@@ -66,7 +66,7 @@ type IScheduleModel interface {
 	QueryScheduledDates(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]string, error)
 	// without permission check, internal function call
 	QueryUnsafe(ctx context.Context, condition *entity.ScheduleQueryCondition) ([]*entity.Schedule, error)
-	QueryScheduleTimeView(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]*entity.ScheduleTimeView, error)
+	QueryScheduleTimeView(ctx context.Context, query *entity.ScheduleTimeViewListRequest, op *entity.Operator, loc *time.Location) (int, []*entity.ScheduleTimeView, error)
 
 	QueryByConditionInternal(ctx context.Context, condition *da.ScheduleCondition) (int, []*entity.ScheduleSimplified, error)
 }
@@ -3339,32 +3339,59 @@ func (s *scheduleModel) QueryUnsafe(ctx context.Context, condition *entity.Sched
 	return scheduleList, nil
 }
 
-func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]*entity.ScheduleTimeView, error) {
-	condition, err := s.PrepareScheduleTimeViewCondition(ctx, query, op, loc)
+func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity.ScheduleTimeViewListRequest, op *entity.Operator, loc *time.Location) (int, []*entity.ScheduleTimeView, error) {
+	condition, err := s.PrepareScheduleTimeViewCondition(ctx, &entity.ScheduleTimeViewQuery{
+		ViewType:       query.ViewType,
+		TimeAt:         query.TimeAt,
+		TimeZoneOffset: query.TimeZoneOffset,
+		SchoolIDs:      query.SchoolIDs,
+		TeacherIDs:     query.TeacherIDs,
+		ClassIDs:       query.ClassIDs,
+		SubjectIDs:     query.SubjectIDs,
+		ProgramIDs:     query.ProgramIDs,
+		ClassTypes:     query.ClassTypes,
+		StartAtGe:      query.StartAtGe,
+		EndAtLe:        query.EndAtLe,
+		Anytime:        query.Anytime,
+		OrderBy:        query.OrderBy,
+	}, op, loc)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
+	}
+
+	// pagination
+	if query.PageSize > 0 && query.Page > 0 {
+		condition.Pager = dbo.Pager{
+			Page:     query.Page,
+			PageSize: query.PageSize,
+		}
 	}
 
 	var scheduleList []*entity.Schedule
-	err = da.GetScheduleDA().Query(ctx, condition, &scheduleList)
+	total, err := da.GetScheduleDA().Page(ctx, condition, &scheduleList)
 	if err != nil {
-		log.Error(ctx, "da.GetScheduleDA().Query error",
+		log.Error(ctx, "da.GetScheduleDA().Page error",
 			log.Err(err),
 			log.Any("condition", condition))
-		return nil, err
+		return 0, nil, err
 	}
 
 	result := make([]*entity.ScheduleTimeView, len(scheduleList))
+	var homefunStudyScheduleIDs []string
+	var notHomefunStudyScheduleIDs []string
 	for i, v := range scheduleList {
 		result[i] = &entity.ScheduleTimeView{
-			ID:        v.ID,
-			Title:     v.Title,
-			StartAt:   v.StartAt,
-			EndAt:     v.EndAt,
-			DueAt:     v.DueAt,
-			ClassType: v.ClassType,
-			Status:    v.Status,
-			ClassID:   v.ClassID,
+			ID:           v.ID,
+			Title:        v.Title,
+			StartAt:      v.StartAt,
+			EndAt:        v.EndAt,
+			DueAt:        v.DueAt,
+			ClassType:    v.ClassType,
+			Status:       v.Status,
+			ClassID:      v.ClassID,
+			IsHomeFun:    v.IsHomeFun,
+			IsRepeat:     v.RepeatID != "",
+			LessonPlanID: v.LessonPlanID,
 		}
 
 		// handle schedule status
@@ -3379,8 +3406,46 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 			result[i].StartAt = utils.TodayZeroByTimeStamp(v.DueAt, loc).Unix()
 			result[i].EndAt = utils.TodayEndByTimeStamp(v.DueAt, loc).Unix()
 		}
+
+		if v.ClassType == entity.ScheduleClassTypeHomework && v.IsHomeFun {
+			homefunStudyScheduleIDs = append(homefunStudyScheduleIDs, v.ID)
+		} else {
+			notHomefunStudyScheduleIDs = append(notHomefunStudyScheduleIDs, v.ID)
+		}
 	}
-	return result, nil
+
+	// query assessment_status
+	if query.WithAssessmentStatus {
+		// TODO
+		// assessments, err := GetAssessmentModel().Query(ctx, op, &da.QueryAssessmentConditions{
+		// 	ScheduleIDs: entity.NullStrings{
+		// 		Strings: notHomefunStudyScheduleIDs,
+		// 		Valid:   true,
+		// 	},
+		// })
+		// if err != nil {
+		// 	log.Error(ctx, "GetAssessmentModel().Query error",
+		// 		log.Err(err),
+		// 		log.Any("notHomefunStudyScheduleIDs", notHomefunStudyScheduleIDs))
+		// 	return 0, nil, err
+		// }
+
+		// var homeFunStudyAssessments []*entity.HomeFunStudy
+		// err = GetHomeFunStudyModel().Query(ctx, op, &da.QueryHomeFunStudyCondition{
+		// 	ScheduleIDs: entity.NullStrings{
+		// 		Strings: homefunStudyScheduleIDs,
+		// 		Valid:   true,
+		// 	},
+		// }, &homeFunStudyAssessments)
+		// if err != nil {
+		// 	log.Error(ctx, "GetHomeFunStudyModel().Query error",
+		// 		log.Err(err),
+		// 		log.Any("homefunStudyScheduleIDs", homefunStudyScheduleIDs))
+		// 	return 0, nil, err
+		// }
+	}
+
+	return total, result, nil
 }
 
 func removeResourceMetadata(ctx context.Context, resourceID string) error {
