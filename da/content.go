@@ -9,13 +9,11 @@ import (
 	"time"
 	"unicode"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type ContentOrderBy int
@@ -46,7 +44,6 @@ type IContentDA interface {
 
 	GetContentByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.Content, error)
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition *ContentCondition) (int, []*entity.Content, error)
-	SearchContentInternal(ctx context.Context, tx *dbo.DBContext, condition *ContentConditionInternal) (int, []*entity.Content, error)
 	SearchContentUnSafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (int, []*entity.Content, error)
 	QueryContent(cgtx context.Context, tx *dbo.DBContext, condition *ContentCondition) ([]*entity.Content, error)
 	Count(context.Context, dbo.Conditions) (int, error)
@@ -98,67 +95,6 @@ type ContentCondition struct {
 	LatestID           string             `json:"latest_id"`
 	SourceType         string             `json:"source_type"`
 	DirPath            entity.NullStrings `json:"dir_path"`
-	ContentName        string             `json:"content_name"`
-
-	//AuthedContentFlag bool           `json:"authed_content"`
-	AuthedOrgID entity.NullStrings `json:"authed_org_ids"`
-	OrderBy     ContentOrderBy     `json:"order_by"`
-	Pager       utils.Pager
-
-	JoinUserIDList []string `json:"join_user_id_list"`
-}
-
-func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
-	internalCondition := GetContentConditionByInternalCondition(*s)
-	conditions, params := internalCondition.GetConditions()
-	conditions = append(conditions, " delete_at = 0")
-	return conditions, params
-}
-
-func (s *ContentCondition) GetPager() *dbo.Pager {
-	internalCondition := GetContentConditionByInternalCondition(*s)
-	return internalCondition.GetPager()
-}
-func (s *ContentCondition) GetOrderBy() string {
-	internalCondition := GetContentConditionByInternalCondition(*s)
-	return internalCondition.GetOrderBy()
-}
-
-func GetContentConditionByInternalCondition(s ContentCondition) *ContentConditionInternal {
-	return &ContentConditionInternal{
-		IDS:                s.IDS,
-		Name:               s.Name,
-		ContentType:        s.ContentType,
-		VisibilitySettings: s.VisibilitySettings,
-		PublishStatus:      s.PublishStatus,
-		Author:             s.Author,
-		Org:                s.Org,
-		Program:            s.Program,
-		SourceID:           s.SourceID,
-		LatestID:           s.LatestID,
-		SourceType:         s.SourceType,
-		DirPath:            s.DirPath,
-		ContentName:        s.ContentName,
-		AuthedOrgID:        s.AuthedOrgID,
-		OrderBy:            s.OrderBy,
-		Pager:              s.Pager,
-		JoinUserIDList:     s.JoinUserIDList,
-	}
-}
-
-type ContentConditionInternal struct {
-	IDS                entity.NullStrings `json:"ids"`
-	Name               string             `json:"name"`
-	ContentType        []int              `json:"content_type"`
-	VisibilitySettings []string           `json:"visibility_settings"`
-	PublishStatus      []string           `json:"publish_status"`
-	Author             string             `json:"author"`
-	Org                string             `json:"org"`
-	Program            []string           `json:"program"`
-	SourceID           string             `json:"source_id"`
-	LatestID           string             `json:"latest_id"`
-	SourceType         string             `json:"source_type"`
-	DirPath            entity.NullStrings `json:"dir_path"`
 
 	DirPathRecursion     string   `json:"dir_path_recursion"`
 	DirPathRecursionList []string `json:"dir_path_recursion_list"`
@@ -172,9 +108,10 @@ type ContentConditionInternal struct {
 	DataSourceID string `json:"data_source_id"`
 
 	JoinUserIDList []string `json:"join_user_id_list"`
+	IncludeDeleted bool
 }
 
-func (s *ContentConditionInternal) GetConditions() ([]string, []interface{}) {
+func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 	conditions := make([]string, 0)
 	params := make([]interface{}, 0)
 
@@ -294,15 +231,19 @@ func (s *ContentConditionInternal) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.Org)
 	}
 
+	if !s.IncludeDeleted {
+		conditions = append(conditions, "delete_at=0")
+	}
+
 	return conditions, params
 }
-func (s *ContentConditionInternal) GetPager() *dbo.Pager {
+func (s *ContentCondition) GetPager() *dbo.Pager {
 	return &dbo.Pager{
 		Page:     int(s.Pager.PageIndex),
 		PageSize: int(s.Pager.PageSize),
 	}
 }
-func (s *ContentConditionInternal) GetOrderBy() string {
+func (s *ContentCondition) GetOrderBy() string {
 	return s.OrderBy.ToSQL()
 }
 
@@ -468,15 +409,6 @@ func (cd *DBContentDA) GetContentByIDList(ctx context.Context, tx *dbo.DBContext
 	}
 
 	return objs, nil
-}
-func (cd *DBContentDA) SearchContentInternal(ctx context.Context, tx *dbo.DBContext, condition *ContentConditionInternal) (int, []*entity.Content, error) {
-	objs := make([]*entity.Content, 0)
-	count, err := cd.s.PageTx(ctx, tx, condition, &objs)
-	if err != nil {
-		return 0, nil, err
-	}
-
-	return count, objs, nil
 }
 
 func (cd *DBContentDA) GetContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error) {

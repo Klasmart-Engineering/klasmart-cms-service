@@ -7,16 +7,14 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	mutex "gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 var (
@@ -2166,7 +2164,7 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 	if condition.ContentType == 0 {
 		contentTypes = []int{entity.ContentTypeMaterial, entity.ContentTypePlan}
 	}
-	cdt := &da.ContentConditionInternal{
+	cdt := &da.ContentCondition{
 		IDS: entity.NullStrings{
 			Valid:   condition.IDs != nil,
 			Strings: condition.IDs,
@@ -2175,7 +2173,7 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 		ContentType:  contentTypes,
 		DataSourceID: condition.DataSourceID,
 	}
-	total, data, err := da.GetContentDA().SearchContentInternal(ctx, tx, cdt)
+	total, data, err := da.GetContentDA().SearchContent(ctx, tx, cdt)
 	if err != nil {
 		log.Error(ctx, "search content internal failed",
 			log.Err(err),
