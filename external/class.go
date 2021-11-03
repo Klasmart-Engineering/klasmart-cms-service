@@ -3,10 +3,11 @@ package external
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
 	"sync"
 	"text/template"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -39,11 +40,12 @@ type Class struct {
 
 type NullableClass struct {
 	Class
-	Valid bool `json:"valid"`
+	Valid bool   `json:"valid"`
+	ID    string `json:"id"`
 }
 
 func (n *NullableClass) StringID() string {
-	return n.Class.ID
+	return n.ID
 }
 func (n *NullableClass) RelatedIDs() []*cache.RelatedEntity {
 	return nil
@@ -159,9 +161,16 @@ func (s AmsClassService) QueryByIDs(ctx context.Context, ids []string, options .
 	for index := range ids {
 		class := payload[fmt.Sprintf("index_%d", indexMapping[index])]
 		if class == nil {
-			classes = append(classes, &NullableClass{Valid: false})
+			classes = append(classes, &NullableClass{
+				Valid: false,
+				ID:    ids[indexMapping[index]],
+			})
 		} else {
-			classes = append(classes, &NullableClass{*class, true})
+			classes = append(classes, &NullableClass{
+				Class: *class,
+				Valid: true,
+				ID:    ids[indexMapping[index]],
+			})
 		}
 	}
 
