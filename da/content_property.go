@@ -14,6 +14,7 @@ type IContentPropertyDA interface {
 	CleanByContentID(ctx context.Context, tx *dbo.DBContext, contentID string) error
 
 	BatchGetByContentIDList(ctx context.Context, tx *dbo.DBContext, contentID []string) ([]*entity.ContentProperty, error)
+	BatchGetByContentIDsMapResult(ctx context.Context, tx *dbo.DBContext, contentID []string) (map[string][]*entity.ContentProperty, error)
 }
 type ContentPropertyDA struct {
 	s dbo.BaseDA
@@ -38,6 +39,18 @@ func (c *ContentPropertyDA) CleanByContentID(ctx context.Context, tx *dbo.DBCont
 		return err
 	}
 	return nil
+}
+
+func (c *ContentPropertyDA) BatchGetByContentIDsMapResult(ctx context.Context, tx *dbo.DBContext, contentIDs []string) (map[string][]*entity.ContentProperty, error) {
+	list, err := c.BatchGetByContentIDList(ctx, tx, contentIDs)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string][]*entity.ContentProperty)
+	for _, it := range list {
+		result[it.ContentID] = append(result[it.ContentID], it)
+	}
+	return result, nil
 }
 
 func (c *ContentPropertyDA) BatchGetByContentIDList(ctx context.Context, tx *dbo.DBContext, contentID []string) ([]*entity.ContentProperty, error) {
