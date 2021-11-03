@@ -146,6 +146,8 @@ type IContentModel interface {
 	ConvertContentObj(ctx context.Context, tx *dbo.DBContext, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error)
 	BatchConvertContentObj(ctx context.Context, tx *dbo.DBContext, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error)
 
+	ConvertContentObjWithProperties(ctx context.Context, obj *entity.Content, properties []*entity.ContentProperty) (*entity.ContentInfo, error)
+
 	PublishContentWithAssetsTx(ctx context.Context, cid string, scope []string, user *entity.Operator) error
 	LockContentTx(ctx context.Context, cid string, user *entity.Operator) (string, error)
 	CreateContentTx(ctx context.Context, c entity.CreateContentRequest, operator *entity.Operator) (string, error)
