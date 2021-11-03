@@ -64,7 +64,7 @@ func (s *Server) createContent(c *gin.Context) {
 		return
 	}
 
-	cid, err := model.GetContentModel().CreateContentTx(ctx, data, op)
+	cid, err := model.GetContentModel().CreateContent(ctx, data, op)
 
 	switch err {
 	case model.ErrContentDataRequestSource:

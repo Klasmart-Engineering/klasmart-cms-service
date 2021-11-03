@@ -30,7 +30,7 @@ func (s *Server) createAsset(c *gin.Context) {
 	}
 	s.fillAssetsRequest(c.Request.Context(), &data)
 
-	cid, err := model.GetContentModel().CreateContent(ctx, dbo.MustGetDB(ctx), data, op)
+	cid, err := model.GetContentModel().CreateContent(ctx, data, op)
 	switch err {
 	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
