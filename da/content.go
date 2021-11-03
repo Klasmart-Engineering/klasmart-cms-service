@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"time"
 	"unicode"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -32,11 +31,9 @@ const (
 type IContentDA interface {
 	CreateContent(ctx context.Context, tx *dbo.DBContext, co entity.Content) (string, error)
 	UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, co entity.Content) error
-	DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string) error
 	GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.Content, error)
 
 	SearchContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, condition *ContentVisibilitySettingsCondition) ([]*entity.ContentVisibilitySetting, error)
-	CreateContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, co entity.ContentVisibilitySetting) error
 	GetContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	BatchCreateContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, scope []string) error
 	BatchDeleteContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, visibilitySettings []string) error
@@ -46,7 +43,6 @@ type IContentDA interface {
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition *ContentCondition) (int, []*entity.Content, error)
 	SearchContentUnSafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (int, []*entity.Content, error)
 	QueryContent(cgtx context.Context, tx *dbo.DBContext, condition *ContentCondition) ([]*entity.Content, error)
-	Count(context.Context, dbo.Conditions) (int, error)
 
 	SearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 ContentCondition, condition2 *FolderCondition) (int, []*entity.FolderContent, error)
 	SearchFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 *FolderCondition) (int, []*entity.FolderContent, error)
@@ -317,13 +313,6 @@ func (cd *DBContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co 
 	return co.ID, nil
 }
 
-func (cd *DBContentDA) CreateContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cv entity.ContentVisibilitySetting) error {
-	_, err := cd.s.InsertTx(ctx, tx, &cv)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 func (cd *DBContentDA) BatchCreateContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, scope []string) error {
 	cv := make([]entity.ContentVisibilitySetting, len(scope))
 	for i := range scope {
@@ -372,17 +361,6 @@ func (cd *DBContentDA) BatchUpdateContentPath(ctx context.Context, tx *dbo.DBCon
 	return nil
 }
 
-func (cd *DBContentDA) DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string) error {
-	now := time.Now()
-	content := new(entity.Content)
-	content.ID = cid
-	content.DeleteAt = now.Unix()
-	_, err := cd.s.UpdateTx(ctx, tx, content)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 func (cd *DBContentDA) GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.Content, error) {
 	obj := new(entity.Content)
 	err := cd.s.GetTx(ctx, tx, cid, obj)
@@ -390,6 +368,7 @@ func (cd *DBContentDA) GetContentByID(ctx context.Context, tx *dbo.DBContext, ci
 		return nil, err
 	}
 	if obj.DeleteAt > 0 {
+		log.Error(ctx, "record deleted", log.String("id", cid), log.Any("content", obj))
 		return nil, dbo.ErrRecordNotFound
 	}
 
@@ -626,10 +605,6 @@ func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBCont
 		return 0, nil, err
 	}
 	return total.Total, folderContents, nil
-}
-
-func (cd *DBContentDA) Count(ctx context.Context, condition dbo.Conditions) (int, error) {
-	return cd.s.Count(ctx, condition, &entity.Content{})
 }
 
 func (cd *DBContentDA) searchFolderContentSQL(ctx context.Context, query1, query2 []string) string {
