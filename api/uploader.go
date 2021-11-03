@@ -123,3 +123,9 @@ func (s *Server) getDownloadPath(c *gin.Context) {
 		s.defaultErrorHandler(c, err)
 	}
 }
+
+func responseMsg(msg string) interface{} {
+	return gin.H{
+		"msg": msg,
+	}
+}
