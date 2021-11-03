@@ -611,7 +611,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
 // @Tags content
-// @Success 200 {object} entity.ContentInfoWithDetailsResponse
+// @Success 200 {object} entity.QueryContentResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents [get]
@@ -679,7 +679,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
 // @Tags content
-// @Success 200 {object} entity.ContentInfoWithDetailsResponse
+// @Success 200 {object} entity.QueryContentResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents_authed [get]
@@ -798,7 +798,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
 // @Tags content
-// @Success 200 {object} entity.ContentInfoWithDetailsResponse
+// @Success 200 {object} entity.QueryContentResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} BadRequestResponse
@@ -857,7 +857,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
 // @Tags content
-// @Success 200 {object} entity.ContentInfoWithDetailsResponse
+// @Success 200 {object} entity.QueryContentResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents_pending [get]
