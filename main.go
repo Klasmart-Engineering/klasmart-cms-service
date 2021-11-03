@@ -44,6 +44,7 @@ func initDataSource() {
 	ctx := context.Background()
 	engine := cache.GetCacheEngine()
 	engine.SetExpire(ctx, constant.MaxCacheExpire)
+	engine.OpenCache(ctx, config.Get().RedisConfig.OpenCache)
 	cache.GetPassiveCacheRefresher().SetUpdateFrequency(constant.MaxCacheExpire, constant.MinCacheExpire)
 
 	engine.AddDataSource(ctx, external.GetUserServiceProvider())
