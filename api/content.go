@@ -1095,7 +1095,7 @@ func (s *Server) checkPager(pageIndex int, pageSize int) bool {
 	if pageIndex <= 0 {
 		return false
 	}
-	if utils.ContainsInt(pageSizeArray, pageSize) {
+	if !utils.ContainsInt(pageSizeArray, pageSize) {
 		return false
 	}
 	return true
