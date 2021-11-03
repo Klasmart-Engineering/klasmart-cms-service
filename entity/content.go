@@ -499,8 +499,8 @@ type ContentInfoWithDetailsResponse struct {
 	ContentList []*ContentInfoWithDetails `json:"list"`
 }
 type QueryContentResponse struct {
-	Total       int `json:"total"`
-	ContentList []*QueryContentItem`json:"list"`
+	Total       int                 `json:"total"`
+	ContentList []*QueryContentItem `json:"list"`
 }
 
 type QueryContentItem struct {
@@ -514,6 +514,7 @@ type QueryContentItem struct {
 	PublishStatus   ContentPublishStatus `json:"publish_status"`
 	ContentTypeName string               `json:"content_type_name"`
 	Permission      ContentPermission    `json:"permission"`
+	SuggestTime     int                  `json:"suggest_time"`
 }
 
 type FolderContentInfoWithDetailsResponse struct {
