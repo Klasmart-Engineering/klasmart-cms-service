@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -650,10 +651,10 @@ func (s *Server) queryContent(c *gin.Context) {
 	}
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
+		c.JSON(http.StatusOK, s.convertQueryContentResult(ctx, &entity.ContentInfoWithDetailsResponse{
 			Total:       total,
 			ContentList: results,
-		})
+		}))
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoPermissionToQuery:
@@ -691,10 +692,10 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 	total, results, err := model.GetContentModel().SearchAuthedContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
+		c.JSON(http.StatusOK, s.convertQueryContentResult(ctx, &entity.ContentInfoWithDetailsResponse{
 			Total:       total,
 			ContentList: results,
-		})
+		}))
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoPermissionToQuery:
@@ -702,6 +703,29 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 	default:
 		s.defaultErrorHandler(c, err)
 	}
+}
+func (s *Server) convertQueryContentResult(ctx context.Context, cdr *entity.ContentInfoWithDetailsResponse) (qcr *entity.QueryContentResponse) {
+	qcr = &entity.QueryContentResponse{}
+	if cdr == nil {
+		return
+	}
+	qcr.Total = cdr.Total
+	for _, cd := range cdr.ContentList {
+		qcr.List = append(qcr.List, &entity.QueryContentItem{
+			ID:              cd.ID,
+			ContentType:     cd.ContentType,
+			Name:            cd.Name,
+			Thumbnail:       cd.Thumbnail,
+			AuthorName:      cd.AuthorName,
+			Data:            cd.Data,
+			Author:          cd.Author,
+			PublishStatus:   cd.PublishStatus,
+			ContentTypeName: cd.ContentTypeName,
+			Permission:      cd.Permission,
+			SuggestTime:     cd.SuggestTime,
+		})
+	}
+	return
 }
 
 // @Summary queryFolderContent
@@ -823,10 +847,10 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 	total, results, err := model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
+		c.JSON(http.StatusOK, s.convertQueryContentResult(ctx, &entity.ContentInfoWithDetailsResponse{
 			Total:       total,
 			ContentList: results,
-		})
+		}))
 	case model.ErrInvalidVisibleScope:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidVisibilitySetting:
@@ -889,10 +913,10 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 	total, results, err := model.GetContentModel().ListPendingContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
+		c.JSON(http.StatusOK, s.convertQueryContentResult(ctx, &entity.ContentInfoWithDetailsResponse{
 			Total:       total,
 			ContentList: results,
-		})
+		}))
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoPermissionToQuery:

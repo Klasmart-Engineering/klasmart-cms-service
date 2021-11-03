@@ -124,7 +124,6 @@ type IContentModel interface {
 	SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
-	SearchContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 
 	SearchSimplifyContentInternal(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentInternalConditionRequest) (int, []*entity.ContentSimplified, error)
 
@@ -2282,12 +2281,6 @@ func (cm *ContentModel) getRelatedUserID(ctx context.Context, keyword string, us
 	return ids
 }
 
-func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
-	condition.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition.PublishStatus)
-	cm.addUserCondition(ctx, condition, user)
-	return cm.searchContent(ctx, tx, condition, user)
-}
-
 func (cm *ContentModel) refreshContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, scope []string) error {
 	alreadyScopes, err := da.GetContentDA().GetContentVisibilitySettings(ctx, tx, cid)
 	if err != nil {
@@ -2867,125 +2860,18 @@ func (cm *ContentModel) copyContentProperties(ctx context.Context, tx *dbo.DBCon
 	return nil
 }
 func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList []*entity.ContentInfo, includeOutcomes bool, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error) {
-	orgName := ""
-	orgProvider := external.GetOrganizationServiceProvider()
-	orgs, err := orgProvider.BatchGet(ctx, user, []string{user.OrgID})
-	if err != nil || len(orgs) < 1 {
-		log.Error(ctx, "can't get org info", log.Err(err))
-	} else {
-		if orgs[0].Valid {
-			orgName = orgs[0].Name
-		} else {
-			log.Warn(ctx, "invalid value", log.String("org_id", user.OrgID))
-		}
-	}
-
-	programNameMap := make(map[string]string)
-	subjectNameMap := make(map[string]string)
-	developmentalNameMap := make(map[string]string)
-	skillsNameMap := make(map[string]string)
-	ageNameMap := make(map[string]string)
-	gradeNameMap := make(map[string]string)
-	publishScopeNameMap := make(map[string]string)
-	lessonTypeNameMap := make(map[string]string)
 	userNameMap := make(map[string]string)
-
-	programIDs := make([]string, 0)
-	subjectIDs := make([]string, 0)
-	developmentalIDs := make([]string, 0)
-	skillsIDs := make([]string, 0)
-	ageIDs := make([]string, 0)
-	gradeIDs := make([]string, 0)
-	scopeIDs := make([]string, 0)
-	lessonTypeIDs := make([]string, 0)
 	userIDs := make([]string, 0)
 
-	visibilitySettingsMap, err := cm.buildVisibilitySettingsMap(ctx, contentList)
-	if err != nil {
-		log.Error(ctx, "buildVisibilitySettingsMap failed",
-			log.Err(err),
-			log.Any("contentList", contentList))
-		return nil, err
-	}
-
 	for i := range contentList {
-		if contentList[i].Program != "" {
-			programIDs = append(programIDs, contentList[i].Program)
-		}
-		subjectIDs = append(subjectIDs, contentList[i].Subject...)
-		developmentalIDs = append(developmentalIDs, contentList[i].Category...)
-		skillsIDs = append(skillsIDs, contentList[i].SubCategory...)
-		ageIDs = append(ageIDs, contentList[i].Age...)
-		gradeIDs = append(gradeIDs, contentList[i].Grade...)
-
-		scopeIDs = append(scopeIDs, visibilitySettingsMap[contentList[i].ID]...)
-		lessonTypeIDs = append(lessonTypeIDs, contentList[i].LessonType)
 		userIDs = append(userIDs, contentList[i].Author)
 		userIDs = append(userIDs, contentList[i].Creator)
 	}
 
-	//Users
-	userNameMap, err = external.GetUserServiceProvider().BatchGetNameMap(ctx, user, userIDs)
+	// map[userID]userName
+	userNameMap, err := external.GetUserServiceProvider().BatchGetNameMap(ctx, user, userIDs)
 	if err != nil {
 		log.Error(ctx, "can't get user info", log.Err(err), log.Strings("ids", userIDs))
-	}
-
-	//LessonType
-	lessonTypes, err := GetLessonTypeModel().Query(ctx, &da.LessonTypeCondition{
-		IDs: entity.NullStrings{
-			Strings: lessonTypeIDs,
-			Valid:   len(lessonTypeIDs) != 0,
-		},
-	})
-	if err != nil {
-		log.Error(ctx, "can't get lesson type info", log.Err(err))
-	} else {
-		for i := range lessonTypes {
-			lessonTypeNameMap[lessonTypes[i].ID] = lessonTypes[i].Name
-		}
-	}
-
-	//Program
-	programNameMap, err = external.GetProgramServiceProvider().BatchGetNameMap(ctx, user, programIDs)
-	if err != nil {
-		log.Error(ctx, "can't get programs", log.Err(err), log.Strings("ids", programIDs))
-	}
-
-	//Subjects
-	subjectNameMap, err = external.GetSubjectServiceProvider().BatchGetNameMap(ctx, user, subjectIDs)
-	if err != nil {
-		log.Error(ctx, "can't get subjects info", log.Err(err))
-	}
-
-	//developmental
-	developmentalNameMap, err = external.GetCategoryServiceProvider().BatchGetNameMap(ctx, user, developmentalIDs)
-	if err != nil {
-		log.Error(ctx, "can't get category info", log.Err(err), log.Strings("ids", developmentalIDs))
-	}
-
-	//scope
-	//TODO:change to get org name
-	publishScopeNameMap, err = external.GetOrganizationServiceProvider().GetNameMapByOrganizationOrSchool(ctx, user, scopeIDs)
-	if err != nil {
-		log.Error(ctx, "can't get publish scope info", log.Strings("scope", scopeIDs), log.Err(err))
-	}
-
-	//skill
-	skillsNameMap, err = external.GetSubCategoryServiceProvider().BatchGetNameMap(ctx, user, skillsIDs)
-	if err != nil {
-		log.Error(ctx, "can't get skills info", log.Strings("skillsIDs", skillsIDs), log.Err(err))
-	}
-
-	//age
-	ageNameMap, err = external.GetAgeServiceProvider().BatchGetNameMap(ctx, user, ageIDs)
-	if err != nil {
-		log.Error(ctx, "can't get age info", log.Strings("ageIDs", ageIDs), log.Err(err))
-	}
-
-	//grade
-	gradeNameMap, err = external.GetGradeServiceProvider().BatchGetNameMap(ctx, user, gradeIDs)
-	if err != nil {
-		log.Error(ctx, "can't get grade info", log.Strings("gradeIDs", gradeIDs), log.Err(err))
 	}
 
 	var outcomeDictionary map[string]*entity.Outcome
@@ -3015,50 +2901,10 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 
 	contentDetailsList := make([]*entity.ContentInfoWithDetails, len(contentList))
 	for i := range contentList {
-		subjectNames := make([]string, len(contentList[i].Subject))
-		developmentalNames := make([]string, len(contentList[i].Category))
-		skillsNames := make([]string, len(contentList[i].SubCategory))
-		ageNames := make([]string, len(contentList[i].Age))
-		gradeNames := make([]string, len(contentList[i].Grade))
-
-		for j := range contentList[i].Subject {
-			subjectNames[j] = subjectNameMap[contentList[i].Subject[j]]
-		}
-		for j := range contentList[i].Category {
-			developmentalNames[j] = developmentalNameMap[contentList[i].Category[j]]
-		}
-		for j := range contentList[i].SubCategory {
-			skillsNames[j] = skillsNameMap[contentList[i].SubCategory[j]]
-		}
-		for j := range contentList[i].Age {
-			ageNames[j] = ageNameMap[contentList[i].Age[j]]
-		}
-		for j := range contentList[i].Grade {
-			gradeNames[j] = gradeNameMap[contentList[i].Grade[j]]
-		}
-
-		contentList[i].PublishScope = visibilitySettingsMap[contentList[i].ID]
-		publishScopeNames := make([]string, len(contentList[i].PublishScope))
-
-		for j := range contentList[i].PublishScope {
-			publishScopeNames[j] = publishScopeNameMap[contentList[i].PublishScope[j]]
-		}
 		contentList[i].AuthorName = userNameMap[contentList[i].Author]
 		contentDetailsList[i] = &entity.ContentInfoWithDetails{
-			ContentInfo:      *contentList[i],
-			ContentTypeName:  contentList[i].ContentType.Name(),
-			ProgramName:      programNameMap[contentList[i].Program],
-			SubjectName:      subjectNames,
-			CategoryName:     developmentalNames,
-			SubCategoryName:  skillsNames,
-			AgeName:          ageNames,
-			GradeName:        gradeNames,
-			LessonTypeName:   lessonTypeNameMap[contentList[i].LessonType],
-			PublishScopeName: publishScopeNames,
-			OrgName:          orgName,
-			//AuthorName:        userNameMap[contentList[i].Author],
-			CreatorName:     userNameMap[contentList[i].Creator],
-			OutcomeEntities: []*entity.Outcome{},
+			ContentInfo:     *contentList[i],
+			ContentTypeName: contentList[i].ContentType.Name(),
 			IsMine:          contentList[i].Author == user.UserID,
 		}
 

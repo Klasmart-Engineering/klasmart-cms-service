@@ -95,15 +95,15 @@ func (c *ContentModel) BatchConvertContentObj(ctx context.Context, tx *dbo.DBCon
 			}
 		}
 
-		subjects := make([]string, 0)
-		developmentals := make([]string, 0)
-		skills := make([]string, 0)
-		ages := make([]string, 0)
-		grades := make([]string, 0)
+		//subjects := make([]string, 0)
+		//developmentals := make([]string, 0)
+		//skills := make([]string, 0)
+		//ages := make([]string, 0)
+		//grades := make([]string, 0)
 		keywords := make([]string, 0)
 		outcomes := make([]string, 0)
 		rejectReason := make([]string, 0)
-		program := ""
+		//program := ""
 
 		for i := range contentProperties {
 			if contentProperties[i].ContentID != obj.ID {
@@ -111,17 +111,17 @@ func (c *ContentModel) BatchConvertContentObj(ctx context.Context, tx *dbo.DBCon
 			}
 			switch contentProperties[i].PropertyType {
 			case entity.ContentPropertyTypeProgram:
-				program = contentProperties[i].PropertyID
+				//program = contentProperties[i].PropertyID
 			case entity.ContentPropertyTypeSubject:
-				subjects = append(subjects, contentProperties[i].PropertyID)
+				//subjects = append(subjects, contentProperties[i].PropertyID)
 			case entity.ContentPropertyTypeCategory:
-				developmentals = append(developmentals, contentProperties[i].PropertyID)
+				//developmentals = append(developmentals, contentProperties[i].PropertyID)
 			case entity.ContentPropertyTypeAge:
-				ages = append(ages, contentProperties[i].PropertyID)
+				//ages = append(ages, contentProperties[i].PropertyID)
 			case entity.ContentPropertyTypeGrade:
-				grades = append(grades, contentProperties[i].PropertyID)
+				//grades = append(grades, contentProperties[i].PropertyID)
 			case entity.ContentPropertyTypeSubCategory:
-				skills = append(skills, contentProperties[i].PropertyID)
+				//skills = append(skills, contentProperties[i].PropertyID)
 			}
 		}
 		if obj.Keywords != "" {
@@ -134,23 +134,23 @@ func (c *ContentModel) BatchConvertContentObj(ctx context.Context, tx *dbo.DBCon
 			rejectReason = strings.Split(obj.RejectReason, constant.StringArraySeparator)
 		}
 
-		log.Info(ctx, "content properties",
-			log.String("program", program),
-			log.Strings("subjects", subjects),
-			log.Strings("developmentals", developmentals),
-			log.Strings("skills", skills),
-			log.Strings("ages", ages),
-			log.Strings("grades", grades))
+		log.Info(ctx, "content properties") //log.String("program", program),
+		//log.Strings("subjects", subjects),
+		//log.Strings("developmentals", developmentals),
+		//log.Strings("skills", skills),
+		//log.Strings("ages", ages),
+		//log.Strings("grades", grades)
+
 		cm := &entity.ContentInfo{
-			ID:                 obj.ID,
-			ContentType:        obj.ContentType,
-			Name:               obj.Name,
-			Program:            program,
-			Subject:            subjects,
-			Category:           developmentals,
-			SubCategory:        skills,
-			Age:                ages,
-			Grade:              grades,
+			ID:          obj.ID,
+			ContentType: obj.ContentType,
+			Name:        obj.Name,
+			//Program:     program,
+			//Subject:            subjects,
+			//Category:           developmentals,
+			//SubCategory:        skills,
+			//Age:                ages,
+			//Grade:              grades,
 			Keywords:           keywords,
 			SourceType:         obj.SourceType,
 			SuggestTime:        obj.SuggestTime,
