@@ -109,7 +109,6 @@ func (m *assessmentModel) PrepareAddInput(ctx context.Context, operator *entity.
 		entity.ScheduleRelationTypeClassRosterStudent,
 	})
 
-	// Different processing is performed for different schedules
 	assessmentArgs := make([]*entity.AddAssessmentArgs, 0, len(schedules))
 
 	for _, item := range schedules {
@@ -145,7 +144,7 @@ func (m *assessmentModel) PrepareAddInput(ctx context.Context, operator *entity.
 			return nil, constant.ErrInvalidArgs
 		}
 
-		// processing other type
+		// processing class,live,study type
 		assessmentArgsItem := &entity.AddAssessmentArgs{
 			Title:         title,
 			ScheduleID:    item.ID,
