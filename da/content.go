@@ -48,6 +48,7 @@ type IContentDA interface {
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition *ContentCondition) (int, []*entity.Content, error)
 	SearchContentInternal(ctx context.Context, tx *dbo.DBContext, condition *ContentConditionInternal) (int, []*entity.Content, error)
 	SearchContentUnSafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (int, []*entity.Content, error)
+	QueryContent(cgtx context.Context, tx *dbo.DBContext, condition *ContentCondition) ([]*entity.Content, error)
 	Count(context.Context, dbo.Conditions) (int, error)
 
 	SearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 ContentCondition, condition2 *FolderCondition) (int, []*entity.FolderContent, error)
@@ -525,6 +526,12 @@ func (cd *DBContentDA) SearchContentUnSafe(ctx context.Context, tx *dbo.DBContex
 	}
 
 	return count, objs, nil
+}
+
+func (cd *DBContentDA) QueryContent(ctx context.Context, tx *dbo.DBContext, condition *ContentCondition) ([]*entity.Content, error) {
+	objs := make([]*entity.Content, 0)
+	err := cd.s.QueryTx(ctx, tx, condition, &objs)
+	return objs, err
 }
 
 func (cm *DBContentDA) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error {

@@ -177,7 +177,7 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 
 	//更新所有latestID为sourceContent的Content
 	//Update all sourceContent latestID fields
-	_, oldContents, err := da.GetContentDA().SearchContent(ctx, tx, &da.ContentCondition{
+	oldContents, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
 		LatestID: sourceContent.ID,
 	})
 	if err != nil {
@@ -355,7 +355,7 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 		return nil
 	}
 
-	_, contentList, err := da.GetContentDA().SearchContent(ctx, tx, &da.ContentCondition{
+	contentList, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
 		IDS: entity.NullStrings{
 			Strings: subContentIDs,
 			Valid:   true,
@@ -785,7 +785,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 	//被自己锁住，则返回锁定id
 	//if it is locked by current user, return cloned content id
 	if content.LockedBy == user.UserID {
-		_, data, err := da.GetContentDA().SearchContent(ctx, tx, &da.ContentCondition{
+		data, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
 			SourceID: cid,
 		})
 		if err != nil {
@@ -844,7 +844,7 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 	if len(ids) < 1 {
 		return nil
 	}
-	_, contents, err := da.GetContentDA().SearchContent(ctx, tx, &da.ContentCondition{
+	contents, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
 		IDS: entity.NullStrings{
 			Strings: ids,
 			Valid:   true,
@@ -1262,7 +1262,7 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 	}
 	deletedIDs := make([]string, 0)
 	deletedIDs = append(deletedIDs, ids...)
-	_, contents, err := da.GetContentDA().SearchContent(ctx, tx, &da.ContentCondition{
+	contents, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
 		IDS: entity.NullStrings{
 			Strings: ids,
 			Valid:   true,
@@ -1934,7 +1934,7 @@ func (cm *ContentModel) GetPastContentIDByID(ctx context.Context, tx *dbo.DBCont
 		latestID = data.ID
 	}
 
-	_, res, err := da.GetContentDA().SearchContent(ctx, tx, &da.ContentCondition{
+	res, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
 		LatestID: latestID,
 	})
 	if err != nil {
@@ -2500,7 +2500,7 @@ func (cm *ContentModel) ContentDataCount(ctx context.Context, tx *dbo.DBContext,
 	}
 	subContentIDs := cd.SubContentIDs(ctx)
 
-	_, subContents, err := da.GetContentDA().SearchContent(ctx, tx, &da.ContentCondition{
+	subContents, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
 		IDS: entity.NullStrings{
 			Strings: subContentIDs,
 			Valid:   true,
