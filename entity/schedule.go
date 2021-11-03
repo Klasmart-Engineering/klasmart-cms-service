@@ -860,3 +860,9 @@ type ScheduleTimeView struct {
 	Status    ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
 	ClassID   string            `json:"class_id"`
 }
+
+type ScheduleUserInfo struct {
+	ID       string           `json:"id"`
+	Name     string           `json:"name"`
+	RoleType ScheduleRoleType `json:"role_type"`
+}

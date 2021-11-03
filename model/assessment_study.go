@@ -35,8 +35,6 @@ type IStudyAssessmentModel interface {
 	GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.AssessmentDetail, error)
 	List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args *entity.ListStudyAssessmentsArgs) (*entity.ListStudyAssessmentsResult, error)
 	BatchCheckAnyoneAttempted(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, roomIDs []string) (map[string]bool, error)
-	PrepareAddArgs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args []*entity.AddAssessmentArgs) (*entity.BatchAddAssessmentSuperArgs, error)
-	Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input *entity.BatchAddAssessmentSuperArgs) ([]string, error)
 	Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args *entity.UpdateAssessmentArgs) error
 	Delete(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) error
 }
@@ -205,46 +203,6 @@ func (m *studyAssessmentModel) BatchCheckAnyoneAttempted(ctx context.Context, tx
 		}
 	}
 	return result, nil
-}
-
-func (m *studyAssessmentModel) PrepareAddArgs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args []*entity.AddAssessmentArgs) (*entity.BatchAddAssessmentSuperArgs, error) {
-	classIDs := make([]string, 0, len(args))
-	for _, item := range args {
-		classIDs = append(classIDs, item.ClassID)
-	}
-	classNameMap, err := external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, classIDs)
-	if err != nil {
-		log.Error(ctx, "add studies: batch get class name map failed",
-			log.Err(err),
-			log.Strings("class_ids", classIDs),
-		)
-		return nil, err
-	}
-	for _, item := range args {
-		className := classNameMap[item.ClassID]
-		if className == "" {
-			className = constant.AssessmentNoClass
-		}
-		item.Title = m.generateTitle(className, item.ScheduleTitle)
-	}
-
-	superArgs, err := m.assessmentBase.prepareBatchAddSuperArgs(ctx, tx, operator, args)
-	if err != nil {
-		log.Error(ctx, "prepare add assessment args: prepare batch add super args failed",
-			log.Err(err),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-
-	return superArgs, nil
-}
-
-func (m *studyAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.BatchAddAssessmentSuperArgs) ([]string, error) {
-	log.Debug(ctx, "add studies args", log.Any("args", args), log.Any("operator", operator))
-
-	return m.assessmentBase.batchAdd(ctx, tx, operator, args)
 }
 
 func (m *studyAssessmentModel) Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args *entity.UpdateAssessmentArgs) error {

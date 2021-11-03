@@ -10,6 +10,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 )
@@ -40,8 +41,11 @@ type IAssessmentModel interface {
 	Summary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsSummaryArgs) (*entity.AssessmentsSummary, error)
 	StudentQuery(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, conditions *entity.StudentQueryAssessmentConditions) (int, []*entity.StudentAssessment, error)
 
+	ScheduleEndClassCallback(ctx context.Context, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) error
+
 	PrepareAddInput(ctx context.Context, operator *entity.Operator, input []*entity.AssessmentAddInput) (*entity.BatchAddAssessmentSuperArgs, error)
-	BatchAddTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input []*entity.AssessmentAddInput) error
+	BatchAdd(ctx context.Context, operator *entity.Operator, input *entity.BatchAddAssessmentSuperArgs) error
+	BatchAddTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input *entity.BatchAddAssessmentSuperArgs) error
 }
 
 type assessmentModel struct {
@@ -51,6 +55,36 @@ type assessmentModel struct {
 	ScheduleRelationModel IScheduleRelationModel
 }
 
+func (m *assessmentModel) ScheduleEndClassCallback(ctx context.Context, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) error {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixScheduleID, args.ScheduleID)
+	if err != nil {
+		log.Error(ctx, "add class and live assessment: lock fail",
+			log.Err(err),
+			log.Any("args", args),
+		)
+		return err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+
+	superArgs, err := GetAssessmentModel().PrepareAddInput(ctx, operator, []*entity.AssessmentAddInput{
+		&entity.AssessmentAddInput{
+			ScheduleID:   args.ScheduleID,
+			ClassLength:  args.ClassLength,
+			ClassEndTime: args.ClassEndTime,
+			Attendances:  args.AttendanceIDs,
+		}})
+	if err != nil {
+		return err
+	}
+
+	err = GetAssessmentModel().BatchAdd(ctx, operator, superArgs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (m *assessmentModel) PrepareAddInput(ctx context.Context, operator *entity.Operator, input []*entity.AssessmentAddInput) (*entity.BatchAddAssessmentSuperArgs, error) {
 	scheduleIDs := make([]string, len(input))
 	inputMap := make(map[string]*entity.AssessmentAddInput)
@@ -58,6 +92,8 @@ func (m *assessmentModel) PrepareAddInput(ctx context.Context, operator *entity.
 		scheduleIDs[i] = item.ScheduleID
 		inputMap[item.ScheduleID] = item
 	}
+
+	// get schedules
 	schedules, err := m.ScheduleModel.GetVariableDataByIDs(ctx, operator, scheduleIDs, &entity.ScheduleInclude{
 		ClassRosterClass: true,
 	})
@@ -65,8 +101,16 @@ func (m *assessmentModel) PrepareAddInput(ctx context.Context, operator *entity.
 		return nil, err
 	}
 
-	noneHomefunSchedules := make([]*entity.AddAssessmentArgs, 0, len(schedules))
-	homefunSchedules := make([]*entity.AddAssessmentArgs, 0, len(schedules))
+	// get user
+	scheduleUserRelationMap, err := m.ScheduleRelationModel.GetRelationMap(ctx, operator, scheduleIDs, []entity.ScheduleRelationType{
+		entity.ScheduleRelationTypeParticipantTeacher,
+		entity.ScheduleRelationTypeParticipantStudent,
+		entity.ScheduleRelationTypeClassRosterTeacher,
+		entity.ScheduleRelationTypeClassRosterStudent,
+	})
+
+	// Different processing is performed for different schedules
+	assessmentArgs := make([]*entity.AddAssessmentArgs, 0, len(schedules))
 
 	for _, item := range schedules {
 		assessmentType, err := entity.GetAssessmentTypeByScheduleType(ctx, entity.GetAssessmentTypeInput{
@@ -82,6 +126,7 @@ func (m *assessmentModel) PrepareAddInput(ctx context.Context, operator *entity.
 			return nil, constant.ErrInvalidArgs
 		}
 
+		// generate assessment title
 		var className string
 		if item.ClassRosterClass != nil {
 			className = item.ClassRosterClass.Name
@@ -95,26 +140,61 @@ func (m *assessmentModel) PrepareAddInput(ctx context.Context, operator *entity.
 			return nil, err
 		}
 
-		if assessmentType == entity.AssessmentTypeHomeFunStudy {
-			homefunSchedules = append(homefunSchedules, &entity.AddAssessmentArgs{
-				Title:         title,
-				ScheduleID:    "",
-				ScheduleTitle: "",
-				LessonPlanID:  "",
-				ClassID:       "",
-				ClassLength:   0,
-				ClassEndTime:  0,
-				Attendances:   nil,
-			})
-		} else {
-			noneHomefunSchedules = append(noneHomefunSchedules, &entity.AddAssessmentArgs{})
+		scheduleUsers, ok := scheduleUserRelationMap[item.ID]
+		if !ok {
+			return nil, constant.ErrInvalidArgs
 		}
+
+		// processing other type
+		assessmentArgsItem := &entity.AddAssessmentArgs{
+			Title:         title,
+			ScheduleID:    item.ID,
+			ScheduleTitle: item.Title,
+			LessonPlanID:  item.LessonPlanID,
+			ClassID:       item.ClassRosterClass.ID,
+			ClassLength:   inputMapItem.ClassLength,
+			ClassEndTime:  inputMapItem.ClassEndTime,
+		}
+
+		if assessmentType == entity.AssessmentTypeClass || assessmentType == entity.AssessmentTypeStudy {
+			assessmentArgsItem.Attendances = scheduleUsers
+		} else if assessmentType == entity.AssessmentTypeLive {
+			userRelationMap := make(map[string]*entity.ScheduleRelation)
+			for _, userItem := range scheduleUsers {
+				userRelationMap[userItem.RelationID] = userItem
+			}
+
+			for _, userID := range inputMapItem.Attendances {
+				if relationItem, ok := userRelationMap[userID]; ok {
+					assessmentArgsItem.Attendances = append(assessmentArgsItem.Attendances, relationItem)
+				}
+			}
+		}
+		assessmentArgs = append(assessmentArgs, assessmentArgsItem)
 	}
 
-	return nil, nil
+	superArgs, err := m.assessmentBase.prepareBatchAddSuperArgs(ctx, dbo.MustGetDB(ctx), operator, assessmentArgs)
+	if err != nil {
+		log.Error(ctx, "prepare add assessment args: prepare batch add super args failed",
+			log.Err(err),
+			log.Any("assessmentArgs", assessmentArgs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	return superArgs, nil
 }
 
-func (m *assessmentModel) BatchAddTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input []*entity.AssessmentAddInput) error {
+func (m *assessmentModel) BatchAdd(ctx context.Context, operator *entity.Operator, input *entity.BatchAddAssessmentSuperArgs) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		return m.BatchAddTx(ctx, tx, operator, input)
+	})
+}
+func (m *assessmentModel) BatchAddTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input *entity.BatchAddAssessmentSuperArgs) error {
+	_, err := m.assessmentBase.batchAdd(ctx, tx, operator, input)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

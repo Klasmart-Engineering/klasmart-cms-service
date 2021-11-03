@@ -16,6 +16,7 @@ import (
 )
 
 func setup() {
+	os.Setenv("connection_string", "root:Passw0rd@tcp(127.0.0.1:3306)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local")
 	config.Set(&config.Config{
 		DBConfig: config.DBConfig{
 			ConnectionString: os.Getenv("connection_string"),

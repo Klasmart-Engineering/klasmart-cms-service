@@ -189,8 +189,8 @@ type AddAssessmentArgs struct {
 
 type AssessmentAddInput struct {
 	ScheduleID string `json:"schedule_id"`
-	//LessonPlanID string   `json:"lesson_plan_id"`
-	//ClassID      string   `json:"class_id"`
+
+	// class and live type
 	ClassLength  int      `json:"class_length"`
 	ClassEndTime int64    `json:"class_end_time"`
 	Attendances  []string `json:"attendances"`

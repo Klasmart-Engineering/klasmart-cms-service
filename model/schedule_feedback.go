@@ -171,7 +171,7 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 			ClassEndTime:  time.Now().Unix(),
 		}
 		log.Debug(ctx, "feedback notify assignments", log.Any("data", data))
-		_, err := GetClassesAssignmentsModel().CreateRecord(ctx, op, data)
+		err := GetClassesAssignmentsModel().CreateRecord(ctx, op, data)
 		if err != nil {
 			log.Error(ctx, "feedback notify assignments",
 				log.Err(err),
