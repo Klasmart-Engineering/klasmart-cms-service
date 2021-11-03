@@ -172,6 +172,7 @@ func (m *assessmentModel) PrepareAddInput(ctx context.Context, operator *entity.
 		assessmentArgs = append(assessmentArgs, assessmentArgsItem)
 	}
 
+	// processing args
 	superArgs, err := m.assessmentBase.prepareBatchAddSuperArgs(ctx, dbo.MustGetDB(ctx), operator, assessmentArgs)
 	if err != nil {
 		log.Error(ctx, "prepare add assessment args: prepare batch add super args failed",
