@@ -35,7 +35,10 @@ func (s *Server) getUploadPath(c *gin.Context) {
 	extension := c.Query("extension")
 
 	if partition == "" || extension == "" {
-		c.JSON(http.StatusBadRequest, responseMsg("partition or extension is required"))
+		c.JSON(http.StatusBadRequest,
+			gin.H{
+				"msg": "partition or extension is required",
+			})
 		return
 	}
 	name, path, err := model.GetResourceUploaderModel().GetResourceUploadPath(ctx, partition, extension)
@@ -70,7 +73,10 @@ func (s *Server) getContentResourcePath(c *gin.Context) {
 	resourceId := c.Param("resource_id")
 
 	if resourceId == "" {
-		c.JSON(http.StatusBadRequest, responseMsg("resourceId is required"))
+		c.JSON(http.StatusBadRequest,
+			gin.H{
+				"msg": "resourceId is required",
+			})
 		return
 	}
 	path, err := model.GetResourceUploaderModel().GetResourcePath(ctx, resourceId)
@@ -104,7 +110,10 @@ func (s *Server) getDownloadPath(c *gin.Context) {
 	resourceId := c.Param("resource_id")
 
 	if resourceId == "" {
-		c.JSON(http.StatusBadRequest, responseMsg("resourceId is required"))
+		c.JSON(http.StatusBadRequest,
+			gin.H{
+				"msg": "resourceId is required",
+			})
 		return
 	}
 	path, err := model.GetResourceUploaderModel().GetResourcePath(ctx, resourceId)
@@ -121,11 +130,5 @@ func (s *Server) getDownloadPath(c *gin.Context) {
 		})
 	default:
 		s.defaultErrorHandler(c, err)
-	}
-}
-
-func responseMsg(msg string) interface{} {
-	return gin.H{
-		"msg": msg,
 	}
 }
