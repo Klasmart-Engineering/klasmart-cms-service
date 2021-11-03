@@ -5,11 +5,11 @@ import (
 	"errors"
 	"strings"
 
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
@@ -254,6 +254,84 @@ func (c *ContentModel) BatchConvertContentObj(ctx context.Context, tx *dbo.DBCon
 			SubCategory:        skills,
 			Age:                ages,
 			Grade:              grades,
+			Keywords:           keywords,
+			SourceType:         obj.SourceType,
+			SuggestTime:        obj.SuggestTime,
+			RejectReason:       rejectReason,
+			Remark:             obj.Remark,
+			Description:        obj.Description,
+			Thumbnail:          obj.Thumbnail,
+			Data:               obj.Data,
+			Extra:              obj.Extra,
+			Outcomes:           outcomes,
+			Author:             obj.Author,
+			TeacherManualBatch: teacherManuals,
+			Creator:            obj.Creator,
+			SelfStudy:          obj.SelfStudy.Bool(),
+			DrawActivity:       obj.DrawActivity.Bool(),
+			LessonType:         obj.LessonType,
+			Org:                obj.Org,
+			PublishStatus:      obj.PublishStatus,
+			Version:            obj.Version,
+			CreatedAt:          obj.CreateAt,
+			UpdatedAt:          obj.UpdateAt,
+			LatestID:           obj.LatestID,
+		}
+		res = append(res, cm)
+	}
+
+	return res, nil
+}
+
+func (c *ContentModel) BatchConvertContentObjForSearchContent(ctx context.Context, tx *dbo.DBContext, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error) {
+	if len(objs) < 1 {
+		return nil, nil
+	}
+	contentIDs := make([]string, len(objs))
+	for i := range objs {
+		contentIDs[i] = objs[i].ID
+	}
+
+	res := make([]*entity.ContentInfo, 0)
+	for _, obj := range objs {
+		log.Info(ctx, "Convert content object", log.String("extra", obj.Extra))
+		contentData, err := c.CreateContentData(ctx, obj.ContentType, obj.Data)
+		if err != nil {
+			log.Error(ctx, "CreateContentData",
+				log.Err(err),
+				log.Any("obj", obj))
+			return nil, err
+		}
+		teacherManuals := make([]*entity.TeacherManualFile, 0)
+		if obj.ContentType == entity.ContentTypePlan {
+			planData := contentData.(*LessonData)
+			if len(planData.TeacherManualBatch) > 0 {
+				teacherManuals = planData.TeacherManualBatch
+			} else if planData.TeacherManual != "" {
+				teacherManuals = []*entity.TeacherManualFile{{
+					ID:   planData.TeacherManual,
+					Name: planData.TeacherManualName,
+				}}
+			}
+		}
+
+		keywords := make([]string, 0)
+		outcomes := make([]string, 0)
+		rejectReason := make([]string, 0)
+		if obj.Keywords != "" {
+			keywords = strings.Split(obj.Keywords, constant.StringArraySeparator)
+		}
+		if obj.Outcomes != "" {
+			outcomes = strings.Split(obj.Outcomes, constant.StringArraySeparator)
+		}
+		if obj.RejectReason != "" {
+			rejectReason = strings.Split(obj.RejectReason, constant.StringArraySeparator)
+		}
+
+		cm := &entity.ContentInfo{
+			ID:                 obj.ID,
+			ContentType:        obj.ContentType,
+			Name:               obj.Name,
 			Keywords:           keywords,
 			SourceType:         obj.SourceType,
 			SuggestTime:        obj.SuggestTime,

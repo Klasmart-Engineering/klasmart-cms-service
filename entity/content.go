@@ -499,8 +499,8 @@ type ContentInfoWithDetailsResponse struct {
 	ContentList []*ContentInfoWithDetails `json:"list"`
 }
 type QueryContentResponse struct {
-	Total       int                 `json:"total"`
-	ContentList []*QueryContentItem `json:"list"`
+	Total int                 `json:"total"`
+	List  []*QueryContentItem `json:"list"`
 }
 
 type QueryContentItem struct {
