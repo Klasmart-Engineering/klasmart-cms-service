@@ -3282,6 +3282,21 @@ func (s *scheduleModel) PrepareScheduleTimeViewCondition(ctx context.Context, qu
 		Bool:  query.Anytime,
 		Valid: query.Anytime,
 	}
+
+	if query.StartAtGe >= 0 {
+		condition.StartAtGe = sql.NullInt64{
+			Int64: query.StartAtGe,
+			Valid: true,
+		}
+	}
+
+	if query.EndAtLe >= 0 {
+		condition.EndAtLe = sql.NullInt64{
+			Int64: query.EndAtLe,
+			Valid: true,
+		}
+	}
+
 	log.Debug(ctx, "condition info",
 		log.String("viewType", viewType),
 		log.Any("condition", condition),
@@ -3359,13 +3374,15 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 		return 0, nil, err
 	}
 
-	// pagination
-	if query.PageSize > 0 && query.Page > 0 {
-		condition.Pager = dbo.Pager{
-			Page:     query.Page,
-			PageSize: query.PageSize,
+	if query.DueAtEq >= 0 {
+		condition.DueToEq = sql.NullInt64{
+			Int64: query.DueAtEq,
+			Valid: true,
 		}
 	}
+
+	// pagination
+	condition.Pager = utils.GetDboPagerFromInt(query.Page, query.PageSize)
 
 	var scheduleList []*entity.Schedule
 	total, err := da.GetScheduleDA().Page(ctx, condition, &scheduleList)
@@ -3414,35 +3431,52 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 		}
 	}
 
-	// query assessment_status
+	// query assessment_status, only for student user
 	if query.WithAssessmentStatus {
-		// TODO
-		// assessments, err := GetAssessmentModel().Query(ctx, op, &da.QueryAssessmentConditions{
-		// 	ScheduleIDs: entity.NullStrings{
-		// 		Strings: notHomefunStudyScheduleIDs,
-		// 		Valid:   true,
-		// 	},
-		// })
-		// if err != nil {
-		// 	log.Error(ctx, "GetAssessmentModel().Query error",
-		// 		log.Err(err),
-		// 		log.Any("notHomefunStudyScheduleIDs", notHomefunStudyScheduleIDs))
-		// 	return 0, nil, err
-		// }
+		assessments, err := GetAssessmentModel().Query(ctx, op, &da.QueryAssessmentConditions{
+			ScheduleIDs: entity.NullStrings{
+				Strings: notHomefunStudyScheduleIDs,
+				Valid:   true,
+			},
+		})
+		if err != nil {
+			log.Error(ctx, "GetAssessmentModel().Query error",
+				log.Err(err),
+				log.Any("notHomefunStudyScheduleIDs", notHomefunStudyScheduleIDs))
+			return 0, nil, err
+		}
 
-		// var homeFunStudyAssessments []*entity.HomeFunStudy
-		// err = GetHomeFunStudyModel().Query(ctx, op, &da.QueryHomeFunStudyCondition{
-		// 	ScheduleIDs: entity.NullStrings{
-		// 		Strings: homefunStudyScheduleIDs,
-		// 		Valid:   true,
-		// 	},
-		// }, &homeFunStudyAssessments)
-		// if err != nil {
-		// 	log.Error(ctx, "GetHomeFunStudyModel().Query error",
-		// 		log.Err(err),
-		// 		log.Any("homefunStudyScheduleIDs", homefunStudyScheduleIDs))
-		// 	return 0, nil, err
-		// }
+		var homeFunStudyAssessments []*entity.HomeFunStudy
+		err = GetHomeFunStudyModel().Query(ctx, op, &da.QueryHomeFunStudyCondition{
+			ScheduleIDs: entity.NullStrings{
+				Strings: homefunStudyScheduleIDs,
+				Valid:   true,
+			},
+			StudentIDs: entity.NullStrings{
+				Strings: []string{op.UserID},
+				Valid:   true,
+			},
+		}, &homeFunStudyAssessments)
+		if err != nil {
+			log.Error(ctx, "GetHomeFunStudyModel().Query error",
+				log.Err(err),
+				log.Strings("homefunStudyScheduleIDs", homefunStudyScheduleIDs),
+				log.String("studentID", op.UserID))
+			return 0, nil, err
+		}
+
+		var assessmentStatusMap map[string]entity.AssessmentStatus
+		for _, assessment := range assessments {
+			assessmentStatusMap[assessment.ScheduleID] = assessment.Status
+		}
+
+		for _, homefunStudyAssessment := range homeFunStudyAssessments {
+			assessmentStatusMap[homefunStudyAssessment.ScheduleID] = homefunStudyAssessment.Status
+		}
+
+		for _, r := range result {
+			r.AssessmentStatus = assessmentStatusMap[r.ID]
+		}
 	}
 
 	return total, result, nil
