@@ -122,6 +122,7 @@ func (m *assessmentModel) PrepareAddInput(ctx context.Context, operator *entity.
 
 		inputMapItem, ok := inputMap[item.ID]
 		if !ok {
+			log.Error(ctx,"input no match schedule id",log.Any("inputMap",inputMap),log.String("scheduleID",item.ID))
 			return nil, constant.ErrInvalidArgs
 		}
 
@@ -141,6 +142,7 @@ func (m *assessmentModel) PrepareAddInput(ctx context.Context, operator *entity.
 
 		scheduleUsers, ok := scheduleUserRelationMap[item.ID]
 		if !ok {
+			log.Error(ctx,"not found users from schedule",log.Any("scheduleUserRelationMap",scheduleUserRelationMap),log.String("scheduleID",item.ID))
 			return nil, constant.ErrInvalidArgs
 		}
 
