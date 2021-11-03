@@ -1370,6 +1370,12 @@ func (s *Server) getScheduleTimeViewList(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	requestBody := new(entity.ScheduleTimeViewListRequest)
+	// set default value -1 to avoid zero vale
+	requestBody.DueAtEq = -1
+	requestBody.StartAtGe = -1
+	requestBody.EndAtLe = -1
+	requestBody.Page = -1
+	requestBody.PageSize = -1
 	if err := c.ShouldBindJSON(requestBody); err != nil {
 		log.Error(ctx, "c.ShouldBindJSON error", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))

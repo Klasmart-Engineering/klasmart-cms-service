@@ -880,7 +880,7 @@ type ScheduleTimeViewListRequest struct {
 	Anytime              bool     `json:"anytime"`
 	WithAssessmentStatus bool     `json:"with_assessment_status"`
 	OrderBy              string   `json:"order_by"`
-	PageSize             int      `json:"page_size" binding:"min=0,max=1000"`
+	PageSize             int      `json:"page_size" binding:"min=-1,max=1000"`
 	Page                 int      `json:"page"`
 }
 
