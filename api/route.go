@@ -35,14 +35,6 @@ func (s Server) registeRoute() {
 		}
 	}
 
-	assets := s.engine.Group("/v1/assets")
-	{
-		assets.GET("/", s.mustLogin, s.searchAssets)
-		assets.POST("/", s.mustLogin, s.createAsset)
-		assets.GET("/:id", s.mustLogin, s.getAssetByID)
-		assets.PUT("/:id", s.mustLogin, s.updateAsset)
-		assets.DELETE("/:id", s.mustLogin, s.deleteAsset)
-	}
 	content := s.engine.Group("/v1")
 	{
 		content.POST("/contents", s.mustLogin, s.createContent)
