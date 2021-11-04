@@ -110,7 +110,7 @@ func (m *assessmentH5P) batchGetRoomMap(ctx context.Context, operator *entity.Op
 	}
 
 	contentIDs := make([]string, 0, len(contentIDMap))
-	for key, _ := range contentIDMap {
+	for key := range contentIDMap {
 		contentIDs = append(contentIDs, key)
 	}
 	LessonMaterialMap, err := m.assessmentBase.batchGetLessonMaterialDataMap(ctx, dbo.MustGetDB(ctx), operator, contentIDs)
