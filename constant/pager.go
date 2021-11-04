@@ -1,5 +1,5 @@
 package constant
 
 var (
-	PageSizeArray = []int64{20, 100, 500}
+	ValidPageSizes = []int64{20, 100, 500}
 )
