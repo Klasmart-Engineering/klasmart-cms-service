@@ -331,8 +331,9 @@ func (f *FolderModel) fetchSharedContentIDs(ctx context.Context, folders []*enti
 
 	//4.Get contents from folders
 	condition := &da.ContentCondition{
-		ContentType: []int{entity.ContentTypePlan, entity.ContentTypeMaterial},
-		DirPath:     entity.NullStrings{Strings: folderPathList, Valid: true},
+		ContentType:    []int{entity.ContentTypePlan, entity.ContentTypeMaterial},
+		DirPath:        entity.NullStrings{Strings: folderPathList, Valid: true},
+		IncludeDeleted: true,
 	}
 	contents, err := da.GetContentDA().QueryContent(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
@@ -2319,7 +2320,10 @@ func (f *FolderModel) updateLinkedItemPath(ctx context.Context,
 
 func (f *FolderModel) listContentInFolder(ctx context.Context, tx *dbo.DBContext, path string) ([]string, error) {
 	//search all content in the folders
-	condition := &da.ContentCondition{DirPathRecursion: path}
+	condition := &da.ContentCondition{
+		DirPathRecursion: path,
+		IncludeDeleted:   true,
+	}
 	contentList, err := da.GetContentDA().QueryContent(ctx, tx, condition)
 	if err != nil {
 		log.Error(ctx, "QueryContent failed",
@@ -2344,7 +2348,10 @@ func (f *FolderModel) listContentMapInFolders(ctx context.Context, tx *dbo.DBCon
 		i++
 	}
 	//search all content in the folders
-	condition := &da.ContentCondition{DirPathRecursionList: pathList}
+	condition := &da.ContentCondition{
+		DirPathRecursionList: pathList,
+		IncludeDeleted:       true,
+	}
 	contentList, err := da.GetContentDA().QueryContent(ctx, tx, condition)
 	if err != nil {
 		log.Error(ctx, "QueryContent failed",

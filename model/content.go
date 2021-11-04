@@ -1899,9 +1899,10 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 			Valid:   condition.IDs != nil,
 			Strings: condition.IDs,
 		},
-		Org:          condition.OrgID,
-		ContentType:  contentTypes,
-		DataSourceID: condition.DataSourceID,
+		Org:            condition.OrgID,
+		ContentType:    contentTypes,
+		DataSourceID:   condition.DataSourceID,
+		IncludeDeleted: true,
 	}
 	total, data, err := da.GetContentDA().SearchContent(ctx, tx, cdt)
 	if err != nil {
