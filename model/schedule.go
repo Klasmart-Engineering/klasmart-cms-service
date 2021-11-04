@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
-
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -2301,7 +2299,7 @@ func (s *scheduleModel) ExistScheduleByLessonPlanID(ctx context.Context, lessonP
 	}
 	lessonPlanPastIDs, err := GetContentModel().GetPastContentIDByID(ctx, dbo.MustGetDB(ctx), lessonPlanID)
 	if err != nil {
-		logger.Error(ctx, "ExistScheduleByLessonPlanID:GetContentModel.GetPastContentIDByID error",
+		log.Error(ctx, "ExistScheduleByLessonPlanID:GetContentModel.GetPastContentIDByID error",
 			log.Err(err),
 			log.String("lessonPlanID", lessonPlanID),
 		)
@@ -2507,7 +2505,7 @@ func (s *scheduleModel) UpdateScheduleStatus(ctx context.Context, tx *dbo.DBCont
 func (s *scheduleModel) GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error) {
 	lessonPlanIDs, err := da.GetScheduleDA().GetLessonPlanIDsByCondition(ctx, tx, condition)
 	if err != nil {
-		logger.Error(ctx, "GetLessonPlanByCondition:get lessonPlanIDs error",
+		log.Error(ctx, "GetLessonPlanByCondition:get lessonPlanIDs error",
 			log.Err(err),
 			log.Any("condition", condition),
 			log.Any("operator", operator),
@@ -2516,7 +2514,7 @@ func (s *scheduleModel) GetLessonPlanByCondition(ctx context.Context, tx *dbo.DB
 	}
 	latestIDs, err := GetContentModel().GetLatestContentIDByIDList(ctx, tx, lessonPlanIDs)
 	if err != nil {
-		logger.Error(ctx, "GetLessonPlanByCondition:get latest lessonPlanIDs error",
+		log.Error(ctx, "GetLessonPlanByCondition:get latest lessonPlanIDs error",
 			log.Err(err),
 			log.Any("condition", condition),
 			log.Any("operator", operator),
@@ -2528,7 +2526,7 @@ func (s *scheduleModel) GetLessonPlanByCondition(ctx context.Context, tx *dbo.DB
 	latestIDs = utils.SliceDeduplication(latestIDs)
 	lessonPlanInfos, err := GetContentModel().GetContentNameByIDList(ctx, tx, latestIDs)
 	if err != nil {
-		logger.Error(ctx, "GetLessonPlanByCondition:get lessonPlan info error",
+		log.Error(ctx, "GetLessonPlanByCondition:get lessonPlan info error",
 			log.Err(err),
 			log.Strings("lessonPlanIDs", lessonPlanIDs),
 			log.Strings("latestIDs", latestIDs),
@@ -2549,7 +2547,7 @@ func (s *scheduleModel) GetLessonPlanByCondition(ctx context.Context, tx *dbo.DB
 func (s *scheduleModel) GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *entity.ScheduleIDsCondition) ([]string, error) {
 	lessonPlanPastIDs, err := GetContentModel().GetPastContentIDByID(ctx, tx, condition.LessonPlanID)
 	if err != nil {
-		logger.Error(ctx, "GetScheduleIDsByCondition:get past lessonPlan id error",
+		log.Error(ctx, "GetScheduleIDsByCondition:get past lessonPlan id error",
 			log.Err(err),
 			log.Any("condition", condition),
 			log.Any("operator", operator),

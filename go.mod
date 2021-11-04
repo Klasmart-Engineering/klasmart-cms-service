@@ -23,7 +23,7 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/newrelic/go-agent v3.15.0+incompatible
 	github.com/onsi/ginkgo v1.14.0 // indirect
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/swaggo/swag v1.7.4
 	github.com/tencentcloud/tencentcloud-sdk-go v1.0.62

@@ -3,11 +3,11 @@ package da
 import (
 	"context"
 	"database/sql"
-	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"sync"
 )
 
 type IFeedbackAssignmentDA interface {
@@ -22,7 +22,7 @@ type feedbackAssignmentDA struct {
 func (s *feedbackAssignmentDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, assignments []*entity.FeedbackAssignment) (int64, error) {
 	_, err := s.InsertTx(ctx, dbContext, &assignments)
 	if err != nil {
-		logger.Error(ctx, "batch insert feedbackAssignment: batch insert failed", log.Any("assignments", assignments), log.Err(err))
+		log.Error(ctx, "batch insert feedbackAssignment: batch insert failed", log.Any("assignments", assignments), log.Err(err))
 		return 0, err
 	}
 	return int64(len(assignments)), nil
