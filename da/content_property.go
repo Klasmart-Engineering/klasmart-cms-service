@@ -2,11 +2,11 @@ package da
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"sync"
 )
 
 type IContentPropertyDA interface {
@@ -35,7 +35,7 @@ func (c *ContentPropertyDA) BatchAdd(ctx context.Context, tx *dbo.DBContext, co 
 func (c *ContentPropertyDA) CleanByContentID(ctx context.Context, tx *dbo.DBContext, contentID string) error {
 	err := tx.Where("content_id = ?", contentID).Delete(entity.ContentProperty{}).Error
 	if err != nil {
-		logger.Error(ctx, "db exec sql error", log.String("contentID", contentID), log.Err(err))
+		log.Error(ctx, "db exec sql error", log.String("contentID", contentID), log.Err(err))
 		return err
 	}
 	return nil

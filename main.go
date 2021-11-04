@@ -3,8 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/go-redis/redis"
-	"github.com/sirupsen/logrus"
 	"gitlab.badanamu.com.cn/calmisland/common-cn/common"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -15,11 +18,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"gitlab.badanamu.com.cn/calmisland/ro"
-	"os"
-	"os/signal"
-	"syscall"
-
-	logger "gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 )
 
 func initDB() {
@@ -83,9 +81,6 @@ func main() {
 		}
 	}()
 
-	// temp solution, will remove in next version
-	logger.SetLevel(logrus.DebugLevel)
-
 	log.Debug(context.TODO(), "build information",
 		log.String("gitHash", constant.GitHash),
 		log.String("buildTimestamp", constant.BuildTimestamp),
@@ -94,19 +89,19 @@ func main() {
 	// read config
 	config.LoadEnvConfig()
 
-	log.Debug(context.TODO(), "load config success", log.Any("config", config.Get()))
+	log.Debug(context.TODO(), "load config successfully", log.Any("config", config.Get()))
 
 	// init database connection
 	initDB()
 
-	log.Debug(context.TODO(), "init db success")
+	log.Debug(context.TODO(), "init db successfully")
 	initCache()
 
-	log.Debug(context.TODO(), "init cache success")
+	log.Debug(context.TODO(), "init cache successfully")
 	// init dynamodb connection
 	storage.DefaultStorage()
 
-	log.Debug(context.TODO(), "init storage success")
+	log.Debug(context.TODO(), "init storage successfully")
 
 	if os.Getenv("env") == "HTTP" {
 		common.Setenv(common.EnvHTTP)
@@ -116,7 +111,7 @@ func main() {
 
 	go common.RunWithHTTPHandler(api.NewServer(), ":8088")
 
-	log.Debug(context.TODO(), "init api server success")
+	log.Debug(context.TODO(), "init api server successfully")
 
 	quit := make(chan os.Signal)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
