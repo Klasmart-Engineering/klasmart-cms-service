@@ -3,7 +3,6 @@ module gitlab.badanamu.com.cn/calmisland/kidsloop2
 go 1.14
 
 require (
-	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/aws/aws-sdk-go v1.35.23
 	github.com/coreos/etcd v3.3.25+incompatible // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
@@ -49,7 +48,6 @@ require (
 	golang.org/x/net v0.0.0-20210924054057-cf34111cab4d
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20210923061019-b8560ed6a9b7 // indirect
-	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/genproto v0.0.0-20210924002016-3dee208752a0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
