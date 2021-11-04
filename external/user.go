@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
 	"sync"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -43,12 +44,13 @@ type User struct {
 }
 
 type NullableUser struct {
-	Valid bool `json:"valid"`
+	Valid bool   `json:"valid"`
+	ID    string `json:"id"`
 	*User
 }
 
 func (n *NullableUser) StringID() string {
-	return n.User.ID
+	return n.ID
 }
 func (n *NullableUser) RelatedIDs() []*cache.RelatedEntity {
 	return nil
@@ -138,6 +140,7 @@ func (s AmsUserService) QueryByIDs(ctx context.Context, ids []string, options ..
 		users = append(users, &NullableUser{
 			Valid: user != nil,
 			User:  user,
+			ID:    ids[indexMapping[index]],
 		})
 	}
 
