@@ -49,7 +49,7 @@ func TestContentModel_CreateContent(t *testing.T) {
 		ParentFolder: "5fc8466ea1207f8c137118c9", //string `json:"parent_folder"`
 	}
 	operator := init2Operator(operatorOrgID, "brilliant.yang@badanamu.com.cn", "Try1try123")
-	content, err := GetContentModel().CreateContent(ctx, dbo.MustGetDB(ctx), req, operator)
+	content, err := GetContentModel().CreateContent(ctx, req, operator)
 	if err != nil {
 		t.Fatal(err)
 	}
