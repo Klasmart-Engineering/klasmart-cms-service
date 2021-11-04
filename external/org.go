@@ -3,9 +3,10 @@ package external
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
 	"text/template"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 
 	"go.uber.org/zap/buffer"
 
@@ -36,11 +37,12 @@ type Organization struct {
 
 type NullableOrganization struct {
 	Organization
-	Valid bool `json:"valid"`
+	ID    string `json:"id"`
+	Valid bool   `json:"valid"`
 }
 
 func (n *NullableOrganization) StringID() string {
-	return n.Organization.ID
+	return n.ID
 }
 func (n *NullableOrganization) RelatedIDs() []*cache.RelatedEntity {
 	return nil
@@ -105,9 +107,16 @@ func (s AmsOrganizationService) QueryByIDs(ctx context.Context, ids []string, op
 	nullableOrganizations := make([]cache.Object, len(ids))
 	for index := range ids {
 		if payload[indexMapping[index]] == nil {
-			nullableOrganizations[index] = &NullableOrganization{Valid: false}
+			nullableOrganizations[index] = &NullableOrganization{
+				ID:    ids[indexMapping[index]],
+				Valid: false,
+			}
 		} else {
-			nullableOrganizations[index] = &NullableOrganization{*payload[indexMapping[index]], true}
+			nullableOrganizations[index] = &NullableOrganization{
+				Organization: *payload[indexMapping[index]],
+				ID:           ids[indexMapping[index]],
+				Valid:        true,
+			}
 		}
 	}
 

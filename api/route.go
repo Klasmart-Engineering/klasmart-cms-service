@@ -35,14 +35,6 @@ func (s Server) registeRoute() {
 		}
 	}
 
-	assets := s.engine.Group("/v1/assets")
-	{
-		assets.GET("/", s.mustLogin, s.searchAssets)
-		assets.POST("/", s.mustLogin, s.createAsset)
-		assets.GET("/:id", s.mustLogin, s.getAssetByID)
-		assets.PUT("/:id", s.mustLogin, s.updateAsset)
-		assets.DELETE("/:id", s.mustLogin, s.deleteAsset)
-	}
 	content := s.engine.Group("/v1")
 	{
 		content.POST("/contents", s.mustLogin, s.createContent)
@@ -223,12 +215,6 @@ func (s Server) registeRoute() {
 	{
 		crypto.GET("/h5p/signature", s.mustLogin, s.h5pSignature)
 		crypto.GET("/h5p/jwt", s.mustLogin, s.generateH5pJWT)
-	}
-
-	classTypes := s.engine.Group("/v1/class_types")
-	{
-		classTypes.GET("", s.mustLoginWithoutOrgID, s.getClassType)
-		classTypes.GET("/:id", s.mustLoginWithoutOrgID, s.getClassTypeByID)
 	}
 
 	lessonTypes := s.engine.Group("/v1/lesson_types")
