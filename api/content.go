@@ -619,7 +619,7 @@ func (s *Server) queryContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := s.queryContentCondition(c, op)
-	if !s.checkPager(condition.Pager.PageIndex, condition.Pager.PageSize) {
+	if !s.checkPager(c, condition.Pager.PageIndex, condition.Pager.PageSize) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -691,7 +691,7 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := s.queryContentCondition(c, op)
-	if !s.checkPager(condition.Pager.PageIndex, condition.Pager.PageSize) {
+	if !s.checkPager(c, condition.Pager.PageIndex, condition.Pager.PageSize) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -740,7 +740,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := s.queryContentCondition(c, op)
-	if !s.checkPager(condition.Pager.PageIndex, condition.Pager.PageSize) {
+	if !s.checkPager(c, condition.Pager.PageIndex, condition.Pager.PageSize) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -819,7 +819,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 	op := s.getOperator(c)
 
 	condition := s.queryContentCondition(c, op)
-	if !s.checkPager(condition.Pager.PageIndex, condition.Pager.PageSize) {
+	if !s.checkPager(c, condition.Pager.PageIndex, condition.Pager.PageSize) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -882,7 +882,7 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 	op := s.getOperator(c)
 
 	condition := s.queryContentCondition(c, op)
-	if !s.checkPager(condition.Pager.PageIndex, condition.Pager.PageSize) {
+	if !s.checkPager(c, condition.Pager.PageIndex, condition.Pager.PageSize) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -1090,11 +1090,13 @@ func (s *Server) queryContentCondition(c *gin.Context, op *entity.Operator) enti
 	return condition
 }
 
-func (s *Server) checkPager(pageIndex int64, pageSize int64) bool {
-	if pageIndex <= 0 {
+func (s *Server) checkPager(c *gin.Context, pageIndex int64, pageSize int64) bool {
+	if pageIndex < 0 {
+		log.Debug(c.Request.Context(), "pageIndex less than zero")
 		return false
 	}
 	if !utils.ContainsInt64(constant.ValidPageSizes, pageSize) {
+		log.Debug(c.Request.Context(), "pageSize is not in ValidPageSizes")
 		return false
 	}
 	return true
