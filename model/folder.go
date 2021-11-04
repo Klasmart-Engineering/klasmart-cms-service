@@ -1122,7 +1122,9 @@ func (f *FolderModel) getParentFolderListByContentIDs(ctx context.Context, tx *d
 			IDS: entity.NullStrings{
 				Strings: ids,
 				Valid:   true,
-			}})
+			},
+			IncludeDeleted: true,
+		})
 	if err != nil {
 		log.Warn(ctx, "QueryContent failed",
 			log.Err(err),
