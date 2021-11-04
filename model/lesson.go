@@ -296,7 +296,7 @@ func (l *LessonData) PrepareResult(ctx context.Context, tx *dbo.DBContext, conte
 	}
 
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, ld *LessonData) {
-		data, ok := contentMap[l.MaterialId]
+		data, ok := contentMap[ld.MaterialId]
 		if ok {
 			material, _ := GetContentModel().ConvertContentObjWithProperties(ctx, data, contentPropertiesMap[data.ID])
 			ld.Material = material
