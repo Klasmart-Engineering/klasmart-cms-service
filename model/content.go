@@ -75,13 +75,6 @@ func NewErrContentAlreadyLocked(ctx context.Context, lockedBy string, operator *
 	return &ErrContentAlreadyLocked{LockedBy: user}
 }
 
-type visiblePermission string
-
-var (
-	visiblePermissionPublished visiblePermission = "published"
-	visiblePermissionPending   visiblePermission = "pending"
-)
-
 type SubContentsWithName struct {
 	ID   string      `json:"id"`
 	Name string      `json:"name"`
