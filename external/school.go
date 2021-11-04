@@ -3,9 +3,10 @@ package external
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
 	"sync"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -36,12 +37,13 @@ type School struct {
 }
 
 type NullableSchool struct {
-	Valid bool `json:"valid"`
+	Valid bool   `json:"valid"`
+	ID    string `json:"id"`
 	*School
 }
 
 func (n *NullableSchool) StringID() string {
-	return n.School.ID
+	return n.ID
 }
 func (n *NullableSchool) RelatedIDs() []*cache.RelatedEntity {
 	return nil
@@ -132,6 +134,7 @@ func (s AmsSchoolService) QueryByIDs(ctx context.Context, ids []string, options 
 		schools = append(schools, &NullableSchool{
 			Valid:  school != nil,
 			School: school,
+			ID:     ids[indexMapping[index]],
 		})
 	}
 

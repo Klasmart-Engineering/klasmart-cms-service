@@ -54,7 +54,6 @@ type IScheduleModel interface {
 	UpdateScheduleShowOption(ctx context.Context, op *entity.Operator, scheduleID string, option entity.ScheduleShowOption) (string, error)
 	GetPrograms(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
 	GetSubjects(ctx context.Context, op *entity.Operator, programID string) ([]*entity.ScheduleShortInfo, error)
-	GetClassTypes(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
 	GetRosterClassNotStartScheduleIDs(ctx context.Context, rosterClassID string, userIDs []string) ([]string, error)
 	GetLearningOutcomeIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]string, error)
 	GetScheduleViewByID(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleViewDetail, error)
@@ -2873,29 +2872,6 @@ func (s *scheduleModel) GetSubjects(ctx context.Context, op *entity.Operator, pr
 
 func (s *scheduleModel) getClassTypesCondition(ctx context.Context, op *entity.Operator) (*da.ScheduleCondition, error) {
 	return s.getRelationCondition(ctx, op)
-}
-
-func (s *scheduleModel) GetClassTypes(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error) {
-	condition, err := s.getClassTypesCondition(ctx, op)
-	if err != nil {
-		return nil, err
-	}
-	classTypes, err := da.GetScheduleDA().GetClassTypes(ctx, dbo.MustGetDB(ctx), condition)
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]*entity.ScheduleShortInfo, len(classTypes))
-	for i, item := range classTypes {
-		name := entity.ScheduleClassType(item)
-
-		result[i] = &entity.ScheduleShortInfo{
-			ID:   item,
-			Name: name.ToLabel().String(),
-		}
-	}
-
-	return result, nil
 }
 
 func (s *scheduleModel) GetRosterClassNotStartScheduleIDs(ctx context.Context, rosterClassID string, userIDs []string) ([]string, error) {
