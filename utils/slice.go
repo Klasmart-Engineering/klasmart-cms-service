@@ -124,6 +124,15 @@ func ContainsInt(s []int, e int) bool {
 	return false
 }
 
+func ContainsInt64(s []int64, e int64) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
 func IntersectAndDeduplicateStrSlice(slice1 []string, slice2 []string) []string {
 	m := make(map[string]int)
 	m2 := make(map[string]int)

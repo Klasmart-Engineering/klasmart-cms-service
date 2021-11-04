@@ -620,6 +620,10 @@ func (s *Server) queryContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := s.queryContentCondition(c, op)
+	if !s.checkPager(condition.Pager.PageIndex, condition.Pager.PageSize) {
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
 	author := c.Query("author")
 	//filter unauthed visibility settings
 	if author != constant.Self {
@@ -688,7 +692,10 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := s.queryContentCondition(c, op)
-
+	if !s.checkPager(condition.Pager.PageIndex, condition.Pager.PageSize) {
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
 	total, results, err := model.GetContentModel().SearchAuthedContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case nil:
@@ -757,6 +764,10 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := s.queryContentCondition(c, op)
+	if !s.checkPager(condition.Pager.PageIndex, condition.Pager.PageSize) {
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
 	author := c.Query("author")
 
 	//if query is not self, filter conditions
@@ -832,6 +843,10 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 	op := s.getOperator(c)
 
 	condition := s.queryContentCondition(c, op)
+	if !s.checkPager(condition.Pager.PageIndex, condition.Pager.PageSize) {
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
 	condition.Author = op.UserID
 
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, &condition, op)
@@ -891,7 +906,10 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 	op := s.getOperator(c)
 
 	condition := s.queryContentCondition(c, op)
-
+	if !s.checkPager(condition.Pager.PageIndex, condition.Pager.PageSize) {
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
 	//filter pending visibility settings
 	isTerminal := s.filterPendingContent(c, &condition, op)
 	if isTerminal {
@@ -1094,4 +1112,14 @@ func (s *Server) queryContentCondition(c *gin.Context, op *entity.Operator) enti
 		condition.SourceType = sourceType
 	}
 	return condition
+}
+
+func (s *Server) checkPager(pageIndex int64, pageSize int64) bool {
+	if pageIndex <= 0 {
+		return false
+	}
+	if !utils.ContainsInt64(constant.ValidPageSizes, pageSize) {
+		return false
+	}
+	return true
 }
