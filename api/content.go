@@ -620,7 +620,7 @@ func (s *Server) queryContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := s.queryContentCondition(c, op)
-	if !s.checkPager(c.Request.Context(), condition.Pager.PageIndex, condition.Pager.PageSize) {
+	if !s.checkPager(ctx, condition.Pager.PageIndex, condition.Pager.PageSize) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -692,7 +692,7 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := s.queryContentCondition(c, op)
-	if !s.checkPager(c.Request.Context(), condition.Pager.PageIndex, condition.Pager.PageSize) {
+	if !s.checkPager(ctx, condition.Pager.PageIndex, condition.Pager.PageSize) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -741,7 +741,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := s.queryContentCondition(c, op)
-	if !s.checkPager(c.Request.Context(), condition.Pager.PageIndex, condition.Pager.PageSize) {
+	if !s.checkPager(ctx, condition.Pager.PageIndex, condition.Pager.PageSize) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -820,7 +820,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 	op := s.getOperator(c)
 
 	condition := s.queryContentCondition(c, op)
-	if !s.checkPager(c.Request.Context(), condition.Pager.PageIndex, condition.Pager.PageSize) {
+	if !s.checkPager(ctx, condition.Pager.PageIndex, condition.Pager.PageSize) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -883,7 +883,7 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 	op := s.getOperator(c)
 
 	condition := s.queryContentCondition(c, op)
-	if !s.checkPager(c.Request.Context(), condition.Pager.PageIndex, condition.Pager.PageSize) {
+	if !s.checkPager(ctx, condition.Pager.PageIndex, condition.Pager.PageSize) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
