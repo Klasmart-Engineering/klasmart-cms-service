@@ -501,7 +501,7 @@ func (s *Server) processScheduleDueDate(c *gin.Context, input *entity.ProcessSch
 
 // @Summary getScheduleByID
 // @ID getScheduleByID
-// @Description get schedule by id
+// @Description get schedule by id, excluding deleted
 // @Accept json
 // @Produce json
 // @Param schedule_id path string true "schedule id"

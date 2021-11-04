@@ -335,13 +335,18 @@ func (s *scheduleRelationModel) GetRelationTypeByScheduleID(ctx context.Context,
 	var relations []*entity.ScheduleRelation
 	err := da.GetScheduleRelationDA().Query(ctx, condition, &relations)
 	if err != nil {
-		log.Error(ctx, "get relation count error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
+		log.Error(ctx, "da.GetScheduleRelationDA().Query error",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("condition", condition))
 		return "", err
 	}
-	if len(relations) <= 0 {
-		log.Info(ctx, "not found", log.Any("op", op), log.Any("condition", condition))
+	if len(relations) == 0 {
+		log.Debug(ctx, "schedule relation not found",
+			log.Any("condition", condition))
 		return entity.ScheduleRoleTypeUnknown, nil
 	}
+
 	relation := relations[0]
 	switch relation.RelationType {
 	case entity.ScheduleRelationTypeParticipantTeacher, entity.ScheduleRelationTypeClassRosterTeacher:
@@ -389,7 +394,7 @@ func (s *scheduleRelationModel) GetOutcomeIDs(ctx context.Context, scheduleID st
 	}
 	err := da.GetScheduleRelationDA().Query(ctx, relationCondition, &scheduleRelations)
 	if err != nil {
-		log.Error(ctx, "get users relation error",
+		log.Error(ctx, "da.GetScheduleRelationDA().Query error",
 			log.Err(err),
 			log.Any("relationCondition", relationCondition))
 		return nil, err

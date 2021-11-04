@@ -136,7 +136,10 @@ func (s *scheduleFeedbackModel) ExistByScheduleID(ctx context.Context, op *entit
 	}
 	count, err := da.GetScheduleFeedbackDA().Count(ctx, condition, &entity.ScheduleFeedback{})
 	if err != nil {
-		log.Error(ctx, "insert error", log.Err(err), log.Any("op", op), log.String("scheduleID", scheduleID))
+		log.Error(ctx, "da.GetScheduleFeedbackDA().Count error",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("condition", condition))
 		return false, err
 	}
 	return count > 0, nil
