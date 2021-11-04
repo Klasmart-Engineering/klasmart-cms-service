@@ -255,17 +255,6 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 	return content
 }
 
-func (cm ContentModel) prepareCopyContentParams(ctx context.Context, content *entity.Content, user *entity.Operator) *entity.Content {
-	content.Version = 1
-	content.ID = ""
-	content.LockedBy = constant.LockedByNoBody
-	content.Author = user.UserID
-	content.Org = user.OrgID
-	content.CopySourceID = content.ID
-	content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusPublished)
-	return content
-}
-
 func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus, user *entity.Operator) *entity.Content {
 	//删除的时候不去掉路径信息
 	//delete the dir path info

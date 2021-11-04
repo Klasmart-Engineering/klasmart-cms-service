@@ -3,23 +3,21 @@ package api
 import (
 	"context"
 	"fmt"
-	newrelic "github.com/newrelic/go-agent"
-	"github.com/newrelic/go-agent/_integrations/nrgin/v1"
 	"net"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-
 	"github.com/dgrijalva/jwt-go"
-
 	"github.com/gin-gonic/gin"
+	newrelic "github.com/newrelic/go-agent"
+	"github.com/newrelic/go-agent/_integrations/nrgin/v1"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 func ExtractSession(c *gin.Context) (string, error) {
@@ -123,20 +121,6 @@ func (Server) getOperator(c *gin.Context) *entity.Operator {
 		return op.(*entity.Operator)
 	}
 	return &entity.Operator{}
-}
-
-func (Server) getTimeLocation(c *gin.Context) *time.Location {
-	tz := c.GetHeader("CloudFront-Viewer-Time-Zone")
-	if tz == "" {
-		log.Debug(c.Request.Context(), "GetTimeLocation: get header failed")
-		return time.Local
-	}
-	loc, err := time.LoadLocation(tz)
-	if err != nil {
-		log.Debug(c.Request.Context(), "GetTimeLocation: load location failed", log.Err(err))
-		return time.Local
-	}
-	return loc
 }
 
 func (s Server) logger() gin.HandlerFunc {

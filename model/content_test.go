@@ -6,17 +6,17 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 	"testing"
+
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 const operatorOrgID = "92db7ddd-1f23-4f64-bd47-94f6d34a50c0"
-const operatorID = "150de04b-6777-4cab-a381-5f36a9b750ef"
 
 func TestContentModel_CreateContent(t *testing.T) {
 	ctx := context.Background()
@@ -148,7 +148,7 @@ func init2Operator(orgID string, authTo string, authCode string) *entity.Operato
 		var user struct {
 			ID string `json:"id"`
 		}
-		json.Unmarshal(info, &user)
+		_ = json.Unmarshal(info, &user)
 		op.UserID = user.ID
 		return op
 	}
@@ -164,7 +164,7 @@ func init2Operator(orgID string, authTo string, authCode string) *entity.Operato
 			var user struct {
 				ID string `json:"id"`
 			}
-			json.Unmarshal(info, &user)
+			_ = json.Unmarshal(info, &user)
 			op.UserID = user.ID
 			return op
 		}

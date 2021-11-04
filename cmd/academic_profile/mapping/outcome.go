@@ -183,7 +183,7 @@ func (o OutcomeService) Do(ctx context.Context, cliContext *cli.Context, mapper 
 			log.Error(ctx, "delete relation failed", log.Err(err), log.Any("outcome", outcome))
 			return err
 		}
-		err = da.GetOutcomeRelationDA().InsertTx(ctx, tx, relations)
+		_, err = da.GetOutcomeRelationDA().InsertTx(ctx, tx, relations)
 		if err != nil {
 			log.Error(ctx, "InsertTx relation failed", log.Err(err), log.Any("relations", relations))
 			return err

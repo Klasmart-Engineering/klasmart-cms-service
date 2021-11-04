@@ -114,7 +114,7 @@ func (ac *AuthedContent) BatchAddByOrgIDs(ctx context.Context, tx *dbo.DBContext
 		log.Strings("orgIDs", orgIDs))
 
 	allContentsWithChildren := make([]string, 0)
-	for k, _ := range allContentIDsMap {
+	for k := range allContentIDsMap {
 		allContentIDsMap[k] = utils.SliceDeduplication(allContentIDsMap[k])
 
 		allContentsWithChildren = append(allContentsWithChildren, allContentIDsMap[k]...)

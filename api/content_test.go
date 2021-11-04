@@ -6,8 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/common-cn/common"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -17,9 +15,11 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
+	"gitlab.badanamu.com.cn/calmisland/common-cn/common"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/ro"
 )
 
@@ -168,7 +168,6 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-const url = ""
 const prefix = "/v1"
 
 func DoHttp(method string, url string, body string) string {
