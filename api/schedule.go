@@ -1222,30 +1222,6 @@ func (s *Server) getSubjectsInScheduleFilter(c *gin.Context) {
 	}
 }
 
-// @Summary get schedule filter classTypes
-// @Description get schedule filter classTypes
-// @Tags schedule
-// @ID getClassTypesInScheduleFilter
-// @Accept json
-// @Produce json
-// @Success 200 {array} entity.ScheduleShortInfo
-// @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules_filter/class_types [get]
-func (s *Server) getClassTypesInScheduleFilter(c *gin.Context) {
-	op := s.getOperator(c)
-	ctx := c.Request.Context()
-
-	classTypes, err := model.GetScheduleModel().GetClassTypes(ctx, op)
-	switch err {
-	case nil:
-		c.JSON(http.StatusOK, classTypes)
-	case constant.ErrForbidden:
-		c.JSON(http.StatusOK, []string{})
-	default:
-		s.defaultErrorHandler(c, err)
-	}
-}
-
 // @Summary getSchedulePopupByID
 // @ID getSchedulePopupByID
 // @Description get schedule popup info by id

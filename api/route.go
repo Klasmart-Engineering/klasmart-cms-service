@@ -96,7 +96,6 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules/:id/operator/newest_feedback", s.mustLogin, s.getScheduleNewestFeedbackByOperator)
 		schedules.GET("/schedules_filter/programs", s.mustLogin, s.getProgramsInScheduleFilter)
 		schedules.GET("/schedules_filter/subjects", s.mustLogin, s.getSubjectsInScheduleFilter)
-		schedules.GET("/schedules_filter/class_types", s.mustLogin, s.getClassTypesInScheduleFilter)
 		schedules.GET("/schedules_view/:id", s.mustLogin, s.getScheduleViewByID)
 
 		schedules.POST("/schedules_time_view/dates", s.mustLogin, s.postScheduledDates)
@@ -216,12 +215,6 @@ func (s Server) registeRoute() {
 	{
 		crypto.GET("/h5p/signature", s.mustLogin, s.h5pSignature)
 		crypto.GET("/h5p/jwt", s.mustLogin, s.generateH5pJWT)
-	}
-
-	classTypes := s.engine.Group("/v1/class_types")
-	{
-		classTypes.GET("", s.mustLoginWithoutOrgID, s.getClassType)
-		classTypes.GET("/:id", s.mustLoginWithoutOrgID, s.getClassTypeByID)
 	}
 
 	lessonTypes := s.engine.Group("/v1/lesson_types")
