@@ -3,19 +3,14 @@ package da
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 	"sync"
-	"time"
-	"unicode"
-
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type ContentOrderBy int
@@ -34,11 +29,9 @@ const (
 type IContentDA interface {
 	CreateContent(ctx context.Context, tx *dbo.DBContext, co entity.Content) (string, error)
 	UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, co entity.Content) error
-	DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string) error
 	GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.Content, error)
 
 	SearchContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, condition *ContentVisibilitySettingsCondition) ([]*entity.ContentVisibilitySetting, error)
-	CreateContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, co entity.ContentVisibilitySetting) error
 	GetContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	BatchCreateContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, scope []string) error
 	BatchDeleteContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, visibilitySettings []string) error
@@ -46,9 +39,8 @@ type IContentDA interface {
 
 	GetContentByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.Content, error)
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition *ContentCondition) (int, []*entity.Content, error)
-	SearchContentInternal(ctx context.Context, tx *dbo.DBContext, condition *ContentConditionInternal) (int, []*entity.Content, error)
 	SearchContentUnSafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (int, []*entity.Content, error)
-	Count(context.Context, dbo.Conditions) (int, error)
+	QueryContent(cgtx context.Context, tx *dbo.DBContext, condition *ContentCondition) ([]*entity.Content, error)
 
 	SearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 ContentCondition, condition2 *FolderCondition) (int, []*entity.FolderContent, error)
 	SearchFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 *FolderCondition) (int, []*entity.FolderContent, error)
@@ -97,67 +89,6 @@ type ContentCondition struct {
 	LatestID           string             `json:"latest_id"`
 	SourceType         string             `json:"source_type"`
 	DirPath            entity.NullStrings `json:"dir_path"`
-	ContentName        string             `json:"content_name"`
-
-	//AuthedContentFlag bool           `json:"authed_content"`
-	AuthedOrgID entity.NullStrings `json:"authed_org_ids"`
-	OrderBy     ContentOrderBy     `json:"order_by"`
-	Pager       utils.Pager
-
-	JoinUserIDList []string `json:"join_user_id_list"`
-}
-
-func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
-	internalCondition := GetContentConditionByInternalCondition(*s)
-	conditions, params := internalCondition.GetConditions()
-	conditions = append(conditions, " delete_at = 0")
-	return conditions, params
-}
-
-func (s *ContentCondition) GetPager() *dbo.Pager {
-	internalCondition := GetContentConditionByInternalCondition(*s)
-	return internalCondition.GetPager()
-}
-func (s *ContentCondition) GetOrderBy() string {
-	internalCondition := GetContentConditionByInternalCondition(*s)
-	return internalCondition.GetOrderBy()
-}
-
-func GetContentConditionByInternalCondition(s ContentCondition) *ContentConditionInternal {
-	return &ContentConditionInternal{
-		IDS:                s.IDS,
-		Name:               s.Name,
-		ContentType:        s.ContentType,
-		VisibilitySettings: s.VisibilitySettings,
-		PublishStatus:      s.PublishStatus,
-		Author:             s.Author,
-		Org:                s.Org,
-		Program:            s.Program,
-		SourceID:           s.SourceID,
-		LatestID:           s.LatestID,
-		SourceType:         s.SourceType,
-		DirPath:            s.DirPath,
-		ContentName:        s.ContentName,
-		AuthedOrgID:        s.AuthedOrgID,
-		OrderBy:            s.OrderBy,
-		Pager:              s.Pager,
-		JoinUserIDList:     s.JoinUserIDList,
-	}
-}
-
-type ContentConditionInternal struct {
-	IDS                entity.NullStrings `json:"ids"`
-	Name               string             `json:"name"`
-	ContentType        []int              `json:"content_type"`
-	VisibilitySettings []string           `json:"visibility_settings"`
-	PublishStatus      []string           `json:"publish_status"`
-	Author             string             `json:"author"`
-	Org                string             `json:"org"`
-	Program            []string           `json:"program"`
-	SourceID           string             `json:"source_id"`
-	LatestID           string             `json:"latest_id"`
-	SourceType         string             `json:"source_type"`
-	DirPath            entity.NullStrings `json:"dir_path"`
 
 	DirPathRecursion     string   `json:"dir_path_recursion"`
 	DirPathRecursionList []string `json:"dir_path_recursion_list"`
@@ -171,9 +102,10 @@ type ContentConditionInternal struct {
 	DataSourceID string `json:"data_source_id"`
 
 	JoinUserIDList []string `json:"join_user_id_list"`
+	IncludeDeleted bool
 }
 
-func (s *ContentConditionInternal) GetConditions() ([]string, []interface{}) {
+func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 	conditions := make([]string, 0)
 	params := make([]interface{}, 0)
 
@@ -293,25 +225,20 @@ func (s *ContentConditionInternal) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.Org)
 	}
 
+	if !s.IncludeDeleted {
+		conditions = append(conditions, "delete_at=0")
+	}
+
 	return conditions, params
 }
-func (s *ContentConditionInternal) GetPager() *dbo.Pager {
+func (s *ContentCondition) GetPager() *dbo.Pager {
 	return &dbo.Pager{
 		Page:     int(s.Pager.PageIndex),
 		PageSize: int(s.Pager.PageSize),
 	}
 }
-func (s *ContentConditionInternal) GetOrderBy() string {
+func (s *ContentCondition) GetOrderBy() string {
 	return s.OrderBy.ToSQL()
-}
-
-func IsChineseChar(str string) bool {
-	for _, r := range str {
-		if unicode.Is(unicode.Scripts["Han"], r) || (regexp.MustCompile("[\u3002\uff1b\uff0c\uff1a\u201c\u201d\uff08\uff09\u3001\uff1f\u300a\u300b]").MatchString(string(r))) {
-			return true
-		}
-	}
-	return false
 }
 
 // NewTeacherOrderBy parse order by
@@ -375,13 +302,6 @@ func (cd *DBContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co 
 	return co.ID, nil
 }
 
-func (cd *DBContentDA) CreateContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cv entity.ContentVisibilitySetting) error {
-	_, err := cd.s.InsertTx(ctx, tx, &cv)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 func (cd *DBContentDA) BatchCreateContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, scope []string) error {
 	cv := make([]entity.ContentVisibilitySetting, len(scope))
 	for i := range scope {
@@ -430,17 +350,6 @@ func (cd *DBContentDA) BatchUpdateContentPath(ctx context.Context, tx *dbo.DBCon
 	return nil
 }
 
-func (cd *DBContentDA) DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string) error {
-	now := time.Now()
-	content := new(entity.Content)
-	content.ID = cid
-	content.DeleteAt = now.Unix()
-	_, err := cd.s.UpdateTx(ctx, tx, content)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 func (cd *DBContentDA) GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.Content, error) {
 	obj := new(entity.Content)
 	err := cd.s.GetTx(ctx, tx, cid, obj)
@@ -448,6 +357,7 @@ func (cd *DBContentDA) GetContentByID(ctx context.Context, tx *dbo.DBContext, ci
 		return nil, err
 	}
 	if obj.DeleteAt > 0 {
+		log.Error(ctx, "record deleted", log.String("id", cid), log.Any("content", obj))
 		return nil, dbo.ErrRecordNotFound
 	}
 
@@ -467,15 +377,6 @@ func (cd *DBContentDA) GetContentByIDList(ctx context.Context, tx *dbo.DBContext
 	}
 
 	return objs, nil
-}
-func (cd *DBContentDA) SearchContentInternal(ctx context.Context, tx *dbo.DBContext, condition *ContentConditionInternal) (int, []*entity.Content, error) {
-	objs := make([]*entity.Content, 0)
-	count, err := cd.s.PageTx(ctx, tx, condition, &objs)
-	if err != nil {
-		return 0, nil, err
-	}
-
-	return count, objs, nil
 }
 
 func (cd *DBContentDA) GetContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error) {
@@ -525,6 +426,12 @@ func (cd *DBContentDA) SearchContentUnSafe(ctx context.Context, tx *dbo.DBContex
 	}
 
 	return count, objs, nil
+}
+
+func (cd *DBContentDA) QueryContent(ctx context.Context, tx *dbo.DBContext, condition *ContentCondition) ([]*entity.Content, error) {
+	objs := make([]*entity.Content, 0)
+	err := cd.s.QueryTx(ctx, tx, condition, &objs)
+	return objs, err
 }
 
 func (cm *DBContentDA) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error {
@@ -687,10 +594,6 @@ func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBCont
 		return 0, nil, err
 	}
 	return total.Total, folderContents, nil
-}
-
-func (cd *DBContentDA) Count(ctx context.Context, condition dbo.Conditions) (int, error) {
-	return cd.s.Count(ctx, condition, &entity.Content{})
 }
 
 func (cd *DBContentDA) searchFolderContentSQL(ctx context.Context, query1, query2 []string) string {

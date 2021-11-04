@@ -219,7 +219,7 @@ func (c *contentPermissionChecker) getOperatorContentPermissionByMode(mode Conte
 				}
 			}
 
-			if allow == true {
+			if allow {
 				break
 			}
 		}
@@ -357,9 +357,7 @@ func (p PermissionSetList) getAllPermissions() []external.PermissionName {
 
 	for _, pmSetList := range p {
 		for _, pmSet := range pmSetList {
-			for _, pm := range pmSet.Permissions {
-				result = append(result, pm)
-			}
+			result = append(result, pmSet.Permissions...)
 		}
 	}
 

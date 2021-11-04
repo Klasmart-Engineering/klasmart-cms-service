@@ -186,7 +186,7 @@ func (l *LessonData) PrepareVersion(ctx context.Context) error {
 	if len(ids) < 1 {
 		return nil
 	}
-	_, contentList, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), &da.ContentCondition{
+	contentList, err := da.GetContentDA().QueryContent(ctx, dbo.MustGetDB(ctx), &da.ContentCondition{
 		IDS: entity.NullStrings{
 			Strings: ids,
 			Valid:   true,
@@ -247,7 +247,7 @@ func (l *LessonData) PrepareResult(ctx context.Context, tx *dbo.DBContext, conte
 		return nil
 	}
 
-	_, contentList, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), &da.ContentCondition{
+	contentList, err := da.GetContentDA().QueryContent(ctx, dbo.MustGetDB(ctx), &da.ContentCondition{
 		IDS: entity.NullStrings{
 			Strings: materialList,
 			Valid:   true,

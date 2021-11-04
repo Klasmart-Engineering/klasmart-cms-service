@@ -38,7 +38,7 @@ func (s Server) registeRoute() {
 	content := s.engine.Group("/v1")
 	{
 		content.POST("/contents", s.mustLogin, s.createContent)
-		//content.POST("/contents/copy", s.mustLogin, s.copyContent)
+
 		//Inherent & unchangeable
 		content.GET("/contents/:content_id", s.mustLogin, s.getContent)
 		//Inherent & unchangeable

@@ -203,7 +203,7 @@ func TestGetLatestOutcomesByIDs(t *testing.T) {
 	ctx := context.Background()
 	//ids := []string{"5f5726af0944d7c38e20696f"}
 	ids := []string{}
-	outcomes, err := model.GetOutcomeModel().GetLatestByIDs(ctx, op, dbo.MustGetDB(ctx), ids)
+	outcomes, err := model.GetOutcomeModel().GetLatestByIDsMapResult(ctx, op, dbo.MustGetDB(ctx), ids)
 	if err != nil {
 		t.Fatal(err)
 	}
