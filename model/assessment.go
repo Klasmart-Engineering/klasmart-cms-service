@@ -4,15 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"sync"
-
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"sync"
 )
 
 var (
@@ -27,7 +27,11 @@ var (
 
 func GetAssessmentModel() IAssessmentModel {
 	assessmentModelInstanceOnce.Do(func() {
-		assessmentModelInstance = &assessmentModel{}
+		assessmentModelInstance = &assessmentModel{
+			AmsServices:           external.GetAmsServices(),
+			ScheduleModel:         GetScheduleModel(),
+			ScheduleRelationModel: GetScheduleRelationModel(),
+		}
 	})
 	return assessmentModelInstance
 }
@@ -36,10 +40,164 @@ type IAssessmentModel interface {
 	Query(ctx context.Context, operator *entity.Operator, conditions *da.QueryAssessmentConditions) ([]*entity.Assessment, error)
 	Summary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsSummaryArgs) (*entity.AssessmentsSummary, error)
 	StudentQuery(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, conditions *entity.StudentQueryAssessmentConditions) (int, []*entity.StudentAssessment, error)
+
+	ScheduleEndClassCallback(ctx context.Context, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) error
+
+	PrepareAddInput(ctx context.Context, operator *entity.Operator, input []*entity.AssessmentAddInput) (*entity.BatchAddAssessmentSuperArgs, error)
+	BatchAdd(ctx context.Context, operator *entity.Operator, input *entity.BatchAddAssessmentSuperArgs) error
+	BatchAddTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input *entity.BatchAddAssessmentSuperArgs) error
 }
 
 type assessmentModel struct {
 	assessmentBase
+	AmsServices           external.AmsServices
+	ScheduleModel         IScheduleModel
+	ScheduleRelationModel IScheduleRelationModel
+}
+
+func (m *assessmentModel) ScheduleEndClassCallback(ctx context.Context, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) error {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixScheduleID, args.ScheduleID)
+	if err != nil {
+		log.Error(ctx, "add class and live assessment: lock fail",
+			log.Err(err),
+			log.Any("args", args),
+		)
+		return err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+
+	superArgs, err := GetAssessmentModel().PrepareAddInput(ctx, operator, []*entity.AssessmentAddInput{
+		&entity.AssessmentAddInput{
+			ScheduleID:   args.ScheduleID,
+			ClassLength:  args.ClassLength,
+			ClassEndTime: args.ClassEndTime,
+			Attendances:  args.AttendanceIDs,
+		}})
+	if err != nil {
+		return err
+	}
+
+	err = GetAssessmentModel().BatchAdd(ctx, operator, superArgs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *assessmentModel) PrepareAddInput(ctx context.Context, operator *entity.Operator, input []*entity.AssessmentAddInput) (*entity.BatchAddAssessmentSuperArgs, error) {
+	scheduleIDs := make([]string, len(input))
+	inputMap := make(map[string]*entity.AssessmentAddInput)
+	for i, item := range input {
+		scheduleIDs[i] = item.ScheduleID
+		inputMap[item.ScheduleID] = item
+	}
+
+	// get schedules
+	schedules, err := m.ScheduleModel.GetVariableDataByIDs(ctx, operator, scheduleIDs, &entity.ScheduleInclude{
+		ClassRosterClass: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// get user
+	scheduleUserRelationMap, err := m.ScheduleRelationModel.GetRelationMap(ctx, operator, scheduleIDs, []entity.ScheduleRelationType{
+		entity.ScheduleRelationTypeParticipantTeacher,
+		entity.ScheduleRelationTypeParticipantStudent,
+		entity.ScheduleRelationTypeClassRosterTeacher,
+		entity.ScheduleRelationTypeClassRosterStudent,
+	})
+
+	assessmentArgs := make([]*entity.AddAssessmentArgs, 0, len(schedules))
+
+	for _, item := range schedules {
+		assessmentType, err := entity.GetAssessmentTypeByScheduleType(ctx, entity.GetAssessmentTypeInput{
+			ScheduleType: item.ClassType,
+			IsHomeFun:    item.IsHomeFun,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		inputMapItem, ok := inputMap[item.ID]
+		if !ok {
+			log.Error(ctx,"input no match schedule id",log.Any("inputMap",inputMap),log.String("scheduleID",item.ID))
+			return nil, constant.ErrInvalidArgs
+		}
+
+		// generate assessment title
+		var className string
+		if item.ClassRosterClass != nil {
+			className = item.ClassRosterClass.Name
+		}
+		title, err := assessmentType.Title(ctx, entity.GenerateAssessmentTitleInput{
+			ClassName:    className,
+			ScheduleName: item.Schedule.Title,
+			ClassEndTime: inputMapItem.ClassEndTime,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		scheduleUsers, ok := scheduleUserRelationMap[item.ID]
+		if !ok {
+			log.Error(ctx,"not found users from schedule",log.Any("scheduleUserRelationMap",scheduleUserRelationMap),log.String("scheduleID",item.ID))
+			return nil, constant.ErrInvalidArgs
+		}
+
+		// processing class,live,study type
+		assessmentArgsItem := &entity.AddAssessmentArgs{
+			Title:         title,
+			ScheduleID:    item.ID,
+			ScheduleTitle: item.Title,
+			LessonPlanID:  item.LessonPlanID,
+			ClassID:       item.ClassRosterClass.ID,
+			ClassLength:   inputMapItem.ClassLength,
+			ClassEndTime:  inputMapItem.ClassEndTime,
+		}
+
+		if assessmentType == entity.AssessmentTypeClass || assessmentType == entity.AssessmentTypeStudy {
+			assessmentArgsItem.Attendances = scheduleUsers
+		} else if assessmentType == entity.AssessmentTypeLive {
+			userRelationMap := make(map[string]*entity.ScheduleRelation)
+			for _, userItem := range scheduleUsers {
+				userRelationMap[userItem.RelationID] = userItem
+			}
+
+			for _, userID := range inputMapItem.Attendances {
+				if relationItem, ok := userRelationMap[userID]; ok {
+					assessmentArgsItem.Attendances = append(assessmentArgsItem.Attendances, relationItem)
+				}
+			}
+		}
+		assessmentArgs = append(assessmentArgs, assessmentArgsItem)
+	}
+
+	// processing args
+	superArgs, err := m.assessmentBase.prepareBatchAddSuperArgs(ctx, dbo.MustGetDB(ctx), operator, assessmentArgs)
+	if err != nil {
+		log.Error(ctx, "prepare add assessment args: prepare batch add super args failed",
+			log.Err(err),
+			log.Any("assessmentArgs", assessmentArgs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	return superArgs, nil
+}
+
+func (m *assessmentModel) BatchAdd(ctx context.Context, operator *entity.Operator, input *entity.BatchAddAssessmentSuperArgs) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		return m.BatchAddTx(ctx, tx, operator, input)
+	})
+}
+func (m *assessmentModel) BatchAddTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input *entity.BatchAddAssessmentSuperArgs) error {
+	_, err := m.assessmentBase.batchAdd(ctx, tx, operator, input)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (m *assessmentModel) Query(ctx context.Context, operator *entity.Operator, conditions *da.QueryAssessmentConditions) ([]*entity.Assessment, error) {
@@ -87,7 +245,7 @@ func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operat
 		teachers []*external.Teacher
 	)
 	if args.TeacherName.Valid {
-		if teachers, err = external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.TeacherName.String); err != nil {
+		if teachers, err = m.AmsServices.TeacherService.Query(ctx, operator, operator.OrgID, args.TeacherName.String); err != nil {
 			log.Error(ctx, "List: external.GetTeacherServiceProvider().Query: query failed",
 				log.Err(err),
 				log.String("org_id", operator.OrgID),
@@ -736,7 +894,7 @@ func (m *assessmentModel) queryTeacherMap(ctx context.Context,
 	}
 
 	//query teacher info
-	teacherInfoMap, err := external.GetUserServiceProvider().BatchGetMap(ctx, operator, teacherIDs)
+	teacherInfoMap, err := m.AmsServices.UserService.BatchGetMap(ctx, operator, teacherIDs)
 	if err != nil {
 		log.Error(ctx, "GetTeacherServiceProvider.BatchGetNameMap failed",
 			log.Err(err),

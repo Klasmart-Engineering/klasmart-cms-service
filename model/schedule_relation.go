@@ -28,6 +28,10 @@ type IScheduleRelationModel interface {
 	GetSubjectIDs(ctx context.Context, scheduleID string) ([]string, error)
 	GetSubjectsByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]*entity.ScheduleShortInfo, error)
 	GetOutcomeIDs(ctx context.Context, scheduleID string) ([]string, error)
+	// scheduleID:classInfo
+	GetClassRosterMap(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]*entity.ScheduleShortInfo, error)
+	// // scheduleID:Relations
+	GetRelationMap(ctx context.Context, op *entity.Operator, scheduleIDs []string, types []entity.ScheduleRelationType) (map[string][]*entity.ScheduleRelation, error)
 }
 
 type scheduleRelationModel struct {
@@ -401,4 +405,84 @@ func (s *scheduleRelationModel) GetOutcomeIDs(ctx context.Context, scheduleID st
 	}
 
 	return outcomeIDs, nil
+}
+
+func (s *scheduleRelationModel) GetClassRosterMap(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
+	condition := &da.ScheduleRelationCondition{
+		ScheduleIDs: entity.NullStrings{
+			Strings: scheduleIDs,
+			Valid:   true,
+		},
+		RelationType: sql.NullString{
+			String: string(entity.ScheduleRelationTypeClassRosterClass),
+			Valid:  true,
+		},
+	}
+	var classRelations []*entity.ScheduleRelation
+	err := da.GetScheduleRelationDA().Query(ctx, condition, &classRelations)
+	if err != nil {
+		log.Error(ctx, "GetClassRosterMap error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
+		return nil, err
+	}
+
+	classIDs := make([]string, 0, len(classRelations))
+	classIDMap := make(map[string]struct{})
+	scheduleClassMap := make(map[string]string, len(classRelations))
+	for _, item := range classRelations {
+		scheduleClassMap[item.ScheduleID] = item.RelationID
+
+		if _, ok := classIDMap[item.RelationID]; !ok {
+			classIDMap[item.RelationID] = struct{}{}
+			classIDs = append(classIDs, item.RelationID)
+		}
+	}
+
+	classMap, err := external.GetClassServiceProvider().BatchGetMap(ctx, op, classIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]*entity.ScheduleShortInfo, len(classRelations))
+	for _, item := range classRelations {
+		if classInfo, ok := classMap[scheduleClassMap[item.ScheduleID]]; ok {
+			result[item.ScheduleID] = &entity.ScheduleShortInfo{
+				ID:   classInfo.ID,
+				Name: classInfo.Name,
+			}
+		}
+	}
+
+	return result, nil
+}
+
+func (s *scheduleRelationModel) GetRelationMap(ctx context.Context, op *entity.Operator, scheduleIDs []string, types []entity.ScheduleRelationType) (map[string][]*entity.ScheduleRelation, error) {
+	typesStr := make([]string, len(types))
+	for i, item := range types {
+		typesStr[i] = item.String()
+	}
+
+	condition := &da.ScheduleRelationCondition{
+		ScheduleIDs: entity.NullStrings{
+			Strings: scheduleIDs,
+			Valid:   true,
+		},
+		RelationTypes: entity.NullStrings{
+			Strings: typesStr,
+			Valid:   true,
+		},
+	}
+	var relations []*entity.ScheduleRelation
+	err := da.GetScheduleRelationDA().Query(ctx, condition, &relations)
+	if err != nil {
+		log.Error(ctx, "GetClassRosterMap error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
+		return nil, err
+	}
+
+	result := make(map[string][]*entity.ScheduleRelation, len(scheduleIDs))
+
+	for _, item := range relations {
+		result[item.ScheduleID] = append(result[item.ScheduleID], item)
+	}
+
+	return result, nil
 }

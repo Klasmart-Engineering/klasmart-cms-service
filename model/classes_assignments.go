@@ -14,7 +14,7 @@ import (
 )
 
 type IClassesAssignments interface {
-	CreateRecord(ctx context.Context, op *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) (string, error)
+	CreateRecord(ctx context.Context, op *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) error
 	GetOverview(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentOverViewRequest) ([]*entity.ClassesAssignmentOverView, error)
 	GetStatistic(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentsViewRequest) ([]*entity.ClassesAssignmentsView, error)
 	GetUnattended(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentsUnattendedViewRequest) ([]*entity.ClassesAssignmentsUnattendedStudentsView, error)
@@ -28,20 +28,20 @@ var (
 type ClassesAssignmentsModel struct {
 }
 
-func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Operator, data *entity.AddClassAndLiveAssessmentArgs) (string, error) {
+func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Operator, data *entity.AddClassAndLiveAssessmentArgs) error {
 	schedule, err := GetScheduleModel().GetPlainByID(ctx, data.ScheduleID)
 	if err != nil {
 		log.Error(ctx, "CreateRecord: GetPlainByID failed", log.Err(err), log.Any("data", data))
-		return "", err
+		return err
 	}
 	classID, err := GetScheduleRelationModel().GetClassRosterID(ctx, op, schedule.ID)
 	if err != nil {
 		log.Error(ctx, "CreateRecord: GetClassRosterID failed", log.Err(err), log.Any("data", data))
-		return "", err
+		return err
 	}
 	if classID == "" {
 		log.Info(ctx, "CreateRecord: schedule doesn't belong any class", log.Any("data", data))
-		return "", nil
+		return nil
 	}
 	shouldAttendances, err := GetScheduleRelationModel().Query(ctx, op, &da.ScheduleRelationCondition{
 		ScheduleID:   sql.NullString{String: schedule.ID, Valid: true},
@@ -49,7 +49,7 @@ func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Op
 	})
 	if err != nil {
 		log.Error(ctx, "CreateRecord: shouldAttendances failed", log.Err(err), log.Any("data", data))
-		return "", err
+		return err
 	}
 
 	existAttendances, err := da.GetClassesAssignmentsDA().QueryTx(ctx, dbo.MustGetDB(ctx), &da.ClassesAssignmentsCondition{
@@ -61,7 +61,7 @@ func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Op
 			log.Err(err),
 			log.Any("data", data),
 			log.Any("should", shouldAttendances))
-		return "", err
+		return err
 	}
 
 	insertRecords := make([]*entity.ClassesAssignmentsRecords, 0)
@@ -110,7 +110,7 @@ func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Op
 		}
 		return nil
 	})
-	return "", err
+	return err
 }
 
 func (c ClassesAssignmentsModel) getMinAndMax(ctx context.Context, timeRanges []entity.TimeRange) (int64, int64, error) {

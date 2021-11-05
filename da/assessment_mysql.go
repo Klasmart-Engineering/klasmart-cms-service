@@ -19,8 +19,8 @@ type IAssessmentDA interface {
 	Query(ctx context.Context, condition *QueryAssessmentConditions) ([]*entity.Assessment, error)
 	CountTx(ctx context.Context, tx *dbo.DBContext, condition *QueryAssessmentConditions) (int, error)
 	Page(ctx context.Context, condition *QueryAssessmentConditions) (int, []*entity.Assessment, error)
+	GetByID(ctx context.Context, id string) (*entity.Assessment, error)
 
-	GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error)
 	UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error
 	BatchSoftDelete(ctx context.Context, tx *dbo.DBContext, ids []string) error
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.Assessment) error
@@ -80,22 +80,9 @@ func (a *assessmentDA) CountTx(ctx context.Context, tx *dbo.DBContext, condition
 	return count, nil
 }
 
-func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error) {
-	tx.ResetCondition()
-
-	cacheResult, err := GetAssessmentRedisDA().GetAssessment(ctx, id)
-	if err != nil {
-		log.Info(ctx, "get assessment exclude soft deleted: get failed from cache",
-			log.Err(err),
-			log.String("id", id),
-		)
-	} else if cacheResult != nil {
-		log.Info(ctx, "get assessment exclude soft deleted: hit cache")
-		return cacheResult, nil
-	}
-
+func (a *assessmentDA) GetByID(ctx context.Context, id string) (*entity.Assessment, error) {
 	item := new(entity.Assessment)
-	err = a.GetTx(ctx, tx, id, item)
+	err := a.Get(ctx, id, item)
 	if err != nil {
 		log.Error(ctx, "get assessment: get from db failed",
 			log.Err(err),
@@ -105,13 +92,6 @@ func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBCont
 	}
 	if item.DeleteAt != 0 {
 		return nil, constant.ErrRecordNotFound
-	}
-
-	if err := GetAssessmentRedisDA().SetAssessment(ctx, id, item); err != nil {
-		log.Warn(ctx, "get assessment exclude soft deleted: cache item failed",
-			log.Err(err),
-			log.String("id", id),
-		)
 	}
 
 	return item, nil

@@ -655,9 +655,7 @@ func (s *scheduleModel) prepareScheduleAddData(ctx context.Context, op *entity.O
 
 	// add schedules relation
 	allRelations := make([]*entity.ScheduleRelation, 0, len(scheduleList)*len(relations))
-	userRelations := make(map[string][]*entity.ScheduleRelation, len(scheduleList))
 	for _, item := range scheduleList {
-		userRelations[item.ID] = make([]*entity.ScheduleRelation, 0, len(relations))
 
 		for _, relation := range relations {
 			if relation.RelationID == "" {
@@ -669,34 +667,21 @@ func (s *scheduleModel) prepareScheduleAddData(ctx context.Context, op *entity.O
 				RelationID:   relation.RelationID,
 				RelationType: relation.RelationType,
 			})
-			switch relation.RelationType {
-			case entity.ScheduleRelationTypeClassRosterTeacher,
-				entity.ScheduleRelationTypeClassRosterStudent,
-				entity.ScheduleRelationTypeParticipantTeacher,
-				entity.ScheduleRelationTypeParticipantStudent:
-				userRelations[item.ID] = append(userRelations[item.ID], relation)
-			}
 		}
 	}
 
 	var batchAddAssessmentSuperArgs *entity.BatchAddAssessmentSuperArgs
 	// add assessment
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
-		studyInput := make([]*entity.AddAssessmentArgs, len(scheduleList))
+		studyInput := make([]*entity.AssessmentAddInput, len(scheduleList))
 
 		for i, item := range scheduleList {
-			attendances := userRelations[item.ID]
-
-			studyInput[i] = &entity.AddAssessmentArgs{
-				ScheduleID:    item.ID,
-				ClassID:       item.ClassID,
-				LessonPlanID:  item.LessonPlanID,
-				Attendances:   attendances,
-				ScheduleTitle: item.Title,
+			studyInput[i] = &entity.AssessmentAddInput{
+				ScheduleID: item.ID,
 			}
 		}
 
-		batchAddAssessmentSuperArgs, err = GetStudyAssessmentModel().PrepareAddArgs(ctx, dbo.MustGetDB(ctx), op, studyInput)
+		batchAddAssessmentSuperArgs, err = GetAssessmentModel().PrepareAddInput(ctx, op, studyInput)
 		if err != nil {
 			log.Error(ctx, "add schedule assessment error", log.Err(err), log.Any("studyInput", allRelations))
 			return nil, nil, nil, err
@@ -874,7 +859,7 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *
 
 	// add assessment
 	if batchAddAssessmentSuperArgs != nil {
-		_, err = GetStudyAssessmentModel().Add(ctx, tx, op, batchAddAssessmentSuperArgs)
+		err = GetAssessmentModel().BatchAddTx(ctx, tx, op, batchAddAssessmentSuperArgs)
 		if err != nil {
 			log.Error(ctx, "add schedule assessment error",
 				log.Err(err),
@@ -2720,6 +2705,15 @@ func (s *scheduleModel) GetVariableDataByIDs(ctx context.Context, op *entity.Ope
 		}
 		for _, item := range result {
 			item.Subjects = scheduleSubjectMap[item.ID]
+		}
+	}
+	if include.ClassRosterClass {
+		scheduleClassMap, err := GetScheduleRelationModel().GetClassRosterMap(ctx, op, ids)
+		if err != nil {
+			return nil, err
+		}
+		for _, item := range result {
+			item.ClassRosterClass = scheduleClassMap[item.ID]
 		}
 	}
 
