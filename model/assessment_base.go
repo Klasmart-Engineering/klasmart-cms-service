@@ -648,6 +648,7 @@ func (m *assessmentBase) batchGetLatestLessonPlanMap(ctx context.Context, tx *db
 		)
 		return nil, err
 	}
+	log.Debug(ctx, "content material list", log.Any("contents", m2))
 	for id, lp := range result {
 		lms := m2[id]
 		for _, lm := range lms {
