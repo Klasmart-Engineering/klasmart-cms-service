@@ -12,7 +12,9 @@ func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity
 	lps = []*entity.LessonPlanForSchedule{}
 	sql := `
 select 
-	cc.id,cc.content_name as name,pg.group_name 
+	cc.id,
+	cc.content_name as name, 
+	if(pg.group_name is null,?,?) as group_name
 from cms_contents cc 
 left join cms_content_properties ccp on ccp.content_id =cc.id 
 left join programs_groups pg on pg.program_id =ccp.property_id 
@@ -30,6 +32,8 @@ where
 order by cc.create_at 
 `
 	args := []interface{}{
+		entity.LessonPlanGroupNameMoreFeaturedContent,
+		entity.LessonPlanGroupNameBadanamuContent,
 		entity.ContentTypePlan,
 		entity.ContentStatusPublished,
 		entity.ContentPropertyTypeProgram,

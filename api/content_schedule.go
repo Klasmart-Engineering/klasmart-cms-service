@@ -3,8 +3,6 @@ package api
 import (
 	"net/http"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
@@ -15,7 +13,6 @@ import (
 // @Accept json
 // @Produce json
 // @Tags content
-// @Param order_by query string false "order by"
 // @Success 200 {object} []*entity.LessonPlanForSchedule
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /contents/schedule_lesson_plans [get]
@@ -33,7 +30,7 @@ func (s *Server) getLessonPlansCanSchedule(c *gin.Context) {
 		}
 	}()
 
-	r, err := model.GetContentModel().GetLessonPlansCanSchedule(ctx, op, &entity.ContentConditionRequest{OrderBy: c.Query("order_by")})
+	r, err := model.GetContentModel().GetLessonPlansCanSchedule(ctx, op)
 	if err != nil {
 		return
 	}
