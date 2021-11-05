@@ -44,7 +44,7 @@ type IAssessmentModel interface {
 	ScheduleEndClassCallback(ctx context.Context, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) error
 
 	PrepareAddInputWhenCreateSchedule(ctx context.Context, operator *entity.Operator, input []*entity.AssessmentAddInputWhenCreateSchedule) (*entity.BatchAddAssessmentSuperArgs, error)
-	PrepareAddInput(ctx context.Context, operator *entity.Operator, schedules []*entity.AssessmentAddInput) (*entity.BatchAddAssessmentSuperArgs, error)
+	PrepareAddInputWhenScheduleExist(ctx context.Context, operator *entity.Operator, schedules []*entity.AssessmentAddInput) (*entity.BatchAddAssessmentSuperArgs, error)
 	BatchAdd(ctx context.Context, operator *entity.Operator, input *entity.BatchAddAssessmentSuperArgs) error
 	BatchAddTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input *entity.BatchAddAssessmentSuperArgs) error
 }
@@ -121,7 +121,7 @@ func (m *assessmentModel) ScheduleEndClassCallback(ctx context.Context, operator
 	locker.Lock()
 	defer locker.Unlock()
 
-	superArgs, err := GetAssessmentModel().PrepareAddInput(ctx, operator, []*entity.AssessmentAddInput{
+	superArgs, err := m.PrepareAddInputWhenScheduleExist(ctx, operator, []*entity.AssessmentAddInput{
 		&entity.AssessmentAddInput{
 			ScheduleID:   args.ScheduleID,
 			ClassLength:  args.ClassLength,
@@ -139,7 +139,7 @@ func (m *assessmentModel) ScheduleEndClassCallback(ctx context.Context, operator
 	return nil
 }
 
-func (m *assessmentModel) PrepareAddInput(ctx context.Context, operator *entity.Operator, input []*entity.AssessmentAddInput) (*entity.BatchAddAssessmentSuperArgs, error) {
+func (m *assessmentModel) PrepareAddInputWhenScheduleExist(ctx context.Context, operator *entity.Operator, input []*entity.AssessmentAddInput) (*entity.BatchAddAssessmentSuperArgs, error) {
 	scheduleIDs := make([]string, len(input))
 	inputMap := make(map[string]*entity.AssessmentAddInput)
 	for i, item := range input {
