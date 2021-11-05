@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -12,7 +14,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
 )
 
 var (
@@ -28,9 +29,7 @@ var (
 func GetAssessmentModel() IAssessmentModel {
 	assessmentModelInstanceOnce.Do(func() {
 		assessmentModelInstance = &assessmentModel{
-			AmsServices:           external.GetAmsServices(),
-			ScheduleModel:         GetScheduleModel(),
-			ScheduleRelationModel: GetScheduleRelationModel(),
+			AmsServices: external.GetAmsServices(),
 		}
 	})
 	return assessmentModelInstance
@@ -51,9 +50,7 @@ type IAssessmentModel interface {
 
 type assessmentModel struct {
 	assessmentBase
-	AmsServices           external.AmsServices
-	ScheduleModel         IScheduleModel
-	ScheduleRelationModel IScheduleRelationModel
+	AmsServices external.AmsServices
 }
 
 func (m *assessmentModel) PrepareAddInputWhenCreateSchedule(ctx context.Context, operator *entity.Operator, input []*entity.AssessmentAddInputWhenCreateSchedule) (*entity.BatchAddAssessmentSuperArgs, error) {
@@ -122,7 +119,7 @@ func (m *assessmentModel) ScheduleEndClassCallback(ctx context.Context, operator
 	defer locker.Unlock()
 
 	// The orgID needs to be populated because it is a callback
-	schedules, err := m.ScheduleModel.GetVariableDataByIDs(ctx, operator, []string{args.ScheduleID}, nil)
+	schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, operator, []string{args.ScheduleID}, nil)
 	if err != nil {
 		return err
 	}
@@ -159,7 +156,7 @@ func (m *assessmentModel) PrepareAddInputWhenScheduleExist(ctx context.Context, 
 	}
 
 	// get schedules
-	schedules, err := m.ScheduleModel.GetVariableDataByIDs(ctx, operator, scheduleIDs, &entity.ScheduleInclude{
+	schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, operator, scheduleIDs, &entity.ScheduleInclude{
 		ClassRosterClass: true,
 	})
 	if err != nil {
@@ -167,7 +164,7 @@ func (m *assessmentModel) PrepareAddInputWhenScheduleExist(ctx context.Context, 
 	}
 
 	// get user
-	scheduleUserRelationMap, err := m.ScheduleRelationModel.GetRelationMap(ctx, operator, scheduleIDs, []entity.ScheduleRelationType{
+	scheduleUserRelationMap, err := GetScheduleRelationModel().GetRelationMap(ctx, operator, scheduleIDs, []entity.ScheduleRelationType{
 		entity.ScheduleRelationTypeParticipantTeacher,
 		entity.ScheduleRelationTypeParticipantStudent,
 		entity.ScheduleRelationTypeClassRosterTeacher,

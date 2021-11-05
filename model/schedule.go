@@ -83,12 +83,6 @@ type scheduleModel struct {
 	scheduleDA         da.IScheduleDA
 	scheduleRelationDA da.IScheduleRelationDA
 
-	scheduleRelationModel IScheduleRelationModel
-	scheduleFeedbackModel IScheduleFeedbackModel
-	studyAssessmentModel  IStudyAssessmentModel
-	homefunStudyModel     IHomeFunStudyModel
-	assessmentModel       IAssessmentModel
-
 	userService    external.UserServiceProvider
 	schoolService  external.SchoolServiceProvider
 	classService   external.ClassServiceProvider
@@ -1277,7 +1271,7 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 	}
 
 	// query schedule_relation, include teachers, students and subjects(one-to-many relationship)
-	scheduleRelations, err := s.scheduleRelationModel.Query(ctx, operator, &da.ScheduleRelationCondition{
+	scheduleRelations, err := GetScheduleRelationModel().Query(ctx, operator, &da.ScheduleRelationCondition{
 		ScheduleIDs: entity.NullStrings{Strings: scheduleIDs, Valid: true},
 		RelationTypes: entity.NullStrings{
 			Strings: []string{
@@ -3175,7 +3169,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 
 	// check if the schedule feedback exists
 	g.Go(func() error {
-		existFeedback, err := s.scheduleFeedbackModel.ExistByScheduleID(ctx, operator, schedule.ID)
+		existFeedback, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, operator, schedule.ID)
 		if err != nil {
 			log.Error(ctx, "s.scheduleFeedbackModel.ExistByScheduleID error",
 				log.Err(err),
@@ -3191,7 +3185,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 	// check if the assessment exists, only not homefun homework
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
 		g.Go(func() error {
-			existAssessment, err := s.studyAssessmentModel.BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, []string{schedule.ID})
+			existAssessment, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, []string{schedule.ID})
 			if err != nil {
 				log.Error(ctx, "s.studyAssessmentModel.BatchCheckAnyoneAttempted error",
 					log.Err(err),
@@ -3208,7 +3202,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
 		g.Go(func() error {
 			var homeFunStudyAssessments []*entity.HomeFunStudy
-			err = s.homefunStudyModel.Query(ctx, operator, &da.QueryHomeFunStudyCondition{
+			err = GetHomeFunStudyModel().Query(ctx, operator, &da.QueryHomeFunStudyCondition{
 				ScheduleID: entity.NullString{
 					String: schedule.ID,
 					Valid:  true,
@@ -3234,7 +3228,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 	} else if schedule.ClassType != entity.ScheduleClassTypeTask {
 		// check if the assessment completed, not homefun homework, no assessment for the Task
 		g.Go(func() error {
-			assessments, err := s.assessmentModel.Query(ctx, operator, &da.QueryAssessmentConditions{
+			assessments, err := GetAssessmentModel().Query(ctx, operator, &da.QueryAssessmentConditions{
 				ScheduleIDs: entity.NullStrings{
 					Strings: []string{schedule.ID},
 					Valid:   true,
@@ -3439,7 +3433,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 
 	// check if the schedule feedback exists
 	g.Go(func() error {
-		existFeedback, err := s.scheduleFeedbackModel.ExistByScheduleID(ctx, operator, schedule.ID)
+		existFeedback, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, operator, schedule.ID)
 		if err != nil {
 			log.Error(ctx, "s.scheduleFeedbackModel.ExistByScheduleID error",
 				log.Err(err),
@@ -3455,7 +3449,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 	// check if the assessment exists, only not homefun homework
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
 		g.Go(func() error {
-			existAssessment, err := s.studyAssessmentModel.BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, []string{schedule.ID})
+			existAssessment, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, []string{schedule.ID})
 			if err != nil {
 				log.Error(ctx, "s.studyAssessmentModel.BatchCheckAnyoneAttempted error",
 					log.Err(err),
@@ -3472,7 +3466,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
 		g.Go(func() error {
 			var homeFunStudyAssessments []*entity.HomeFunStudy
-			err = s.homefunStudyModel.Query(ctx, operator, &da.QueryHomeFunStudyCondition{
+			err = GetHomeFunStudyModel().Query(ctx, operator, &da.QueryHomeFunStudyCondition{
 				ScheduleID: entity.NullString{
 					String: schedule.ID,
 					Valid:  true,
@@ -3497,7 +3491,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 	} else if schedule.ClassType != entity.ScheduleClassTypeTask {
 		// check if the assessment completed, not homefun homework, no assessment of the Task
 		g.Go(func() error {
-			assessments, err := s.assessmentModel.Query(ctx, operator, &da.QueryAssessmentConditions{
+			assessments, err := GetAssessmentModel().Query(ctx, operator, &da.QueryAssessmentConditions{
 				ScheduleIDs: entity.NullStrings{
 					Strings: []string{schedule.ID},
 					Valid:   true,
@@ -3590,7 +3584,7 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 	// check if the assessment exists, only not homefun homework
 	if len(notHomefunHomeworkIDs) > 0 {
 		g.Go(func() error {
-			existAssessment, err := s.studyAssessmentModel.BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, notHomefunHomeworkIDs)
+			existAssessment, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, notHomefunHomeworkIDs)
 			if err != nil {
 				log.Error(ctx, "s.studyAssessmentModel.BatchCheckAnyoneAttempted error",
 					log.Err(err),
@@ -3607,7 +3601,7 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 	g.Go(func() error {
 		if len(homefunHomeworkIDs) > 0 {
 			var homeFunStudyAssessments []*entity.HomeFunStudy
-			err := s.homefunStudyModel.Query(ctx, operator, &da.QueryHomeFunStudyCondition{
+			err := GetHomeFunStudyModel().Query(ctx, operator, &da.QueryHomeFunStudyCondition{
 				ScheduleIDs: entity.NullStrings{
 					Strings: homefunHomeworkIDs,
 					Valid:   true,
@@ -3628,7 +3622,7 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 		}
 
 		if len(withAssessmentScheduleIDs) > 0 {
-			assessments, err := s.assessmentModel.Query(ctx, operator, &da.QueryAssessmentConditions{
+			assessments, err := GetAssessmentModel().Query(ctx, operator, &da.QueryAssessmentConditions{
 				ScheduleIDs: entity.NullStrings{
 					Strings: withAssessmentScheduleIDs,
 					Valid:   true,
@@ -3654,7 +3648,7 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 
 	// check if the schedule feedback exists
 	g.Go(func() error {
-		existFeedback, err := s.scheduleFeedbackModel.ExistByScheduleIDs(ctx, operator, scheduleIDs)
+		existFeedback, err := GetScheduleFeedbackModel().ExistByScheduleIDs(ctx, operator, scheduleIDs)
 		if err != nil {
 			log.Error(ctx, "s.scheduleFeedbackModel.ExistByScheduleIDs error",
 				log.Err(err),
@@ -3797,12 +3791,6 @@ func GetScheduleModel() IScheduleModel {
 		_scheduleModel = &scheduleModel{
 			scheduleDA:         da.GetScheduleDA(),
 			scheduleRelationDA: da.GetScheduleRelationDA(),
-
-			scheduleRelationModel: GetScheduleRelationModel(),
-			scheduleFeedbackModel: GetScheduleFeedbackModel(),
-			studyAssessmentModel:  GetStudyAssessmentModel(),
-			homefunStudyModel:     GetHomeFunStudyModel(),
-			assessmentModel:       GetAssessmentModel(),
 
 			userService:    external.GetUserServiceProvider(),
 			schoolService:  external.GetSchoolServiceProvider(),
