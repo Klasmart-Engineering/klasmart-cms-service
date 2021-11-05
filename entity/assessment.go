@@ -195,6 +195,14 @@ type AssessmentAddInput struct {
 	ClassEndTime int64    `json:"class_end_time"`
 	Attendances  []string `json:"attendances"`
 }
+type AssessmentAddInputWhenCreateSchedule struct {
+	ScheduleID     string              `json:"schedule_id"`
+	ScheduleTitle  string              `json:"schedule_title"`
+	LessonPlanID   string              `json:"lesson_plan_id"`
+	ClassID        string              `json:"class_id"`
+	AssessmentType AssessmentType      `json:"schedule_type"`
+	Attendances    []*ScheduleRelation `json:"attendances"`
+}
 
 type BatchAddAssessmentSuperArgs struct {
 	Raw                       []*AddAssessmentArgs

@@ -655,6 +655,7 @@ func (s *scheduleModel) prepareScheduleAddData(ctx context.Context, op *entity.O
 
 	// add schedules relation
 	allRelations := make([]*entity.ScheduleRelation, 0, len(scheduleList)*len(relations))
+	userRelations := make(map[string][]*entity.ScheduleRelation, len(scheduleList))
 	for _, item := range scheduleList {
 
 		for _, relation := range relations {
@@ -667,21 +668,42 @@ func (s *scheduleModel) prepareScheduleAddData(ctx context.Context, op *entity.O
 				RelationID:   relation.RelationID,
 				RelationType: relation.RelationType,
 			})
+
+			switch relation.RelationType {
+			case entity.ScheduleRelationTypeClassRosterTeacher,
+				entity.ScheduleRelationTypeClassRosterStudent,
+				entity.ScheduleRelationTypeParticipantTeacher,
+				entity.ScheduleRelationTypeParticipantStudent:
+				userRelations[item.ID] = append(userRelations[item.ID], relation)
+			}
 		}
 	}
 
 	var batchAddAssessmentSuperArgs *entity.BatchAddAssessmentSuperArgs
 	// add assessment
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
-		studyInput := make([]*entity.AssessmentAddInput, len(scheduleList))
+		studyInput := make([]*entity.AssessmentAddInputWhenCreateSchedule, len(scheduleList))
 
 		for i, item := range scheduleList {
-			studyInput[i] = &entity.AssessmentAddInput{
-				ScheduleID: item.ID,
+			assessmentType, err := entity.GetAssessmentTypeByScheduleType(ctx, entity.GetAssessmentTypeInput{
+				ScheduleType: item.ClassType,
+				IsHomeFun:    item.IsHomeFun,
+			})
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
+			studyInput[i] = &entity.AssessmentAddInputWhenCreateSchedule{
+				ScheduleID:     item.ID,
+				ScheduleTitle:  item.Title,
+				LessonPlanID:   item.LessonPlanID,
+				ClassID:        item.ClassID,
+				AssessmentType: assessmentType,
+				Attendances:    userRelations[item.ID],
 			}
 		}
 
-		batchAddAssessmentSuperArgs, err = GetAssessmentModel().PrepareAddInput(ctx, op, studyInput)
+		batchAddAssessmentSuperArgs, err = GetAssessmentModel().PrepareAddInputWhenCreateSchedule(ctx, op, studyInput)
 		if err != nil {
 			log.Error(ctx, "add schedule assessment error", log.Err(err), log.Any("studyInput", allRelations))
 			return nil, nil, nil, err

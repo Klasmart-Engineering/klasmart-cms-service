@@ -43,7 +43,8 @@ type IAssessmentModel interface {
 
 	ScheduleEndClassCallback(ctx context.Context, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) error
 
-	PrepareAddInput(ctx context.Context, operator *entity.Operator, input []*entity.AssessmentAddInput) (*entity.BatchAddAssessmentSuperArgs, error)
+	PrepareAddInputWhenCreateSchedule(ctx context.Context, operator *entity.Operator, input []*entity.AssessmentAddInputWhenCreateSchedule) (*entity.BatchAddAssessmentSuperArgs, error)
+	PrepareAddInput(ctx context.Context, operator *entity.Operator, schedules []*entity.AssessmentAddInput) (*entity.BatchAddAssessmentSuperArgs, error)
 	BatchAdd(ctx context.Context, operator *entity.Operator, input *entity.BatchAddAssessmentSuperArgs) error
 	BatchAddTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input *entity.BatchAddAssessmentSuperArgs) error
 }
@@ -55,6 +56,59 @@ type assessmentModel struct {
 	ScheduleRelationModel IScheduleRelationModel
 }
 
+func (m *assessmentModel) PrepareAddInputWhenCreateSchedule(ctx context.Context, operator *entity.Operator, input []*entity.AssessmentAddInputWhenCreateSchedule) (*entity.BatchAddAssessmentSuperArgs, error) {
+	classIDs := make([]string, 0, len(input))
+	for _, item := range input {
+		classIDs = append(classIDs, item.ClassID)
+	}
+	classNameMap, err := external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, classIDs)
+	if err != nil {
+		log.Error(ctx, "add studies: batch get class name map failed",
+			log.Err(err),
+			log.Strings("class_ids", classIDs),
+		)
+		return nil, err
+	}
+
+	assessmentArgs := make([]*entity.AddAssessmentArgs, 0, len(input))
+
+	for _, item := range input {
+		if item.AssessmentType != entity.AssessmentTypeStudy {
+			log.Warn(ctx, "Only study is supported", log.Any("input", input))
+			return nil, constant.ErrInvalidArgs
+		}
+		title, err := item.AssessmentType.Title(ctx, entity.GenerateAssessmentTitleInput{
+			ClassName:    classNameMap[item.ClassID],
+			ScheduleName: item.ScheduleTitle,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		assessmentArgsItem := &entity.AddAssessmentArgs{
+			Title:         title,
+			ScheduleID:    item.ScheduleID,
+			ScheduleTitle: item.ScheduleTitle,
+			LessonPlanID:  item.LessonPlanID,
+			ClassID:       item.ClassID,
+			Attendances:   item.Attendances,
+		}
+
+		assessmentArgs = append(assessmentArgs, assessmentArgsItem)
+	}
+
+	// processing args
+	superArgs, err := m.assessmentBase.prepareBatchAddSuperArgs(ctx, dbo.MustGetDB(ctx), operator, assessmentArgs)
+	if err != nil {
+		log.Error(ctx, "prepare add assessment args: prepare batch add super args failed",
+			log.Err(err),
+			log.Any("assessmentArgs", assessmentArgs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	return superArgs, nil
+}
 func (m *assessmentModel) ScheduleEndClassCallback(ctx context.Context, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) error {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixScheduleID, args.ScheduleID)
 	if err != nil {
@@ -122,7 +176,7 @@ func (m *assessmentModel) PrepareAddInput(ctx context.Context, operator *entity.
 
 		inputMapItem, ok := inputMap[item.ID]
 		if !ok {
-			log.Error(ctx,"input no match schedule id",log.Any("inputMap",inputMap),log.String("scheduleID",item.ID))
+			log.Error(ctx, "input no match schedule id", log.Any("inputMap", inputMap), log.String("scheduleID", item.ID))
 			return nil, constant.ErrInvalidArgs
 		}
 
@@ -142,7 +196,7 @@ func (m *assessmentModel) PrepareAddInput(ctx context.Context, operator *entity.
 
 		scheduleUsers, ok := scheduleUserRelationMap[item.ID]
 		if !ok {
-			log.Error(ctx,"not found users from schedule",log.Any("scheduleUserRelationMap",scheduleUserRelationMap),log.String("scheduleID",item.ID))
+			log.Error(ctx, "not found users from schedule", log.Any("scheduleUserRelationMap", scheduleUserRelationMap), log.String("scheduleID", item.ID))
 			return nil, constant.ErrInvalidArgs
 		}
 
