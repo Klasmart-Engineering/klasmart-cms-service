@@ -179,7 +179,7 @@ func (m *homeFunStudyModel) GetDetail(ctx context.Context, operator *entity.Oper
 	for _, ao := range assessmentOutcomes {
 		outcomeIDs = append(outcomeIDs, ao.OutcomeID)
 	}
-	outcomeAttendances, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, dbo.MustGetDB(ctx), id, outcomeIDs)
+	outcomeAttendances, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, id, outcomeIDs)
 	if err != nil {
 		log.Error(ctx, "assess home fun study: query outcome attendance failed",
 			log.Err(err),
