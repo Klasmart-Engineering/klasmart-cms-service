@@ -23,7 +23,7 @@ var (
 type IScheduleFeedbackModel interface {
 	Add(ctx context.Context, op *entity.Operator, input *entity.ScheduleFeedbackAddInput) (string, error)
 	ExistByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) (bool, error)
-	ExistByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (bool, error)
+	ExistByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]bool, error)
 	Query(ctx context.Context, op *entity.Operator, condition *da.ScheduleFeedbackCondition) ([]*entity.ScheduleFeedbackView, error)
 	GetNewest(ctx context.Context, op *entity.Operator, userID string, scheduleID string) (*entity.ScheduleFeedbackView, error)
 }
@@ -136,25 +136,38 @@ func (s *scheduleFeedbackModel) ExistByScheduleID(ctx context.Context, op *entit
 	}
 	count, err := da.GetScheduleFeedbackDA().Count(ctx, condition, &entity.ScheduleFeedback{})
 	if err != nil {
-		log.Error(ctx, "insert error", log.Err(err), log.Any("op", op), log.String("scheduleID", scheduleID))
+		log.Error(ctx, "da.GetScheduleFeedbackDA().Count error",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("condition", condition))
 		return false, err
 	}
 	return count > 0, nil
 }
 
-func (s *scheduleFeedbackModel) ExistByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (bool, error) {
+func (s *scheduleFeedbackModel) ExistByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]bool, error) {
 	condition := &da.ScheduleFeedbackCondition{
 		ScheduleIDs: entity.NullStrings{
 			Strings: scheduleIDs,
 			Valid:   true,
 		},
 	}
-	count, err := da.GetScheduleFeedbackDA().Count(ctx, condition, &entity.ScheduleFeedback{})
+	var scheduleFeedbacks []*entity.ScheduleFeedback
+	err := da.GetScheduleFeedbackDA().Query(ctx, condition, &scheduleFeedbacks)
 	if err != nil {
-		log.Error(ctx, "ScheduleFeedback count error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
-		return false, err
+		log.Error(ctx, "da.GetScheduleFeedbackDA().Query error",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("condition", condition))
+		return nil, err
 	}
-	return count > 0, nil
+
+	result := make(map[string]bool, len(scheduleIDs))
+	for _, scheduleFeedback := range scheduleFeedbacks {
+		result[scheduleFeedback.ScheduleID] = true
+	}
+
+	return result, nil
 }
 
 func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, input *entity.ScheduleFeedbackAddInput) (string, error) {
