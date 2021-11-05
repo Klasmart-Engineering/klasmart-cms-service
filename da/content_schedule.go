@@ -26,7 +26,9 @@ where
 		from cms_authed_contents 
 		where	org_id in (?, ?)			 
 		and delete_at = 0
-	)`
+	)
+order by cc.create_at 
+`
 	args := []interface{}{
 		entity.ContentTypePlan,
 		entity.ContentStatusPublished,
