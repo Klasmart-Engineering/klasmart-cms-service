@@ -121,6 +121,17 @@ func (m *assessmentModel) ScheduleEndClassCallback(ctx context.Context, operator
 	locker.Lock()
 	defer locker.Unlock()
 
+	// The orgID needs to be populated because it is a callback
+	schedules, err := m.ScheduleModel.GetVariableDataByIDs(ctx, operator, []string{args.ScheduleID}, nil)
+	if err != nil {
+		return err
+	}
+	if len(schedules) <= 0 {
+		log.Error(ctx, "schedule not found", log.Any("args", args))
+		return constant.ErrRecordNotFound
+	}
+	operator.OrgID = schedules[0].OrgID
+
 	superArgs, err := m.PrepareAddInputWhenScheduleExist(ctx, operator, []*entity.AssessmentAddInput{
 		&entity.AssessmentAddInput{
 			ScheduleID:   args.ScheduleID,
