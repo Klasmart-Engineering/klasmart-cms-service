@@ -67,6 +67,7 @@ func (s Server) registeRoute() {
 		content.GET("/contents_resources/:resource_id", s.mustLoginWithoutOrgID, s.getContentResourcePath)
 		content.GET("/contents_resources/:resource_id/download", s.mustLoginWithoutOrgID, s.getDownloadPath)
 		content.GET("/contents/:content_id/live/token", s.mustLogin, s.getContentLiveToken)
+		content.GET("/contents/schedule_lesson_plans", s.mustLogin, s.getLessonPlansCanSchedule)
 	}
 
 	authedContents := s.engine.Group("/v1")

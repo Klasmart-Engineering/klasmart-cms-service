@@ -143,6 +143,8 @@ type IContentModel interface {
 	PublishContentTx(ctx context.Context, cid string, scope []string, user *entity.Operator) error
 	DeleteContentBulkTx(ctx context.Context, ids []string, user *entity.Operator) error
 	DeleteContentTx(ctx context.Context, cid string, user *entity.Operator) error
+
+	GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, req *entity.ContentConditionRequest) (lps []*entity.LessonPlanForSchedule, err error)
 }
 
 type ContentModel struct {

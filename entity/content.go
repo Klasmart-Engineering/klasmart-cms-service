@@ -745,3 +745,9 @@ func (cInfo ContentInfo) CanBeDeleted() bool {
 	}
 	return false
 }
+
+type LessonPlanForSchedule struct {
+	ID        string              `json:"id" gorm:"column:id" `
+	Name      string              `json:"name" gorm:"column:name" `
+	GroupName LessonPlanGroupName `json:"group_name" gorm:"column:group_name" `
+}
