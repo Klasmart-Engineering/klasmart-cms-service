@@ -2758,20 +2758,6 @@ func (s *scheduleModel) PrepareScheduleTimeViewCondition(ctx context.Context, qu
 		Valid: query.Anytime,
 	}
 
-	if query.StartAtGe >= 0 {
-		condition.StartAtGe = sql.NullInt64{
-			Int64: query.StartAtGe,
-			Valid: true,
-		}
-	}
-
-	if query.EndAtLe >= 0 {
-		condition.EndAtLe = sql.NullInt64{
-			Int64: query.EndAtLe,
-			Valid: true,
-		}
-	}
-
 	log.Debug(ctx, "condition info",
 		log.String("viewType", viewType),
 		log.Any("condition", condition),
@@ -2847,6 +2833,22 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 	}, op, loc)
 	if err != nil {
 		return 0, nil, err
+	}
+
+	// StartAtGe query by start_at and due_at, required by APP team
+	if query.StartAtGe >= 0 {
+		condition.StartAtAndDueAtGe = sql.NullInt64{
+			Int64: query.StartAtGe,
+			Valid: true,
+		}
+	}
+
+	// EndAtLe query by end_at and due_at, required by APP team
+	if query.EndAtLe >= 0 {
+		condition.EndAtAndDueAtLe = sql.NullInt64{
+			Int64: query.EndAtLe,
+			Valid: true,
+		}
 	}
 
 	if query.DueAtEq >= 0 {
