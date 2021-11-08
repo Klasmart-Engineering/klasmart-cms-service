@@ -3740,6 +3740,8 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 		if scheduleOperatorRoleTypeMap, ok := scheduleOperatorRoleTypeMap[schedule.ID]; ok {
 			item.RoleType = scheduleOperatorRoleTypeMap
 		}
+
+		scheduleListView[i] = item
 	}
 
 	return scheduleListView, nil
