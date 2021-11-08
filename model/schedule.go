@@ -2984,6 +2984,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 			ID:   schedule.ClassType.String(),
 			Name: schedule.ClassType.ToLabel().String(),
 		},
+		OutcomeIDs: []string{},
 	}
 
 	// get schedule status, business logic not status in database
@@ -3308,6 +3309,10 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 		IsRepeat:       schedule.RepeatID != "",
 		LessonPlanID:   schedule.LessonPlanID,
 		Description:    schedule.Description,
+		// init empty slice
+		OutcomeIDs: []string{},
+		Teachers:   []*entity.ScheduleShortInfo{},
+		Students:   []*entity.ScheduleShortInfo{},
 	}
 
 	// get schedule status, business logic not status in database
