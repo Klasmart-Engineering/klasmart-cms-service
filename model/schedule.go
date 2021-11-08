@@ -2957,7 +2957,7 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 	return total, result, nil
 }
 
-// Interval function
+// Schedule model interval function
 func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, operator *entity.Operator, schedule *entity.Schedule) (*entity.ScheduleDetailsView, error) {
 	if schedule == nil {
 		log.Debug(ctx, "schedule is nil")
@@ -3541,7 +3541,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 
 	for _, studentID := range studentIDs {
 		if user, ok := userMap[studentID]; ok && user.Valid {
-			scheduleViewDetail.Students = append(scheduleViewDetail.Teachers, &entity.ScheduleShortInfo{
+			scheduleViewDetail.Students = append(scheduleViewDetail.Students, &entity.ScheduleShortInfo{
 				ID:   user.ID,
 				Name: user.Name,
 			})
@@ -3747,6 +3747,7 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 	return scheduleListView, nil
 }
 
+// model package interval function
 func removeResourceMetadata(ctx context.Context, resourceID string) error {
 	if resourceID == "" {
 		return nil
