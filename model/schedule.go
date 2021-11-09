@@ -2942,7 +2942,7 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 			return 0, nil, err
 		}
 
-		var assessmentStatusMap map[string]entity.AssessmentStatus
+		assessmentStatusMap := make(map[string]entity.AssessmentStatus)
 		for _, assessment := range assessments {
 			assessmentStatusMap[assessment.ScheduleID] = assessment.Status
 		}
