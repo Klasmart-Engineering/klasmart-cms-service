@@ -132,6 +132,7 @@ func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operat
 		EnableTeachers:   true,
 		EnableClass:      true,
 		EnableLessonPlan: true,
+		EnableStudents:   true,
 	}); err != nil {
 		return nil, err
 	}
