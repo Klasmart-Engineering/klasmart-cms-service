@@ -13,7 +13,7 @@ import (
 // @Accept json
 // @Produce json
 // @Tags content
-// @Success 200 {object} []*entity.LessonPlanForSchedule
+// @Success 200 {object} []entity.LessonPlanForSchedule
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /contents/schedule_lesson_plans [get]
 func (s *Server) getLessonPlansCanSchedule(c *gin.Context) {
