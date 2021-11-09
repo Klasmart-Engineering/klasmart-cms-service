@@ -15,7 +15,7 @@ import (
 // @Tags content
 // @Success 200 {object} []entity.LessonPlanForSchedule
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /contents/schedule_lesson_plans [get]
+// @Router /content_schedule/lesson_plans [get]
 func (s *Server) getLessonPlansCanSchedule(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()

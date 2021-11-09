@@ -32,6 +32,19 @@ func (cm *ContentModel) GetLessonPlansCanSchedule(ctx context.Context, op *entit
 	if err != nil {
 		return
 	}
+	mPG, err := GetProgramGroupModel().QueryMap(ctx, &da.ProgramGroupQueryCondition{})
+	if err != nil {
+		return
+	}
+	for _, lp := range lps1 {
+		_, ok := mPG[lp.ProgramID]
+		if ok {
+			lp.GroupName = entity.LessonPlanGroupNameBadanamuContent
+		} else {
+			lp.GroupName = entity.LessonPlanGroupNameMoreFeaturedContent
+		}
+	}
+
 	lps = append(lps, lps1...)
 	return
 }
