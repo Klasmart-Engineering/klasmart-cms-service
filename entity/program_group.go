@@ -31,3 +31,11 @@ func (t ProgramGroupName) Valid() bool {
 		return false
 	}
 }
+
+type LessonPlanGroupName string
+
+const (
+	LessonPlanGroupNameOrganizationContent LessonPlanGroupName = "Organization Content"
+	LessonPlanGroupNameBadanamuContent     LessonPlanGroupName = "Badanamu Content"
+	LessonPlanGroupNameMoreFeaturedContent LessonPlanGroupName = "More Featured Content"
+)
