@@ -120,8 +120,21 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 		)
 		return nil, err
 	}
+	if len(assessments) == 0 {
+		return nil, nil
+	}
 
-	total := len(assessments)
+	// get assessment list total
+	var total int
+	if total, err = da.GetAssessmentDA().CountTx(ctx, tx, &cond); err != nil {
+		log.Error(ctx, "List: da.GetAssessmentDA().CountTx: count failed",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("cond", cond),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
 
 	// convert to assessment view
 	var views []*entity.AssessmentView
