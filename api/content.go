@@ -667,7 +667,9 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 	}
 }
 func (s *Server) convertQueryContentResult(ctx context.Context, cdr *entity.ContentInfoWithDetailsResponse) (qcr *entity.QueryContentResponse) {
-	qcr = &entity.QueryContentResponse{}
+	qcr = &entity.QueryContentResponse{
+		List: []*entity.QueryContentItem{},
+	}
 	if cdr == nil {
 		return
 	}
