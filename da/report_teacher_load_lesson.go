@@ -169,16 +169,16 @@ select sc.* from
    	from schedules s
    	inner join schedules_relations sl
     on s.id=sl.schedule_id
-   	where sl.relation_id=? -- teacherId params
+    -- teacherId params
+   	where sl.relation_id=?
     and s.class_type in ('${OnlineClass}', '${OfflineClass}') 
     and s.delete_at = 0
   	and s.end_at >= ? and s.end_at <?
     and class_id in (?)
-   	group by sl.schedule_id
-   	order by s.end_at desc
+   	order by sl.schedule_id,s.end_at desc
 	)
    sc left join  assessments ass on sc.id=ass.schedule_id
-   where !exists
+   where not exists
    ( 
 	  select attendance_id from assessments_attendances ast 
      where ast.assessment_id = ass.id and ast.attendance_id=sc.teacher_id
@@ -218,11 +218,10 @@ select count(*) from
     and s.delete_at = 0
    	and s.end_at >= ? and s.end_at <?
     and class_id in (?)
-   	group by sl.schedule_id
-   	order by s.end_at desc
+   	order by sl.schedule_id,s.end_at desc
 	)
    sc left join  assessments ass on sc.id=ass.schedule_id
-   where !exists
+   where not exists
    ( 
 	  select attendance_id from assessments_attendances ast 
      where ast.assessment_id = ass.id and ast.attendance_id=sc.teacher_id
