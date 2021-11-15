@@ -146,8 +146,8 @@ from (
 func (r *ReportDA) MissedLessonsListInfo(ctx context.Context, request *entity.TeacherLoadMissedLessonsRequest) (model []*entity.TeacherLoadMissedLesson, err error) {
 	sql := `
 select sc.* from
-    (
-   	select 
+	(
+	select 
 		s.id,
 		sl.relation_id as teacher_id,
 		s.class_type, 
@@ -169,7 +169,6 @@ select sc.* from
    	from schedules s
    	inner join schedules_relations sl
     on s.id=sl.schedule_id
-    -- teacherId params
    	where sl.relation_id=?
     and s.class_type in ('${OnlineClass}', '${OfflineClass}') 
     and s.delete_at = 0
@@ -177,12 +176,12 @@ select sc.* from
     and class_id in (?)
    	order by sl.schedule_id,s.end_at desc
 	)
-   sc left join  assessments ass on sc.id=ass.schedule_id
-   where not exists
-   ( 
-	  select attendance_id from assessments_attendances ast 
-     where ast.assessment_id = ass.id and ast.attendance_id=sc.teacher_id
-    )
+	sc left join  assessments ass on sc.id=ass.schedule_id
+	where not exists
+	( 
+	select attendance_id from assessments_attendances ast 
+	where ast.assessment_id = ass.id and ast.attendance_id=sc.teacher_id
+	)
 	LIMIT ? OFFSET ?`
 
 	sql = strings.Replace(sql, "${OnlineClass}", entity.ScheduleClassTypeOnlineClass.String(), -1)
@@ -213,19 +212,19 @@ select count(*) from
    	from schedules s
    	inner join schedules_relations sl
     on s.id=sl.schedule_id
-   	where sl.relation_id=? -- teacherId params
+   	where sl.relation_id=? 
     and s.class_type in ('${OnlineClass}', '${OfflineClass}') 
     and s.delete_at = 0
    	and s.end_at >= ? and s.end_at <?
     and class_id in (?)
-   	order by sl.schedule_id,s.end_at desc
+	order by sl.schedule_id,s.end_at desc
 	)
-   sc left join  assessments ass on sc.id=ass.schedule_id
-   where not exists
-   ( 
-	  select attendance_id from assessments_attendances ast 
-     where ast.assessment_id = ass.id and ast.attendance_id=sc.teacher_id
-    )`
+	sc left join  assessments ass on sc.id=ass.schedule_id
+	where not exists
+	( 
+	select attendance_id from assessments_attendances ast 
+	where ast.assessment_id = ass.id and ast.attendance_id=sc.teacher_id
+	)`
 	sql = strings.Replace(sql, "${OnlineClass}", entity.ScheduleClassTypeOnlineClass.String(), -1)
 	sql = strings.Replace(sql, "${OfflineClass}", entity.ScheduleClassTypeOfflineClass.String(), -1)
 	startAt, endAt, err := request.Duration.Value(ctx)
