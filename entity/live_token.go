@@ -53,6 +53,9 @@ type LiveTokenInfo struct {
 	Materials  []*LiveMaterial `json:"materials"`
 	ClassType  LiveClassType   `json:"classtype"`
 	OrgID      string          `json:"org_id"`
+
+	StartAt int64 `json:"start_at"`
+	EndAt   int64 `json:"end_at"`
 }
 
 type LiveMaterial struct {
