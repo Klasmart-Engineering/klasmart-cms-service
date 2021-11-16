@@ -176,6 +176,7 @@ func (r *ReportDA) MissedLessonsListInfo(ctx context.Context, request *entity.Te
 		inner join schedules_relations sl 
 		on s.id=sl.schedule_id
 		where sl.relation_id =?
+		and sl.relation_type in (?, ?)
 	) sr
 	left join assessments ass 
 	on sr.id=ass.schedule_id
@@ -199,6 +200,8 @@ func (r *ReportDA) MissedLessonsListInfo(ctx context.Context, request *entity.Te
 		endAt,
 		request.ClassIDs,
 		request.TeacherId,
+		entity.ScheduleRelationTypeClassRosterTeacher.String(),
+		entity.ScheduleRelationTypeParticipantTeacher.String(),
 		request.PageSize,
 		(request.Page-1)*request.PageSize)
 	if err != nil {
@@ -225,6 +228,7 @@ func (r *ReportDA) MissedLessonsListTotal(ctx context.Context, request *entity.T
 		inner join schedules_relations sl 
 		on s.id=sl.schedule_id
 		where sl.relation_id =?
+		and sl.relation_type in (?, ?)
 	) sr
 	left join assessments ass 
 	on sr.id=ass.schedule_id
@@ -243,7 +247,9 @@ func (r *ReportDA) MissedLessonsListTotal(ctx context.Context, request *entity.T
 		startAt,
 		endAt,
 		request.ClassIDs,
-		request.TeacherId)
+		request.TeacherId,
+		entity.ScheduleRelationTypeClassRosterTeacher.String(),
+		entity.ScheduleRelationTypeParticipantTeacher.String())
 	if err != nil {
 		log.Error(ctx, "exec missedLessonsListTotal sql failed",
 			log.Err(err),
