@@ -3,6 +3,8 @@ package api
 import (
 	"net/http"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
@@ -30,7 +32,20 @@ func (s *Server) getLessonPlansCanSchedule(c *gin.Context) {
 		}
 	}()
 
-	r, err := model.GetContentModel().GetLessonPlansCanSchedule(ctx, op)
+	condition := &entity.ContentConditionRequest{
+		ContentType:   []int{entity.ContentTypePlan},
+		PublishStatus: []string{entity.ContentStatusPublished},
+		OrderBy:       "create_at",
+	}
+	err = model.GetContentFilterModel().FilterPublishContent(ctx, condition, op)
+	if err == model.ErrNoAvailableVisibilitySettings {
+		condition.VisibilitySettings = []string{"none"}
+		err = nil
+	}
+	if err != nil {
+		return
+	}
+	r, err := model.GetContentModel().GetLessonPlansCanSchedule(ctx, op, condition)
 	if err != nil {
 		return
 	}
