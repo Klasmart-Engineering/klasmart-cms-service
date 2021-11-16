@@ -49,6 +49,16 @@ func (s *Server) addSchedule(c *gin.Context) {
 		return
 	}
 	log.Debug(ctx, "request data", log.Any("operator", op), log.Any("requestData", data))
+
+	data.ClassRosterTeacherIDs = utils.SliceDeduplicationExcludeEmpty(data.ClassRosterTeacherIDs)
+	data.ClassRosterStudentIDs = utils.SliceDeduplicationExcludeEmpty(data.ClassRosterStudentIDs)
+	data.ParticipantsTeacherIDs = utils.SliceDeduplicationExcludeEmpty(data.ParticipantsTeacherIDs)
+	data.ParticipantsStudentIDs = utils.SliceDeduplicationExcludeEmpty(data.ParticipantsStudentIDs)
+
+	// if a user is both a student and a teacher, he/she is considered to be a teacher
+	data.ClassRosterStudentIDs = utils.ExcludeStrings(data.ClassRosterStudentIDs, data.ClassRosterTeacherIDs)
+	data.ParticipantsStudentIDs = utils.ExcludeStrings(data.ParticipantsStudentIDs, data.ParticipantsTeacherIDs)
+
 	err := s.verifyScheduleData(c, &entity.ScheduleEditValidation{
 		ClassRosterTeacherIDs:  data.ClassRosterTeacherIDs,
 		ClassRosterStudentIDs:  data.ClassRosterStudentIDs,
@@ -210,6 +220,15 @@ func (s *Server) updateSchedule(c *gin.Context) {
 			}
 		}
 	}
+
+	scheduleUpdateView.ClassRosterTeacherIDs = utils.SliceDeduplicationExcludeEmpty(scheduleUpdateView.ClassRosterTeacherIDs)
+	scheduleUpdateView.ClassRosterStudentIDs = utils.SliceDeduplicationExcludeEmpty(scheduleUpdateView.ClassRosterStudentIDs)
+	scheduleUpdateView.ParticipantsTeacherIDs = utils.SliceDeduplicationExcludeEmpty(scheduleUpdateView.ParticipantsTeacherIDs)
+	scheduleUpdateView.ParticipantsStudentIDs = utils.SliceDeduplicationExcludeEmpty(scheduleUpdateView.ParticipantsStudentIDs)
+
+	// if a user is both a student and a teacher, he/she is considered to be a teacher
+	scheduleUpdateView.ClassRosterStudentIDs = utils.ExcludeStrings(scheduleUpdateView.ClassRosterStudentIDs, scheduleUpdateView.ClassRosterTeacherIDs)
+	scheduleUpdateView.ParticipantsStudentIDs = utils.ExcludeStrings(scheduleUpdateView.ParticipantsStudentIDs, scheduleUpdateView.ParticipantsTeacherIDs)
 
 	err := s.verifyScheduleData(c, &entity.ScheduleEditValidation{
 		ClassRosterTeacherIDs:  scheduleUpdateView.ClassRosterTeacherIDs,
@@ -393,15 +412,6 @@ func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditVa
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return constant.ErrInvalidArgs
 	}
-
-	input.ClassRosterTeacherIDs = utils.SliceDeduplicationExcludeEmpty(input.ClassRosterTeacherIDs)
-	input.ClassRosterStudentIDs = utils.SliceDeduplicationExcludeEmpty(input.ClassRosterStudentIDs)
-	input.ParticipantsTeacherIDs = utils.SliceDeduplicationExcludeEmpty(input.ParticipantsTeacherIDs)
-	input.ParticipantsStudentIDs = utils.SliceDeduplicationExcludeEmpty(input.ParticipantsStudentIDs)
-
-	// if a user is both a student and a teacher, he/she is considered to be a teacher
-	input.ClassRosterStudentIDs = utils.ExcludeStrings(input.ClassRosterStudentIDs, input.ClassRosterTeacherIDs)
-	input.ParticipantsStudentIDs = utils.ExcludeStrings(input.ParticipantsStudentIDs, input.ParticipantsTeacherIDs)
 
 	// students and teachers must exist
 	if (len(input.ClassRosterTeacherIDs) == 0 &&
