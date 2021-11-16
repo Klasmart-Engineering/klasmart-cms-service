@@ -110,10 +110,10 @@ func (m *assessmentH5P) batchGetRoomMap(ctx context.Context, operator *entity.Op
 	}
 
 	contentIDs := make([]string, 0, len(contentIDMap))
-	for key, _ := range contentIDMap {
+	for key := range contentIDMap {
 		contentIDs = append(contentIDs, key)
 	}
-	LessonMaterialMap, err := m.assessmentBase.batchGetLessonMaterialDataMap(ctx, dbo.MustGetDB(ctx), operator, contentIDs)
+	LessonMaterialMap, err := m.assessmentBase.batchGetLessonMaterialDataMap(ctx, operator, contentIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -215,16 +215,11 @@ func (m *assessmentH5P) getContentsMapByContentID(user *entity.AssessmentH5PUser
 	return result
 }
 
-func (m *assessmentH5P) getStudentViewItems(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, view *entity.AssessmentView) ([]*entity.AssessmentStudentViewH5PItem, error) {
+func (m *assessmentH5P) getStudentViewItems(ctx context.Context, operator *entity.Operator, view *entity.AssessmentView) ([]*entity.AssessmentStudentViewH5PItem, error) {
 	var roomIDs = []string{view.RoomID}
 	// get room
 	roomMap, err := m.batchGetRoomMap(ctx, operator, roomIDs)
 	if err != nil {
-		log.Error(ctx, "get student view items: batch get room map failed",
-			log.Err(err),
-			log.String("room_id", view.RoomID),
-			log.Any("view", view),
-		)
 		return nil, err
 	}
 	room := roomMap[view.RoomID]
@@ -234,16 +229,11 @@ func (m *assessmentH5P) getStudentViewItems(ctx context.Context, operator *entit
 	}
 
 	// batch get students lesson materials map
-	studentLessonMaterialsMap, err := m.batchGetStudentViewH5PLessonMaterialsMap(ctx, operator, tx, view, room)
+	studentLessonMaterialsMap, err := m.batchGetStudentViewH5PLessonMaterialsMap(ctx, operator, view, room)
 
 	// get room comments
 	roomCommentMap, err := m.batchGetRoomCommentMap(ctx, operator, roomIDs)
 	if err != nil {
-		log.Error(ctx, "batch get comments failed",
-			log.Err(err),
-			log.Strings("room_ids", roomIDs),
-			log.Any("operator", operator),
-		)
 		return nil, err
 	}
 
@@ -321,7 +311,6 @@ func (m *assessmentH5P) generateUserH5PContentKey(contentID string, subH5PID str
 func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 	ctx context.Context,
 	operator *entity.Operator,
-	tx *dbo.DBContext,
 	view *entity.AssessmentView,
 	room *entity.AssessmentH5PRoom,
 ) (map[string][]*entity.AssessmentStudentViewH5PLessonMaterial, error) {
@@ -362,7 +351,7 @@ func (m *assessmentH5P) batchGetStudentViewH5PLessonMaterialsMap(
 	for _, ao := range assessmentOutcomes {
 		outcomeIDs = append(outcomeIDs, ao.OutcomeID)
 	}
-	outcomeMap, err := m.getOutcomeMap(ctx, operator, tx, outcomeIDs)
+	outcomeMap, err := m.getOutcomeMap(ctx, operator, outcomeIDs)
 	if err != nil {
 		log.Error(ctx, "batch get student view h5p lesson materials map: get outcomes map failed",
 			log.Err(err),
@@ -695,12 +684,12 @@ func (m *assessmentH5P) treeingRemainingStudentViewLessonMaterials(contents []*e
 	}
 }
 
-func (m *assessmentH5P) getOutcomeMap(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, error) {
+func (m *assessmentH5P) getOutcomeMap(ctx context.Context, operator *entity.Operator, outcomeIDs []string) (map[string]*entity.Outcome, error) {
 	outcomeIDs = utils.SliceDeduplicationExcludeEmpty(outcomeIDs)
 	if len(outcomeIDs) == 0 {
 		return map[string]*entity.Outcome{}, nil
 	}
-	outcomes, err := GetOutcomeModel().GetByIDs(ctx, operator, tx, outcomeIDs)
+	outcomes, err := GetOutcomeModel().GetByIDs(ctx, operator, dbo.MustGetDB(ctx), outcomeIDs)
 	if err != nil {
 		log.Error(ctx, "get outcome map: batch get outcomes failed",
 			log.Err(err),

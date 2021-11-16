@@ -3,10 +3,10 @@ package mapping
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"strings"
 
 	"github.com/urfave/cli/v2"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -160,7 +160,7 @@ func (cd *ContentObjectDA) UpdateContent(ctx context.Context, tx *dbo.DBContext,
 
 	return nil
 }
-func (cd *ContentObjectDA) SearchContentInternal(ctx context.Context, tx *dbo.DBContext, condition *da.ContentConditionInternal) ([]*ContentObject, error) {
+func (cd *ContentObjectDA) SearchContentInternal(ctx context.Context, tx *dbo.DBContext, condition *da.ContentCondition) ([]*ContentObject, error) {
 	objs := make([]*ContentObject, 0)
 	err := cd.s.QueryTx(ctx, tx, condition, &objs)
 	if err != nil {

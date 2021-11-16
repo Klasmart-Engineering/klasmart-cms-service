@@ -35,18 +35,10 @@ func (s Server) registeRoute() {
 		}
 	}
 
-	assets := s.engine.Group("/v1/assets")
-	{
-		assets.GET("/", s.mustLogin, s.searchAssets)
-		assets.POST("/", s.mustLogin, s.createAsset)
-		assets.GET("/:id", s.mustLogin, s.getAssetByID)
-		assets.PUT("/:id", s.mustLogin, s.updateAsset)
-		assets.DELETE("/:id", s.mustLogin, s.deleteAsset)
-	}
 	content := s.engine.Group("/v1")
 	{
 		content.POST("/contents", s.mustLogin, s.createContent)
-		//content.POST("/contents/copy", s.mustLogin, s.copyContent)
+
 		//Inherent & unchangeable
 		content.GET("/contents/:content_id", s.mustLogin, s.getContent)
 		//Inherent & unchangeable
@@ -75,6 +67,7 @@ func (s Server) registeRoute() {
 		content.GET("/contents_resources/:resource_id", s.mustLoginWithoutOrgID, s.getContentResourcePath)
 		content.GET("/contents_resources/:resource_id/download", s.mustLoginWithoutOrgID, s.getDownloadPath)
 		content.GET("/contents/:content_id/live/token", s.mustLogin, s.getContentLiveToken)
+		content.GET("/contents_lesson_plans", s.mustLogin, s.getLessonPlansCanSchedule)
 	}
 
 	authedContents := s.engine.Group("/v1")
@@ -104,7 +97,6 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules/:id/operator/newest_feedback", s.mustLogin, s.getScheduleNewestFeedbackByOperator)
 		schedules.GET("/schedules_filter/programs", s.mustLogin, s.getProgramsInScheduleFilter)
 		schedules.GET("/schedules_filter/subjects", s.mustLogin, s.getSubjectsInScheduleFilter)
-		schedules.GET("/schedules_filter/class_types", s.mustLogin, s.getClassTypesInScheduleFilter)
 		schedules.GET("/schedules_view/:id", s.mustLogin, s.getScheduleViewByID)
 
 		schedules.POST("/schedules_time_view/dates", s.mustLogin, s.postScheduledDates)
@@ -224,12 +216,6 @@ func (s Server) registeRoute() {
 	{
 		crypto.GET("/h5p/signature", s.mustLogin, s.h5pSignature)
 		crypto.GET("/h5p/jwt", s.mustLogin, s.generateH5pJWT)
-	}
-
-	classTypes := s.engine.Group("/v1/class_types")
-	{
-		classTypes.GET("", s.mustLoginWithoutOrgID, s.getClassType)
-		classTypes.GET("/:id", s.mustLoginWithoutOrgID, s.getClassTypeByID)
 	}
 
 	lessonTypes := s.engine.Group("/v1/lesson_types")

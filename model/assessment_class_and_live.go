@@ -15,8 +15,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 var (
@@ -37,9 +35,6 @@ func GetClassAndLiveAssessmentModel() IClassAndLiveAssessmentModel {
 type IClassAndLiveAssessmentModel interface {
 	GetDetail(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetail, error)
 	List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error)
-	PrepareAddArgs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) (*entity.BatchAddAssessmentSuperArgs, error)
-	Add(ctx context.Context, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) (string, error)
-	AddTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.BatchAddAssessmentSuperArgs) (string, error)
 	Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.UpdateAssessmentArgs) error
 }
 
@@ -48,7 +43,7 @@ type classAndLiveAssessmentModel struct {
 }
 
 func (m *classAndLiveAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetail, error) {
-	return m.assessmentBase.getDetail(ctx, tx, operator, id)
+	return m.assessmentBase.getDetail(ctx, operator, id)
 }
 
 func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error) {
@@ -125,12 +120,25 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 		)
 		return nil, err
 	}
+	if len(assessments) == 0 {
+		return nil, nil
+	}
 
-	total := len(assessments)
+	// get assessment list total
+	var total int
+	if total, err = da.GetAssessmentDA().CountTx(ctx, tx, &cond); err != nil {
+		log.Error(ctx, "List: da.GetAssessmentDA().CountTx: count failed",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("cond", cond),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
 
 	// convert to assessment view
 	var views []*entity.AssessmentView
-	if views, err = m.toViews(ctx, tx, operator, assessments, entity.ConvertToViewsOptions{
+	if views, err = m.toViews(ctx, operator, assessments, entity.ConvertToViewsOptions{
 		CheckedStudents:  sql.NullBool{Bool: true, Valid: true},
 		EnableProgram:    true,
 		EnableSubjects:   true,
@@ -158,169 +166,6 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 	}
 
 	return &result, nil
-}
-
-func (m *classAndLiveAssessmentModel) Add(ctx context.Context, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) (string, error) {
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixScheduleID, args.ScheduleID)
-	if err != nil {
-		log.Error(ctx, "add class and live assessment: lock fail",
-			log.Err(err),
-			log.Any("args", args),
-		)
-		return "", err
-	}
-	locker.Lock()
-	defer locker.Unlock()
-
-	superArgs, err := m.PrepareAddArgs(ctx, dbo.MustGetDB(ctx), operator, args)
-	if err != nil {
-		return "", err
-	}
-	var newID string
-	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		var err error
-		newID, err = m.AddTx(ctx, tx, operator, superArgs)
-		if err != nil {
-			return err
-		}
-		return nil
-	}); err != nil {
-		log.Error(ctx, "add class or live assessment: add failed",
-			log.Err(err),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return "", err
-	}
-	return newID, nil
-}
-
-func (m *classAndLiveAssessmentModel) PrepareAddArgs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) (*entity.BatchAddAssessmentSuperArgs, error) {
-	// clean data
-	args.AttendanceIDs = utils.SliceDeduplicationExcludeEmpty(args.AttendanceIDs)
-
-	// get schedule
-	schedule, err := GetScheduleModel().GetPlainByID(ctx, args.ScheduleID)
-	if err != nil {
-		log.Error(ctx, "add class and live assessment: get schedule failed",
-			log.Err(err),
-			log.Any("schedule_id", args.ScheduleID),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		switch err {
-		case constant.ErrRecordNotFound, dbo.ErrRecordNotFound:
-			return nil, constant.ErrInvalidArgs
-		default:
-			return nil, err
-		}
-	}
-
-	// check class type
-	if schedule.ClassType != entity.ScheduleClassTypeOnlineClass && schedule.ClassType != entity.ScheduleClassTypeOfflineClass {
-		log.Warn(ctx, "add class and live assessment: invalid schedule class type",
-			log.String("class_type", string(schedule.ClassType)),
-			log.Any("schedule", schedule),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return nil, constant.ErrInvalidArgs
-	}
-
-	// fix empty org id
-	operator.OrgID = schedule.OrgID
-
-	// generate assessment title
-	classNameMap, err := external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, []string{schedule.ClassID})
-	if err != nil {
-		log.Error(ctx, "Add: external.GetClassServiceProvider().BatchGetNameMap: get failed",
-			log.Err(err),
-			log.Strings("class_ids", []string{schedule.ClassID}),
-			log.Any("args", args),
-		)
-		return nil, err
-	}
-	assessmentTitle := m.generateTitle(args.ClassEndTime, classNameMap[schedule.ClassID], schedule.Title)
-
-	// fill args attendance ids
-	if schedule.ClassType == entity.ScheduleClassTypeOfflineClass {
-		users, err := GetScheduleRelationModel().GetUsersByScheduleID(ctx, operator, args.ScheduleID)
-		if err != nil {
-			log.Error(ctx, "add class and live assessments: get users by schedule id failed",
-				log.Err(err),
-				log.Any("args", args),
-			)
-			return nil, err
-		}
-		for _, u := range users {
-			args.AttendanceIDs = append(args.AttendanceIDs, u.RelationID)
-		}
-	}
-	args.AttendanceIDs = utils.SliceDeduplicationExcludeEmpty(args.AttendanceIDs)
-
-	// get attendances
-	scheduleRelationCond := &da.ScheduleRelationCondition{
-		ScheduleID: sql.NullString{
-			String: schedule.ID,
-			Valid:  true,
-		},
-		RelationIDs: entity.NullStrings{
-			Strings: args.AttendanceIDs,
-			Valid:   true,
-		},
-	}
-	scheduleRelations, err := GetScheduleRelationModel().Query(ctx, operator, scheduleRelationCond)
-	if err != nil {
-		log.Error(ctx, "add class and live assessments: query schedule relations failed",
-			log.Err(err),
-			log.Any("attendance_ids", args.AttendanceIDs),
-			log.Any("operator", operator),
-			log.Any("condition", scheduleRelationCond),
-		)
-		return nil, err
-	}
-	if len(scheduleRelations) == 0 {
-		log.Error(ctx, "add class and live assessments: not found schedule relations",
-			log.Err(err),
-			log.Any("attendance_ids", args.AttendanceIDs),
-			log.Any("operator", operator),
-			log.Any("condition", scheduleRelationCond),
-		)
-		return nil, ErrNotFoundAttendance
-	}
-	superArgs, err := m.assessmentBase.prepareBatchAddSuperArgs(ctx, tx, operator, []*entity.AddAssessmentArgs{{
-		Title:         assessmentTitle,
-		ScheduleID:    args.ScheduleID,
-		ScheduleTitle: schedule.Title,
-		LessonPlanID:  schedule.LessonPlanID,
-		ClassID:       schedule.ClassID,
-		ClassLength:   args.ClassLength,
-		ClassEndTime:  args.ClassEndTime,
-		Attendances:   scheduleRelations,
-	}})
-	if err != nil {
-		log.Error(ctx, "prepare add assessment args: prepare batch add super args failed",
-			log.Err(err),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	return superArgs, nil
-}
-
-func (m *classAndLiveAssessmentModel) AddTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.BatchAddAssessmentSuperArgs) (string, error) {
-	log.Debug(ctx, "add class and live assessment: print args", log.Any("args", args), log.Any("operator", operator))
-
-	ids, err := m.assessmentBase.batchAdd(ctx, tx, operator, args)
-	if err != nil {
-		return "", err
-	}
-	if len(ids) > 0 {
-		return ids[0], nil
-	}
-
-	return "", nil
 }
 
 func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.UpdateAssessmentArgs) error {

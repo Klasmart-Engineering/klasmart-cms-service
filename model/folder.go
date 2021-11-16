@@ -7,13 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
@@ -331,11 +330,12 @@ func (f *FolderModel) fetchSharedContentIDs(ctx context.Context, folders []*enti
 	}
 
 	//4.Get contents from folders
-	condition := &da.ContentConditionInternal{
-		ContentType: []int{entity.ContentTypePlan, entity.ContentTypeMaterial},
-		DirPath:     entity.NullStrings{Strings: folderPathList, Valid: true},
+	condition := &da.ContentCondition{
+		ContentType:    []int{entity.ContentTypePlan, entity.ContentTypeMaterial},
+		DirPath:        entity.NullStrings{Strings: folderPathList, Valid: true},
+		IncludeDeleted: true,
 	}
-	_, contents, err := da.GetContentDA().SearchContentInternal(ctx, dbo.MustGetDB(ctx), condition)
+	contents, err := da.GetContentDA().QueryContent(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
 		log.Error(ctx, "Search folder items failed",
 			log.Err(err),
@@ -1117,14 +1117,16 @@ func (f *FolderModel) getParentFolderListByContentIDs(ctx context.Context, tx *d
 	if len(ids) < 1 {
 		return nil, nil
 	}
-	_, contentList, err := da.GetContentDA().SearchContentInternal(ctx, tx,
-		&da.ContentConditionInternal{
+	contentList, err := da.GetContentDA().QueryContent(ctx, tx,
+		&da.ContentCondition{
 			IDS: entity.NullStrings{
 				Strings: ids,
 				Valid:   true,
-			}})
+			},
+			IncludeDeleted: true,
+		})
 	if err != nil {
-		log.Warn(ctx, "SearchContentInternal failed",
+		log.Warn(ctx, "QueryContent failed",
 			log.Err(err),
 			log.Strings("ids", ids))
 		return nil, err
@@ -2320,10 +2322,14 @@ func (f *FolderModel) updateLinkedItemPath(ctx context.Context,
 
 func (f *FolderModel) listContentInFolder(ctx context.Context, tx *dbo.DBContext, path string) ([]string, error) {
 	//search all content in the folders
-	condition := &da.ContentConditionInternal{DirPathRecursion: path}
-	_, contentList, err := da.GetContentDA().SearchContentInternal(ctx, tx, condition)
+	condition := &da.ContentCondition{
+		DirPathRecursion: path,
+		IncludeDeleted:   true,
+	}
+	contentList, err := da.GetContentDA().QueryContent(ctx, tx, condition)
 	if err != nil {
-		log.Error(ctx, "SearchContentInternal failed", log.Err(err),
+		log.Error(ctx, "QueryContent failed",
+			log.Err(err),
 			log.String("itemType", "content"),
 			log.String("path", path))
 		return nil, err
@@ -2344,10 +2350,14 @@ func (f *FolderModel) listContentMapInFolders(ctx context.Context, tx *dbo.DBCon
 		i++
 	}
 	//search all content in the folders
-	condition := &da.ContentConditionInternal{DirPathRecursionList: pathList}
-	_, contentList, err := da.GetContentDA().SearchContentInternal(ctx, tx, condition)
+	condition := &da.ContentCondition{
+		DirPathRecursionList: pathList,
+		IncludeDeleted:       true,
+	}
+	contentList, err := da.GetContentDA().QueryContent(ctx, tx, condition)
 	if err != nil {
-		log.Error(ctx, "SearchContentInternal failed", log.Err(err),
+		log.Error(ctx, "QueryContent failed",
+			log.Err(err),
 			log.String("itemType", "content"),
 			log.Any("path", pathList))
 		return nil, err

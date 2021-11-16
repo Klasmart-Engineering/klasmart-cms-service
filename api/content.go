@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -64,7 +65,7 @@ func (s *Server) createContent(c *gin.Context) {
 		return
 	}
 
-	cid, err := model.GetContentModel().CreateContentTx(ctx, data, op)
+	cid, err := model.GetContentModel().CreateContent(ctx, data, op)
 
 	switch err {
 	case model.ErrContentDataRequestSource:
@@ -94,43 +95,6 @@ func (s *Server) createContent(c *gin.Context) {
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidSelectForm:
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"id": cid,
-		})
-	default:
-		s.defaultErrorHandler(c, err)
-	}
-}
-
-// @Summary copyContent
-// @ID copyContent
-// @Description copy lesson plan, lesson material
-// @Accept json
-// @Produce json
-// @Param content body entity.CreateContentRequest true "create request"
-// @Tags content
-// @Success 200 {object} CreateContentResponse
-// @Failure 500 {object} InternalServerErrorResponse
-// @Failure 400 {object} BadRequestResponse
-// @Router /contents/copy [post]
-func (s *Server) copyContent(c *gin.Context) {
-	ctx := c.Request.Context()
-	op := s.getOperator(c)
-	var data entity.CopyContentRequest
-	err := c.ShouldBind(&data)
-	if err != nil {
-		log.Error(ctx, "create content failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
-
-	cid, err := model.GetContentModel().CopyContentTx(ctx, data.ContentID, data.Deep, op)
-	switch err {
-	case model.ErrNoContentData:
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
@@ -611,7 +575,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
 // @Tags content
-// @Success 200 {object} entity.ContentInfoWithDetailsResponse
+// @Success 200 {object} entity.QueryContentResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents [get]
@@ -650,10 +614,10 @@ func (s *Server) queryContent(c *gin.Context) {
 	}
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
+		c.JSON(http.StatusOK, s.convertQueryContentResult(ctx, &entity.ContentInfoWithDetailsResponse{
 			Total:       total,
 			ContentList: results,
-		})
+		}))
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoPermissionToQuery:
@@ -679,7 +643,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
 // @Tags content
-// @Success 200 {object} entity.ContentInfoWithDetailsResponse
+// @Success 200 {object} entity.QueryContentResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents_authed [get]
@@ -687,14 +651,13 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := s.queryContentCondition(c, op)
-
 	total, results, err := model.GetContentModel().SearchAuthedContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
+		c.JSON(http.StatusOK, s.convertQueryContentResult(ctx, &entity.ContentInfoWithDetailsResponse{
 			Total:       total,
 			ContentList: results,
-		})
+		}))
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoPermissionToQuery:
@@ -702,6 +665,31 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 	default:
 		s.defaultErrorHandler(c, err)
 	}
+}
+func (s *Server) convertQueryContentResult(ctx context.Context, cdr *entity.ContentInfoWithDetailsResponse) (qcr *entity.QueryContentResponse) {
+	qcr = &entity.QueryContentResponse{
+		List: []*entity.QueryContentItem{},
+	}
+	if cdr == nil {
+		return
+	}
+	qcr.Total = cdr.Total
+	for _, cd := range cdr.ContentList {
+		qcr.List = append(qcr.List, &entity.QueryContentItem{
+			ID:              cd.ID,
+			ContentType:     cd.ContentType,
+			Name:            cd.Name,
+			Thumbnail:       cd.Thumbnail,
+			AuthorName:      cd.AuthorName,
+			Data:            cd.Data,
+			Author:          cd.Author,
+			PublishStatus:   cd.PublishStatus,
+			ContentTypeName: cd.ContentTypeName,
+			Permission:      cd.Permission,
+			SuggestTime:     cd.SuggestTime,
+		})
+	}
+	return
 }
 
 // @Summary queryFolderContent
@@ -798,7 +786,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
 // @Tags content
-// @Success 200 {object} entity.ContentInfoWithDetailsResponse
+// @Success 200 {object} entity.QueryContentResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} BadRequestResponse
@@ -823,10 +811,10 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 	total, results, err := model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
+		c.JSON(http.StatusOK, s.convertQueryContentResult(ctx, &entity.ContentInfoWithDetailsResponse{
 			Total:       total,
 			ContentList: results,
-		})
+		}))
 	case model.ErrInvalidVisibleScope:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidVisibilitySetting:
@@ -857,7 +845,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
 // @Tags content
-// @Success 200 {object} entity.ContentInfoWithDetailsResponse
+// @Success 200 {object} entity.QueryContentResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents_pending [get]
@@ -867,7 +855,6 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 	op := s.getOperator(c)
 
 	condition := s.queryContentCondition(c, op)
-
 	//filter pending visibility settings
 	isTerminal := s.filterPendingContent(c, &condition, op)
 	if isTerminal {
@@ -889,10 +876,10 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 	total, results, err := model.GetContentModel().ListPendingContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
+		c.JSON(http.StatusOK, s.convertQueryContentResult(ctx, &entity.ContentInfoWithDetailsResponse{
 			Total:       total,
 			ContentList: results,
-		})
+		}))
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoPermissionToQuery:

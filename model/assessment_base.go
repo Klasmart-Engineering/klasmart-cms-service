@@ -19,10 +19,11 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
-type assessmentBase struct{}
+type assessmentBase struct {
+}
 
-func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetail, error) {
-	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, id)
+func (m *assessmentBase) getDetail(ctx context.Context, operator *entity.Operator, id string) (*entity.AssessmentDetail, error) {
+	assessment, err := da.GetAssessmentDA().GetByID(ctx, id)
 	if err != nil {
 		log.Error(ctx, "Get: da.GetAssessmentDA().GetExcludeSoftDeleted: get failed",
 			log.Err(err),
@@ -36,7 +37,7 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 		views []*entity.AssessmentView
 		view  *entity.AssessmentView
 	)
-	if views, err = m.toViews(ctx, tx, operator, []*entity.Assessment{assessment}, entity.ConvertToViewsOptions{
+	if views, err = m.toViews(ctx, operator, []*entity.Assessment{assessment}, entity.ConvertToViewsOptions{
 		EnableProgram:    true,
 		EnableSubjects:   true,
 		EnableTeachers:   true,
@@ -80,7 +81,7 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 	}
 	var currentContentOutcomeMap map[string][]string
 	if len(contentIDs) > 0 {
-		assessmentContentOutcomeMap, err := m.getAssessmentContentOutcomeMap(ctx, tx, []string{id}, contentIDs)
+		assessmentContentOutcomeMap, err := m.getAssessmentContentOutcomeMap(ctx, []string{id}, contentIDs)
 		if err != nil {
 			log.Error(ctx, "Get: m.getAssessmentContentOutcomeMap: get failed",
 				log.Err(err),
@@ -111,7 +112,7 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 
 	// fill outcomes
 	var assessmentOutcomes []*entity.AssessmentOutcome
-	if err := da.GetAssessmentOutcomeDA().QueryTx(ctx, tx, &da.QueryAssessmentOutcomeConditions{
+	if err := da.GetAssessmentOutcomeDA().Query(ctx, &da.QueryAssessmentOutcomeConditions{
 		AssessmentIDs: entity.NullStrings{
 			Strings: []string{id},
 			Valid:   true,
@@ -133,7 +134,7 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 			assessmentOutcomeMap[o.OutcomeID] = *o
 			outcomeIDs = append(outcomeIDs, o.OutcomeID)
 		}
-		if outcomes, err = GetOutcomeModel().GetByIDs(ctx, operator, tx, outcomeIDs); err != nil {
+		if outcomes, err = GetOutcomeModel().GetByIDs(ctx, operator, dbo.MustGetDB(ctx), outcomeIDs); err != nil {
 			log.Error(ctx, "Get: GetOutcomeModel().GetByIDs: get failed",
 				log.Err(err),
 				log.Strings("outcome_ids", outcomeIDs),
@@ -148,7 +149,7 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 			outcomeAttendances      = make([]*entity.OutcomeAttendance, 0, len(outcomeIDs))
 			outcomeAttendanceIDsMap = make(map[string][]string, len(outcomeIDs))
 		)
-		outcomeAttendances, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, tx, id, outcomeIDs)
+		outcomeAttendances, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, id, outcomeIDs)
 		if err != nil {
 			log.Error(ctx, "Get: da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs: batch get failed",
 				log.Err(err),
@@ -163,7 +164,7 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 		}
 
 		// batch get outcome content types map
-		outcomeContentTypesMap, err := m.batchGetOutcomeContentTypesMap(ctx, tx, id, outcomeIDs)
+		outcomeContentTypesMap, err := m.batchGetOutcomeContentTypesMap(ctx, id, outcomeIDs)
 		if err != nil {
 			log.Error(ctx, "get assessment detail: batch get outcome content types map",
 				log.Err(err),
@@ -197,7 +198,7 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 
 	// fill student view items
 	if view.Schedule.ClassType != entity.ScheduleClassTypeOfflineClass {
-		result.StudentViewItems, err = getAssessmentH5P().getStudentViewItems(ctx, operator, tx, view)
+		result.StudentViewItems, err = getAssessmentH5P().getStudentViewItems(ctx, operator, view)
 		if err != nil {
 			log.Error(ctx, "get assessment detail: get student view items failed",
 				log.Err(err),
@@ -211,7 +212,7 @@ func (m *assessmentBase) getDetail(ctx context.Context, tx *dbo.DBContext, opera
 	return &result, nil
 }
 
-func (m *assessmentBase) getAssessmentContentOutcomeMap(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string, contentIDs []string) (map[string]map[string][]string, error) {
+func (m *assessmentBase) getAssessmentContentOutcomeMap(ctx context.Context, assessmentIDs []string, contentIDs []string) (map[string]map[string][]string, error) {
 	var assessmentContentOutcomes []*entity.AssessmentContentOutcome
 	cond := da.QueryAssessmentContentOutcomeConditions{
 		AssessmentIDs: entity.NullStrings{
@@ -223,7 +224,7 @@ func (m *assessmentBase) getAssessmentContentOutcomeMap(ctx context.Context, tx 
 			Valid:   true,
 		},
 	}
-	if err := da.GetAssessmentContentOutcomeDA().QueryTx(ctx, tx, &cond, &assessmentContentOutcomes); err != nil {
+	if err := da.GetAssessmentContentOutcomeDA().Query(ctx, &cond, &assessmentContentOutcomes); err != nil {
 		log.Error(ctx, "getAssessmentContentOutcomeMap: da.GetAssessmentContentOutcomeDA().QueryTx: get failed",
 			log.Err(err),
 			log.Any("cond", cond),
@@ -307,7 +308,7 @@ func (m *assessmentBase) checkEditPermission(ctx context.Context, operator *enti
 	return nil
 }
 
-func (m *assessmentBase) toViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error) {
+func (m *assessmentBase) toViews(ctx context.Context, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error) {
 	if len(assessments) == 0 {
 		return nil, nil
 	}
@@ -365,7 +366,7 @@ func (m *assessmentBase) toViews(ctx context.Context, tx *dbo.DBContext, operato
 			teacherIDs            []string
 		)
 		assessmentTeachersMap = map[string][]*entity.AssessmentAttendance{}
-		if err := da.GetAssessmentAttendanceDA().QueryTx(ctx, tx, &da.QueryAssessmentAttendanceConditions{
+		if err := da.GetAssessmentAttendanceDA().Query(ctx, &da.QueryAssessmentAttendanceConditions{
 			AssessmentIDs: entity.NullStrings{
 				Strings: assessmentIDs,
 				Valid:   true,
@@ -409,7 +410,7 @@ func (m *assessmentBase) toViews(ctx context.Context, tx *dbo.DBContext, operato
 			studentIDs            []string
 		)
 		assessmentStudentsMap = map[string][]*entity.AssessmentAttendance{}
-		if err := da.GetAssessmentAttendanceDA().QueryTx(ctx, tx, &da.QueryAssessmentAttendanceConditions{
+		if err := da.GetAssessmentAttendanceDA().Query(ctx, &da.QueryAssessmentAttendanceConditions{
 			AssessmentIDs: entity.NullStrings{
 				Strings: assessmentIDs,
 				Valid:   true,
@@ -488,7 +489,7 @@ func (m *assessmentBase) toViews(ctx context.Context, tx *dbo.DBContext, operato
 				lessonMaterialIDs = append(lessonMaterialIDs, c.ContentID)
 			}
 		}
-		lessonMaterialSourceMap, err := m.batchGetLessonMaterialDataMap(ctx, tx, operator, lessonMaterialIDs)
+		lessonMaterialSourceMap, err := m.batchGetLessonMaterialDataMap(ctx, operator, lessonMaterialIDs)
 		if err != nil {
 			log.Error(ctx, "to views: get lesson material source map failed",
 				log.Err(err),
@@ -523,7 +524,7 @@ func (m *assessmentBase) toViews(ctx context.Context, tx *dbo.DBContext, operato
 			}
 		}
 
-		sortedLessonMaterialIDsMap, err = m.getSortedLessonMaterialIDsMap(ctx, tx, operator, lessonPlanIDs)
+		sortedLessonMaterialIDsMap, err = m.getSortedLessonMaterialIDsMap(ctx, dbo.MustGetDB(ctx), operator, lessonPlanIDs)
 		if err != nil {
 			log.Error(ctx, "to assessment views: get sorted lesson material ids map failed",
 				log.Err(err),
@@ -647,6 +648,7 @@ func (m *assessmentBase) batchGetLatestLessonPlanMap(ctx context.Context, tx *db
 		)
 		return nil, err
 	}
+	log.Debug(ctx, "content material list", log.Any("contents", m2))
 	for id, lp := range result {
 		lms := m2[id]
 		for _, lm := range lms {
@@ -693,9 +695,9 @@ type AssessmentMaterialData struct {
 	Source   SourceID
 }
 
-func (m *assessmentBase) batchGetLessonMaterialDataMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) (map[string]*AssessmentMaterialData, error) {
+func (m *assessmentBase) batchGetLessonMaterialDataMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*AssessmentMaterialData, error) {
 	log.Debug(ctx, "assessmentBase.batchGetLessonMaterialDataMap", log.Strings("contentIDs", ids))
-	lessonMaterials, err := GetContentModel().GetContentByIDList(ctx, tx, ids, operator)
+	lessonMaterials, err := GetContentModel().GetContentByIDList(ctx, dbo.MustGetDB(ctx), ids, operator)
 	if err != nil {
 		log.Error(ctx, "get lesson material source map: get contents faield",
 			log.Err(err),
@@ -1228,7 +1230,7 @@ func (m *assessmentBase) update(ctx context.Context, tx *dbo.DBContext, operator
 	}
 
 	// check assessment status
-	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, dbo.MustGetDB(ctx), args.ID)
+	assessment, err := da.GetAssessmentDA().GetByID(ctx, args.ID)
 	if err != nil {
 		log.Error(ctx, "update assessment: get assessment exclude soft deleted failed",
 			log.Err(err),
@@ -1733,7 +1735,7 @@ func (m *assessmentBase) queryUnifiedAssessments(ctx context.Context, tx *dbo.DB
 	return result, nil
 }
 
-func (m *assessmentBase) batchGetOutcomeContentTypesMap(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) (map[string][]entity.AssessmentContentType, error) {
+func (m *assessmentBase) batchGetOutcomeContentTypesMap(ctx context.Context, assessmentID string, outcomeIDs []string) (map[string][]entity.AssessmentContentType, error) {
 	if len(outcomeIDs) == 0 {
 		log.Debug(ctx, "batch get outcome content map: empty content ids", log.String("assessment_id", assessmentID))
 		return nil, nil
@@ -1770,7 +1772,7 @@ func (m *assessmentBase) batchGetOutcomeContentTypesMap(ctx context.Context, tx 
 		contentIDs = append(contentIDs, item.ContentID)
 	}
 	contentIDs = utils.SliceDeduplicationExcludeEmpty(contentIDs)
-	contents, err := GetContentModel().GetRawContentByIDList(ctx, tx, contentIDs)
+	contents, err := GetContentModel().GetRawContentByIDList(ctx, dbo.MustGetDB(ctx), contentIDs)
 	if err != nil {
 		log.Error(ctx, "batch get outcome content map: get raw content by id list",
 			log.Any("content_ids", contentIDs),

@@ -18,7 +18,7 @@ func TestClassesAssignmentsModel_CreateRecord(t *testing.T) {
 		ClassEndTime:  time.Now().Unix(),
 	}
 
-	_, err := GetClassesAssignmentsModel().CreateRecord(ctx, op, args)
+	err := GetClassesAssignmentsModel().CreateRecord(ctx, op, args)
 	if err != nil {
 		t.Fatal(err)
 	}

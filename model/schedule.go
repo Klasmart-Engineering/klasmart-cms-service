@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
+	"golang.org/x/sync/errgroup"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -17,7 +17,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mq"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
@@ -32,46 +31,145 @@ var (
 )
 
 type IScheduleModel interface {
-	Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
-	Update(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error)
+	// schedule operation
+	Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) ([]*entity.Schedule, error)
+	Update(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleUpdateView) ([]*entity.Schedule, error)
 	Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error
+
 	QueryByCondition(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error)
 	QueryScheduledDatesByCondition(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]string, error)
 	Page(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition) (int, []*entity.ScheduleSearchView, error)
+
+	// Excluding deleted
 	GetByID(ctx context.Context, operator *entity.Operator, id string) (*entity.ScheduleDetailsView, error)
+	GetScheduleViewByID(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleViewDetail, error)
+
 	ConflictDetection(ctx context.Context, op *entity.Operator, input *entity.ScheduleConflictInput) (*entity.ScheduleConflictView, error)
-	GetOrgClassIDsByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string, orgID string) ([]string, error)
-	GetTeacherByName(ctx context.Context, operator *entity.Operator, OrgID, name string) ([]*external.Teacher, error)
-	ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool
+
 	ExistScheduleByLessonPlanID(ctx context.Context, lessonPlanID string) (bool, error)
 	ExistScheduleByID(ctx context.Context, id string) (bool, error)
 	GetPlainByID(ctx context.Context, id string) (*entity.SchedulePlain, error)
 	UpdateScheduleStatus(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string, status entity.ScheduleStatus) error
-	GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error)
+
+	// todo queryScheduleIDs
 	GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *entity.ScheduleIDsCondition) ([]string, error)
 	GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, orgID string) ([]string, error)
+	// todo queryScheduleIDs
+	GetRosterClassNotStartScheduleIDs(ctx context.Context, rosterClassID string, userIDs []string) ([]string, error)
+	// move to other
 	VerifyLessonPlanAuthed(ctx context.Context, operator *entity.Operator, lessonPlanID string) (bool, error)
 	UpdateScheduleShowOption(ctx context.Context, op *entity.Operator, scheduleID string, option entity.ScheduleShowOption) (string, error)
+	// schedule_filter
 	GetPrograms(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
 	GetSubjects(ctx context.Context, op *entity.Operator, programID string) ([]*entity.ScheduleShortInfo, error)
-	GetClassTypes(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
-	GetRosterClassNotStartScheduleIDs(ctx context.Context, rosterClassID string, userIDs []string) ([]string, error)
 	GetLearningOutcomeIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]string, error)
-	GetScheduleViewByID(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleViewDetail, error)
+
 	GetSubjectsBySubjectIDs(ctx context.Context, op *entity.Operator, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error)
 	GetVariableDataByIDs(ctx context.Context, op *entity.Operator, ids []string, include *entity.ScheduleInclude) ([]*entity.ScheduleVariable, error)
 	GetTeachingLoad(ctx context.Context, input *entity.ScheduleTeachingLoadInput) ([]*entity.ScheduleTeachingLoadView, error)
 	//prepareScheduleTimeViewCondition(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) (*da.ScheduleCondition, error)
+	// query with user permission
 	Query(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]*entity.ScheduleListView, error)
 	QueryScheduledDates(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]string, error)
+
 	// without permission check, internal function call
 	QueryUnsafe(ctx context.Context, condition *entity.ScheduleQueryCondition) ([]*entity.Schedule, error)
-	QueryScheduleTimeView(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]*entity.ScheduleTimeView, error)
+	QueryScheduleTimeView(ctx context.Context, query *entity.ScheduleTimeViewListRequest, op *entity.Operator, loc *time.Location) (int, []*entity.ScheduleTimeView, error)
 
 	QueryByConditionInternal(ctx context.Context, condition *da.ScheduleCondition) (int, []*entity.ScheduleSimplified, error)
 }
 
 type scheduleModel struct {
+	scheduleDA         da.IScheduleDA
+	scheduleRelationDA da.IScheduleRelationDA
+
+	userService    external.UserServiceProvider
+	schoolService  external.SchoolServiceProvider
+	classService   external.ClassServiceProvider
+	programService external.ProgramServiceProvider
+	subjectService external.SubjectServiceProvider
+	teacherService external.TeacherServiceProvider
+}
+
+func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) ([]*entity.Schedule, error) {
+	// todo move to api
+	viewData.SubjectIDs = utils.SliceDeduplicationExcludeEmpty(viewData.SubjectIDs)
+	// verify data
+	err := s.verifyData(ctx, op, &entity.ScheduleVerifyInput{
+		ClassID:      viewData.ClassID,
+		SubjectIDs:   viewData.SubjectIDs,
+		ProgramID:    viewData.ProgramID,
+		LessonPlanID: viewData.LessonPlanID,
+		ClassType:    viewData.ClassType,
+		IsHomeFun:    viewData.IsHomeFun,
+		OutcomeIDs:   viewData.OutcomeIDs,
+	})
+	if err != nil {
+		log.Error(ctx, "add schedule: verify data error",
+			log.Err(err),
+			log.Any("viewData", viewData))
+		return nil, err
+	}
+	if viewData.ClassType == entity.ScheduleClassTypeTask {
+		viewData.LessonPlanID = ""
+		viewData.ProgramID = ""
+		viewData.SubjectIDs = nil
+	}
+
+	schedule, err := viewData.ToSchedule(ctx)
+
+	relationInput := &entity.ScheduleRelationInput{
+		ClassRosterClassID:     viewData.ClassID,
+		ClassRosterTeacherIDs:  viewData.ClassRosterTeacherIDs,
+		ClassRosterStudentIDs:  viewData.ClassRosterStudentIDs,
+		ParticipantsTeacherIDs: viewData.ParticipantsTeacherIDs,
+		ParticipantsStudentIDs: viewData.ParticipantsStudentIDs,
+		SubjectIDs:             viewData.SubjectIDs,
+	}
+
+	// homefun study can bind learning outcome
+	if viewData.ClassType == entity.ScheduleClassTypeHomework && viewData.IsHomeFun {
+		relationInput.LearningOutcomeIDs = viewData.OutcomeIDs
+	}
+
+	relations, err := s.prepareScheduleRelationAddData(ctx, op, relationInput)
+	if err != nil {
+		log.Error(ctx, "prepareScheduleRelationAddData error", log.Err(err), log.Any("op", op), log.Any("relationInput", relationInput))
+		return nil, err
+	}
+
+	scheduleList, allRelations, batchAddAssessmentSuperArgs, err := s.prepareScheduleAddData(ctx, op, schedule, &viewData.Repeat, viewData.Location, relations)
+	if err != nil {
+		log.Error(ctx, "prepareScheduleAddData: error",
+			log.Err(err),
+			log.Any("schedule", schedule),
+			log.Any("option", &viewData.Repeat),
+			log.Any("location", viewData.Location),
+			log.Any("relations", relations))
+		return nil, err
+	}
+
+	result, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		result, err := s.addSchedule(ctx, tx, op, scheduleList, allRelations, batchAddAssessmentSuperArgs)
+		if err != nil {
+			log.Error(ctx, "add schedule: error",
+				log.Err(err),
+				log.Any("scheduleList", scheduleList),
+				log.Any("allRelations", allRelations),
+				log.Any("batchAddAssessmentSuperArgs", batchAddAssessmentSuperArgs))
+			return nil, err
+		}
+		return result, nil
+	})
+
+	err = da.GetScheduleRedisDA().Clean(ctx, op.OrgID)
+	if err != nil {
+		log.Warn(ctx, "clean schedule cache error", log.String("orgID", op.OrgID), log.Err(err))
+	}
+
+	go removeResourceMetadata(ctx, viewData.Attachment.ID)
+
+	return result.([]*entity.Schedule), nil
 }
 
 func (s *scheduleModel) UpdateScheduleShowOption(ctx context.Context, op *entity.Operator, scheduleID string, option entity.ScheduleShowOption) (string, error) {
@@ -123,47 +221,6 @@ func (s *scheduleModel) UpdateScheduleShowOption(ctx context.Context, op *entity
 	return schedule.ID, nil
 }
 
-func (s *scheduleModel) GetOrgClassIDsByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string, orgID string) ([]string, error) {
-	userClassInfos, err := external.GetClassServiceProvider().GetByUserIDs(ctx, operator, userIDs)
-	if err != nil {
-		log.Error(ctx, "GetMyOrgClassIDs:GetClassServiceProvider.GetByUserID error",
-			log.Err(err),
-			log.String("org", orgID),
-			log.Strings("userIDs", userIDs))
-		return nil, err
-	}
-
-	myClassIDs := make([]string, 0)
-	for _, classInfos := range userClassInfos {
-		for _, item := range classInfos {
-			myClassIDs = append(myClassIDs, item.ID)
-		}
-	}
-	orgClassInfoMap, err := external.GetClassServiceProvider().GetByOrganizationIDs(ctx, operator, []string{orgID})
-	if err != nil {
-		log.Error(ctx, "GetMyOrgClassIDs:GetClassServiceProvider.GetByOrganizationIDs error",
-			log.Err(err),
-			log.Strings("userIDs", userIDs),
-			log.String("orgID", orgID),
-		)
-		return nil, err
-	}
-	orgClassInfos := orgClassInfoMap[orgID]
-	orgClassIDs := make([]string, len(orgClassInfos))
-	for i, item := range orgClassInfos {
-		orgClassIDs[i] = item.ID
-	}
-	result := utils.IntersectAndDeduplicateStrSlice(myClassIDs, orgClassIDs)
-	log.Debug(ctx, "my org class ids",
-		log.String("orgID", orgID),
-		log.Strings("userIDs", userIDs),
-		log.Strings("myClassIDs", myClassIDs),
-		log.Strings("orgClassIDs", orgClassIDs),
-		log.Strings("result", result),
-	)
-	return result, nil
-}
-
 func (s *scheduleModel) getRepeatResult(ctx context.Context, startAt int64, endAt int64, options *entity.RepeatOptions, location *time.Location) ([]*RepeatBaseTimeStamp, error) {
 	if options == nil || !options.Type.Valid() {
 		return nil, constant.ErrInvalidArgs
@@ -207,9 +264,9 @@ func (s *scheduleModel) buildConflictCondition(ctx context.Context, op *entity.O
 			Type: entity.ScheduleRelationTypeParticipantStudent,
 		})
 	}
-	accessiblePartUser, err := s.AccessibleParticipantUser(ctx, op, partUsers)
+	accessiblePartUser, err := s.accessibleParticipantUser(ctx, op, partUsers)
 	if err != nil {
-		log.Error(ctx, "AccessibleParticipantUser error", log.Err(err), log.Any("input", input), log.Any("op", op))
+		log.Error(ctx, "s.accessibleParticipantUser error", log.Err(err), log.Any("input", input), log.Any("op", op))
 		return nil, err
 	}
 	userList := make([]string, 0, len(accessiblePartUser))
@@ -376,15 +433,6 @@ func (s *scheduleModel) ConflictDetection(ctx context.Context, op *entity.Operat
 		}
 	}
 	return result, constant.ErrConflict
-}
-
-func (s *scheduleModel) ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool {
-	_, exist := storage.DefaultStorage().ExistFile(ctx, storage.ScheduleAttachmentStoragePartition, attachmentPath)
-	if !exist {
-		log.Info(ctx, "add schedule: attachment is not exits", log.Any("attachmentPath", attachmentPath))
-		return false
-	}
-	return true
 }
 
 func (s *scheduleModel) GetSchoolIDsByUserIDs(ctx context.Context, op *entity.Operator, userIDs []string) ([]string, error) {
@@ -620,7 +668,7 @@ func (s *scheduleModel) prepareScheduleRelationUpdateData(ctx context.Context, o
 		}
 	}
 
-	partUserAccessible, err := s.AccessibleParticipantUser(ctx, op, oldPartUsers)
+	partUserAccessible, err := s.accessibleParticipantUser(ctx, op, oldPartUsers)
 	if err != nil {
 		return nil, err
 	}
@@ -660,7 +708,6 @@ func (s *scheduleModel) prepareScheduleAddData(ctx context.Context, op *entity.O
 	allRelations := make([]*entity.ScheduleRelation, 0, len(scheduleList)*len(relations))
 	userRelations := make(map[string][]*entity.ScheduleRelation, len(scheduleList))
 	for _, item := range scheduleList {
-		userRelations[item.ID] = make([]*entity.ScheduleRelation, 0, len(relations))
 
 		for _, relation := range relations {
 			if relation.RelationID == "" {
@@ -672,6 +719,7 @@ func (s *scheduleModel) prepareScheduleAddData(ctx context.Context, op *entity.O
 				RelationID:   relation.RelationID,
 				RelationType: relation.RelationType,
 			})
+
 			switch relation.RelationType {
 			case entity.ScheduleRelationTypeClassRosterTeacher,
 				entity.ScheduleRelationTypeClassRosterStudent,
@@ -685,21 +733,28 @@ func (s *scheduleModel) prepareScheduleAddData(ctx context.Context, op *entity.O
 	var batchAddAssessmentSuperArgs *entity.BatchAddAssessmentSuperArgs
 	// add assessment
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
-		studyInput := make([]*entity.AddAssessmentArgs, len(scheduleList))
+		studyInput := make([]*entity.AssessmentAddInputWhenCreateSchedule, len(scheduleList))
 
 		for i, item := range scheduleList {
-			attendances := userRelations[item.ID]
+			assessmentType, err := entity.GetAssessmentTypeByScheduleType(ctx, entity.GetAssessmentTypeInput{
+				ScheduleType: item.ClassType,
+				IsHomeFun:    item.IsHomeFun,
+			})
+			if err != nil {
+				return nil, nil, nil, err
+			}
 
-			studyInput[i] = &entity.AddAssessmentArgs{
-				ScheduleID:    item.ID,
-				ClassID:       item.ClassID,
-				LessonPlanID:  item.LessonPlanID,
-				Attendances:   attendances,
-				ScheduleTitle: item.Title,
+			studyInput[i] = &entity.AssessmentAddInputWhenCreateSchedule{
+				ScheduleID:     item.ID,
+				ScheduleTitle:  item.Title,
+				LessonPlanID:   item.LessonPlanID,
+				ClassID:        item.ClassID,
+				AssessmentType: assessmentType,
+				Attendances:    userRelations[item.ID],
 			}
 		}
 
-		batchAddAssessmentSuperArgs, err = GetStudyAssessmentModel().PrepareAddArgs(ctx, dbo.MustGetDB(ctx), op, studyInput)
+		batchAddAssessmentSuperArgs, err = GetAssessmentModel().PrepareAddInputWhenCreateSchedule(ctx, op, studyInput)
 		if err != nil {
 			log.Error(ctx, "add schedule assessment error", log.Err(err), log.Any("studyInput", allRelations))
 			return nil, nil, nil, err
@@ -777,116 +832,38 @@ func (s *scheduleModel) prepareScheduleUpdateData(ctx context.Context, op *entit
 	return &newSchedule, repeatOptions, nil
 }
 
-func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
-	viewData.SubjectIDs = utils.SliceDeduplicationExcludeEmpty(viewData.SubjectIDs)
-	// verify data
-	err := s.verifyData(ctx, op, &entity.ScheduleVerify{
-		ClassID:      viewData.ClassID,
-		SubjectIDs:   viewData.SubjectIDs,
-		ProgramID:    viewData.ProgramID,
-		LessonPlanID: viewData.LessonPlanID,
-		ClassType:    viewData.ClassType,
-		IsHomeFun:    viewData.IsHomeFun,
-		OutcomeIDs:   viewData.OutcomeIDs,
-	})
+// finished
+func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, scheduleList []*entity.Schedule, scheduleRelations []*entity.ScheduleRelation, batchAddAssessmentSuperArgs *entity.BatchAddAssessmentSuperArgs) ([]*entity.Schedule, error) {
+	// insert into `schedules` table
+	result, err := s.scheduleDA.InsertInBatchesTx(ctx, tx, scheduleList, len(scheduleList))
 	if err != nil {
-		log.Error(ctx, "add schedule: verify data error",
-			log.Err(err),
-			log.Any("viewData", viewData))
-		return "", err
-	}
-	if viewData.ClassType == entity.ScheduleClassTypeTask {
-		viewData.LessonPlanID = ""
-		viewData.ProgramID = ""
-		viewData.SubjectIDs = nil
-	}
-
-	schedule, err := viewData.ToSchedule(ctx)
-	schedule.CreatedID = op.UserID
-	relationInput := &entity.ScheduleRelationInput{
-		ClassRosterClassID:     viewData.ClassID,
-		ClassRosterTeacherIDs:  viewData.ClassRosterTeacherIDs,
-		ClassRosterStudentIDs:  viewData.ClassRosterStudentIDs,
-		ParticipantsTeacherIDs: viewData.ParticipantsTeacherIDs,
-		ParticipantsStudentIDs: viewData.ParticipantsStudentIDs,
-		SubjectIDs:             viewData.SubjectIDs,
-	}
-
-	// homefun study can bind learning outcome
-	if viewData.ClassType == entity.ScheduleClassTypeHomework && viewData.IsHomeFun {
-		relationInput.LearningOutcomeIDs = viewData.OutcomeIDs
-	}
-
-	relations, err := s.prepareScheduleRelationAddData(ctx, op, relationInput)
-	if err != nil {
-		log.Error(ctx, "prepareScheduleRelationAddData error", log.Err(err), log.Any("op", op), log.Any("relationInput", relationInput))
-		return "", err
-	}
-
-	scheduleList, allRelations, batchAddAssessmentSuperArgs, err := s.prepareScheduleAddData(ctx, op, schedule, &viewData.Repeat, viewData.Location, relations)
-	if err != nil {
-		log.Error(ctx, "prepareScheduleAddData: error",
-			log.Err(err),
-			log.Any("schedule", schedule),
-			log.Any("option", &viewData.Repeat),
-			log.Any("location", viewData.Location),
-			log.Any("relations", relations))
-		return "", err
-	}
-
-	id, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
-		scheduleID, err := s.addSchedule(ctx, tx, op, scheduleList, allRelations, batchAddAssessmentSuperArgs)
-		if err != nil {
-			log.Error(ctx, "add schedule: error",
-				log.Err(err),
-				log.Any("scheduleList", scheduleList),
-				log.Any("allRelations", allRelations),
-				log.Any("batchAddAssessmentSuperArgs", batchAddAssessmentSuperArgs))
-			return "", err
-		}
-		return scheduleID, nil
-	})
-
-	err = da.GetScheduleRedisDA().Clean(ctx, op.OrgID)
-	if err != nil {
-		log.Warn(ctx, "clean schedule cache error", log.String("orgID", op.OrgID), log.Err(err))
-	}
-
-	go removeResourceMetadata(ctx, viewData.Attachment.ID)
-
-	return id.(string), nil
-}
-
-func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, scheduleList []*entity.Schedule, allRelations []*entity.ScheduleRelation, batchAddAssessmentSuperArgs *entity.BatchAddAssessmentSuperArgs) (string, error) {
-	// add to schedules
-	_, err := da.GetScheduleDA().InsertInBatchesTx(ctx, tx, scheduleList, len(scheduleList))
-	if err != nil {
-		log.Error(ctx, "schedule InsertInBatchesTx error",
+		log.Error(ctx, "s.scheduleDA.InsertInBatchesTx error",
 			log.Err(err),
 			log.Any("scheduleList", scheduleList))
-		return "", err
+		return nil, err
 	}
 
-	_, err = da.GetScheduleRelationDA().InsertInBatchesTx(ctx, tx, allRelations, len(allRelations))
+	// insert into `schedules_relations` table
+	_, err = s.scheduleRelationDA.InsertInBatchesTx(ctx, tx, scheduleRelations, len(scheduleRelations))
 	if err != nil {
-		log.Error(ctx, "schedules_relations InsertInBatchesTx error",
+		log.Error(ctx, "s.scheduleRelationDA.InsertInBatchesTx error",
 			log.Err(err),
-			log.Any("allRelations", allRelations))
-		return "", err
+			log.Any("scheduleRelations", scheduleRelations))
+		return nil, err
 	}
 
-	// add assessment
+	// TODO add assessment
 	if batchAddAssessmentSuperArgs != nil {
-		_, err = GetStudyAssessmentModel().Add(ctx, tx, op, batchAddAssessmentSuperArgs)
+		err = GetAssessmentModel().BatchAddTx(ctx, tx, op, batchAddAssessmentSuperArgs)
 		if err != nil {
 			log.Error(ctx, "add schedule assessment error",
 				log.Err(err),
 				log.Any("batchAddAssessmentSuperArgs", batchAddAssessmentSuperArgs))
-			return "", err
+			return nil, err
 		}
 	}
 
-	return scheduleList[0].ID, nil
+	return result.([]*entity.Schedule), nil
 }
 
 func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Operator, id string) (*entity.Schedule, error) {
@@ -980,18 +957,18 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 	return schedule, nil
 }
 
-func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error) {
+func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, viewData *entity.ScheduleUpdateView) ([]*entity.Schedule, error) {
 	schedule, err := s.checkScheduleStatus(ctx, operator, viewData.ID)
 	if err != nil {
 		log.Error(ctx, "update schedule: get schedule by id error",
 			log.Any("viewData", viewData),
 			log.Err(err),
 		)
-		return "", err
+		return nil, err
 	}
 	viewData.SubjectIDs = utils.SliceDeduplicationExcludeEmpty(viewData.SubjectIDs)
 	// verify data
-	err = s.verifyData(ctx, operator, &entity.ScheduleVerify{
+	err = s.verifyData(ctx, operator, &entity.ScheduleVerifyInput{
 		ClassID:      viewData.ClassID,
 		SubjectIDs:   viewData.SubjectIDs,
 		ProgramID:    viewData.ProgramID,
@@ -1004,7 +981,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		log.Error(ctx, "update schedule: verify data error",
 			log.Err(err),
 			log.Any("viewData", viewData))
-		return "", err
+		return nil, err
 	}
 
 	if viewData.ClassType == entity.ScheduleClassTypeTask {
@@ -1031,7 +1008,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 
 	relations, err := s.prepareScheduleRelationUpdateData(ctx, operator, relationInput)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	updateSchedule, repeatOptions, err := s.prepareScheduleUpdateData(ctx, operator, schedule, viewData)
@@ -1040,7 +1017,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 			log.Err(err),
 			log.Any("schedule", schedule),
 			log.Any("viewData", viewData))
-		return "", err
+		return nil, err
 	}
 
 	scheduleList, allRelations, batchAddAssessmentSuperArgs, err := s.prepareScheduleAddData(ctx, operator, updateSchedule, repeatOptions, viewData.Location, relations)
@@ -1051,10 +1028,10 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 			log.Any("option", &viewData.Repeat),
 			log.Any("location", viewData.Location),
 			log.Any("relations", relations))
-		return "", err
+		return nil, err
 	}
 
-	var id string
+	var result []*entity.Schedule
 	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		var err error
 		// delete schedule
@@ -1077,9 +1054,9 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 			return err
 		}
 
-		id, err = s.addSchedule(ctx, tx, operator, scheduleList, allRelations, batchAddAssessmentSuperArgs)
+		result, err = s.addSchedule(ctx, tx, operator, scheduleList, allRelations, batchAddAssessmentSuperArgs)
 		if err != nil {
-			log.Error(ctx, "update schedule: add failed",
+			log.Error(ctx, "s.addSchedule error",
 				log.Err(err),
 				log.Any("schedule", updateSchedule),
 				log.Any("viewData", viewData),
@@ -1089,7 +1066,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		return nil
 	}); err != nil {
 		log.Error(ctx, "update schedule: tx failed", log.Err(err))
-		return "", err
+		return nil, err
 	}
 	err = da.GetScheduleRedisDA().Clean(ctx, operator.OrgID)
 	if err != nil {
@@ -1097,7 +1074,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 	}
 
 	go removeResourceMetadata(ctx, viewData.Attachment.ID)
-	return id, nil
+	return result, nil
 }
 
 func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error {
@@ -1259,66 +1236,194 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 	var scheduleList []*entity.Schedule
 	total, err := da.GetScheduleDA().Page(ctx, condition, &scheduleList)
 	if err != nil {
-		log.Error(ctx, "Page: schedule query error", log.Err(err), log.Any("condition", condition))
+		log.Error(ctx, "da.GetScheduleDA().Page error",
+			log.Err(err),
+			log.Any("condition", condition))
 		return 0, nil, err
 	}
 
-	result := make([]*entity.ScheduleSearchView, 0, len(scheduleList))
-	basicInfoInput := make([]*entity.ScheduleBasicDataInput, len(scheduleList))
-	for i, item := range scheduleList {
-		relations, err := GetScheduleRelationModel().GetUsersByScheduleID(ctx, operator, item.ID)
-		if err != nil {
-			return 0, nil, err
+	// in schedule
+	var classIDs []string
+	var programIDs []string
+	var lessonPlanIDs []string
+	// in schedule_relation
+	var subjectIDs []string
+	var teacherIDs []string
+
+	result := make([]*entity.ScheduleSearchView, len(scheduleList))
+	resultMap := make(map[string]*entity.ScheduleSearchView, len(scheduleList))
+	scheduleIDs := make([]string, len(scheduleList))
+	for i, schedule := range scheduleList {
+		scheduleIDs[i] = schedule.ID
+		result[i] = &entity.ScheduleSearchView{
+			ID:      schedule.ID,
+			StartAt: schedule.StartAt,
+			EndAt:   schedule.EndAt,
+			DueAt:   schedule.DueAt,
+			Title:   schedule.Title,
 		}
-		teacherIDs := make([]string, 0, len(relations))
-		studentIDs := make([]string, 0, len(relations))
-		for _, relationItem := range relations {
-			switch relationItem.RelationType {
-			case entity.ScheduleRelationTypeClassRosterTeacher, entity.ScheduleRelationTypeParticipantTeacher:
-				teacherIDs = append(teacherIDs, relationItem.RelationID)
-			case entity.ScheduleRelationTypeClassRosterStudent, entity.ScheduleRelationTypeParticipantStudent:
-				studentIDs = append(studentIDs, relationItem.RelationID)
+
+		resultMap[schedule.ID] = result[i]
+
+		classIDs = append(classIDs, schedule.ClassID)
+		programIDs = append(programIDs, schedule.ProgramID)
+		lessonPlanIDs = append(lessonPlanIDs, schedule.LessonPlanID)
+	}
+
+	// query schedule_relation, include teachers, students and subjects(one-to-many relationship)
+	scheduleRelations, err := GetScheduleRelationModel().Query(ctx, operator, &da.ScheduleRelationCondition{
+		ScheduleIDs: entity.NullStrings{Strings: scheduleIDs, Valid: true},
+		RelationTypes: entity.NullStrings{
+			Strings: []string{
+				string(entity.ScheduleRelationTypeClassRosterTeacher),
+				string(entity.ScheduleRelationTypeParticipantTeacher),
+				string(entity.ScheduleRelationTypeClassRosterStudent),
+				string(entity.ScheduleRelationTypeParticipantStudent),
+				string(entity.ScheduleRelationTypeSubject),
+			}, Valid: true},
+	})
+
+	for _, scheduleRelation := range scheduleRelations {
+		switch scheduleRelation.RelationType {
+		case entity.ScheduleRelationTypeClassRosterTeacher, entity.ScheduleRelationTypeParticipantTeacher:
+			teacherIDs = append(teacherIDs, scheduleRelation.RelationID)
+		case entity.ScheduleRelationTypeSubject:
+			subjectIDs = append(subjectIDs, scheduleRelation.RelationID)
+		}
+	}
+
+	classIDs = utils.SliceDeduplicationExcludeEmpty(classIDs)
+	programIDs = utils.SliceDeduplicationExcludeEmpty(programIDs)
+	lessonPlanIDs = utils.SliceDeduplicationExcludeEmpty(lessonPlanIDs)
+	subjectIDs = utils.SliceDeduplicationExcludeEmpty(subjectIDs)
+	teacherIDs = utils.SliceDeduplicationExcludeEmpty(teacherIDs)
+
+	var classMap map[string]*external.NullableClass
+	var programMap map[string]*external.Program
+	var lessonPlanMap map[string]*entity.ScheduleShortInfo
+	var subjectMap map[string]*external.Subject
+	var teacherMap map[string]*external.NullableTeacher
+
+	g := new(errgroup.Group)
+
+	// get class info
+	g.Go(func() error {
+		classes, err := s.classService.BatchGetMap(ctx, operator, classIDs)
+		if err != nil {
+			log.Error(ctx, "s.classService.BatchGetMap error",
+				log.Err(err),
+				log.Strings("classIDs", classIDs))
+			return err
+		}
+		classMap = classes
+		return nil
+	})
+
+	// get program info
+	g.Go(func() error {
+		programs, err := s.programService.BatchGetMap(ctx, operator, programIDs)
+		if err != nil {
+			log.Error(ctx, "s.programService.BatchGetMap error",
+				log.Err(err),
+				log.Strings("programIDs", programIDs))
+			return err
+		}
+		programMap = programs
+		return nil
+	})
+
+	// get subject info
+	g.Go(func() error {
+		subjects, err := s.subjectService.BatchGetMap(ctx, operator, subjectIDs)
+		if err != nil {
+			log.Error(ctx, "s.subjectService.BatchGetMap error",
+				log.Err(err),
+				log.Strings("subjectIDs", subjectIDs))
+			return err
+		}
+		subjectMap = subjects
+		return nil
+	})
+
+	// get teacher info
+	g.Go(func() error {
+		teachers, err := s.teacherService.BatchGetMap(ctx, operator, teacherIDs)
+		if err != nil {
+			log.Error(ctx, "s.teacherService.BatchGetMap error",
+				log.Err(err),
+				log.Strings("teacherIDs", teacherIDs))
+			return err
+		}
+		teacherMap = teachers
+		return nil
+	})
+
+	// get lesson plan info
+	g.Go(func() error {
+		lessonPlans, err := s.getLessonPlanNameByIDs(ctx, dbo.MustGetDB(ctx), lessonPlanIDs)
+		if err != nil {
+			log.Error(ctx, "s.getLessonPlanNameByIDs error",
+				log.Err(err),
+				log.Any("lessonPlanIDs", lessonPlanIDs))
+			return err
+		}
+
+		lessonPlanMap = lessonPlans
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		log.Error(ctx, "get schedule basic info error",
+			log.Err(err))
+		return 0, nil, err
+	}
+
+	// fill schedule program, lesson plan, class
+	for _, schedule := range scheduleList {
+		if program, ok := programMap[schedule.ProgramID]; ok {
+			resultMap[schedule.ID].Program = &entity.ScheduleShortInfo{
+				ID:   program.ID,
+				Name: program.Name,
 			}
 		}
-		subjectIDs, err := GetScheduleRelationModel().GetSubjectIDs(ctx, item.ID)
-		if err != nil {
-			return 0, nil, err
-		}
-		basicInfoInput[i] = &entity.ScheduleBasicDataInput{
-			ScheduleID:   item.ID,
-			ClassID:      item.ClassID,
-			ProgramID:    item.ProgramID,
-			LessonPlanID: item.LessonPlanID,
-			SubjectIDs:   subjectIDs,
-			TeacherIDs:   teacherIDs,
-			StudentIDs:   studentIDs,
-		}
-	}
-	basicInfo, err := s.getBasicInfo(ctx, operator, basicInfoInput)
-	if err != nil {
-		log.Error(ctx, "Page: get basic info error",
-			log.Err(err),
-			log.Any("condition", condition),
-			log.Any("scheduleList", scheduleList))
-		return 0, nil, err
-	}
-	for _, item := range scheduleList {
-		if item.ClassType == entity.ScheduleClassTypeHomework && item.DueAt <= 0 {
-			log.Info(ctx, "schedule type is homework", log.Any("schedule", item))
-			continue
-		}
-		viewData := &entity.ScheduleSearchView{
-			ID:      item.ID,
-			StartAt: item.StartAt,
-			Title:   item.Title,
-			EndAt:   item.EndAt,
-			DueAt:   item.DueAt,
+
+		if lessonPlan, ok := lessonPlanMap[schedule.LessonPlanID]; ok {
+			resultMap[schedule.ID].LessonPlan = &entity.ScheduleShortInfo{
+				ID:   lessonPlan.ID,
+				Name: lessonPlan.Name,
+			}
 		}
 
-		if v, ok := basicInfo[item.ID]; ok {
-			viewData.ScheduleBasic = *v
+		if class, ok := classMap[schedule.ClassID]; ok && class.Valid {
+			// TODO: why use entity.ScheduleAccessibleUserView, field `Type` and `Enable` never used
+			resultMap[schedule.ID].Class = &entity.ScheduleAccessibleUserView{
+				ID:   class.ID,
+				Name: class.Name,
+			}
 		}
-		result = append(result, viewData)
+	}
+
+	// fill schedule relation, subject, teacher, student count
+	for _, scheduleRelation := range scheduleRelations {
+		switch scheduleRelation.RelationType {
+		case entity.ScheduleRelationTypeClassRosterTeacher, entity.ScheduleRelationTypeParticipantTeacher:
+			if teacher, ok := teacherMap[scheduleRelation.RelationID]; ok {
+				resultMap[scheduleRelation.ScheduleID].MemberTeachers = append(resultMap[scheduleRelation.ScheduleID].MemberTeachers, &entity.ScheduleShortInfo{
+					ID:   teacher.ID,
+					Name: teacher.Name,
+				})
+			}
+		case entity.ScheduleRelationTypeClassRosterStudent, entity.ScheduleRelationTypeParticipantStudent:
+			// TODO: if schedule_relation table exist dirty data, need to clean duplicate data
+			resultMap[scheduleRelation.ScheduleID].StudentCount++
+		case entity.ScheduleRelationTypeSubject:
+			if subject, ok := subjectMap[scheduleRelation.RelationID]; ok {
+				resultMap[scheduleRelation.ScheduleID].Subjects = append(resultMap[scheduleRelation.ScheduleID].Subjects, &entity.ScheduleShortInfo{
+					ID:   subject.ID,
+					Name: subject.Name,
+				})
+			}
+		}
 	}
 
 	return total, result, nil
@@ -1469,17 +1574,6 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 	return result, nil
 }
 
-func (s *scheduleModel) QueryByDB(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition) ([]*entity.Schedule, error) {
-	var scheduleList []*entity.Schedule
-	err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)
-	if err != nil {
-		log.Error(ctx, "schedule query error", log.Err(err), log.Any("condition", condition))
-		return nil, err
-	}
-
-	return scheduleList, nil
-}
-
 func (s *scheduleModel) QueryByConditionInternal(ctx context.Context, condition *da.ScheduleCondition) (int, []*entity.ScheduleSimplified, error) {
 	var scheduleList []*entity.Schedule
 	total, err := da.GetScheduleDA().Page(ctx, condition, &scheduleList)
@@ -1495,191 +1589,57 @@ func (s *scheduleModel) QueryByConditionInternal(ctx context.Context, condition 
 }
 
 func (s *scheduleModel) QueryByCondition(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error) {
-	cacheData, err := s.queryByCache(ctx, op, condition)
-	if err == nil {
-		log.Info(ctx, "Query:using cache",
-			log.Any("op", op),
-			log.Any("condition", condition),
-		)
-		return cacheData, nil
-	}
+	// cache
+	// cacheData, err := s.queryByCache(ctx, op, condition)
+	// if err == nil {
+	// 	log.Info(ctx, "Query:using cache",
+	// 		log.Any("op", op),
+	// 		log.Any("condition", condition),
+	// 	)
+	// 	return cacheData, nil
+	// }
 
-	scheduleData, err := s.QueryByDB(ctx, op, condition)
+	var scheduleList []*entity.Schedule
+	err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)
 	if err != nil {
-		return nil, err
-	}
-
-	result, err := s.ProcessQueryData(ctx, op, scheduleData, loc)
-	if err != nil {
+		log.Error(ctx, "da.GetScheduleDA().Query error",
+			log.Err(err),
+			log.Any("condition", condition))
 		return nil, err
 	}
 
 	// cache
-	if err = da.GetScheduleRedisDA().Set(ctx, op.OrgID, &da.ScheduleCacheCondition{
-		Condition: condition,
-		DataType:  da.ScheduleListView,
-	}, result); err != nil {
-		log.Warn(ctx, "set cache error",
-			log.Err(err),
-			log.Any("condition", condition),
-			log.Any("data", result))
-	}
+	// if err = da.GetScheduleRedisDA().Set(ctx, op.OrgID, &da.ScheduleCacheCondition{
+	// 	Condition: condition,
+	// 	DataType:  da.ScheduleListView,
+	// }, result); err != nil {
+	// 	log.Warn(ctx, "set cache error",
+	// 		log.Err(err),
+	// 		log.Any("condition", condition),
+	// 		log.Any("data", result))
+	// }
 
-	return result, nil
+	return s.transformToScheduleListView(ctx, op, scheduleList, loc)
 }
 
-func (s *scheduleModel) getBasicInfo(ctx context.Context, op *entity.Operator, input []*entity.ScheduleBasicDataInput) (map[string]*entity.ScheduleBasic, error) {
-	scheduleBasicMap := make(map[string]*entity.ScheduleBasic)
-	if len(input) == 0 {
-		return scheduleBasicMap, nil
-	}
-	var other []*entity.ScheduleBasicDataInput
-	for _, item := range input {
-		cacheData, err := da.GetScheduleRedisDA().GetScheduleBasic(ctx, op.OrgID, item.ScheduleID)
-		if err != nil {
-			other = append(other, item)
-			continue
-		}
-		log.Info(ctx, "get basic data:using cache",
+func (s *scheduleModel) getLessonPlanNameByIDs(ctx context.Context, tx *dbo.DBContext, lessonPlanIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
+	lessonPlans, err := GetContentModel().GetContentNameByIDList(ctx, tx, lessonPlanIDs)
+	if err != nil {
+		log.Error(ctx, "GetContentModel().GetContentNameByIDList error",
 			log.Err(err),
-			log.Any("op", op),
-			log.Any("item", item),
-			log.Any("cacheData", cacheData),
-		)
-		scheduleBasicMap[item.ScheduleID] = cacheData
-	}
-
-	var (
-		classIDs      []string
-		classMap      map[string]*entity.ScheduleAccessibleUserView
-		subjectIDs    []string
-		subjectMap    map[string]*entity.ScheduleShortInfo
-		programIDs    []string
-		programMap    map[string]*entity.ScheduleShortInfo
-		lessonPlanIDs []string
-		lessonPlanMap map[string]*entity.ScheduleShortInfo
-		teacherIDs    []string
-		teacherMap    = make(map[string]*entity.ScheduleShortInfo)
-		scheduleIDs   = make([]string, len(other))
-	)
-	for i, item := range other {
-		if item.ClassID != "" {
-			classIDs = append(classIDs, item.ClassID)
-		}
-		if len(item.SubjectIDs) != 0 {
-			subjectIDs = append(subjectIDs, item.SubjectIDs...)
-		}
-		if item.ProgramID != "" {
-			programIDs = append(programIDs, item.ProgramID)
-		}
-		if item.LessonPlanID != "" {
-			lessonPlanIDs = append(lessonPlanIDs, item.LessonPlanID)
-		}
-		if len(item.TeacherIDs) != 0 {
-			for _, teacherID := range item.TeacherIDs {
-				if _, ok := teacherMap[teacherID]; ok {
-					continue
-				}
-				teacherMap[teacherID] = &entity.ScheduleShortInfo{}
-			}
-		}
-
-		scheduleIDs[i] = item.ScheduleID
-	}
-	for key := range teacherMap {
-		teacherIDs = append(teacherIDs, key)
-	}
-	if len(teacherIDs) != 0 {
-		teachers, err := external.GetUserServiceProvider().BatchGet(ctx, op, teacherIDs)
-		if err != nil {
-			return nil, err
-		}
-		for _, item := range teachers {
-			teacherMap[item.ID] = &entity.ScheduleShortInfo{
-				ID:   item.ID,
-				Name: item.Name,
-			}
-		}
-	}
-
-	classIDs = utils.SliceDeduplication(classIDs)
-	classMap, err := s.getClassInfoMapByClassIDs(ctx, op, classIDs)
-	if err != nil {
-		log.Error(ctx, "get class info error", log.Err(err), log.Strings("classIDs", classIDs))
+			log.Strings("lessonPlanIDs", lessonPlanIDs))
 		return nil, err
 	}
 
-	subjectMap, err = s.GetSubjectsBySubjectIDs(ctx, op, subjectIDs)
-	if err != nil {
-		log.Error(ctx, "get subject info error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
-		return nil, err
-	}
+	lessonPlanMap := make(map[string]*entity.ScheduleShortInfo, len(lessonPlans))
 
-	programMap, err = s.getProgramsByIDs(ctx, op, programIDs)
-	if err != nil {
-		log.Error(ctx, "get program info error", log.Err(err), log.Strings("programIDs", programIDs))
-		return nil, err
-	}
-	lessonPlanMap, err = s.getLessonPlanByIDs(ctx, dbo.MustGetDB(ctx), lessonPlanIDs)
-	if err != nil {
-		log.Error(ctx, "get lesson plan info error", log.Err(err), log.Any("lessonPlanIDs", lessonPlanIDs))
-		return nil, err
-	}
-
-	for _, item := range other {
-		scheduleBasic := &entity.ScheduleBasic{}
-		if v, ok := classMap[item.ClassID]; ok {
-			scheduleBasic.Class = v
-		}
-		scheduleBasic.Subjects = make([]*entity.ScheduleShortInfo, len(item.SubjectIDs))
-		for i, subID := range item.SubjectIDs {
-			scheduleBasic.Subjects[i] = subjectMap[subID]
-		}
-		if v, ok := programMap[item.ProgramID]; ok {
-			scheduleBasic.Program = v
-		}
-		if v, ok := lessonPlanMap[item.LessonPlanID]; ok {
-			scheduleBasic.LessonPlan = v
-		}
-		scheduleBasic.MemberTeachers = make([]*entity.ScheduleShortInfo, len(item.TeacherIDs))
-		for i, teacherID := range item.TeacherIDs {
-			scheduleBasic.MemberTeachers[i] = teacherMap[teacherID]
-		}
-		scheduleBasic.StudentCount = len(item.StudentIDs)
-		scheduleBasic.Members = scheduleBasic.MemberTeachers
-		scheduleBasicMap[item.ScheduleID] = scheduleBasic
-
-		if err = da.GetScheduleRedisDA().Set(ctx, op.OrgID, &da.ScheduleCacheCondition{
-			ScheduleID: item.ScheduleID,
-			DataType:   da.ScheduleBasic,
-		}, scheduleBasic); err != nil {
-			log.Warn(ctx, "set cache error",
-				log.Err(err),
-				log.String("scheduleID", item.ScheduleID),
-				log.Any("data", scheduleBasic))
+	for _, lessonPlan := range lessonPlans {
+		lessonPlanMap[lessonPlan.ID] = &entity.ScheduleShortInfo{
+			ID:   lessonPlan.ID,
+			Name: lessonPlan.Name,
 		}
 	}
 
-	return scheduleBasicMap, nil
-}
-
-func (s *scheduleModel) getLessonPlanByIDs(ctx context.Context, tx *dbo.DBContext, lessonPlanIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
-	lessonPlanMap := make(map[string]*entity.ScheduleShortInfo)
-	if len(lessonPlanIDs) != 0 {
-		lessonPlanIDs = utils.SliceDeduplication(lessonPlanIDs)
-		lessonPlans, err := GetContentModel().GetContentNameByIDList(ctx, tx, lessonPlanIDs)
-		if err != nil {
-			log.Error(ctx, "get lesson plan info error", log.Err(err), log.Strings("lessonPlanIDs", lessonPlanIDs))
-			return nil, err
-		}
-
-		for _, item := range lessonPlans {
-			lessonPlanMap[item.ID] = &entity.ScheduleShortInfo{
-				ID:   item.ID,
-				Name: item.Name,
-			}
-		}
-	}
 	return lessonPlanMap, nil
 }
 
@@ -1727,27 +1687,6 @@ func (s *scheduleModel) getLessonPlanWithMaterial(ctx context.Context, op *entit
 	return result, nil
 }
 
-func (s *scheduleModel) getClassInfoMapByClassIDs(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string]*entity.ScheduleAccessibleUserView, error) {
-	var classMap = make(map[string]*entity.ScheduleAccessibleUserView)
-	if len(classIDs) != 0 {
-		classService := external.GetClassServiceProvider()
-		classInfos, err := classService.BatchGet(ctx, operator, classIDs)
-		if err != nil {
-			log.Error(ctx, "GetClassServiceProvider BatchGet error", log.Err(err), log.Strings("classIDs", classIDs))
-			return nil, err
-		}
-		for _, item := range classInfos {
-			if item != nil {
-				classMap[item.ID] = &entity.ScheduleAccessibleUserView{
-					ID:   item.ID,
-					Name: item.Name,
-				}
-			}
-		}
-	}
-	return classMap, nil
-}
-
 func (s *scheduleModel) GetSubjectsBySubjectIDs(ctx context.Context, operator *entity.Operator, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
 	var subjectMap = make(map[string]*entity.ScheduleShortInfo)
 	if len(subjectIDs) != 0 {
@@ -1768,373 +1707,29 @@ func (s *scheduleModel) GetSubjectsBySubjectIDs(ctx context.Context, operator *e
 	return subjectMap, nil
 }
 
-func (s *scheduleModel) getProgramsByIDs(ctx context.Context, operator *entity.Operator, programIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
-	var programMap = make(map[string]*entity.ScheduleShortInfo)
-	if len(programIDs) != 0 {
-		programIDs = utils.SliceDeduplication(programIDs)
-		programInfos, err := external.GetProgramServiceProvider().BatchGet(ctx, operator, programIDs)
-		if err != nil {
-			log.Error(ctx, "GetProgramServiceProvider BatchGet error", log.Err(err), log.Strings("programIDs", programIDs))
-			return nil, err
-		}
-
-		for _, item := range programInfos {
-			programMap[item.ID] = &entity.ScheduleShortInfo{
-				ID:   item.ID,
-				Name: item.Name,
-			}
-		}
-	}
-	return programMap, nil
-}
-
-func (s *scheduleModel) getByIDFormDB(ctx context.Context, operator *entity.Operator, id string) (*entity.Schedule, error) {
-	var schedule = new(entity.Schedule)
-	err := da.GetScheduleDA().Get(ctx, id, schedule)
-	if err == dbo.ErrRecordNotFound {
-		return nil, constant.ErrRecordNotFound
-	}
-	if err != nil {
-		log.Error(ctx, "GetByID error", log.Err(err), log.String("id", id))
-		return nil, err
-	}
-	if schedule.DeleteAt != 0 {
-		return nil, constant.ErrRecordNotFound
-	}
-	return schedule, nil
-}
-
-func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *entity.Operator, schedule *entity.Schedule) (*entity.ScheduleDetailsView, error) {
-	realTimeData, err := s.getLessonPlanAuthed(ctx, operator, schedule.ID, schedule.LessonPlanID)
-	if err != nil {
-		log.Error(ctx, "GetByID using cache:GetScheduleRealTimeStatus error",
-			log.Err(err),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	result := &entity.ScheduleDetailsView{
-		ID:             schedule.ID,
-		Title:          schedule.Title,
-		OrgID:          schedule.OrgID,
-		StartAt:        schedule.StartAt,
-		EndAt:          schedule.EndAt,
-		IsAllDay:       schedule.IsAllDay,
-		ClassType:      schedule.ClassType,
-		DueAt:          schedule.DueAt,
-		Description:    schedule.Description,
-		Version:        schedule.ScheduleVersion,
-		IsRepeat:       schedule.RepeatID != "",
-		Status:         schedule.Status,
-		RealTimeStatus: *realTimeData,
-		IsHomeFun:      schedule.IsHomeFun,
-		IsHidden:       schedule.IsHidden,
-	}
-
-	result.ClassTypeLabel = entity.ScheduleShortInfo{
-		ID:   schedule.ClassType.String(),
-		Name: schedule.ClassType.ToLabel().String(),
-	}
-
-	// get role type
-	roleType, err := GetScheduleRelationModel().GetRelationTypeByScheduleID(ctx, operator, schedule.ID)
-	if err != nil {
-		log.Error(ctx, "get relation type error", log.Any("op", operator), log.Any("schedule", schedule), log.Err(err))
-		return nil, err
-	}
-	result.RoleType = roleType
-
-	// verify is exist feedback
-	existFeedback, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, operator, schedule.ID)
-	if err != nil {
-		log.Error(ctx, "exist by schedule id error", log.Any("op", operator), log.Any("schedule", schedule), log.Err(err))
-		return nil, err
-	}
-	result.ExistFeedback = existFeedback
-
-	// verify is exist assessment
-	if result.ClassType == entity.ScheduleClassTypeHomework && !result.IsHomeFun {
-		existAssessment, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, []string{result.ID})
-		if err != nil {
-			log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", result.ID))
-			return nil, err
-		}
-		result.ExistAssessment = existAssessment[result.ID]
-	}
-
-	// verify is complete assessment
-	if result.ClassType == entity.ScheduleClassTypeHomework && result.IsHomeFun {
-		var homeFunStudyAssessments []*entity.HomeFunStudy
-		err = GetHomeFunStudyModel().Query(ctx, operator, &da.QueryHomeFunStudyCondition{
-			ScheduleID: entity.NullString{
-				String: result.ID,
-				Valid:  true,
-			},
-		}, &homeFunStudyAssessments)
-		if err != nil {
-			log.Error(ctx, "get homefun study assessment error",
-				log.Err(err),
-				log.Any("scheduleID", result.ID))
-			return nil, err
-		}
-
-		for _, v := range homeFunStudyAssessments {
-			if v.Status == entity.AssessmentStatusComplete {
-				result.CompleteAssessment = true
-				break
-			}
-		}
-	} else {
-		assessments, err := GetAssessmentModel().Query(ctx, operator, &da.QueryAssessmentConditions{
-			ScheduleIDs: entity.NullStrings{
-				Strings: []string{result.ID},
-				Valid:   true,
-			},
-		})
-		if err != nil {
-			log.Error(ctx, "get assessment error",
-				log.Err(err),
-				log.Any("scheduleID", result.ID))
-			return nil, err
-		}
-
-		for _, v := range assessments {
-			if v.Status == entity.AssessmentStatusComplete {
-				result.CompleteAssessment = true
-				break
-			}
-		}
-	}
-
-	// home fun study relation learning outcome
-	if result.ClassType == entity.ScheduleClassTypeHomework && result.IsHomeFun {
-		outcomeIDs, err := GetScheduleRelationModel().GetOutcomeIDs(ctx, result.ID)
-		if err != nil {
-			log.Error(ctx, "get schedule relation learning outcomes error",
-				log.Err(err),
-				log.String("scheduleID", result.ID))
-			return nil, err
-		}
-		result.OutcomeIDs = outcomeIDs
-	}
-
-	if schedule.Attachment != "" {
-		var attachment entity.ScheduleShortInfo
-		err := json.Unmarshal([]byte(schedule.Attachment), &attachment)
-		if err != nil {
-			log.Error(ctx, "Unmarshal schedule.Attachment error", log.Err(err), log.String("schedule.Attachment", schedule.Attachment))
-			return nil, err
-		}
-		result.Attachment = attachment
-	}
-
-	if schedule.RepeatJson != "" {
-		var repeat entity.RepeatOptions
-		err := json.Unmarshal([]byte(schedule.RepeatJson), &repeat)
-		if err != nil {
-			log.Error(ctx, "Unmarshal schedule.RepeatJson error", log.Err(err), log.String("schedule.RepeatJson", schedule.RepeatJson))
-			return nil, err
-		}
-		result.Repeat = repeat
-	}
-
-	classID, err := GetScheduleRelationModel().GetClassRosterID(ctx, operator, schedule.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	if classID != "" {
-		classes, err := s.getClassInfoMapByClassIDs(ctx, operator, []string{classID})
-		if err != nil {
-			log.Error(ctx, "get class error", log.Err(err), log.String("classID", classID))
-			return nil, err
-		}
-		if item, ok := classes[classID]; ok {
-			result.Class = item
-		}
-	}
-
-	if schedule.ProgramID != "" {
-		programMap, err := s.getProgramsByIDs(ctx, operator, []string{schedule.ProgramID})
-		if err != nil {
-			log.Error(ctx, "get program info error", log.Err(err), log.String("ProgramID", schedule.ProgramID))
-			return nil, err
-		}
-		if item, ok := programMap[schedule.ProgramID]; ok {
-			result.Program = item
-		}
-	}
-
-	result.Subjects, err = GetScheduleRelationModel().GetSubjects(ctx, operator, schedule.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	if schedule.LessonPlanID != "" {
-		result.LessonPlan, err = s.getLessonPlanWithMaterial(ctx, operator, schedule.LessonPlanID)
-		if err != nil {
-			log.Error(ctx, "get lesson plan with material error", log.Err(err), log.Any("schedule", schedule))
-			return nil, err
-		}
-	}
-	result.Status = result.Status.GetScheduleStatus(entity.ScheduleStatusInput{
-		EndAt:     result.EndAt,
-		DueAt:     result.DueAt,
-		ClassType: result.ClassType,
-	})
-	return result, nil
-}
-
-func (s *scheduleModel) processUsersAccessible(ctx context.Context, operator *entity.Operator, data *entity.ScheduleDetailsView) (*entity.ScheduleDetailsView, error) {
-	scheduleRelations, err := GetScheduleRelationModel().GetUsersByScheduleID(ctx, operator, data.ID)
-	if err != nil {
-		return nil, err
-	}
-	classRosterUserMap := make(map[string]*entity.ScheduleUserInput)
-	classRosterUserIDs := make([]string, 0)
-	partUserInput := make([]*entity.ScheduleUserInput, 0)
-	for _, item := range scheduleRelations {
-		switch item.RelationType {
-		case entity.ScheduleRelationTypeClassRosterTeacher, entity.ScheduleRelationTypeClassRosterStudent:
-			classRosterUserMap[item.RelationID] = &entity.ScheduleUserInput{
-				ID:   item.RelationID,
-				Type: item.RelationType,
-			}
-			classRosterUserIDs = append(classRosterUserIDs, item.RelationID)
-		case entity.ScheduleRelationTypeParticipantTeacher, entity.ScheduleRelationTypeParticipantStudent:
-			partUserInput = append(partUserInput, &entity.ScheduleUserInput{
-				ID:   item.RelationID,
-				Type: item.RelationType,
-			})
-		}
-	}
-	accessibleUserList := make([]*entity.ScheduleAccessibleUserView, 0)
-	if data.Class != nil {
-		isClassAccessible, err := s.AccessibleClass(ctx, operator, data.Class.ID)
-		if err != nil {
-			log.Error(ctx, "GetByID:AccessibleClassRosterUser error",
-				log.Err(err),
-				log.Any("operator", operator),
-				log.Any("data", data),
-			)
-			return nil, err
-		}
-		data.Class.Enable = isClassAccessible
-
-		userInfos, err := external.GetUserServiceProvider().BatchGet(ctx, operator, classRosterUserIDs)
-		if err != nil {
-			return nil, err
-		}
-		for _, item := range userInfos {
-			if !item.Valid {
-				continue
-			}
-			if u, ok := classRosterUserMap[item.ID]; ok {
-				temp := &entity.ScheduleAccessibleUserView{
-					ID:     item.ID,
-					Name:   item.Name,
-					Type:   u.Type,
-					Enable: isClassAccessible,
-				}
-				accessibleUserList = append(accessibleUserList, temp)
-			}
-		}
-	}
-	accessiblePart, err := s.AccessibleParticipantUser(ctx, operator, partUserInput)
-	if err != nil {
-		log.Error(ctx, "GetByID:AccessibleParticipantUser error",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("userInput", partUserInput),
-		)
-		return nil, err
-	}
-	accessibleUserList = append(accessibleUserList, accessiblePart...)
-	for _, item := range accessibleUserList {
-		temp := &entity.ScheduleAccessibleUserView{
-			ID:     item.ID,
-			Name:   item.Name,
-			Type:   item.Type,
-			Enable: item.Enable,
-		}
-		switch item.Type {
-		case entity.ScheduleRelationTypeParticipantTeacher:
-			data.ParticipantsTeachers = append(data.ParticipantsTeachers, temp)
-		case entity.ScheduleRelationTypeParticipantStudent:
-			data.ParticipantsStudents = append(data.ParticipantsStudents, temp)
-		case entity.ScheduleRelationTypeClassRosterTeacher:
-			data.ClassRosterTeachers = append(data.ClassRosterTeachers, temp)
-		case entity.ScheduleRelationTypeClassRosterStudent:
-			data.ClassRosterStudents = append(data.ClassRosterStudents, temp)
-		}
-	}
-	data.Teachers = append(data.Teachers, data.ClassRosterTeachers...)
-	data.Teachers = append(data.Teachers, data.ParticipantsTeachers...)
-	return data, nil
-}
-
-func (s *scheduleModel) getByIDFormCache(ctx context.Context, operator *entity.Operator, id string) (*entity.ScheduleDetailsView, error) {
-	cacheData, err := da.GetScheduleRedisDA().GetScheduleDetailView(ctx, operator.OrgID, operator.UserID, id)
-	if err != nil {
-		return nil, err
-	}
-	cacheData.Status = cacheData.Status.GetScheduleStatus(entity.ScheduleStatusInput{
-		EndAt:     cacheData.EndAt,
-		DueAt:     cacheData.DueAt,
-		ClassType: cacheData.ClassType,
-	})
-	if cacheData.LessonPlan != nil {
-		lessonPlanAuthed, err := s.getLessonPlanAuthed(ctx, operator, id, cacheData.LessonPlan.ID)
-		if err != nil {
-			log.Error(ctx, "GetByID using cache:GetScheduleRealTimeStatus error",
-				log.Err(err),
-				log.Any("operator", operator),
-			)
-			return nil, err
-		}
-		cacheData.RealTimeStatus = *lessonPlanAuthed
-	}
-	return cacheData, nil
-}
-
 func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, id string) (*entity.ScheduleDetailsView, error) {
-	cacheData, err := s.getByIDFormCache(ctx, operator, id)
-	if err == nil {
-		log.Info(ctx, "GetByID:using cache",
-			log.Any("op", operator),
-			log.Any("id", id),
-		)
-		return cacheData, nil
-	}
-
-	schedule, err := s.getByIDFormDB(ctx, operator, id)
-	if err != nil {
-		return nil, err
-	}
-
-	result, err := s.processSingleSchedule(ctx, operator, schedule)
-	if err != nil {
-		return nil, err
-	}
-
-	result, err = s.processUsersAccessible(ctx, operator, result)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = da.GetScheduleRedisDA().Set(ctx, operator.OrgID, &da.ScheduleCacheCondition{
-		UserID:     operator.UserID,
-		ScheduleID: id,
-		DataType:   da.ScheduleDetailView,
-	}, result); err != nil {
-		log.Warn(ctx, "set cache error",
+	var schedule = new(entity.Schedule)
+	err := s.scheduleDA.Get(ctx, id, schedule)
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "schedule reocord not found",
 			log.Err(err),
-			log.String("userID", operator.UserID),
-			log.String("scheduleID", id),
-			log.Any("data", result))
+			log.String("scheduleID", id))
+		return nil, constant.ErrRecordNotFound
+	}
+	if err != nil {
+		log.Error(ctx, "s.scheduleDA.Get error",
+			log.Err(err),
+			log.String("scheduleID", id))
+		return nil, err
 	}
 
-	return result, nil
+	if schedule.DeleteAt != 0 {
+		log.Error(ctx, "schedule reocord has been deleted",
+			log.Any("schedule", schedule))
+		return nil, constant.ErrRecordNotFound
+	}
+
+	return s.transformToScheduleDetailsView(ctx, operator, schedule)
 }
 
 func (s *scheduleModel) AccessibleClass(ctx context.Context, operator *entity.Operator, classID string) (bool, error) {
@@ -2199,7 +1794,7 @@ func (s *scheduleModel) AccessibleClass(ctx context.Context, operator *entity.Op
 	return false, nil
 }
 
-func (s *scheduleModel) AccessibleParticipantUser(ctx context.Context, operator *entity.Operator, users []*entity.ScheduleUserInput) ([]*entity.ScheduleAccessibleUserView, error) {
+func (s *scheduleModel) accessibleParticipantUser(ctx context.Context, operator *entity.Operator, users []*entity.ScheduleUserInput) ([]*entity.ScheduleAccessibleUserView, error) {
 	result := make([]*entity.ScheduleAccessibleUserView, 0)
 	if len(users) <= 0 {
 		return result, nil
@@ -2284,17 +1879,6 @@ func (s *scheduleModel) AccessibleParticipantUser(ctx context.Context, operator 
 	return result, nil
 }
 
-func (s *scheduleModel) GetTeacherByName(ctx context.Context, operator *entity.Operator, orgID, name string) ([]*external.Teacher, error) {
-	teacherService := external.GetTeacherServiceProvider()
-	teachers, err := teacherService.Query(ctx, operator, orgID, name)
-	if err != nil {
-		log.Error(ctx, "querySchedule:query teacher info error", log.Err(err), log.String("name", name))
-		return nil, err
-	}
-
-	return teachers, nil
-}
-
 func (s *scheduleModel) ExistScheduleByLessonPlanID(ctx context.Context, lessonPlanID string) (bool, error) {
 	if strings.TrimSpace(lessonPlanID) == "" {
 		log.Info(ctx, "lessonPlanID is empty", log.String("lessonPlanID", lessonPlanID))
@@ -2302,7 +1886,7 @@ func (s *scheduleModel) ExistScheduleByLessonPlanID(ctx context.Context, lessonP
 	}
 	lessonPlanPastIDs, err := GetContentModel().GetPastContentIDByID(ctx, dbo.MustGetDB(ctx), lessonPlanID)
 	if err != nil {
-		logger.Error(ctx, "ExistScheduleByLessonPlanID:GetContentModel.GetPastContentIDByID error",
+		log.Error(ctx, "ExistScheduleByLessonPlanID:GetContentModel.GetPastContentIDByID error",
 			log.Err(err),
 			log.String("lessonPlanID", lessonPlanID),
 		)
@@ -2364,10 +1948,10 @@ func (s *scheduleModel) GetPlainByID(ctx context.Context, id string) (*entity.Sc
 	return result, nil
 }
 
-func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operator, v *entity.ScheduleVerify) error {
+func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operator, v *entity.ScheduleVerifyInput) error {
 	// class
-	classService := external.GetClassServiceProvider()
-	classInfos, err := classService.BatchGet(ctx, operator, []string{v.ClassID})
+	// classService := external.GetClassServiceProvider()
+	classInfos, err := s.classService.BatchGet(ctx, operator, []string{v.ClassID})
 	if err != nil {
 		log.Error(ctx, "verifyData:GetClassServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
@@ -2505,52 +2089,10 @@ func (s *scheduleModel) UpdateScheduleStatus(ctx context.Context, tx *dbo.DBCont
 	return nil
 }
 
-func (s *scheduleModel) GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error) {
-	lessonPlanIDs, err := da.GetScheduleDA().GetLessonPlanIDsByCondition(ctx, tx, condition)
-	if err != nil {
-		logger.Error(ctx, "GetLessonPlanByCondition:get lessonPlanIDs error",
-			log.Err(err),
-			log.Any("condition", condition),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	latestIDs, err := GetContentModel().GetLatestContentIDByIDList(ctx, tx, lessonPlanIDs)
-	if err != nil {
-		logger.Error(ctx, "GetLessonPlanByCondition:get latest lessonPlanIDs error",
-			log.Err(err),
-			log.Any("condition", condition),
-			log.Any("operator", operator),
-			log.Strings("lessonPlanIDs", lessonPlanIDs),
-			log.Strings("latestIDs", latestIDs),
-		)
-		return nil, err
-	}
-	latestIDs = utils.SliceDeduplication(latestIDs)
-	lessonPlanInfos, err := GetContentModel().GetContentNameByIDList(ctx, tx, latestIDs)
-	if err != nil {
-		logger.Error(ctx, "GetLessonPlanByCondition:get lessonPlan info error",
-			log.Err(err),
-			log.Strings("lessonPlanIDs", lessonPlanIDs),
-			log.Strings("latestIDs", latestIDs),
-			log.Any("condition", condition),
-			log.Any("operator", operator),
-		)
-	}
-	result := make([]*entity.ScheduleShortInfo, len(lessonPlanInfos))
-	for i, item := range lessonPlanInfos {
-		result[i] = &entity.ScheduleShortInfo{
-			ID:   item.ID,
-			Name: item.Name,
-		}
-	}
-	return result, nil
-}
-
 func (s *scheduleModel) GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *entity.ScheduleIDsCondition) ([]string, error) {
 	lessonPlanPastIDs, err := GetContentModel().GetPastContentIDByID(ctx, tx, condition.LessonPlanID)
 	if err != nil {
-		logger.Error(ctx, "GetScheduleIDsByCondition:get past lessonPlan id error",
+		log.Error(ctx, "GetScheduleIDsByCondition:get past lessonPlan id error",
 			log.Err(err),
 			log.Any("condition", condition),
 			log.Any("operator", operator),
@@ -2725,6 +2267,15 @@ func (s *scheduleModel) GetVariableDataByIDs(ctx context.Context, op *entity.Ope
 			item.Subjects = scheduleSubjectMap[item.ID]
 		}
 	}
+	if include.ClassRosterClass {
+		scheduleClassMap, err := GetScheduleRelationModel().GetClassRosterMap(ctx, op, ids)
+		if err != nil {
+			return nil, err
+		}
+		for _, item := range result {
+			item.ClassRosterClass = scheduleClassMap[item.ID]
+		}
+	}
 
 	return result, nil
 }
@@ -2871,33 +2422,6 @@ func (s *scheduleModel) GetSubjects(ctx context.Context, op *entity.Operator, pr
 	return result, nil
 }
 
-func (s *scheduleModel) getClassTypesCondition(ctx context.Context, op *entity.Operator) (*da.ScheduleCondition, error) {
-	return s.getRelationCondition(ctx, op)
-}
-
-func (s *scheduleModel) GetClassTypes(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error) {
-	condition, err := s.getClassTypesCondition(ctx, op)
-	if err != nil {
-		return nil, err
-	}
-	classTypes, err := da.GetScheduleDA().GetClassTypes(ctx, dbo.MustGetDB(ctx), condition)
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]*entity.ScheduleShortInfo, len(classTypes))
-	for i, item := range classTypes {
-		name := entity.ScheduleClassType(item)
-
-		result[i] = &entity.ScheduleShortInfo{
-			ID:   item,
-			Name: name.ToLabel().String(),
-		}
-	}
-
-	return result, nil
-}
-
 func (s *scheduleModel) GetRosterClassNotStartScheduleIDs(ctx context.Context, rosterClassID string, userIDs []string) ([]string, error) {
 	condition := da.NewNotStartScheduleCondition(rosterClassID, userIDs)
 
@@ -2942,172 +2466,35 @@ func (s *scheduleModel) GetLearningOutcomeIDs(ctx context.Context, op *entity.Op
 }
 
 func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleViewDetail, error) {
-	schedule, err := s.getByIDFormDB(ctx, op, id)
+	var schedule = new(entity.Schedule)
+	err := s.scheduleDA.Get(ctx, id, schedule)
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "schedule reocord not found",
+			log.Err(err),
+			log.String("scheduleID", id))
+		return nil, constant.ErrRecordNotFound
+	}
 	if err != nil {
-		log.Error(ctx, "get by id from db error", log.Any("op", op), log.String("id", id))
+		log.Error(ctx, "s.scheduleDA.Get error",
+			log.Err(err),
+			log.String("scheduleID", id))
 		return nil, err
 	}
 
-	classType := entity.ScheduleShortInfo{
-		ID:   schedule.ClassType.String(),
-		Name: schedule.ClassType.ToLabel().String(),
+	if schedule.DeleteAt != 0 {
+		log.Error(ctx, "schedule reocord has been deleted",
+			log.Any("schedule", schedule))
+		return nil, constant.ErrRecordNotFound
 	}
 
-	result := &entity.ScheduleViewDetail{
-		ID:             schedule.ID,
-		Title:          schedule.Title,
-		StartAt:        schedule.StartAt,
-		EndAt:          schedule.EndAt,
-		DueAt:          schedule.DueAt,
-		ClassType:      classType,
-		ClassTypeLabel: classType,
-		Status:         schedule.Status,
-		IsHomeFun:      schedule.IsHomeFun,
-		IsHidden:       schedule.IsHidden,
-		RoomID:         schedule.ID,
-		IsRepeat:       schedule.RepeatID != "",
-		LessonPlanID:   schedule.LessonPlanID,
-		Description:    schedule.Description,
-	}
-
-	// verify is complete assessment
-	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
-		var homeFunStudyAssessments []*entity.HomeFunStudy
-		err = GetHomeFunStudyModel().Query(ctx, op, &da.QueryHomeFunStudyCondition{
-			ScheduleID: entity.NullString{
-				String: schedule.ID,
-				Valid:  true,
-			},
-		}, &homeFunStudyAssessments)
-		if err != nil {
-			log.Error(ctx, "get homefun study assessment error",
-				log.Err(err),
-				log.Any("scheduleID", schedule.ID))
-			return nil, err
-		}
-
-		for _, v := range homeFunStudyAssessments {
-			if v.Status == entity.AssessmentStatusComplete {
-				result.CompleteAssessment = true
-				break
-			}
-		}
-	} else {
-		assessments, err := GetAssessmentModel().Query(ctx, op, &da.QueryAssessmentConditions{
-			ScheduleIDs: entity.NullStrings{
-				Strings: []string{schedule.ID},
-				Valid:   true,
-			},
-		})
-		if err != nil {
-			log.Error(ctx, "get assessment error",
-				log.Err(err),
-				log.Any("scheduleID", schedule.ID))
-			return nil, err
-		}
-
-		for _, v := range assessments {
-			if v.Status == entity.AssessmentStatusComplete {
-				result.CompleteAssessment = true
-				break
-			}
-		}
-	}
-
-	// get role type
-	roleType, err := GetScheduleRelationModel().GetRelationTypeByScheduleID(ctx, op, schedule.ID)
-	if err != nil {
-		log.Error(ctx, "get relation type error", log.Any("op", op), log.Any("schedule", schedule), log.Err(err))
-		return nil, err
-	}
-	result.RoleType = roleType
-
-	// verify is exist feedback
-	existFeedback, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, op, schedule.ID)
-	if err != nil {
-		log.Error(ctx, "exist by schedule id error", log.Any("op", op), log.Any("schedule", schedule), log.Err(err))
-		return nil, err
-	}
-	result.ExistFeedback = existFeedback
-
-	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
-		existAssessment, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), op, []string{schedule.ID})
-		if err != nil {
-			log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", schedule.ID))
-			return nil, err
-		}
-		result.ExistAssessment = existAssessment[schedule.ID]
-	}
-
-	// home fun study relation learning outcome
-	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
-		outcomeIDs, err := GetScheduleRelationModel().GetOutcomeIDs(ctx, schedule.ID)
-		if err != nil {
-			log.Error(ctx, "get schedule relation learning outcomes error",
-				log.Err(err),
-				log.String("scheduleID", schedule.ID))
-			return nil, err
-		}
-		result.OutcomeIDs = outcomeIDs
-	}
-
-	if schedule.Attachment != "" {
-		var attachment entity.ScheduleShortInfo
-		err := json.Unmarshal([]byte(schedule.Attachment), &attachment)
-		if err != nil {
-			log.Error(ctx, "Unmarshal schedule.Attachment error", log.Err(err), log.String("schedule.Attachment", schedule.Attachment))
-			return nil, err
-		}
-		result.Attachment = attachment
-	}
-
-	classID, err := GetScheduleRelationModel().GetClassRosterID(ctx, op, schedule.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	if classID != "" {
-		classes, err := s.getClassInfoMapByClassIDs(ctx, op, []string{classID})
-		if err != nil {
-			log.Error(ctx, "get class error", log.Err(err), log.String("classID", classID))
-			return nil, err
-		}
-		if item, ok := classes[classID]; ok {
-			result.Class = &entity.ScheduleShortInfo{
-				ID:   item.ID,
-				Name: item.Name,
-			}
-		}
-	}
-
-	if schedule.LessonPlanID != "" {
-		result.LessonPlan, err = s.getLessonPlanWithMaterial(ctx, op, schedule.LessonPlanID)
-		if err != nil {
-			log.Error(ctx, "get lesson plan with material error", log.Err(err), log.Any("schedule", schedule))
-			return nil, err
-		}
-	}
-	result.Status = result.Status.GetScheduleStatus(entity.ScheduleStatusInput{
-		EndAt:     result.EndAt,
-		DueAt:     result.DueAt,
-		ClassType: schedule.ClassType,
-	})
-
-	users, err := GetScheduleRelationModel().GetUsers(ctx, op, schedule.ID)
-	if err != nil {
-		return nil, err
-	}
-	result.Teachers = users.Teachers
-	result.Students = users.Students
-
-	return result, nil
+	return s.transformToScheduleViewDetail(ctx, op, schedule)
 }
 
 func (s *scheduleModel) GetTeachingLoad(ctx context.Context, input *entity.ScheduleTeachingLoadInput) ([]*entity.ScheduleTeachingLoadView, error) {
 	condition := da.NewScheduleTeachLoadCondition(input)
-	teachLoads, err := da.GetScheduleDA().GetTeachLoadByCondition(ctx, dbo.MustGetDB(ctx), condition)
+	teachLoads, err := s.scheduleDA.GetTeachLoadByCondition(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
-		log.Error(ctx, "get teach load condition", log.Err(err), log.Any("input", input), log.Any("condition", condition))
+		log.Error(ctx, "s.scheduleDA.GetTeachLoadByCondition error", log.Err(err), log.Any("input", input), log.Any("condition", condition))
 		return nil, err
 	}
 	result := make([]*entity.ScheduleTeachingLoadView, 0, len(teachLoads))
@@ -3282,6 +2669,7 @@ func (s *scheduleModel) PrepareScheduleTimeViewCondition(ctx context.Context, qu
 		Bool:  query.Anytime,
 		Valid: query.Anytime,
 	}
+
 	log.Debug(ctx, "condition info",
 		log.String("viewType", viewType),
 		log.Any("condition", condition),
@@ -3330,41 +2718,86 @@ func (s *scheduleModel) QueryUnsafe(ctx context.Context, condition *entity.Sched
 		SubjectIDs:         condition.RelationSubjectIDs,
 		DeleteAt:           condition.DeleteAt,
 	}
-	err := da.GetScheduleDA().Query(ctx, daCondition, &scheduleList)
+	err := s.scheduleDA.Query(ctx, daCondition, &scheduleList)
 	if err != nil {
-		log.Error(ctx, "schedule query error", log.Err(err), log.Any("condition", condition))
+		log.Error(ctx, "s.scheduleDA.Query error", log.Err(err), log.Any("condition", condition))
 		return nil, err
 	}
 
 	return scheduleList, nil
 }
 
-func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]*entity.ScheduleTimeView, error) {
-	condition, err := s.PrepareScheduleTimeViewCondition(ctx, query, op, loc)
+func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity.ScheduleTimeViewListRequest, op *entity.Operator, loc *time.Location) (int, []*entity.ScheduleTimeView, error) {
+	condition, err := s.PrepareScheduleTimeViewCondition(ctx, &entity.ScheduleTimeViewQuery{
+		ViewType:       query.ViewType,
+		TimeAt:         query.TimeAt,
+		TimeZoneOffset: query.TimeZoneOffset,
+		SchoolIDs:      query.SchoolIDs,
+		TeacherIDs:     query.TeacherIDs,
+		ClassIDs:       query.ClassIDs,
+		SubjectIDs:     query.SubjectIDs,
+		ProgramIDs:     query.ProgramIDs,
+		ClassTypes:     query.ClassTypes,
+		StartAtGe:      query.StartAtGe,
+		EndAtLe:        query.EndAtLe,
+		Anytime:        query.Anytime,
+		OrderBy:        query.OrderBy,
+	}, op, loc)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 
+	// StartAtGe query by start_at and due_at, required by APP team
+	if query.StartAtGe >= 0 {
+		condition.StartAtAndDueAtGe = sql.NullInt64{
+			Int64: query.StartAtGe,
+			Valid: true,
+		}
+	}
+
+	// EndAtLe query by end_at and due_at, required by APP team
+	if query.EndAtLe >= 0 {
+		condition.EndAtAndDueAtLe = sql.NullInt64{
+			Int64: query.EndAtLe,
+			Valid: true,
+		}
+	}
+
+	if query.DueAtEq >= 0 {
+		condition.DueToEq = sql.NullInt64{
+			Int64: query.DueAtEq,
+			Valid: true,
+		}
+	}
+
+	// pagination
+	condition.Pager = utils.GetDboPagerFromInt(query.Page, query.PageSize)
+
 	var scheduleList []*entity.Schedule
-	err = da.GetScheduleDA().Query(ctx, condition, &scheduleList)
+	total, err := da.GetScheduleDA().Page(ctx, condition, &scheduleList)
 	if err != nil {
-		log.Error(ctx, "da.GetScheduleDA().Query error",
+		log.Error(ctx, "da.GetScheduleDA().Page error",
 			log.Err(err),
 			log.Any("condition", condition))
-		return nil, err
+		return 0, nil, err
 	}
 
 	result := make([]*entity.ScheduleTimeView, len(scheduleList))
+	var homefunStudyScheduleIDs []string
+	var notHomefunStudyScheduleIDs []string
 	for i, v := range scheduleList {
 		result[i] = &entity.ScheduleTimeView{
-			ID:        v.ID,
-			Title:     v.Title,
-			StartAt:   v.StartAt,
-			EndAt:     v.EndAt,
-			DueAt:     v.DueAt,
-			ClassType: v.ClassType,
-			Status:    v.Status,
-			ClassID:   v.ClassID,
+			ID:           v.ID,
+			Title:        v.Title,
+			StartAt:      v.StartAt,
+			EndAt:        v.EndAt,
+			DueAt:        v.DueAt,
+			ClassType:    v.ClassType,
+			Status:       v.Status,
+			ClassID:      v.ClassID,
+			IsHomeFun:    v.IsHomeFun,
+			IsRepeat:     v.RepeatID != "",
+			LessonPlanID: v.LessonPlanID,
 		}
 
 		// handle schedule status
@@ -3379,10 +2812,1078 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 			result[i].StartAt = utils.TodayZeroByTimeStamp(v.DueAt, loc).Unix()
 			result[i].EndAt = utils.TodayEndByTimeStamp(v.DueAt, loc).Unix()
 		}
+
+		if v.ClassType == entity.ScheduleClassTypeHomework && v.IsHomeFun {
+			homefunStudyScheduleIDs = append(homefunStudyScheduleIDs, v.ID)
+		} else {
+			notHomefunStudyScheduleIDs = append(notHomefunStudyScheduleIDs, v.ID)
+		}
 	}
-	return result, nil
+
+	// query assessment_status, only for student user
+	if query.WithAssessmentStatus {
+		assessments, err := GetAssessmentModel().Query(ctx, op, &da.QueryAssessmentConditions{
+			ScheduleIDs: entity.NullStrings{
+				Strings: notHomefunStudyScheduleIDs,
+				Valid:   true,
+			},
+		})
+		if err != nil {
+			log.Error(ctx, "GetAssessmentModel().Query error",
+				log.Err(err),
+				log.Any("notHomefunStudyScheduleIDs", notHomefunStudyScheduleIDs))
+			return 0, nil, err
+		}
+
+		var homeFunStudyAssessments []*entity.HomeFunStudy
+		err = GetHomeFunStudyModel().Query(ctx, op, &da.QueryHomeFunStudyCondition{
+			ScheduleIDs: entity.NullStrings{
+				Strings: homefunStudyScheduleIDs,
+				Valid:   true,
+			},
+			StudentIDs: entity.NullStrings{
+				Strings: []string{op.UserID},
+				Valid:   true,
+			},
+		}, &homeFunStudyAssessments)
+		if err != nil {
+			log.Error(ctx, "GetHomeFunStudyModel().Query error",
+				log.Err(err),
+				log.Strings("homefunStudyScheduleIDs", homefunStudyScheduleIDs),
+				log.String("studentID", op.UserID))
+			return 0, nil, err
+		}
+
+		assessmentStatusMap := make(map[string]entity.AssessmentStatus)
+		for _, assessment := range assessments {
+			assessmentStatusMap[assessment.ScheduleID] = assessment.Status
+		}
+
+		for _, homefunStudyAssessment := range homeFunStudyAssessments {
+			assessmentStatusMap[homefunStudyAssessment.ScheduleID] = homefunStudyAssessment.Status
+		}
+
+		for _, r := range result {
+			r.AssessmentStatus = assessmentStatusMap[r.ID]
+		}
+	}
+
+	return total, result, nil
 }
 
+// Schedule model interval function
+func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, operator *entity.Operator, schedule *entity.Schedule) (*entity.ScheduleDetailsView, error) {
+	if schedule == nil {
+		log.Debug(ctx, "schedule is nil")
+		return nil, nil
+	}
+
+	scheduleDetailsView := &entity.ScheduleDetailsView{
+		ID:          schedule.ID,
+		Title:       schedule.Title,
+		OrgID:       schedule.OrgID,
+		StartAt:     schedule.StartAt,
+		EndAt:       schedule.EndAt,
+		IsAllDay:    schedule.IsAllDay,
+		ClassType:   schedule.ClassType,
+		DueAt:       schedule.DueAt,
+		Description: schedule.Description,
+		Version:     schedule.ScheduleVersion,
+		IsRepeat:    schedule.RepeatID != "",
+		Status:      schedule.Status,
+		IsHomeFun:   schedule.IsHomeFun,
+		IsHidden:    schedule.IsHidden,
+		RoleType:    entity.ScheduleRoleTypeUnknown,
+		ClassTypeLabel: entity.ScheduleShortInfo{
+			ID:   schedule.ClassType.String(),
+			Name: schedule.ClassType.ToLabel().String(),
+		},
+		OutcomeIDs: []string{},
+	}
+
+	// get schedule status, business logic not status in database
+	scheduleDetailsView.Status = schedule.Status.GetScheduleStatus(entity.ScheduleStatusInput{
+		EndAt:     schedule.EndAt,
+		DueAt:     schedule.DueAt,
+		ClassType: schedule.ClassType,
+	})
+
+	// get attachment
+	if schedule.Attachment != "" {
+		var attachment entity.ScheduleShortInfo
+		err := json.Unmarshal([]byte(schedule.Attachment), &attachment)
+		if err != nil {
+			log.Error(ctx, "json.Unmarshal error",
+				log.Err(err),
+				log.String("schedule.Attachment", schedule.Attachment))
+			return nil, err
+		}
+		scheduleDetailsView.Attachment = attachment
+	}
+
+	// get schedule repeat
+	if schedule.RepeatJson != "" {
+		var repeat entity.RepeatOptions
+		err := json.Unmarshal([]byte(schedule.RepeatJson), &repeat)
+		if err != nil {
+			log.Error(ctx, "json.Unmarshal error",
+				log.Err(err),
+				log.String("schedule.RepeatJson", schedule.RepeatJson))
+			return nil, err
+		}
+		scheduleDetailsView.Repeat = repeat
+	}
+
+	var scheduleRelations []*entity.ScheduleRelation
+	err := s.scheduleRelationDA.Query(ctx, &da.ScheduleRelationCondition{
+		ScheduleID: sql.NullString{
+			String: schedule.ID,
+			Valid:  true,
+		},
+	}, &scheduleRelations)
+
+	var subjectIDs []string
+	var classRoasterTeacherIDs []string
+	var classRoasterStudentIDs []string
+	var participantTeacherIDs []string
+	var participantStudentIDs []string
+	for _, scheduleRelation := range scheduleRelations {
+		// get operator role type in the schedule
+		if scheduleRelation.RelationID == operator.UserID {
+			switch scheduleRelation.RelationType {
+			case entity.ScheduleRelationTypeParticipantTeacher, entity.ScheduleRelationTypeClassRosterTeacher:
+				scheduleDetailsView.RoleType = entity.ScheduleRoleTypeTeacher
+			case entity.ScheduleRelationTypeParticipantStudent, entity.ScheduleRelationTypeClassRosterStudent:
+				scheduleDetailsView.RoleType = entity.ScheduleRoleTypeStudent
+			}
+		}
+
+		switch scheduleRelation.RelationType {
+		// learning outcome relation, only for homefun homework
+		case entity.ScheduleRelationTypeLearningOutcome:
+			scheduleDetailsView.OutcomeIDs = append(scheduleDetailsView.OutcomeIDs, scheduleRelation.RelationID)
+		case entity.ScheduleRelationTypeSubject:
+			subjectIDs = append(subjectIDs, scheduleRelation.RelationID)
+		case entity.ScheduleRelationTypeClassRosterTeacher:
+			classRoasterTeacherIDs = append(classRoasterTeacherIDs, scheduleRelation.RelationID)
+		case entity.ScheduleRelationTypeClassRosterStudent:
+			classRoasterStudentIDs = append(classRoasterStudentIDs, scheduleRelation.RelationID)
+		case entity.ScheduleRelationTypeParticipantTeacher:
+			participantTeacherIDs = append(participantTeacherIDs, scheduleRelation.RelationID)
+		case entity.ScheduleRelationTypeParticipantStudent:
+			participantStudentIDs = append(participantStudentIDs, scheduleRelation.RelationID)
+		}
+	}
+
+	g := new(errgroup.Group)
+
+	var scheduleLessonPlan *entity.ScheduleLessonPlan
+	var scheduleAccessibleUserView *entity.ScheduleAccessibleUserView
+
+	var scheduleProgram *entity.ScheduleShortInfo
+	var scheduleSubjects []*entity.ScheduleShortInfo
+	var scheduleRealTimeStatus *entity.ScheduleRealTimeView
+	var scheduleExistFeedback bool
+	var scheduleExistAssessment bool
+	var scheduleCompleteAssessment bool
+	var userMap map[string]*external.NullableUser
+	var schedulePermissionMap map[external.PermissionName]bool
+	scheduleCanBeCreatedSchoolMap := make(map[string]bool)
+	var schoolByClass []*external.School
+	var classByOperator []*external.Class
+	var participantUserSchoolMap map[string][]*external.School
+
+	// get lesson plan
+	if schedule.LessonPlanID != "" {
+		g.Go(func() error {
+			lessonPlan, err := s.getLessonPlanWithMaterial(ctx, operator, schedule.LessonPlanID)
+			if err != nil {
+				log.Error(ctx, "s.getLessonPlanWithMaterial error",
+					log.Err(err),
+					log.String("lessonPlanID", schedule.LessonPlanID))
+				return err
+			}
+
+			scheduleLessonPlan = lessonPlan
+
+			return nil
+		})
+	}
+
+	// get class info
+	if schedule.ClassID != "" {
+		g.Go(func() error {
+			classes, err := s.classService.BatchGet(ctx, operator, []string{schedule.ClassID})
+			if err != nil {
+				log.Error(ctx, "s.classService.BatchGet error",
+					log.Err(err),
+					log.String("classID", schedule.ClassID))
+				return err
+			}
+
+			if len(classes) == 0 {
+				log.Error(ctx, "class info not found", log.String("classID", schedule.ClassID))
+				return constant.ErrRecordNotFound
+			}
+
+			scheduleAccessibleUserView = &entity.ScheduleAccessibleUserView{
+				ID:   classes[0].ID,
+				Name: classes[0].Name,
+			}
+
+			return nil
+		})
+	}
+
+	// get program info
+	if schedule.ProgramID != "" {
+		g.Go(func() error {
+			programs, err := s.programService.BatchGet(ctx, operator, []string{schedule.ProgramID})
+			if err != nil {
+				log.Error(ctx, "s.programService.BatchGet error",
+					log.Err(err),
+					log.String("programID", schedule.ProgramID))
+				return err
+			}
+
+			if len(programs) == 0 {
+				log.Error(ctx, "program info not found", log.String("programID", schedule.ProgramID))
+				return constant.ErrRecordNotFound
+			}
+
+			scheduleProgram = &entity.ScheduleShortInfo{
+				ID:   programs[0].ID,
+				Name: programs[0].Name,
+			}
+
+			return nil
+		})
+	}
+
+	// get subject info
+	if len(subjectIDs) > 0 {
+		g.Go(func() error {
+			subjects, err := s.subjectService.BatchGet(ctx, operator, subjectIDs)
+			if err != nil {
+				log.Error(ctx, "s.subjectService.BatchGet error",
+					log.Err(err),
+					log.Strings("subjectIDs", subjectIDs))
+				return err
+			}
+
+			for _, subject := range subjects {
+				scheduleSubjects = append(scheduleSubjects, &entity.ScheduleShortInfo{
+					ID:   subject.ID,
+					Name: subject.Name,
+				})
+			}
+
+			return nil
+		})
+	}
+
+	// get lesson plan real time status
+	if schedule.LessonPlanID != "" {
+		g.Go(func() error {
+			scheduleRealTimeView, err := s.getLessonPlanAuthed(ctx, operator, schedule.ID, schedule.LessonPlanID)
+			if err != nil {
+				log.Error(ctx, "s.getLessonPlanAuthed error",
+					log.Err(err),
+					log.String("ScheduleID", schedule.ID),
+					log.String("LessonPlanID", schedule.LessonPlanID),
+				)
+				return err
+			}
+			scheduleRealTimeStatus = scheduleRealTimeView
+
+			return nil
+		})
+	}
+
+	// check if the schedule feedback exists
+	g.Go(func() error {
+		existFeedback, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, operator, schedule.ID)
+		if err != nil {
+			log.Error(ctx, "s.scheduleFeedbackModel.ExistByScheduleID error",
+				log.Err(err),
+				log.Any("op", operator),
+				log.String("scheduleID", schedule.ID))
+			return err
+		}
+		scheduleExistFeedback = existFeedback
+
+		return nil
+	})
+
+	// check if the assessment exists, only not homefun homework
+	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
+		g.Go(func() error {
+			existAssessment, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, []string{schedule.ID})
+			if err != nil {
+				log.Error(ctx, "s.studyAssessmentModel.BatchCheckAnyoneAttempted error",
+					log.Err(err),
+					log.String("scheduleID", schedule.ID))
+				return err
+			}
+			scheduleExistAssessment = existAssessment[schedule.ID]
+
+			return nil
+		})
+	}
+
+	// get user info map
+	userIDs := append(classRoasterTeacherIDs, classRoasterStudentIDs...)
+	userIDs = append(userIDs, participantTeacherIDs...)
+	userIDs = append(userIDs, participantStudentIDs...)
+	if len(userIDs) > 0 {
+		g.Go(func() error {
+			users, err := s.userService.BatchGetMap(ctx, operator, userIDs)
+			if err != nil {
+				log.Error(ctx, "s.userService.BatchGetMap error",
+					log.Err(err),
+					log.Strings("userIDs", userIDs))
+				return err
+			}
+
+			userMap = users
+
+			return nil
+		})
+	}
+
+	// check if the assessment completed, homefun homework
+	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
+		g.Go(func() error {
+			var homeFunStudyAssessments []*entity.HomeFunStudy
+			err = GetHomeFunStudyModel().Query(ctx, operator, &da.QueryHomeFunStudyCondition{
+				ScheduleID: entity.NullString{
+					String: schedule.ID,
+					Valid:  true,
+				},
+			}, &homeFunStudyAssessments)
+			if err != nil {
+				log.Error(ctx, "s.homefunStudyModel.Query error",
+					log.Err(err),
+					log.Any("scheduleID", schedule.ID))
+				return err
+			}
+
+			// if anyone student complete assessment, then schedule CompleteAssessment is true
+			for _, homeFunStudyAssessment := range homeFunStudyAssessments {
+				if homeFunStudyAssessment.Status == entity.AssessmentStatusComplete {
+					scheduleCompleteAssessment = true
+					break
+				}
+			}
+
+			return nil
+		})
+	} else if schedule.ClassType != entity.ScheduleClassTypeTask {
+		// check if the assessment completed, not homefun homework, no assessment for the Task
+		g.Go(func() error {
+			assessments, err := GetAssessmentModel().Query(ctx, operator, &da.QueryAssessmentConditions{
+				ScheduleIDs: entity.NullStrings{
+					Strings: []string{schedule.ID},
+					Valid:   true,
+				},
+			})
+			if err != nil {
+				log.Error(ctx, "s.assessmentModel.Query error",
+					log.Err(err),
+					log.Any("scheduleID", schedule.ID))
+				return err
+			}
+
+			for _, assessment := range assessments {
+				if assessment.Status == entity.AssessmentStatusComplete {
+					scheduleCompleteAssessment = true
+					break
+				}
+			}
+
+			return nil
+		})
+	}
+
+	// check operator schedule permission
+	g.Go(func() error {
+		permissionMap, err := GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, operator, []external.PermissionName{
+			external.ScheduleCreateEvent,
+			external.ScheduleCreateMySchoolEvent,
+			external.ScheduleCreateMyEvent,
+		})
+		if err != nil {
+			log.Error(ctx, "GetSchedulePermissionModel().HasScheduleOrgPermissions error",
+				log.Any("operator", operator))
+			return nil
+		}
+
+		schedulePermissionMap = permissionMap
+
+		return nil
+	})
+
+	// search for schools where the operator has permission to create schedule
+	g.Go(func() error {
+		schoolList, err := s.schoolService.GetByPermission(ctx, operator, external.ScheduleCreateMySchoolEvent)
+		if err != nil {
+			log.Error(ctx, "s.schoolService.GetByPermission error",
+				log.Err(err))
+			return err
+		}
+
+		for _, school := range schoolList {
+			scheduleCanBeCreatedSchoolMap[school.ID] = true
+		}
+
+		return nil
+	})
+
+	// get isClassAccessible
+	if schedule.ClassID != "" {
+		// search for schools by class, for isClassAccessible
+		g.Go(func() error {
+			classSchoolMap, err := s.schoolService.GetByClasses(ctx, operator, []string{schedule.ClassID})
+			if err != nil {
+				log.Error(ctx, "s.schoolService.GetByClasses error",
+					log.Err(err),
+					log.String("classID", schedule.ClassID))
+				return err
+			}
+
+			schoolByClass = classSchoolMap[schedule.ClassID]
+
+			return nil
+		})
+
+		// search for classes by operator, for isClassAccessible
+		g.Go(func() error {
+			classes, err := s.classService.GetByUserID(ctx, operator, operator.UserID)
+			if err != nil {
+				log.Error(ctx, "s.classService.GetByUserID error",
+					log.Err(err),
+					log.Any("operator", operator))
+				return err
+			}
+
+			classByOperator = classes
+
+			return nil
+		})
+	}
+
+	// check participant user is accessible
+	participantUserIDs := append(participantStudentIDs, participantTeacherIDs...)
+	if len(participantUserIDs) > 0 {
+		// get participant user school map
+		g.Go(func() error {
+			userSchoolMap, err := s.schoolService.GetByUsers(ctx, operator, operator.OrgID, participantUserIDs)
+			if err != nil {
+				log.Error(ctx, "s.schoolService.GetByUsers error",
+					log.Err(err),
+					log.Strings("participantUserIDs", participantUserIDs))
+				return err
+			}
+
+			participantUserSchoolMap = userSchoolMap
+			return nil
+		})
+
+	}
+
+	if err := g.Wait(); err != nil {
+		log.Error(ctx, "transformToScheduleDetailsView error",
+			log.Err(err))
+		return nil, err
+	}
+
+	// fill to scheduleDetailsView
+	scheduleDetailsView.LessonPlan = scheduleLessonPlan
+	scheduleDetailsView.Class = scheduleAccessibleUserView
+	scheduleDetailsView.Program = scheduleProgram
+	scheduleDetailsView.Subjects = scheduleSubjects
+	if scheduleRealTimeStatus != nil {
+		scheduleDetailsView.RealTimeStatus = *scheduleRealTimeStatus
+	}
+	scheduleDetailsView.ExistFeedback = scheduleExistFeedback
+	scheduleDetailsView.ExistAssessment = scheduleExistAssessment
+	scheduleDetailsView.CompleteAssessment = scheduleCompleteAssessment
+
+	// get isClassAccessible
+	var isClassAccessible bool
+	if scheduleDetailsView.Class != nil {
+		if schedulePermissionMap[external.ScheduleCreateEvent] {
+			isClassAccessible = true
+		} else if schedulePermissionMap[external.ScheduleCreateMySchoolEvent] {
+			for _, school := range schoolByClass {
+				if scheduleCanBeCreatedSchoolMap[school.ID] {
+					isClassAccessible = true
+					break
+				}
+			}
+		} else if schedulePermissionMap[external.ScheduleCreateMyEvent] {
+			for _, class := range classByOperator {
+				if class.ID == schedule.ClassID {
+					isClassAccessible = true
+					break
+				}
+			}
+		}
+
+		scheduleDetailsView.Class.Enable = isClassAccessible
+	}
+
+	// fill class_roaster_teachers
+	for _, classclassRoasterTeacherID := range classRoasterTeacherIDs {
+		if user, ok := userMap[classclassRoasterTeacherID]; ok && user.Valid {
+			item := &entity.ScheduleAccessibleUserView{
+				ID:     user.ID,
+				Name:   user.Name,
+				Type:   entity.ScheduleRelationTypeClassRosterTeacher,
+				Enable: isClassAccessible,
+			}
+			scheduleDetailsView.ClassRosterTeachers = append(scheduleDetailsView.ClassRosterTeachers, item)
+		}
+	}
+
+	// fill class_roaster_students
+	for _, classclassRoasterStudentID := range classRoasterStudentIDs {
+		if user, ok := userMap[classclassRoasterStudentID]; ok && user.Valid {
+			item := &entity.ScheduleAccessibleUserView{
+				ID:     user.ID,
+				Name:   user.Name,
+				Type:   entity.ScheduleRelationTypeClassRosterStudent,
+				Enable: isClassAccessible,
+			}
+			scheduleDetailsView.ClassRosterStudents = append(scheduleDetailsView.ClassRosterStudents, item)
+		}
+	}
+
+	// fill participants_teachers
+	for _, participantTeacherID := range participantTeacherIDs {
+		if user, ok := userMap[participantTeacherID]; ok && user.Valid {
+			var enable bool
+			if schedulePermissionMap[external.ScheduleCreateEvent] {
+				enable = true
+			} else if schedulePermissionMap[external.ScheduleCreateMySchoolEvent] {
+				for _, school := range participantUserSchoolMap[user.ID] {
+					if scheduleCanBeCreatedSchoolMap[school.ID] {
+						enable = true
+						break
+					}
+				}
+			}
+			item := &entity.ScheduleAccessibleUserView{
+				ID:     user.ID,
+				Name:   user.Name,
+				Type:   entity.ScheduleRelationTypeParticipantTeacher,
+				Enable: enable,
+			}
+			scheduleDetailsView.ParticipantsTeachers = append(scheduleDetailsView.ParticipantsTeachers, item)
+		}
+	}
+
+	// fill participants_students
+	for _, participantStudentID := range participantStudentIDs {
+		if user, ok := userMap[participantStudentID]; ok && user.Valid {
+			var enable bool
+			if schedulePermissionMap[external.ScheduleCreateEvent] {
+				enable = true
+			} else if schedulePermissionMap[external.ScheduleCreateMySchoolEvent] {
+				for _, school := range participantUserSchoolMap[user.ID] {
+					if scheduleCanBeCreatedSchoolMap[school.ID] {
+						enable = true
+						break
+					}
+				}
+			}
+			item := &entity.ScheduleAccessibleUserView{
+				ID:     user.ID,
+				Name:   user.Name,
+				Type:   entity.ScheduleRelationTypeParticipantStudent,
+				Enable: enable,
+			}
+			scheduleDetailsView.ParticipantsStudents = append(scheduleDetailsView.ParticipantsStudents, item)
+		}
+	}
+
+	scheduleDetailsView.Teachers = append(scheduleDetailsView.Teachers, scheduleDetailsView.ClassRosterTeachers...)
+	scheduleDetailsView.Teachers = append(scheduleDetailsView.Teachers, scheduleDetailsView.ParticipantsTeachers...)
+
+	return scheduleDetailsView, nil
+}
+
+func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, operator *entity.Operator, schedule *entity.Schedule) (*entity.ScheduleViewDetail, error) {
+	if schedule == nil {
+		log.Debug(ctx, "schedule is nil")
+		return nil, nil
+	}
+
+	classType := entity.ScheduleShortInfo{
+		ID:   schedule.ClassType.String(),
+		Name: schedule.ClassType.ToLabel().String(),
+	}
+
+	scheduleViewDetail := &entity.ScheduleViewDetail{
+		ID:      schedule.ID,
+		Title:   schedule.Title,
+		StartAt: schedule.StartAt,
+		EndAt:   schedule.EndAt,
+		DueAt:   schedule.DueAt,
+		// Duplicate fields
+		ClassType:      classType,
+		ClassTypeLabel: classType,
+		Status:         schedule.Status,
+		IsHomeFun:      schedule.IsHomeFun,
+		IsHidden:       schedule.IsHidden,
+		RoomID:         schedule.ID,
+		IsRepeat:       schedule.RepeatID != "",
+		LessonPlanID:   schedule.LessonPlanID,
+		Description:    schedule.Description,
+		// init empty slice
+		OutcomeIDs: []string{},
+		Teachers:   []*entity.ScheduleShortInfo{},
+		Students:   []*entity.ScheduleShortInfo{},
+	}
+
+	// get schedule status, business logic not status in database
+	scheduleViewDetail.Status = schedule.Status.GetScheduleStatus(entity.ScheduleStatusInput{
+		EndAt:     schedule.EndAt,
+		DueAt:     schedule.DueAt,
+		ClassType: schedule.ClassType,
+	})
+
+	// get attachment
+	if schedule.Attachment != "" {
+		var attachment entity.ScheduleShortInfo
+		err := json.Unmarshal([]byte(schedule.Attachment), &attachment)
+		if err != nil {
+			log.Error(ctx, "json.Unmarshal error",
+				log.Err(err),
+				log.String("schedule.Attachment", schedule.Attachment))
+			return nil, err
+		}
+		scheduleViewDetail.Attachment = attachment
+	}
+
+	var scheduleRelations []*entity.ScheduleRelation
+	err := s.scheduleRelationDA.Query(ctx, &da.ScheduleRelationCondition{
+		ScheduleID: sql.NullString{
+			String: schedule.ID,
+			Valid:  true,
+		},
+	}, &scheduleRelations)
+
+	var teacherIDs []string
+	var studentIDs []string
+	var userMap map[string]*external.NullableUser
+	for _, scheduleRelation := range scheduleRelations {
+		// get operator role type in the schedule
+		if scheduleRelation.RelationID == operator.UserID {
+			switch scheduleRelation.RelationType {
+			case entity.ScheduleRelationTypeParticipantTeacher, entity.ScheduleRelationTypeClassRosterTeacher:
+				scheduleViewDetail.RoleType = entity.ScheduleRoleTypeTeacher
+			case entity.ScheduleRelationTypeParticipantStudent, entity.ScheduleRelationTypeClassRosterStudent:
+				scheduleViewDetail.RoleType = entity.ScheduleRoleTypeStudent
+			}
+		}
+
+		switch scheduleRelation.RelationType {
+		// learning outcome relation, only for homefun homework
+		case entity.ScheduleRelationTypeLearningOutcome:
+			scheduleViewDetail.OutcomeIDs = append(scheduleViewDetail.OutcomeIDs, scheduleRelation.RelationID)
+		case entity.ScheduleRelationTypeClassRosterTeacher, entity.ScheduleRelationTypeParticipantTeacher:
+			teacherIDs = append(teacherIDs, scheduleRelation.RelationID)
+		case entity.ScheduleRelationTypeClassRosterStudent, entity.ScheduleRelationTypeParticipantStudent:
+			studentIDs = append(studentIDs, scheduleRelation.RelationID)
+		}
+	}
+
+	g := new(errgroup.Group)
+
+	var scheduleLessonPlan *entity.ScheduleLessonPlan
+	var scheduleClass *entity.ScheduleShortInfo
+	var scheduleExistFeedback bool
+	var scheduleExistAssessment bool
+	var scheduleCompleteAssessment bool
+
+	// get lesson plan
+	if schedule.LessonPlanID != "" {
+		g.Go(func() error {
+			lessonPlan, err := s.getLessonPlanWithMaterial(ctx, operator, schedule.LessonPlanID)
+			if err != nil {
+				log.Error(ctx, "s.getLessonPlanWithMaterial error",
+					log.Err(err),
+					log.String("lessonPlanID", schedule.LessonPlanID))
+				return err
+			}
+
+			scheduleLessonPlan = lessonPlan
+
+			return nil
+		})
+	}
+
+	// get class info
+	if schedule.ClassID != "" {
+		g.Go(func() error {
+			classes, err := s.classService.BatchGet(ctx, operator, []string{schedule.ClassID})
+			if err != nil {
+				log.Error(ctx, "s.classService.BatchGet error",
+					log.Err(err),
+					log.String("classID", schedule.ClassID))
+				return err
+			}
+
+			if len(classes) == 0 {
+				log.Error(ctx, "class info not found", log.String("classID", schedule.ClassID))
+				return constant.ErrRecordNotFound
+			}
+
+			scheduleClass = &entity.ScheduleShortInfo{
+				ID:   classes[0].ID,
+				Name: classes[0].Name,
+			}
+
+			return nil
+		})
+	}
+
+	// get user info map
+	userIDs := append(teacherIDs, studentIDs...)
+	if len(userIDs) > 0 {
+		g.Go(func() error {
+			users, err := s.userService.BatchGetMap(ctx, operator, userIDs)
+			if err != nil {
+				log.Error(ctx, "s.userService.BatchGetMap error",
+					log.Err(err),
+					log.Strings("userIDs", userIDs))
+				return err
+			}
+
+			userMap = users
+
+			return nil
+		})
+	}
+
+	// check if the schedule feedback exists
+	g.Go(func() error {
+		existFeedback, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, operator, schedule.ID)
+		if err != nil {
+			log.Error(ctx, "s.scheduleFeedbackModel.ExistByScheduleID error",
+				log.Err(err),
+				log.Any("op", operator),
+				log.String("scheduleID", schedule.ID))
+			return err
+		}
+		scheduleExistFeedback = existFeedback
+
+		return nil
+	})
+
+	// check if the assessment exists, only not homefun homework
+	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
+		g.Go(func() error {
+			existAssessment, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, []string{schedule.ID})
+			if err != nil {
+				log.Error(ctx, "s.studyAssessmentModel.BatchCheckAnyoneAttempted error",
+					log.Err(err),
+					log.String("scheduleID", schedule.ID))
+				return err
+			}
+			scheduleExistAssessment = existAssessment[scheduleViewDetail.ID]
+
+			return nil
+		})
+	}
+
+	// check if the assessment completed, homefun homework
+	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
+		g.Go(func() error {
+			var homeFunStudyAssessments []*entity.HomeFunStudy
+			err = GetHomeFunStudyModel().Query(ctx, operator, &da.QueryHomeFunStudyCondition{
+				ScheduleID: entity.NullString{
+					String: schedule.ID,
+					Valid:  true,
+				},
+			}, &homeFunStudyAssessments)
+			if err != nil {
+				log.Error(ctx, "s.homefunStudyModel.Query error",
+					log.Err(err),
+					log.Any("scheduleID", schedule.ID))
+				return err
+			}
+
+			for _, homeFunStudyAssessment := range homeFunStudyAssessments {
+				if homeFunStudyAssessment.Status == entity.AssessmentStatusComplete {
+					scheduleCompleteAssessment = true
+					break
+				}
+			}
+
+			return nil
+		})
+	} else if schedule.ClassType != entity.ScheduleClassTypeTask {
+		// check if the assessment completed, not homefun homework, no assessment of the Task
+		g.Go(func() error {
+			assessments, err := GetAssessmentModel().Query(ctx, operator, &da.QueryAssessmentConditions{
+				ScheduleIDs: entity.NullStrings{
+					Strings: []string{schedule.ID},
+					Valid:   true,
+				},
+			})
+			if err != nil {
+				log.Error(ctx, "s.assessmentModel.Query error",
+					log.Err(err),
+					log.Any("scheduleID", schedule.ID))
+				return err
+			}
+
+			for _, assessment := range assessments {
+				if assessment.Status == entity.AssessmentStatusComplete {
+					scheduleCompleteAssessment = true
+					break
+				}
+			}
+
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		log.Error(ctx, "transformToScheduleViewDetail error",
+			log.Err(err))
+		return nil, err
+	}
+
+	// fill to scheduleViewDetail
+	scheduleViewDetail.LessonPlan = scheduleLessonPlan
+	scheduleViewDetail.Class = scheduleClass
+	scheduleViewDetail.ExistFeedback = scheduleExistFeedback
+	scheduleViewDetail.ExistAssessment = scheduleExistAssessment
+	scheduleViewDetail.CompleteAssessment = scheduleCompleteAssessment
+
+	for _, teacherID := range teacherIDs {
+		if user, ok := userMap[teacherID]; ok && user.Valid {
+			scheduleViewDetail.Teachers = append(scheduleViewDetail.Teachers, &entity.ScheduleShortInfo{
+				ID:   user.ID,
+				Name: user.Name,
+			})
+		} else {
+			log.Warn(ctx, "teacher info not found", log.String("teacherID", teacherID))
+		}
+	}
+
+	for _, studentID := range studentIDs {
+		if user, ok := userMap[studentID]; ok && user.Valid {
+			scheduleViewDetail.Students = append(scheduleViewDetail.Students, &entity.ScheduleShortInfo{
+				ID:   user.ID,
+				Name: user.Name,
+			})
+		} else {
+			log.Warn(ctx, "student info not found", log.String("studentID", studentID))
+		}
+	}
+
+	return scheduleViewDetail, nil
+}
+
+func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operator *entity.Operator, scheduleList []*entity.Schedule, loc *time.Location) ([]*entity.ScheduleListView, error) {
+	scheduleListView := make([]*entity.ScheduleListView, len(scheduleList))
+	var homefunHomeworkIDs []string
+	var notHomefunHomeworkIDs []string
+	var withAssessmentScheduleIDs []string
+
+	scheduleIDs := make([]string, len(scheduleList))
+	for i, schedule := range scheduleList {
+		if schedule.ClassType == entity.ScheduleClassTypeHomework {
+			if schedule.IsHomeFun {
+				homefunHomeworkIDs = append(homefunHomeworkIDs, schedule.ID)
+			} else {
+				notHomefunHomeworkIDs = append(notHomefunHomeworkIDs, schedule.ID)
+				withAssessmentScheduleIDs = append(withAssessmentScheduleIDs, schedule.ID)
+			}
+		} else if schedule.ClassType != entity.ScheduleClassTypeTask {
+			withAssessmentScheduleIDs = append(withAssessmentScheduleIDs, schedule.ID)
+		}
+
+		scheduleIDs[i] = schedule.ID
+	}
+
+	g := new(errgroup.Group)
+	var scheduleExistAssessmentMap map[string]bool
+	var scheduleCompleteAssessmentMap map[string]bool
+	var scheduleExistFeedbackMap map[string]bool
+	var scheduleOperatorRoleTypeMap map[string]entity.ScheduleRoleType
+
+	// check if the assessment exists, only not homefun homework
+	if len(notHomefunHomeworkIDs) > 0 {
+		g.Go(func() error {
+			existAssessment, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, notHomefunHomeworkIDs)
+			if err != nil {
+				log.Error(ctx, "s.studyAssessmentModel.BatchCheckAnyoneAttempted error",
+					log.Err(err),
+					log.Strings("notHomefunHomeworkIDs", notHomefunHomeworkIDs))
+				return err
+			}
+			scheduleExistAssessmentMap = existAssessment
+
+			return nil
+		})
+	}
+
+	// check if the assessment completed
+	g.Go(func() error {
+		if len(homefunHomeworkIDs) > 0 {
+			var homeFunStudyAssessments []*entity.HomeFunStudy
+			err := GetHomeFunStudyModel().Query(ctx, operator, &da.QueryHomeFunStudyCondition{
+				ScheduleIDs: entity.NullStrings{
+					Strings: homefunHomeworkIDs,
+					Valid:   true,
+				},
+			}, &homeFunStudyAssessments)
+			if err != nil {
+				log.Error(ctx, "s.homefunStudyModel.Query error",
+					log.Err(err),
+					log.Any("homefunHomeworkIDs", homefunHomeworkIDs))
+				return err
+			}
+
+			for _, homeFunStudyAssessment := range homeFunStudyAssessments {
+				if homeFunStudyAssessment.Status == entity.AssessmentStatusComplete {
+					scheduleCompleteAssessmentMap[homeFunStudyAssessment.ScheduleID] = true
+				}
+			}
+		}
+
+		if len(withAssessmentScheduleIDs) > 0 {
+			assessments, err := GetAssessmentModel().Query(ctx, operator, &da.QueryAssessmentConditions{
+				ScheduleIDs: entity.NullStrings{
+					Strings: withAssessmentScheduleIDs,
+					Valid:   true,
+				},
+			})
+			if err != nil {
+				log.Error(ctx, "s.assessmentModel.Query error",
+					log.Err(err),
+					log.Any("withAssessmentScheduleIDs", withAssessmentScheduleIDs))
+				return err
+			}
+
+			for _, assessment := range assessments {
+				if assessment.Status == entity.AssessmentStatusComplete {
+					scheduleCompleteAssessmentMap[assessment.ScheduleID] = true
+					break
+				}
+			}
+		}
+
+		return nil
+	})
+
+	// check if the schedule feedback exists
+	g.Go(func() error {
+		existFeedback, err := GetScheduleFeedbackModel().ExistByScheduleIDs(ctx, operator, scheduleIDs)
+		if err != nil {
+			log.Error(ctx, "s.scheduleFeedbackModel.ExistByScheduleIDs error",
+				log.Err(err),
+				log.Any("op", operator),
+				log.Strings("scheduleIDs", scheduleIDs))
+			return err
+		}
+		scheduleExistFeedbackMap = existFeedback
+
+		return nil
+	})
+
+	// get operator role type in the schedule
+	g.Go(func() error {
+		var scheduleRelations []*entity.ScheduleRelation
+		err := s.scheduleRelationDA.Query(ctx, &da.ScheduleRelationCondition{
+			ScheduleIDs: entity.NullStrings{
+				Strings: scheduleIDs,
+				Valid:   true,
+			},
+			RelationID: sql.NullString{
+				String: operator.UserID,
+				Valid:  true,
+			},
+			RelationTypes: entity.NullStrings{
+				Strings: []string{
+					string(entity.ScheduleRelationTypeParticipantTeacher),
+					string(entity.ScheduleRelationTypeParticipantStudent),
+					string(entity.ScheduleRelationTypeClassRosterTeacher),
+					string(entity.ScheduleRelationTypeClassRosterStudent),
+				},
+				Valid: true,
+			},
+		}, &scheduleRelations)
+		if err != nil {
+			log.Error(ctx, "s.scheduleRelationDA.Query error",
+				log.Err(err),
+				log.Strings("ScheduleIDs", scheduleIDs))
+			return err
+		}
+
+		for _, scheduleRealtion := range scheduleRelations {
+			switch scheduleRealtion.RelationType {
+			case entity.ScheduleRelationTypeParticipantTeacher, entity.ScheduleRelationTypeClassRosterTeacher:
+				scheduleOperatorRoleTypeMap[scheduleRealtion.ScheduleID] = entity.ScheduleRoleTypeTeacher
+			case entity.ScheduleRelationTypeParticipantStudent, entity.ScheduleRelationTypeClassRosterStudent:
+				scheduleOperatorRoleTypeMap[scheduleRealtion.ScheduleID] = entity.ScheduleRoleTypeStudent
+			}
+		}
+
+		return nil
+	})
+
+	for i := range scheduleListView {
+		schedule := scheduleList[i]
+		item := &entity.ScheduleListView{
+			ID:           schedule.ID,
+			Title:        schedule.Title,
+			StartAt:      schedule.StartAt,
+			EndAt:        schedule.EndAt,
+			IsRepeat:     schedule.RepeatID != "",
+			LessonPlanID: schedule.LessonPlanID,
+			ClassID:      schedule.ClassID,
+			ClassType:    schedule.ClassType,
+			DueAt:        schedule.DueAt,
+			IsHidden:     schedule.IsHidden,
+			IsHomeFun:    schedule.IsHomeFun,
+			ClassTypeLabel: entity.ScheduleShortInfo{
+				ID:   schedule.ClassType.String(),
+				Name: schedule.ClassType.ToLabel().String(),
+			},
+			Status: schedule.Status.GetScheduleStatus(entity.ScheduleStatusInput{
+				EndAt:     schedule.EndAt,
+				DueAt:     schedule.DueAt,
+				ClassType: schedule.ClassType,
+			}),
+			RoleType: entity.ScheduleRoleTypeUnknown,
+		}
+
+		// TODO: Perhaps this logic should be handed over to the frontend
+		if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.DueAt != 0 {
+			item.StartAt = utils.TodayZeroByTimeStamp(schedule.DueAt, loc).Unix()
+			item.EndAt = utils.TodayEndByTimeStamp(schedule.DueAt, loc).Unix()
+		}
+
+		item.ExistFeedback = scheduleExistFeedbackMap[schedule.ID]
+		item.ExistAssessment = scheduleExistAssessmentMap[schedule.ID]
+		item.CompleteAssessment = scheduleCompleteAssessmentMap[schedule.ID]
+		if scheduleOperatorRoleTypeMap, ok := scheduleOperatorRoleTypeMap[schedule.ID]; ok {
+			item.RoleType = scheduleOperatorRoleTypeMap
+		}
+
+		scheduleListView[i] = item
+	}
+
+	return scheduleListView, nil
+}
+
+// model package interval function
 func removeResourceMetadata(ctx context.Context, resourceID string) error {
 	if resourceID == "" {
 		return nil
@@ -3426,7 +3927,18 @@ var (
 
 func GetScheduleModel() IScheduleModel {
 	_scheduleOnce.Do(func() {
-		_scheduleModel = &scheduleModel{}
+		_scheduleModel = &scheduleModel{
+			scheduleDA:         da.GetScheduleDA(),
+			scheduleRelationDA: da.GetScheduleRelationDA(),
+
+			userService:    external.GetUserServiceProvider(),
+			schoolService:  external.GetSchoolServiceProvider(),
+			classService:   external.GetClassServiceProvider(),
+			programService: external.GetProgramServiceProvider(),
+			subjectService: external.GetSubjectServiceProvider(),
+			teacherService: external.GetTeacherServiceProvider(),
+		}
 	})
+
 	return _scheduleModel
 }

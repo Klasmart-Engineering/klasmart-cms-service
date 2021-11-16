@@ -71,3 +71,26 @@ func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorin
 
 	return statusCode, err
 }
+
+var (
+	amsServices     AmsServices
+	amsServicesOnce sync.Once
+)
+
+type AmsServices struct {
+	ProgramService ProgramServiceProvider
+	TeacherService TeacherServiceProvider
+	UserService    UserServiceProvider
+}
+
+func GetAmsServices() AmsServices {
+	amsServicesOnce.Do(func() {
+		amsServices = AmsServices{
+			ProgramService: GetProgramServiceProvider(),
+			TeacherService: GetTeacherServiceProvider(),
+			UserService:    GetUserServiceProvider(),
+		}
+	})
+
+	return amsServices
+}

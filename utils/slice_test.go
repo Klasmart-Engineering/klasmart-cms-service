@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/go-playground/assert/v2"
 )
 
 func TestSliceDeduplication(t *testing.T) {
@@ -70,9 +72,10 @@ func TestSliceDeduplicationMap(t *testing.T) {
 }
 
 func TestSliceDeduplicationExcludeEmpty(t *testing.T) {
-	testData := []string{""}
+	testData := []string{"", "abc", "123", "abc", "ab", "a", ""}
 	result := SliceDeduplicationExcludeEmpty(testData)
-	t.Log(len(result))
+	t.Log(result)
+	assert.Equal(t, result, []string{"abc", "123", "ab", "a"})
 }
 
 func TestStableSliceDeduplication(t *testing.T) {

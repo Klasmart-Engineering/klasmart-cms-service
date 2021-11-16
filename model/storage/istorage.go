@@ -4,15 +4,15 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"io"
 	"mime/multipart"
 	"os"
 	"strings"
 	"sync"
+
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 )
@@ -114,14 +114,6 @@ type IStorage interface {
 	UploadFileBytes(ctx context.Context, partition StoragePartition, filePath string, fileStream *bytes.Buffer) error
 	UploadFileLAN(ctx context.Context, partition StoragePartition, filePath string, contentType string, r io.Reader) error
 	CopyFile(ctx context.Context, source, target string) error
-}
-
-func assertGetEnv(key string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		panic(fmt.Sprintf("Environment %v is nil", key))
-	}
-	return value
 }
 
 //根据环境变量创建存储对象

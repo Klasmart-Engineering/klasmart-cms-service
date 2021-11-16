@@ -13,7 +13,7 @@ const (
 	BusTopicLiveRoomEndClass utils.BusTopic = "LiveRoomEndClass"
 )
 
-type BusTopicLiveRoomEndClassFunc func(ctx context.Context, op *entity.Operator, event *entity.AddClassAndLiveAssessmentArgs) (string, error)
+type BusTopicLiveRoomEndClassFunc func(ctx context.Context, op *entity.Operator, event *entity.AddClassAndLiveAssessmentArgs) error
 
 type ILiveRoomEventBus interface {
 	SubEndClass(handler BusTopicLiveRoomEndClassFunc) error
@@ -43,7 +43,7 @@ func GetLiveRoomEventBusModel() ILiveRoomEventBus {
 			bus: utils.NewAsyncEventBus(),
 		}
 
-		bus.SubEndClass(GetClassAndLiveAssessmentModel().Add)
+		bus.SubEndClass(GetAssessmentModel().ScheduleEndClassCallback)
 		bus.SubEndClass(GetClassesAssignmentsModel().CreateRecord)
 
 		_liveRoomBusModel = bus

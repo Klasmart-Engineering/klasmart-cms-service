@@ -186,7 +186,7 @@ func (l *LessonData) PrepareVersion(ctx context.Context) error {
 	if len(ids) < 1 {
 		return nil
 	}
-	_, contentList, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), &da.ContentCondition{
+	contentList, err := da.GetContentDA().QueryContent(ctx, dbo.MustGetDB(ctx), &da.ContentCondition{
 		IDS: entity.NullStrings{
 			Strings: ids,
 			Valid:   true,
@@ -247,7 +247,7 @@ func (l *LessonData) PrepareResult(ctx context.Context, tx *dbo.DBContext, conte
 		return nil
 	}
 
-	_, contentList, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), &da.ContentCondition{
+	contentList, err := da.GetContentDA().QueryContent(ctx, dbo.MustGetDB(ctx), &da.ContentCondition{
 		IDS: entity.NullStrings{
 			Strings: materialList,
 			Valid:   true,
@@ -282,14 +282,24 @@ func (l *LessonData) PrepareResult(ctx context.Context, tx *dbo.DBContext, conte
 	}
 
 	contentMap := make(map[string]*entity.Content)
+	contentIDs := make([]string, len(contentList))
 	for i := range contentList {
 		contentMap[contentList[i].ID] = contentList[i]
+		contentIDs[i] = contentList[i].ID
 	}
-	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
-		data, ok := contentMap[l.MaterialId]
+
+	contentPropertiesMap, err := da.GetContentPropertyDA().BatchGetByContentIDsMapResult(ctx, tx, contentIDs)
+	if err != nil {
+		log.Error(ctx, "PrepareResult: BatchGetByContentIDsMapResult failed",
+			log.Err(err),
+			log.Strings("contents", contentIDs))
+	}
+
+	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, ld *LessonData) {
+		data, ok := contentMap[ld.MaterialId]
 		if ok {
-			material, _ := GetContentModel().ConvertContentObj(ctx, tx, data, operator)
-			l.Material = material
+			material, _ := GetContentModel().ConvertContentObjWithProperties(ctx, data, contentPropertiesMap[data.ID])
+			ld.Material = material
 		}
 	})
 	return nil

@@ -498,6 +498,24 @@ type ContentInfoWithDetailsResponse struct {
 	Total       int                       `json:"total"`
 	ContentList []*ContentInfoWithDetails `json:"list"`
 }
+type QueryContentResponse struct {
+	Total int                 `json:"total"`
+	List  []*QueryContentItem `json:"list"`
+}
+
+type QueryContentItem struct {
+	ID              string               `json:"id"`
+	ContentType     ContentType          `json:"content_type"`
+	Name            string               `json:"name"`
+	Thumbnail       string               `json:"thumbnail"`
+	AuthorName      string               `json:"author_name"`
+	Data            string               `json:"data"`
+	Author          string               `json:"author"`
+	PublishStatus   ContentPublishStatus `json:"publish_status"`
+	ContentTypeName string               `json:"content_type_name"`
+	Permission      ContentPermission    `json:"permission"`
+	SuggestTime     int                  `json:"suggest_time"`
+}
 
 type FolderContentInfoWithDetailsResponse struct {
 	Total       int                  `json:"total"`
@@ -726,4 +744,11 @@ func (cInfo ContentInfo) CanBeDeleted() bool {
 		return true
 	}
 	return false
+}
+
+type LessonPlanForSchedule struct {
+	ID        string              `json:"id" gorm:"column:id" `
+	Name      string              `json:"name" gorm:"column:name" `
+	GroupName LessonPlanGroupName `json:"group_name" gorm:"column:group_name" `
+	ProgramID string              `json:"-" gorm:"column:program_id" `
 }
