@@ -8,13 +8,9 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
-func (cm *ContentModel) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator) (lps []*entity.LessonPlanForSchedule, err error) {
+func (cm *ContentModel) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest) (lps []*entity.LessonPlanForSchedule, err error) {
 	lps = []*entity.LessonPlanForSchedule{}
-	userContentCondition, err := cm.buildUserContentCondition(ctx, dbo.MustGetDB(ctx), &entity.ContentConditionRequest{
-		ContentType:   []int{entity.ContentTypePlan},
-		PublishStatus: []string{entity.ContentStatusPublished},
-		OrderBy:       "create_at",
-	}, []string{}, op)
+	userContentCondition, err := cm.buildUserContentCondition(ctx, dbo.MustGetDB(ctx), cond, []string{}, op)
 	if err != nil {
 		return
 	}
