@@ -3713,9 +3713,9 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 
 	g := new(errgroup.Group)
 	var scheduleExistAssessmentMap map[string]bool
-	var scheduleCompleteAssessmentMap map[string]bool
+	scheduleCompleteAssessmentMap := make(map[string]bool)
 	var scheduleExistFeedbackMap map[string]bool
-	var scheduleOperatorRoleTypeMap map[string]entity.ScheduleRoleType
+	scheduleOperatorRoleTypeMap := make(map[string]entity.ScheduleRoleType)
 
 	// check if the assessment exists, only not homefun homework
 	if len(notHomefunHomeworkIDs) > 0 {
