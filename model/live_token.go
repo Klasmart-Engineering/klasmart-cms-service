@@ -76,13 +76,15 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		return "", constant.ErrInvalidArgs
 	}
 	liveTokenInfo := entity.LiveTokenInfo{
-		UserID:    op.UserID,
-		Type:      tokenType, //entity.LiveTokenTypeLive,
-		RoomID:    scheduleID,
-		ClassType: classType,
-		OrgID:     op.OrgID,
+		UserID:     op.UserID,
+		Type:       tokenType, //entity.LiveTokenTypeLive,
+		RoomID:     scheduleID,
+		ClassType:  classType,
+		OrgID:      op.OrgID,
+		ScheduleID: schedule.ID,
+		StartAt:    schedule.StartAt,
+		EndAt:      schedule.EndAt,
 	}
-	liveTokenInfo.ScheduleID = schedule.ID
 
 	name, err := s.getUserName(ctx, op)
 	if err != nil {
