@@ -3838,6 +3838,12 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 		return nil
 	})
 
+	if err := g.Wait(); err != nil {
+		log.Error(ctx, "transformToScheduleListView error",
+			log.Err(err))
+		return nil, err
+	}
+
 	for i := range scheduleListView {
 		schedule := scheduleList[i]
 		item := &entity.ScheduleListView{
