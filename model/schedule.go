@@ -3795,7 +3795,6 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 			for _, assessment := range assessments {
 				if assessment.Status == entity.AssessmentStatusComplete {
 					scheduleCompleteAssessmentMap[assessment.ScheduleID] = true
-					break
 				}
 			}
 		}
