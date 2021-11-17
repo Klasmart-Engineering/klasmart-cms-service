@@ -429,14 +429,6 @@ func (cd *DBContentDA) SearchContentUnSafe(ctx context.Context, tx *dbo.DBContex
 
 	return count, objs, nil
 }
-func (cd *DBContentDA) QueryContentUnSafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (contents []*entity.Content, err error) {
-	contents = make([]*entity.Content, 0)
-	err = cd.s.QueryTx(ctx, tx, condition, &contents)
-	if err != nil {
-		return
-	}
-	return
-}
 
 func (cd *DBContentDA) QueryContent(ctx context.Context, tx *dbo.DBContext, condition *ContentCondition) ([]*entity.Content, error) {
 	objs := make([]*entity.Content, 0)
