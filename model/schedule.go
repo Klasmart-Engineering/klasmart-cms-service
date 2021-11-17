@@ -2682,11 +2682,17 @@ func (s *scheduleModel) Query(ctx context.Context, query *entity.ScheduleTimeVie
 	if err != nil {
 		return nil, err
 	}
-	result, err := s.QueryByCondition(ctx, op, condition, loc)
+
+	var scheduleList []*entity.Schedule
+	err = s.scheduleDA.Query(ctx, condition, &scheduleList)
 	if err != nil {
+		log.Error(ctx, "s.scheduleDA.Query error",
+			log.Err(err),
+			log.Any("condition", condition))
 		return nil, err
 	}
-	return result, nil
+
+	return s.transformToScheduleListView(ctx, op, scheduleList, loc)
 }
 
 func (s *scheduleModel) QueryScheduledDates(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]string, error) {
@@ -2749,17 +2755,32 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 
 	// StartAtGe query by start_at and due_at, required by APP team
 	if query.StartAtGe >= 0 {
-		condition.StartAtAndDueAtGe = sql.NullInt64{
-			Int64: query.StartAtGe,
-			Valid: true,
+		// apply to StartAtGe and EndAtLe, union will include schedules that are only partially within the specified time frame, intersect will not
+		if query.TimeBoundary == string(entity.UnionScheduleTimeBoundary) {
+			condition.StartAtOrEndAtOrDueAtGe = sql.NullInt64{
+				Int64: query.StartAtGe,
+				Valid: true,
+			}
+		} else {
+			condition.StartAtAndDueAtGe = sql.NullInt64{
+				Int64: query.StartAtGe,
+				Valid: true,
+			}
 		}
 	}
 
 	// EndAtLe query by end_at and due_at, required by APP team
 	if query.EndAtLe >= 0 {
-		condition.EndAtAndDueAtLe = sql.NullInt64{
-			Int64: query.EndAtLe,
-			Valid: true,
+		if query.TimeBoundary == string(entity.UnionScheduleTimeBoundary) {
+			condition.StartAtOrEndAtOrDueAtLe = sql.NullInt64{
+				Int64: query.EndAtLe,
+				Valid: true,
+			}
+		} else {
+			condition.EndAtAndDueAtLe = sql.NullInt64{
+				Int64: query.EndAtLe,
+				Valid: true,
+			}
 		}
 	}
 
