@@ -422,7 +422,7 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 
 	if c.StartAtOrEndAtOrDueAtGe.Valid {
 		wheres = append(wheres, "(start_at >= ? or end_at >= ? or due_at >= ?)")
-		params = append(params, c.StartAtAndDueAtGe.Int64, c.StartAtAndDueAtGe.Int64, c.StartAtAndDueAtGe.Int64)
+		params = append(params, c.StartAtOrEndAtOrDueAtGe.Int64, c.StartAtOrEndAtOrDueAtGe.Int64, c.StartAtOrEndAtOrDueAtGe.Int64)
 	}
 
 	if c.StartAtOrEndAtOrDueAtLe.Valid {
