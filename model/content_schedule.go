@@ -14,7 +14,7 @@ func (cm *ContentModel) GetLessonPlansCanSchedule(ctx context.Context, op *entit
 	if err != nil {
 		return
 	}
-	_, contents, err := da.GetContentDA().SearchContentUnSafe(ctx, dbo.MustGetDB(ctx), userContentCondition)
+	contents, err := da.GetContentDA().QueryContentUnsafe(ctx, dbo.MustGetDB(ctx), userContentCondition)
 	if err != nil {
 		return
 	}
