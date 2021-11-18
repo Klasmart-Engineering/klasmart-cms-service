@@ -3,6 +3,7 @@ package external
 // APStatus academic profile status
 type APStatus string
 type JoinType string
+type OperatorType string
 
 const (
 	Active   APStatus = "active"
@@ -13,6 +14,16 @@ const (
 	IsTeaching JoinType = "teaching"
 	IsStudy    JoinType = "studying"
 )
+
+const (
+	Contains OperatorType = "contains"
+	Eq       OperatorType = "eq"
+	Neq      OperatorType = "neq"
+)
+
+func (o OperatorType) String() string {
+	return string(o)
+}
 
 func (j JoinType) string() string {
 	return string(j)
