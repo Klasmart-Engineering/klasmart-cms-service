@@ -142,7 +142,7 @@ func (t *AmsTeacherLoadService) BatchGetActiveClassWithStudent(ctx context.Conte
 	orFilters := make([]UserFilter, len(ids))
 	for i, v := range ids {
 		uf := UserFilter{}
-		uf.UserID.Operator = Eq
+		uf.UserID.Operator = OperatorTypeEq
 		uf.UserID.Value = v
 		orFilters[i] = uf
 	}
@@ -196,7 +196,7 @@ query ($or:[UserFilter!]){
 	}
 	if statusCode != http.StatusOK {
 		err = &entity.ExternalError{
-			Err:  errors.New("response data contains err"),
+			Err:  constant.ErrAmsHttpFailed,
 			Type: constant.InternalErrorTypeAms,
 		}
 		log.Warn(ctx, "BatchGetClassWithStudent: run failed", log.Int("status_code", statusCode), log.Strings("teacher_ids", ids))

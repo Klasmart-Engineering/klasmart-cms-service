@@ -16,9 +16,9 @@ const (
 )
 
 const (
-	Contains OperatorType = "contains"
-	Eq       OperatorType = "eq"
-	Neq      OperatorType = "neq"
+	OperatorTypeContains OperatorType = "contains"
+	OperatorTypeEq       OperatorType = "eq"
+	OperatorTypeNeq      OperatorType = "neq"
 )
 
 func (o OperatorType) String() string {
