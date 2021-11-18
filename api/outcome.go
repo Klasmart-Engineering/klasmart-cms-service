@@ -889,6 +889,8 @@ func (s *Server) queryPublishedOutcomes(c *gin.Context) {
 		condition.OrganizationID = op.OrgID
 	}
 
+	condition.PublishStatus = entity.OutcomeStatusPublished
+
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ViewPublishedLearningOutcome)
 	if err != nil {
 		log.Error(ctx, "queryPublishedOutcomes: HasOrganizationPermission failed",
@@ -906,7 +908,7 @@ func (s *Server) queryPublishedOutcomes(c *gin.Context) {
 		return
 	}
 
-	total, outcomes, err := model.GetOutcomeModel().SearchPublished(ctx, op, &condition)
+	response, err := model.GetOutcomeModel().SearchPublished(ctx, op, &condition)
 	switch err {
 	case model.ErrBadRequest:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -927,15 +929,6 @@ func (s *Server) queryPublishedOutcomes(c *gin.Context) {
 	case constant.ErrOperateNotAllowed:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case nil:
-		response, err := model.NewSearchPublishedOutcomeResponse(ctx, op, total, outcomes)
-		if err != nil {
-			log.Error(ctx, "queryPublishedOutcomes: model.NewSearchPublishedOutcomeResponse failed",
-				log.Any("op", op),
-				log.Any("outcome", outcomes),
-				log.Err(err))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-			return
-		}
 		c.JSON(http.StatusOK, response)
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))

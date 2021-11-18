@@ -429,79 +429,18 @@ func buildOutcomeView(ctx context.Context, externalNameMap entity.ExternalNameMa
 }
 
 type PublishedOutcomeView struct {
-	OutcomeID      string                  `json:"outcome_id"`
-	OutcomeName    string                  `json:"outcome_name"`
-	AncestorID     string                  `json:"ancestor_id"`
-	Shortcode      string                  `json:"shortcode"`
-	Assumed        bool                    `json:"assumed"`
-	EstimatedTime  int                     `json:"estimated_time"`
-	Keywords       []string                `json:"keywords"`
-	SourceID       string                  `json:"source_id"`
-	LatestID       string                  `json:"latest_id"`
-	LockedBy       string                  `json:"locked_by"`
-	AuthorID       string                  `json:"author_id"`
-	OrganizationID string                  `json:"organization_id"`
-	PublishScope   string                  `json:"publish_scope"`
-	PublishStatus  string                  `json:"publish_status"`
-	RejectReason   string                  `json:"reject_reason"`
-	Description    string                  `json:"description"`
-	CreatedAt      int64                   `json:"created_at"`
-	UpdatedAt      int64                   `json:"update_at"`
-	Sets           []*OutcomeSetCreateView `json:"sets"`
-	ProgramIDs     []string                `json:"program_ids"`
-	SubjectIDs     []string                `json:"subject_ids"`
-	CategoryIDs    []string                `json:"category_ids"`
-	SubcategoryIDs []string                `json:"sub_category_ids"`
-	GradeIDs       []string                `json:"grade_ids"`
-	AgeIDs         []string                `json:"age_ids"`
+	OutcomeID      string   `json:"outcome_id"`
+	OutcomeName    string   `json:"outcome_name"`
+	Shortcode      string   `json:"shortcode"`
+	ProgramIDs     []string `json:"program_ids"`
+	SubjectIDs     []string `json:"subject_ids"`
+	CategoryIDs    []string `json:"category_ids"`
+	SubcategoryIDs []string `json:"sub_category_ids"`
+	GradeIDs       []string `json:"grade_ids"`
+	AgeIDs         []string `json:"age_ids"`
 }
 
 type SearchPublishedOutcomeResponse struct {
 	Total int                     `json:"total"`
 	List  []*PublishedOutcomeView `json:"list"`
-}
-
-func NewSearchPublishedOutcomeResponse(ctx context.Context, op *entity.Operator, total int, outcomes []*entity.Outcome) (*SearchPublishedOutcomeResponse, error) {
-	list := make([]*PublishedOutcomeView, len(outcomes))
-	for i, v := range outcomes {
-		list[i] = &PublishedOutcomeView{
-			OutcomeID:      v.ID,
-			OutcomeName:    v.Name,
-			AncestorID:     v.AncestorID,
-			Shortcode:      v.Shortcode,
-			Assumed:        v.Assumed,
-			EstimatedTime:  v.EstimatedTime,
-			Keywords:       strings.Split(v.Keywords, ","),
-			SourceID:       v.SourceID,
-			LatestID:       v.LatestID,
-			LockedBy:       v.LockedBy,
-			AuthorID:       v.AuthorID,
-			OrganizationID: v.OrganizationID,
-			PublishScope:   v.PublishScope,
-			PublishStatus:  string(v.PublishStatus),
-			RejectReason:   v.RejectReason,
-			Description:    v.Description,
-			CreatedAt:      v.CreateAt,
-			UpdatedAt:      v.UpdateAt,
-			Sets:           make([]*OutcomeSetCreateView, len(v.Sets)),
-			ProgramIDs:     v.Programs,
-			SubjectIDs:     v.Subjects,
-			CategoryIDs:    v.Categories,
-			SubcategoryIDs: v.Subcategories,
-			GradeIDs:       v.Grades,
-			AgeIDs:         v.Ages,
-		}
-
-		for j := range v.Sets {
-			list[i].Sets[j] = &OutcomeSetCreateView{
-				SetID:   v.Sets[j].ID,
-				SetName: v.Sets[j].Name,
-			}
-		}
-	}
-
-	return &SearchPublishedOutcomeResponse{
-		Total: total,
-		List:  list,
-	}, nil
 }

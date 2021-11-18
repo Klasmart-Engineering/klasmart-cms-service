@@ -21,40 +21,56 @@ import (
 
 type IOutcomeModel interface {
 	Create(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) error
-	Get(ctx context.Context, operator *entity.Operator, outcomeID string) (*entity.Outcome, error)
 	Update(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) error
 	Delete(ctx context.Context, operator *entity.Operator, outcomeID string) error
+
+	Get(ctx context.Context, operator *entity.Operator, outcomeID string) (*entity.Outcome, error)
+	GetByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
+	GetLatestOutcomes(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, []string, error)
+	GetLatestByIDsMapResult(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, error)
+	GetLatestByAncestors(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestoryIDs []string) ([]*entity.Outcome, error)
+
 	Search(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
 	SearchWithoutRelation(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
+	SearchPrivate(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
+	SearchPending(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
+	SearchPublished(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (*SearchPublishedOutcomeResponse, error)
 
 	Lock(ctx context.Context, operator *entity.Operator, outcomeID string) (string, error)
-
+	HasLocked(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (bool, error)
 	Publish(ctx context.Context, operator *entity.Operator, outcomeID string, scope string) error
 	BulkPublish(ctx context.Context, operator *entity.Operator, outcomeIDs []string, scope string) error
 	BulkDelete(ctx context.Context, operator *entity.Operator, outcomeIDs []string) error
 
-	SearchPrivate(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
-	SearchPending(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
-	SearchPublished(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
-
-	GetByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
-	GetLatestOutcomes(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, []string, error)
 	Approve(ctx context.Context, operator *entity.Operator, outcomeID string) error
 	Reject(ctx context.Context, operator *entity.Operator, outcomeID string, reason string) error
 
 	BulkApprove(ctx context.Context, operator *entity.Operator, outcomeIDs []string) error
 	BulkReject(ctx context.Context, operator *entity.Operator, outcomeIDs []string, reason string) error
 
-	GetLatestByIDsMapResult(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, error)
-
-	HasLocked(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (bool, error)
-	GetLatestByAncestors(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestoryIDs []string) ([]*entity.Outcome, error)
 	GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error)
 
 	ShortcodeProvider
 }
 
 type OutcomeModel struct {
+	outcomeDA         da.IOutcomeDA
+	outcomeRelationDA da.IOutcomeRelationDA
+}
+
+var (
+	_outcomeModel     IOutcomeModel
+	_outcomeModelOnce sync.Once
+)
+
+func GetOutcomeModel() IOutcomeModel {
+	_outcomeModelOnce.Do(func() {
+		_outcomeModel = &OutcomeModel{
+			outcomeDA:         da.GetOutcomeDA(),
+			outcomeRelationDA: da.GetOutcomeRelationDA(),
+		}
+	})
+	return _outcomeModel
 }
 
 func (ocm OutcomeModel) GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error) {
@@ -1053,40 +1069,41 @@ func (ocm OutcomeModel) SearchPending(ctx context.Context, user *entity.Operator
 	return total, outcomes, err
 }
 
-func (ocm OutcomeModel) SearchPublished(ctx context.Context, op *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
-	condition.PublishStatus = entity.OutcomeStatusPublished
+func (o OutcomeModel) SearchPublished(ctx context.Context, op *entity.Operator, condition *entity.OutcomeCondition) (*SearchPublishedOutcomeResponse, error) {
 	var outcomes []*entity.Outcome
-	total, err := da.GetOutcomeDA().Page(ctx, da.NewOutcomeCondition(condition), &outcomes)
+	daCondition := da.NewOutcomeCondition(condition)
+	total, err := o.outcomeDA.Page(ctx, daCondition, &outcomes)
 	if err != nil {
-		log.Error(ctx, "SearchPublished: da.GetOutcomeDA().Query failed",
+		log.Error(ctx, "o.outcomeDA.Page error",
 			log.Any("op", op),
-			log.Any("condition", condition),
+			log.Any("daCondition", daCondition),
 			log.Err(err))
-		return 0, nil, err
+		return nil, err
 	}
 
 	if len(outcomes) == 0 {
-		log.Info(ctx, "SearchPublished: not found",
+		log.Debug(ctx, "outcome record not found",
 			log.Any("op", op),
-			log.Any("condition", condition))
-		return total, outcomes, nil
+			log.Any("daCondition", daCondition))
+		return &SearchPublishedOutcomeResponse{
+			Total: 0,
+			List:  []*PublishedOutcomeView{},
+		}, nil
 	}
 
-	if err = ocm.fillOutcomeRelation(ctx, outcomes); err != nil {
-		log.Error(ctx, "SearchPublished: ocm.fillOutcomeRelation failed",
-			log.Any("outcomes", outcomes),
-			log.Err(err))
-		return 0, nil, err
+	publishedOutcomeViewList, err := o.transformToPublishedOutcomeView(ctx, op, outcomes)
+	if err != nil {
+		log.Error(ctx, "o.transformToPublishedOutcomeView error",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("outcomes", outcomes))
+		return nil, err
 	}
 
-	if err = ocm.fillOutcomeSets(ctx, outcomes); err != nil {
-		log.Error(ctx, "SearchPublished: ocm.fillOutcomeSets failed",
-			log.Any("outcomes", outcomes),
-			log.Err(err))
-		return 0, nil, err
-	}
-
-	return total, outcomes, err
+	return &SearchPublishedOutcomeResponse{
+		Total: total,
+		List:  publishedOutcomeViewList,
+	}, err
 }
 
 func (ocm OutcomeModel) Approve(ctx context.Context, operator *entity.Operator, outcomeID string) error {
@@ -1743,18 +1760,6 @@ func allowSearchPrivate(ctx context.Context, operator *entity.Operator, perms ma
 	return false
 }
 
-var (
-	_outcomeModel     IOutcomeModel
-	_outcomeModelOnce sync.Once
-)
-
-func GetOutcomeModel() IOutcomeModel {
-	_outcomeModelOnce.Do(func() {
-		_outcomeModel = new(OutcomeModel)
-	})
-	return _outcomeModel
-}
-
 func (ocm OutcomeModel) CollectRelation(oc *entity.Outcome) []*entity.OutcomeRelation {
 	outcomeRelations := make([]*entity.OutcomeRelation, 0, len(oc.Programs)+len(oc.Subjects)+len(oc.Categories)+len(oc.Subcategories)+len(oc.Grades)+len(oc.Ages))
 	for i := range oc.Programs {
@@ -2061,4 +2066,55 @@ func (ocm OutcomeModel) fillOutcomeSets(ctx context.Context, outcomes []*entity.
 	}
 
 	return nil
+}
+
+func (o OutcomeModel) transformToPublishedOutcomeView(ctx context.Context, operator *entity.Operator, outcomes []*entity.Outcome) ([]*PublishedOutcomeView, error) {
+	result := make([]*PublishedOutcomeView, len(outcomes))
+	outcomeMap := make(map[string]*PublishedOutcomeView, len(outcomes))
+	outcomeIDs := make([]string, len(outcomes))
+	for i, outcome := range outcomes {
+		result[i] = &PublishedOutcomeView{
+			OutcomeID:   outcome.ID,
+			OutcomeName: outcome.Name,
+			Shortcode:   outcome.Shortcode,
+		}
+
+		outcomeIDs[i] = outcome.ID
+		outcomeMap[outcome.ID] = result[i]
+	}
+
+	var outcomeRelations []*entity.OutcomeRelation
+	err := o.outcomeRelationDA.Query(ctx, &da.OutcomeRelationCondition{
+		MasterIDs: dbo.NullStrings{
+			Strings: outcomeIDs,
+			Valid:   true,
+		},
+	}, &outcomeRelations)
+	if err != nil {
+		log.Error(ctx, "o.outcomeRelationDA.Query error",
+			log.Err(err),
+			log.Strings("outcomeIDs", outcomeIDs))
+		return nil, err
+	}
+
+	for _, outcomeRelation := range outcomeRelations {
+		if outcome, ok := outcomeMap[outcomeRelation.MasterID]; ok {
+			switch outcomeRelation.RelationType {
+			case entity.ProgramType:
+				outcome.ProgramIDs = append(outcome.ProgramIDs, outcomeRelation.RelationID)
+			case entity.SubjectType:
+				outcome.SubjectIDs = append(outcome.SubjectIDs, outcomeRelation.RelationID)
+			case entity.CategoryType:
+				outcome.CategoryIDs = append(outcome.CategoryIDs, outcomeRelation.RelationID)
+			case entity.SubcategoryType:
+				outcome.SubcategoryIDs = append(outcome.SubcategoryIDs, outcomeRelation.RelationID)
+			case entity.GradeType:
+				outcome.GradeIDs = append(outcome.GradeIDs, outcomeRelation.RelationID)
+			case entity.AgeType:
+				outcome.AgeIDs = append(outcome.AgeIDs, outcomeRelation.RelationID)
+			}
+		}
+	}
+
+	return result, nil
 }
