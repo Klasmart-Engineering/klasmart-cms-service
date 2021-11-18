@@ -23,7 +23,7 @@ func (m *reportModel) GetTeacherLoadReportOfAssignment(ctx context.Context, op *
 	}
 
 	// 1. fill CountOfClasses and CountOfStudents
-	mTeacherClass, err := external.GetTeacherLoadServiceProvider().BatchGetClassWithStudent(ctx, op, req.TeacherIDList)
+	mTeacherClass, err := external.GetTeacherLoadServiceProvider().BatchGetActiveClassWithStudent(ctx, op, req.TeacherIDList)
 	if err != nil {
 		return
 	}
