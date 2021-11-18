@@ -11,7 +11,7 @@ import (
 )
 
 func (t *reportModel) ListTeacherLoadLessons(ctx context.Context, op *entity.Operator, args *entity.TeacherLoadLessonArgs) ([]*entity.TeacherLoadLesson, error) {
-	mapTeacherClassWithStudent, err := external.GetTeacherLoadServiceProvider().BatchGetClassWithStudent(ctx, op, args.TeacherIDs)
+	mapTeacherClassWithStudent, err := external.GetTeacherLoadServiceProvider().BatchGetActiveClassWithStudent(ctx, op, args.TeacherIDs)
 	if err != nil {
 		log.Error(ctx, "ListTeacherLoadLessons: call ams failed",
 			log.Err(err),
