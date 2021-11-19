@@ -105,13 +105,13 @@ func TestOutcomeSetModel_CreateOutcomeSet(t *testing.T) {
 func TestSearch(t *testing.T) {
 	setup()
 	ctx := context.TODO()
-	count, outcomes, err := GetOutcomeModel().Search(ctx, &entity.Operator{OrgID: "92db7ddd-1f23-4f64-bd47-94f6d34a50c0"}, &entity.OutcomeCondition{})
+	response, err := GetOutcomeModel().Search(ctx, &entity.Operator{OrgID: "92db7ddd-1f23-4f64-bd47-94f6d34a50c0"}, &entity.OutcomeCondition{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(count)
-	for _, v := range outcomes {
-		t.Log(v.EditingOutcome)
+	t.Log(response.Total)
+	for _, v := range response.List {
+		t.Log(v)
 	}
 }
 
