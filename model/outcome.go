@@ -60,12 +60,11 @@ type IOutcomeModel interface {
 }
 
 type OutcomeModel struct {
-	outcomeDA         da.IOutcomeDA
-	outcomeRelationDA da.IOutcomeRelationDA
-	outcomeSetDA      da.IOutcomeSetDA
-	milestoneDA       da.IMilestoneDA
-	// TODO: not interface
-	milestoneOutcomeDA da.MilestoneOutcomeSQLDA
+	outcomeDA          da.IOutcomeDA
+	outcomeRelationDA  da.IOutcomeRelationDA
+	outcomeSetDA       da.IOutcomeSetDA
+	milestoneDA        da.IMilestoneDA
+	milestoneOutcomeDA da.IMilestoneOutcomeDA
 
 	userService        external.UserServiceProvider
 	programService     external.ProgramServiceProvider
@@ -88,7 +87,7 @@ func GetOutcomeModel() IOutcomeModel {
 			outcomeRelationDA:  da.GetOutcomeRelationDA(),
 			outcomeSetDA:       da.GetOutcomeSetDA(),
 			milestoneDA:        da.GetMilestoneDA(),
-			milestoneOutcomeDA: *da.GetMilestoneOutcomeDA(),
+			milestoneOutcomeDA: da.GetMilestoneOutcomeDA(),
 
 			userService:        external.GetUserServiceProvider(),
 			programService:     external.GetProgramServiceProvider(),
@@ -542,7 +541,7 @@ func (ocm OutcomeModel) Search(ctx context.Context, op *entity.Operator, conditi
 	err := ocm.fillAuthorIDs(ctx, op, condition)
 	if err != nil {
 		log.Error(ctx, "Search: fillAuthorIDs failed",
-			log.Any("err", err),
+			log.Err(err),
 			log.String("op", op.UserID),
 			log.Any("condition", condition))
 		return nil, err
@@ -551,6 +550,7 @@ func (ocm OutcomeModel) Search(ctx context.Context, op *entity.Operator, conditi
 	err = ocm.fillIDsBySetName(ctx, op, condition)
 	if err != nil {
 		log.Error(ctx, "Search: fillIDsBySetName failed",
+			log.Err(err),
 			log.String("op", op.UserID),
 			log.Any("condition", condition))
 		return nil, err
@@ -1939,6 +1939,13 @@ func (o OutcomeModel) transformToPublishedOutcomeView(ctx context.Context, opera
 			OutcomeID:   outcome.ID,
 			OutcomeName: outcome.Name,
 			Shortcode:   outcome.Shortcode,
+			// init zero value
+			ProgramIDs:     []string{},
+			SubjectIDs:     []string{},
+			CategoryIDs:    []string{},
+			SubcategoryIDs: []string{},
+			GradeIDs:       []string{},
+			AgeIDs:         []string{},
 		}
 
 		outcomeIDs[i] = outcome.ID
@@ -2003,6 +2010,12 @@ func (o OutcomeModel) transformToOutcomeView(ctx context.Context, operator *enti
 			PublishStatus: string(outcome.PublishStatus),
 			CreatedAt:     outcome.CreateAt,
 			UpdatedAt:     outcome.UpdateAt,
+
+			// init zero value
+			LockedLocation: []string{},
+			Program:        []Program{},
+			Developmental:  []Developmental{},
+			Sets:           []*OutcomeSetCreateView{},
 		}
 
 		if outcome.HasLocked() {
@@ -2095,8 +2108,8 @@ func (o OutcomeModel) transformToOutcomeView(ctx context.Context, operator *enti
 				return err
 			}
 
-			for _, outcome := range lockedOutcomeChildren {
-				lockedOutcomeChildrenMap[outcome.SourceID] = outcome
+			for _, lockedOutcome := range lockedOutcomeChildren {
+				lockedOutcomeChildrenMap[lockedOutcome.SourceID] = lockedOutcome
 			}
 
 			return nil
@@ -2163,7 +2176,7 @@ func (o OutcomeModel) transformToOutcomeView(ctx context.Context, operator *enti
 		}
 
 		if outcome.HasLocked() {
-			if lockedOutcomeChildren, ok := lockedOutcomeChildrenMap[outcome.SourceID]; ok {
+			if lockedOutcomeChildren, ok := lockedOutcomeChildrenMap[outcome.ID]; ok {
 				outcomeView.LockedLocation = []string{string(lockedOutcomeChildren.PublishStatus)}
 				outcomeView.LastEditedAt = lockedOutcomeChildren.CreateAt
 				if userName, ok := userNameMap[outcome.LockedBy]; ok {
@@ -2226,6 +2239,16 @@ func (o OutcomeModel) transformToOutcomeDetailView(ctx context.Context, operator
 		Keywords:      strings.Split(outcome.Keywords, ","),
 		CreatedAt:     outcome.CreateAt,
 		UpdatedAt:     outcome.UpdateAt,
+		// init zero value
+		LockedLocation: []string{},
+		Program:        []Program{},
+		Subject:        []Subject{},
+		Developmental:  []Developmental{},
+		Skills:         []Skill{},
+		Age:            []Age{},
+		Grade:          []Grade{},
+		Sets:           []*OutcomeSetCreateView{},
+		Milestones:     []*Milestone{},
 	}
 
 	if outcome.HasLocked() {
@@ -2288,7 +2311,7 @@ func (o OutcomeModel) transformToOutcomeDetailView(ctx context.Context, operator
 	var subCategoryMap map[string]*external.SubCategory
 	var gradeMap map[string]*external.Grade
 	var ageMap map[string]*external.Age
-	var outcomeMilestones []*Milestone
+	outcomeMilestones := []*Milestone{}
 
 	// get outcome set
 	g.Go(func() error {
@@ -2338,8 +2361,8 @@ func (o OutcomeModel) transformToOutcomeDetailView(ctx context.Context, operator
 				return err
 			}
 
-			for _, outcome := range lockedOutcomeChildren {
-				lockedOutcomeChildrenMap[outcome.SourceID] = outcome
+			for _, lockedOutcome := range lockedOutcomeChildren {
+				lockedOutcomeChildrenMap[lockedOutcome.SourceID] = lockedOutcome
 			}
 
 			return nil
@@ -2528,7 +2551,7 @@ func (o OutcomeModel) transformToOutcomeDetailView(ctx context.Context, operator
 	result.Milestones = outcomeMilestones
 
 	if outcome.HasLocked() {
-		if lockedOutcomeChildren, ok := lockedOutcomeChildrenMap[outcome.SourceID]; ok {
+		if lockedOutcomeChildren, ok := lockedOutcomeChildrenMap[outcome.ID]; ok {
 			result.LockedLocation = []string{string(lockedOutcomeChildren.PublishStatus)}
 			result.LastEditedAt = lockedOutcomeChildren.CreateAt
 			if userName, ok := userNameMap[outcome.LockedBy]; ok {

@@ -14,6 +14,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -23,7 +24,7 @@ var (
 
 type IMilestoneModel interface {
 	Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string) error
-	Obtain(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error)
+	Obtain(ctx context.Context, op *entity.Operator, milestoneID string) (*MilestoneDetailView, error)
 	Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeIDs []string) error
 	Delete(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, IDs []string) error
 	Search(ctx context.Context, op *entity.Operator, condition *entity.MilestoneCondition) (int, []*entity.Milestone, error)
@@ -43,11 +44,40 @@ type IMilestoneModel interface {
 }
 
 type MilestoneModel struct {
+	milestoneDA         da.IMilestoneDA
+	milestoneRelationDA da.IMilestoneRelationDA
+	milestoneOutcomeDA  da.IMilestoneOutcomeDA
+	outcomeSetDA        da.IOutcomeSetDA
+	outcomeRelationDA   da.IOutcomeRelationDA
+
+	organizationService external.OrganizationServiceProvider
+	userService         external.UserServiceProvider
+	programService      external.ProgramServiceProvider
+	subjectService      external.SubjectServiceProvider
+	categoryService     external.CategoryServiceProvider
+	subCategoryService  external.SubCategoryServiceProvider
+	gradeService        external.GradeServiceProvider
+	ageService          external.AgeServiceProvider
 }
 
 func GetMilestoneModel() IMilestoneModel {
 	_milestoneModelOnce.Do(func() {
-		_milestoneModel = new(MilestoneModel)
+		_milestoneModel = &MilestoneModel{
+			milestoneDA:         da.GetMilestoneDA(),
+			milestoneRelationDA: da.GetMilestoneRelationDA(),
+			milestoneOutcomeDA:  da.GetMilestoneOutcomeDA(),
+			outcomeSetDA:        da.GetOutcomeSetDA(),
+			outcomeRelationDA:   da.GetOutcomeRelationDA(),
+
+			organizationService: external.GetOrganizationServiceProvider(),
+			userService:         external.GetUserServiceProvider(),
+			programService:      external.GetProgramServiceProvider(),
+			subjectService:      external.GetSubjectServiceProvider(),
+			categoryService:     external.GetCategoryServiceProvider(),
+			subCategoryService:  external.GetSubCategoryServiceProvider(),
+			gradeService:        external.GetGradeServiceProvider(),
+			ageService:          external.GetAgeServiceProvider(),
+		}
 	})
 	return _milestoneModel
 }
@@ -116,7 +146,7 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 			return err
 		}
 
-		err = da.GetMilestoneRelationDA().InsertTx(ctx, tx, m.collectRelation(milestone))
+		_, err = da.GetMilestoneRelationDA().InsertTx(ctx, tx, m.collectRelation(milestone))
 		if err != nil {
 			log.Error(ctx, "CreateMilestone: InsertTx failed",
 				log.Err(err),
@@ -130,93 +160,17 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 	return err
 }
 
-func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error) {
+func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milestoneID string) (*MilestoneDetailView, error) {
 	var milestone *entity.Milestone
-	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		var err error
-		milestone, err = da.GetMilestoneDA().GetByID(ctx, tx, milestoneID)
-		if err != nil {
-			log.Error(ctx, "Obtain: GetByID failed",
-				log.Err(err),
-				log.Any("op", op),
-				log.String("milestone", milestoneID))
-			return err
-		}
-		relations, err := da.GetMilestoneRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
-			MasterIDs:  dbo.NullStrings{Strings: []string{milestoneID}, Valid: true},
-			MasterType: sql.NullString{String: string(entity.MilestoneType), Valid: true},
-		})
-		if err != nil {
-			log.Error(ctx, "Obtain: Search failed", log.Any("op", op), log.String("milestone", milestoneID))
-			return err
-		}
-		m.fillRelation(milestone, relations)
-		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
-			MilestoneID: sql.NullString{String: milestoneID, Valid: true},
-		})
-		if err != nil {
-			log.Error(ctx, "Obtain: SearchTx failed", log.Any("op", op), log.String("milestone", milestoneID))
-			return err
-		}
-		bindLength := len(milestoneOutcomes)
-		if bindLength == 0 {
-			log.Info(ctx, "Obtain: no outcome bind", log.String("milestone", milestoneID))
-			return nil
-		}
+	err := m.milestoneDA.Get(ctx, milestoneID, &milestone)
+	if err != nil {
+		log.Error(ctx, "m.milestoneDA.Get error",
+			log.Err(err),
+			log.String("milestoneID", milestoneID))
+		return nil, err
+	}
 
-		outcomeAncestors := make([]string, 0, bindLength)
-		for i := range milestoneOutcomes {
-			outcomeAncestors = append(outcomeAncestors, milestoneOutcomes[i].OutcomeAncestor)
-		}
-
-		// NKL-1021
-		// if milestone.Type == entity.GeneralMilestoneType {
-		// 	intersect, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
-		// 		OutcomeAncestors: dbo.NullStrings{Strings: outcomeAncestors, Valid: true},
-		// 		NotMilestoneID:   sql.NullString{String: milestone.ID, Valid: true},
-		// 	})
-		// 	if err != nil {
-		// 		log.Debug(ctx, "Obtain: exclude normal bind from general",
-		// 			log.Any("milestone", milestone),
-		// 			log.Strings("ancestors", outcomeAncestors))
-		// 		return err
-		// 	}
-		// 	if len(intersect) > 0 {
-		// 		intersectMap := make(map[string]bool)
-		// 		for i := range intersect {
-		// 			intersectMap[intersect[i].OutcomeAncestor] = true
-		// 		}
-		// 		outcomeAncestors = make([]string, 0, bindLength-len(intersectMap))
-		// 		for i := range milestoneOutcomes {
-		// 			if !intersectMap[milestoneOutcomes[i].OutcomeAncestor] {
-		// 				outcomeAncestors = append(outcomeAncestors, milestoneOutcomes[i].OutcomeAncestor)
-		// 			}
-		// 		}
-		// 	}
-		// }
-
-		outcomeAncestors = utils.StableSliceDeduplication(outcomeAncestors)
-
-		outcomes, err := GetOutcomeModel().GetLatestByAncestors(ctx, op, tx, outcomeAncestors)
-		if err != nil {
-			log.Error(ctx, "Obtain: GetLatestByAncestors failed",
-				log.Err(err),
-				log.Strings("ancestors", outcomeAncestors))
-			return err
-		}
-
-		outcomesMap := make(map[string]*entity.Outcome, len(outcomes))
-		for i := range outcomes {
-			outcomesMap[outcomes[i].AncestorID] = outcomes[i]
-		}
-		milestone.Outcomes = make([]*entity.Outcome, len(outcomes))
-		for i := range outcomeAncestors {
-			milestone.Outcomes[i] = outcomesMap[outcomeAncestors[i]]
-		}
-		milestone.LoCounts = len(milestone.Outcomes)
-		return nil
-	})
-	return milestone, err
+	return m.transformToMilestoneDetailView(ctx, op, milestone)
 }
 
 func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeAncestors []string) error {
@@ -278,7 +232,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			}
 		}
 		newMilsestone := m.updateMilestone(oldMilestone, milestone)
-		err = da.GetMilestoneDA().Update(ctx, tx, newMilsestone)
+		_, err = da.GetMilestoneDA().UpdateTx(ctx, tx, newMilsestone)
 		if err != nil {
 			log.Error(ctx, "Update: Update failed",
 				log.Err(err),
@@ -329,7 +283,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 				log.Any("milestone", oldMilestone))
 			return err
 		}
-		err = da.GetMilestoneRelationDA().InsertTx(ctx, tx, m.collectRelation(newMilsestone))
+		_, err = da.GetMilestoneRelationDA().InsertTx(ctx, tx, m.collectRelation(newMilsestone))
 		if err != nil {
 			log.Error(ctx, "Update: InsertTx failed",
 				log.Err(err),
@@ -499,10 +453,11 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 			}
 		}
 
-		relations, err := da.GetMilestoneRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
+		var milestoneRelations []*entity.MilestoneRelation
+		err = da.GetMilestoneRelationDA().QueryTx(ctx, tx, &da.RelationCondition{
 			MasterIDs:  dbo.NullStrings{Strings: milestoneIDs, Valid: true},
 			MasterType: sql.NullString{String: string(entity.MilestoneType), Valid: true},
-		})
+		}, &milestoneRelations)
 		if err != nil {
 			log.Error(ctx, "Search: Search failed",
 				log.Err(err),
@@ -510,15 +465,15 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 				log.Strings("milestone", milestoneIDs))
 			return err
 		}
-		for i := range relations {
+		for i := range milestoneRelations {
 			for j := range milestones {
-				if relations[i].MasterID == milestones[j].ID {
-					m.fillRelation(milestones[j], []*entity.Relation{relations[i]})
+				if milestoneRelations[i].MasterID == milestones[j].ID {
+					m.fillRelation(milestones[j], []*entity.MilestoneRelation{milestoneRelations[i]})
 					break
 				}
 			}
 		}
-		counts, err := da.GetMilestoneOutcomeDA().CountTx(ctx, tx, generalIDs, normalIDs)
+		counts, err := da.GetMilestoneOutcomeDA().BatchCountTx(ctx, tx, generalIDs, normalIDs)
 		if err != nil {
 			log.Error(ctx, "Search: Count failed",
 				log.Err(err),
@@ -591,7 +546,7 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 		}
 
 		milestone.LockedBy = op.UserID
-		err = da.GetMilestoneDA().Update(ctx, tx, milestone)
+		_, err = da.GetMilestoneDA().UpdateTx(ctx, tx, milestone)
 		if err != nil {
 			log.Error(ctx, "Occupy: Update failed",
 				log.Err(err),
@@ -633,28 +588,28 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 			return err
 		}
 
-		relations, err := da.GetMilestoneRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
+		var milestoneRelations []*entity.MilestoneRelation
+		err = da.GetMilestoneRelationDA().QueryTx(ctx, tx, &da.RelationCondition{
 			MasterIDs:  dbo.NullStrings{Strings: []string{milestoneID}, Valid: true},
 			MasterType: sql.NullString{String: string(entity.MilestoneType), Valid: true},
-		})
+		}, &milestoneRelations)
 		if err != nil {
 			log.Error(ctx, "Occupy: Search failed",
 				log.Err(err),
-				log.Any("op", op),
-				log.Any("relation", relations))
+				log.Any("op", op))
 			return err
 		}
 
-		for i := range relations {
-			relations[i].MasterID = newVersion.ID
+		for i := range milestoneRelations {
+			milestoneRelations[i].MasterID = newVersion.ID
 		}
 
-		err = da.GetMilestoneRelationDA().InsertTx(ctx, tx, relations)
+		_, err = da.GetMilestoneRelationDA().InsertTx(ctx, tx, milestoneRelations)
 		if err != nil {
 			log.Error(ctx, "Occupy: InsertTx failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Any("relation", relations))
+				log.Any("milestoneRelations", milestoneRelations))
 			return err
 		}
 		return nil
@@ -757,7 +712,7 @@ func (m MilestoneModel) BulkPublish(ctx context.Context, op *entity.Operator, mi
 				return ErrInvalidContentStatusToPublish
 			}
 
-			err = da.GetMilestoneDA().Update(ctx, tx, ms)
+			_, err = da.GetMilestoneDA().UpdateTx(ctx, tx, ms)
 			if err != nil {
 				log.Error(ctx, "BulkPublish: UpdateOutcome failed",
 					log.Any("milestone", ms))
@@ -807,7 +762,7 @@ func (m MilestoneModel) BulkApprove(ctx context.Context, op *entity.Operator, mi
 				return ErrInvalidPublishStatus
 			}
 
-			err = da.GetMilestoneDA().Update(ctx, tx, milestone)
+			_, err = da.GetMilestoneDA().UpdateTx(ctx, tx, milestone)
 			if err != nil {
 				log.Error(ctx, "BulkApprove: Update failed",
 					log.Any("op", op),
@@ -829,7 +784,7 @@ func (m MilestoneModel) BulkApprove(ctx context.Context, op *entity.Operator, mi
 						log.Any("milestone", milestone))
 					return ErrInvalidPublishStatus
 				}
-				err = da.GetMilestoneDA().Update(ctx, tx, parent)
+				_, err = da.GetMilestoneDA().UpdateTx(ctx, tx, parent)
 				if err != nil {
 					log.Error(ctx, "BulkApprove: Update failed",
 						log.Any("milestone", milestone))
@@ -898,7 +853,7 @@ func (m MilestoneModel) BulkReject(ctx context.Context, op *entity.Operator, mil
 					log.Any("milestone", milestone))
 				return ErrInvalidPublishStatus
 			}
-			err = da.GetMilestoneDA().Update(ctx, tx, milestone)
+			_, err = da.GetMilestoneDA().UpdateTx(ctx, tx, milestone)
 			if err != nil {
 				log.Error(ctx, "BulkReject: Update failed",
 					log.Any("op", op),
@@ -1319,7 +1274,7 @@ func (m MilestoneModel) collectRelation(ms *entity.Milestone) []*entity.Relation
 	return relations
 }
 
-func (m MilestoneModel) fillRelation(ms *entity.Milestone, relations []*entity.Relation) {
+func (m MilestoneModel) fillRelation(ms *entity.Milestone, relations []*entity.MilestoneRelation) {
 
 	for i := range relations {
 		switch relations[i].RelationType {
@@ -1431,4 +1386,518 @@ func (m *MilestoneModel) allowDeleteMilestone(ctx context.Context, operator *ent
 	}
 
 	return false
+}
+
+func (m *MilestoneModel) transformToMilestoneDetailView(ctx context.Context, operator *entity.Operator, milestone *entity.Milestone) (*MilestoneDetailView, error) {
+	result := &MilestoneDetailView{
+		MilestoneID:  milestone.ID,
+		Name:         milestone.Name,
+		Shortcode:    milestone.Shortcode,
+		Description:  milestone.Description,
+		Type:         milestone.Type,
+		Status:       string(milestone.Status),
+		RejectReason: milestone.RejectReason,
+		// init zero value
+		Program:     []*Program{},
+		Subject:     []*Subject{},
+		Category:    []*Category{},
+		SubCategory: []*SubCategory{},
+		Age:         []*Age{},
+		Grade:       []*Grade{},
+		Outcomes:    []*MilestoneOutcomeView{},
+		CreateAt:    milestone.CreateAt,
+	}
+
+	userIDs := []string{milestone.AuthorID}
+	var milestoneRelations []*entity.MilestoneRelation
+	var programIDs []string
+	var subjectIDs []string
+	var categoryIDs []string
+	var subCategoryIDs []string
+	var ageIDs []string
+	var gradeIDs []string
+
+	err := m.milestoneRelationDA.Query(ctx, &da.MilestoneRelationCondition{
+		MasterIDs: dbo.NullStrings{
+			Strings: []string{milestone.ID},
+			Valid:   true,
+		},
+	}, &milestoneRelations)
+	if err != nil {
+		log.Error(ctx, "m.milestoneRelationDA.Query error",
+			log.Err(err),
+			log.String("milsestoneID", milestone.ID))
+		return nil, err
+	}
+
+	for _, milestoneRelation := range milestoneRelations {
+		switch milestoneRelation.RelationType {
+		case entity.ProgramType:
+			programIDs = append(programIDs, milestoneRelation.RelationID)
+		case entity.SubjectType:
+			subjectIDs = append(subjectIDs, milestoneRelation.RelationID)
+		case entity.CategoryType:
+			categoryIDs = append(categoryIDs, milestoneRelation.RelationID)
+		case entity.SubcategoryType:
+			subCategoryIDs = append(subCategoryIDs, milestoneRelation.RelationID)
+		case entity.GradeType:
+			gradeIDs = append(gradeIDs, milestoneRelation.RelationID)
+		case entity.AgeType:
+			ageIDs = append(ageIDs, milestoneRelation.RelationID)
+		}
+	}
+
+	programIDs = utils.StableSliceDeduplication(programIDs)
+	subjectIDs = utils.StableSliceDeduplication(subjectIDs)
+	categoryIDs = utils.StableSliceDeduplication(categoryIDs)
+	subCategoryIDs = utils.StableSliceDeduplication(subCategoryIDs)
+	gradeIDs = utils.StableSliceDeduplication(gradeIDs)
+	ageIDs = utils.StableSliceDeduplication(ageIDs)
+
+	g := new(errgroup.Group)
+	var orgNameMap map[string]string
+	var userNameMap map[string]string
+	var programNameMap map[string]string
+	var subjectNameMap map[string]string
+	var categoryNameMap map[string]string
+	var subCategoryNameMap map[string]string
+	var gradeNameMap map[string]string
+	var ageNameMap map[string]string
+	milestoneOutcomeViews := []*MilestoneOutcomeView{}
+
+	g.Go(func() error {
+		orgNames, err := m.organizationService.BatchGetNameMap(ctx, operator, []string{milestone.OrganizationID})
+		if err != nil {
+			log.Error(ctx, "m.organizationService.BatchGetNameMap error",
+				log.Err(err),
+				log.Strings("userIDs", userIDs))
+			return err
+		}
+
+		orgNameMap = orgNames
+
+		return nil
+	})
+
+	// get user name map
+	if len(userIDs) > 0 {
+		g.Go(func() error {
+			userNames, err := m.userService.BatchGetNameMap(ctx, operator, userIDs)
+			if err != nil {
+				log.Error(ctx, "m.userService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("userIDs", userIDs))
+				return err
+			}
+
+			userNameMap = userNames
+
+			return nil
+		})
+	}
+
+	// get program info
+	if len(programIDs) > 0 {
+		g.Go(func() error {
+			programNames, err := m.programService.BatchGetNameMap(ctx, operator, programIDs)
+			if err != nil {
+				log.Error(ctx, "m.programService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("programIDs", programIDs))
+				return err
+			}
+
+			programNameMap = programNames
+
+			return nil
+		})
+	}
+
+	// get subject info
+	if len(subjectIDs) > 0 {
+		g.Go(func() error {
+			subjectNames, err := m.subjectService.BatchGetNameMap(ctx, operator, subjectIDs)
+			if err != nil {
+				log.Error(ctx, "m.subjectService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("subjectIDs", subjectIDs))
+				return err
+			}
+
+			subjectNameMap = subjectNames
+
+			return nil
+		})
+	}
+
+	// get category info
+	if len(categoryIDs) > 0 {
+		g.Go(func() error {
+			categoryNames, err := m.categoryService.BatchGetNameMap(ctx, operator, categoryIDs)
+			if err != nil {
+				log.Error(ctx, "m.categoryService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("categoryIDs", categoryIDs))
+				return err
+			}
+
+			categoryNameMap = categoryNames
+
+			return nil
+		})
+	}
+
+	// get sub category info
+	if len(subCategoryIDs) > 0 {
+		g.Go(func() error {
+			subCategoryNames, err := m.subCategoryService.BatchGetNameMap(ctx, operator, subCategoryIDs)
+			if err != nil {
+				log.Error(ctx, "m.subCategoryService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("subCategoryIDs", subCategoryIDs))
+				return err
+			}
+
+			subCategoryNameMap = subCategoryNames
+
+			return nil
+		})
+	}
+
+	// get grade info
+	if len(gradeIDs) > 0 {
+		g.Go(func() error {
+			gradeNames, err := m.gradeService.BatchGetNameMap(ctx, operator, gradeIDs)
+			if err != nil {
+				log.Error(ctx, "m.gradeService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("gradeIDs", gradeIDs))
+				return err
+			}
+
+			gradeNameMap = gradeNames
+
+			return nil
+		})
+	}
+
+	// get age info
+	if len(ageIDs) > 0 {
+		g.Go(func() error {
+			ageNames, err := m.ageService.BatchGetNameMap(ctx, operator, ageIDs)
+			if err != nil {
+				log.Error(ctx, "m.ageService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("ageIDs", ageIDs))
+				return err
+			}
+
+			ageNameMap = ageNames
+
+			return nil
+		})
+	}
+
+	// TODO: bad database query
+	// get outcomes
+	g.Go(func() error {
+		milestoneOutcomeRelations, err := m.milestoneOutcomeDA.SearchTx(ctx, dbo.MustGetDB(ctx),
+			&da.MilestoneOutcomeCondition{
+				MilestoneID: sql.NullString{String: milestone.ID, Valid: true},
+			})
+		if err != nil {
+			log.Error(ctx, "m.milestoneOutcomeDA.SearchTx error", log.Err(err),
+				log.Any("milestone", milestone))
+			return err
+		}
+
+		if len(milestoneOutcomeRelations) == 0 {
+			log.Debug(ctx, "milestone outcome relation not found", log.Any("milestone", milestone))
+			return nil
+		}
+
+		outcomeAncestorIDs := make([]string, len(milestoneOutcomeRelations))
+		for i, milestoneOutcomeRelation := range milestoneOutcomeRelations {
+			outcomeAncestorIDs[i] = milestoneOutcomeRelation.OutcomeAncestor
+		}
+
+		outcomeAncestorIDs = utils.StableSliceDeduplication(outcomeAncestorIDs)
+
+		outcomes, err := GetOutcomeModel().GetLatestByAncestors(ctx, operator, dbo.MustGetDB(ctx), outcomeAncestorIDs)
+		if err != nil {
+			log.Error(ctx, "GetOutcomeModel().GetLatestByAncestors error",
+				log.Err(err),
+				log.Strings("outcomeAncestorIDs", outcomeAncestorIDs))
+			return err
+		}
+
+		milestoneOutcomeViewList, err := m.transformToMilestoneOutcomeView(ctx, operator, outcomes)
+		if err != nil {
+			log.Error(ctx, " m.transformToMilestoneOutcomeView error",
+				log.Err(err),
+				log.Any("outcomes", outcomes))
+			return err
+		}
+
+		outcomesMap := make(map[string]*MilestoneOutcomeView, len(outcomes))
+		for _, milestoneOutcomeView := range milestoneOutcomeViewList {
+			outcomesMap[milestoneOutcomeView.AncestorID] = milestoneOutcomeView
+		}
+
+		for _, outcomeAncestorID := range outcomeAncestorIDs {
+			milestoneOutcomeViews = append(milestoneOutcomeViews, outcomesMap[outcomeAncestorID])
+		}
+
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		log.Error(ctx, "transformToMilestoneDetailView error",
+			log.Err(err))
+		return nil, err
+	}
+
+	// fill author name
+	if userName, ok := userNameMap[milestone.AuthorID]; ok {
+		result.Author = &AuthorView{
+			AuthorID:   milestone.AuthorID,
+			AuthorName: userName,
+		}
+	} else {
+		log.Error(ctx, "author not found", log.String("userID", milestone.AuthorID))
+	}
+
+	// fill org name
+	if orgName, ok := orgNameMap[milestone.OrganizationID]; ok {
+		result.Organization = &OrganizationView{
+			OrganizationID:   milestone.OrganizationID,
+			OrganizationName: orgName,
+		}
+	} else {
+		log.Error(ctx, "organization not found", log.String("orgID", milestone.OrganizationID))
+	}
+
+	// fill outcome milestones
+	result.Outcomes = milestoneOutcomeViews
+
+	// fill program, subject, category, subCategory, grade, age
+	for _, milestoneRelation := range milestoneRelations {
+		switch milestoneRelation.RelationType {
+		case entity.ProgramType:
+			if programName, ok := programNameMap[milestoneRelation.RelationID]; ok {
+				result.Program = append(result.Program,
+					&Program{
+						ProgramID:   milestoneRelation.RelationID,
+						ProgramName: programName,
+					})
+			} else {
+				log.Error(ctx, "program record not found", log.String("programID", milestoneRelation.RelationID))
+			}
+		case entity.SubjectType:
+			if subjectName, ok := subjectNameMap[milestoneRelation.RelationID]; ok {
+				result.Subject = append(result.Subject,
+					&Subject{
+						SubjectID:   milestoneRelation.RelationID,
+						SubjectName: subjectName,
+					})
+			} else {
+				log.Error(ctx, "subject record not found", log.String("subjectID", milestoneRelation.RelationID))
+			}
+		case entity.CategoryType:
+			if categoryName, ok := categoryNameMap[milestoneRelation.RelationID]; ok {
+				result.Category = append(result.Category,
+					&Category{
+						CategoryID:   milestoneRelation.RelationID,
+						CategoryName: categoryName,
+					})
+			} else {
+				log.Error(ctx, "category record not found", log.String("categoryID", milestoneRelation.RelationID))
+			}
+		case entity.SubcategoryType:
+			if subCategoryName, ok := subCategoryNameMap[milestoneRelation.RelationID]; ok {
+				result.SubCategory = append(result.SubCategory,
+					&SubCategory{
+						SubCategoryID:   milestoneRelation.RelationID,
+						SubCategoryName: subCategoryName,
+					})
+			} else {
+				log.Error(ctx, "subCategory record not found", log.String("subCategoryID", milestoneRelation.RelationID))
+			}
+		case entity.GradeType:
+			if gradeName, ok := gradeNameMap[milestoneRelation.RelationID]; ok {
+				result.Grade = append(result.Grade,
+					&Grade{
+						GradeID:   milestoneRelation.RelationID,
+						GradeName: gradeName,
+					})
+			} else {
+				log.Error(ctx, "grade record not found", log.String("gradeID", milestoneRelation.RelationID))
+			}
+		case entity.AgeType:
+			if ageName, ok := ageNameMap[milestoneRelation.RelationID]; ok {
+				result.Age = append(result.Age,
+					&Age{
+						AgeID:   milestoneRelation.RelationID,
+						AgeName: ageName,
+					})
+			} else {
+				log.Error(ctx, "age record not found", log.String("ageID", milestoneRelation.RelationID))
+			}
+		}
+	}
+
+	return result, nil
+}
+
+func (m *MilestoneModel) transformToMilestoneOutcomeView(ctx context.Context, operator *entity.Operator, outcomes []*entity.Outcome) ([]*MilestoneOutcomeView, error) {
+	result := make([]*MilestoneOutcomeView, len(outcomes))
+	resultMap := make(map[string]*MilestoneOutcomeView, len(outcomes))
+	outcomeIDs := make([]string, len(outcomes))
+	var outcomeRelations []*entity.OutcomeRelation
+	var programIDs []string
+	var categoryIDs []string
+
+	for i, outcome := range outcomes {
+		result[i] = &MilestoneOutcomeView{
+			OutcomeID:   outcome.ID,
+			OutcomeName: outcome.Name,
+			Shortcode:   outcome.Shortcode,
+			AncestorID:  outcome.AncestorID,
+			Assumed:     outcome.Assumed,
+			// init zero value
+			Program:       []Program{},
+			Developmental: []Developmental{},
+			Sets:          []*OutcomeSetCreateView{},
+		}
+
+		outcomeIDs[i] = outcome.ID
+		resultMap[outcome.ID] = result[i]
+	}
+
+	err := m.outcomeRelationDA.Query(ctx, &da.OutcomeRelationCondition{
+		MasterIDs: dbo.NullStrings{
+			Strings: outcomeIDs,
+			Valid:   true,
+		},
+	}, &outcomeRelations)
+	if err != nil {
+		log.Error(ctx, "m.outcomeRelationDA.Query error",
+			log.Err(err),
+			log.Strings("outcomeIDs", outcomeIDs))
+		return nil, err
+	}
+
+	for _, outcomeRelation := range outcomeRelations {
+		switch outcomeRelation.RelationType {
+		case entity.ProgramType:
+			programIDs = append(programIDs, outcomeRelation.RelationID)
+		case entity.CategoryType:
+			categoryIDs = append(categoryIDs, outcomeRelation.RelationID)
+		}
+	}
+
+	programIDs = utils.StableSliceDeduplication(programIDs)
+	categoryIDs = utils.StableSliceDeduplication(categoryIDs)
+
+	g := new(errgroup.Group)
+	var outcomeSetMap map[string][]*entity.Set
+	var programNameMap map[string]string
+	var categoryNameMap map[string]string
+
+	// get outcome set
+	g.Go(func() error {
+		outcomeSets, err := m.outcomeSetDA.SearchSetsByOutcome(ctx, dbo.MustGetDB(ctx), outcomeIDs)
+		if err != nil {
+			log.Error(ctx, "m.outcomeSetDA.SearchSetsByOutcome error",
+				log.Err(err),
+				log.Strings("outcomeIDs", outcomeIDs))
+			return err
+		}
+
+		outcomeSetMap = outcomeSets
+		return nil
+	})
+
+	// get program info
+	if len(programIDs) > 0 {
+		g.Go(func() error {
+			programNames, err := m.programService.BatchGetNameMap(ctx, operator, programIDs)
+			if err != nil {
+				log.Error(ctx, "m.programService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("programIDs", programIDs))
+				return err
+			}
+
+			programNameMap = programNames
+
+			return nil
+		})
+	}
+
+	// get category info
+	if len(categoryIDs) > 0 {
+		g.Go(func() error {
+			categoryNames, err := m.categoryService.BatchGetNameMap(ctx, operator, categoryIDs)
+			if err != nil {
+				log.Error(ctx, "m.categoryService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("categoryIDs", categoryIDs))
+				return err
+			}
+
+			categoryNameMap = categoryNames
+
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		log.Error(ctx, "transformToOutcomeView error",
+			log.Err(err))
+		return nil, err
+	}
+
+	for i, outcome := range outcomes {
+		milestoneOutcomeView := result[i]
+		// fill outcome sets
+		if outcomeSets, ok := outcomeSetMap[outcome.ID]; ok {
+			for _, set := range outcomeSets {
+				milestoneOutcomeView.Sets = append(milestoneOutcomeView.Sets, &OutcomeSetCreateView{
+					SetID:   set.ID,
+					SetName: set.Name,
+				})
+			}
+		}
+	}
+
+	// fill program and category
+	for _, outcomeRelation := range outcomeRelations {
+		if outcomeView, ok := resultMap[outcomeRelation.MasterID]; ok {
+			switch outcomeRelation.RelationType {
+			case entity.ProgramType:
+				if programName, ok := programNameMap[outcomeRelation.RelationID]; ok {
+					outcomeView.Program = append(outcomeView.Program,
+						Program{
+							ProgramID:   outcomeRelation.RelationID,
+							ProgramName: programName,
+						})
+				} else {
+					log.Error(ctx, "program record not found", log.String("programID", outcomeRelation.RelationID))
+				}
+			case entity.CategoryType:
+				if categoryName, ok := categoryNameMap[outcomeRelation.RelationID]; ok {
+					outcomeView.Developmental = append(outcomeView.Developmental,
+						Developmental{
+							DevelopmentalID:   outcomeRelation.RelationID,
+							DevelopmentalName: categoryName,
+						})
+				} else {
+					log.Error(ctx, "category record not found", log.String("categoryID", outcomeRelation.RelationID))
+				}
+			}
+		}
+	}
+
+	return result, nil
 }
