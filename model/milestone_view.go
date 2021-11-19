@@ -265,9 +265,9 @@ func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*enti
 		milestoneView.FillAllKindsOfName(externalNameMap.ProgIDMap, externalNameMap.SubjectIDMap,
 			externalNameMap.CatIDMap, externalNameMap.SubcatIDMap, externalNameMap.GradeIDMap, externalNameMap.AgeIDMap, milestone)
 		milestoneView.Outcomes = make([]*OutcomeView, len(milestone.Outcomes))
-		for i, outcome := range milestone.Outcomes {
-			milestoneView.Outcomes[i] = buildOutcomeView(ctx, externalNameMap, outcome)
-		}
+		// for i, outcome := range milestone.Outcomes {
+		// 	milestoneView.Outcomes[i] = buildOutcomeView(ctx, externalNameMap, outcome)
+		// }
 
 		if milestone.HasLocked() {
 			milestoneView.LastEditedBy = externalNameMap.UsrIDMap[milestone.LockedBy]

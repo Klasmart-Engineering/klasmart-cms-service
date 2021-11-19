@@ -78,7 +78,7 @@ func (s *Server) createOutcome(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param outcome_id path string true "outcome id"
-// @Success 200 {object} model.OutcomeView
+// @Success 200 {object} model.OutcomeDetailView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -87,7 +87,7 @@ func (s *Server) getOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	outcomeID := c.Param("id")
-	outcome, err := model.GetOutcomeModel().Get(ctx, op, outcomeID)
+	outcomeDetailView, err := model.GetOutcomeModel().Get(ctx, op, outcomeID)
 	switch err {
 	//case model.ErrInvalidResourceID:
 	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -104,12 +104,7 @@ func (s *Server) getOutcome(c *gin.Context) {
 	//case entity.ErrInvalidContentType:
 	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
-		views, err := model.FillOutcomeViews(ctx, op, []*entity.Outcome{outcome})
-		if err != nil {
-			log.Error(ctx, "getOutcome: FillOutcomeViews failed", log.Any("op", op), log.Any("outcome", outcome))
-			return
-		}
-		c.JSON(http.StatusOK, views[0])
+		c.JSON(http.StatusOK, outcomeDetailView)
 	default:
 		s.defaultErrorHandler(c, err)
 	}
@@ -229,7 +224,7 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
-// @Success 200 {object} model.OutcomeSearchResponse
+// @Success 200 {object} model.SearchOutcomeResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
@@ -247,6 +242,17 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 		return
 	}
 
+	if condition.OrganizationID == "" {
+		condition.OrganizationID = op.OrgID
+	}
+	if condition.AuthorName == constant.Self {
+		condition.AuthorID = op.UserID
+		condition.AuthorName = ""
+	}
+	if condition.PublishStatus == "" { // Must search published outcomes
+		condition.PublishStatus = entity.OutcomeStatusPublished
+	}
+
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ViewPublishedLearningOutcome)
 	if err != nil {
 		log.Error(ctx, "queryOutcomes: HasOrganizationPermission failed", log.Any("op", op),
@@ -260,7 +266,7 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
-	total, outcomes, err := model.GetOutcomeModel().Search(ctx, op, &condition)
+	response, err := model.GetOutcomeModel().Search(ctx, op, &condition)
 	switch err {
 	//case model.ErrInvalidResourceID:
 	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -277,14 +283,6 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 	//case entity.ErrInvalidContentType:
 	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
-		response, err := model.NewSearchResponse(ctx, op, total, outcomes)
-		if err != nil {
-			log.Error(ctx, "queryOutcomes: NewSearchResponse failed",
-				log.Any("op", op),
-				log.Any("outcome", outcomes))
-			s.defaultErrorHandler(c, err)
-			return
-		}
 		c.JSON(http.StatusOK, response)
 	default:
 		s.defaultErrorHandler(c, err)
@@ -740,7 +738,7 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
-// @Success 200 {object} model.OutcomeSearchResponse
+// @Success 200 {object} model.SearchOutcomeResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -757,7 +755,7 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 		return
 	}
 
-	total, outcomes, err := model.GetOutcomeModel().SearchPrivate(ctx, op, &condition)
+	response, err := model.GetOutcomeModel().SearchPrivate(ctx, op, &condition)
 	switch err {
 	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -776,14 +774,6 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
-		response, err := model.NewSearchResponse(ctx, op, total, outcomes)
-		if err != nil {
-			log.Error(ctx, "queryPrivateOutcomes: NewSearchResponse failed",
-				log.Any("op", op),
-				log.Any("outcome", outcomes))
-			s.defaultErrorHandler(c, err)
-			return
-		}
 		c.JSON(http.StatusOK, response)
 	default:
 		s.defaultErrorHandler(c, err)
@@ -807,7 +797,7 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
-// @Success 200 {object} model.OutcomeSearchResponse
+// @Success 200 {object} model.SearchOutcomeResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -824,7 +814,7 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 		return
 	}
 
-	total, outcomes, err := model.GetOutcomeModel().SearchPending(ctx, op, &condition)
+	response, err := model.GetOutcomeModel().SearchPending(ctx, op, &condition)
 	switch err {
 	case model.ErrBadRequest:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -845,14 +835,6 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 	case constant.ErrOperateNotAllowed:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case nil:
-		response, err := model.NewSearchResponse(ctx, op, total, outcomes)
-		if err != nil {
-			log.Error(ctx, "queryPendingOutcomes: NewSearchResponse failed",
-				log.Any("op", op),
-				log.Any("outcome", outcomes))
-			s.defaultErrorHandler(c, err)
-			return
-		}
 		c.JSON(http.StatusOK, response)
 	default:
 		s.defaultErrorHandler(c, err)
@@ -889,6 +871,8 @@ func (s *Server) queryPublishedOutcomes(c *gin.Context) {
 		condition.OrganizationID = op.OrgID
 	}
 
+	condition.PublishStatus = entity.OutcomeStatusPublished
+
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ViewPublishedLearningOutcome)
 	if err != nil {
 		log.Error(ctx, "queryPublishedOutcomes: HasOrganizationPermission failed",
@@ -906,7 +890,7 @@ func (s *Server) queryPublishedOutcomes(c *gin.Context) {
 		return
 	}
 
-	total, outcomes, err := model.GetOutcomeModel().SearchPublished(ctx, op, &condition)
+	response, err := model.GetOutcomeModel().SearchPublished(ctx, op, &condition)
 	switch err {
 	case model.ErrBadRequest:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -927,15 +911,6 @@ func (s *Server) queryPublishedOutcomes(c *gin.Context) {
 	case constant.ErrOperateNotAllowed:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case nil:
-		response, err := model.NewSearchPublishedOutcomeResponse(ctx, op, total, outcomes)
-		if err != nil {
-			log.Error(ctx, "queryPublishedOutcomes: model.NewSearchPublishedOutcomeResponse failed",
-				log.Any("op", op),
-				log.Any("outcome", outcomes),
-				log.Err(err))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-			return
-		}
 		c.JSON(http.StatusOK, response)
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))

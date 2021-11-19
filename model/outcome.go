@@ -3,11 +3,13 @@ package model
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"strings"
 	"sync"
 	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -19,42 +21,85 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
+var (
+	ErrOutcomeInvalidData = errors.New("invalid outcome data")
+)
+
 type IOutcomeModel interface {
 	Create(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) error
-	Get(ctx context.Context, operator *entity.Operator, outcomeID string) (*entity.Outcome, error)
 	Update(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) error
 	Delete(ctx context.Context, operator *entity.Operator, outcomeID string) error
-	Search(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
+
+	Get(ctx context.Context, operator *entity.Operator, outcomeID string) (*OutcomeDetailView, error)
+	GetByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
+	GetLatestOutcomes(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, []string, error)
+	GetLatestByIDsMapResult(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, error)
+	GetLatestByAncestors(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestoryIDs []string) ([]*entity.Outcome, error)
+
+	Search(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (*SearchOutcomeResponse, error)
 	SearchWithoutRelation(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
+	SearchPrivate(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (*SearchOutcomeResponse, error)
+	SearchPending(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (*SearchOutcomeResponse, error)
+	SearchPublished(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (*SearchPublishedOutcomeResponse, error)
 
 	Lock(ctx context.Context, operator *entity.Operator, outcomeID string) (string, error)
-
+	HasLocked(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (bool, error)
 	Publish(ctx context.Context, operator *entity.Operator, outcomeID string, scope string) error
 	BulkPublish(ctx context.Context, operator *entity.Operator, outcomeIDs []string, scope string) error
 	BulkDelete(ctx context.Context, operator *entity.Operator, outcomeIDs []string) error
 
-	SearchPrivate(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
-	SearchPending(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
-	SearchPublished(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
-
-	GetByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
-	GetLatestOutcomes(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, []string, error)
 	Approve(ctx context.Context, operator *entity.Operator, outcomeID string) error
 	Reject(ctx context.Context, operator *entity.Operator, outcomeID string, reason string) error
 
 	BulkApprove(ctx context.Context, operator *entity.Operator, outcomeIDs []string) error
 	BulkReject(ctx context.Context, operator *entity.Operator, outcomeIDs []string, reason string) error
 
-	GetLatestByIDsMapResult(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, error)
-
-	HasLocked(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (bool, error)
-	GetLatestByAncestors(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestoryIDs []string) ([]*entity.Outcome, error)
 	GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error)
 
 	ShortcodeProvider
 }
 
 type OutcomeModel struct {
+	outcomeDA         da.IOutcomeDA
+	outcomeRelationDA da.IOutcomeRelationDA
+	outcomeSetDA      da.IOutcomeSetDA
+	milestoneDA       da.IMilestoneDA
+	// TODO: not interface
+	milestoneOutcomeDA da.MilestoneOutcomeSQLDA
+
+	userService        external.UserServiceProvider
+	programService     external.ProgramServiceProvider
+	subjectService     external.SubjectServiceProvider
+	categoryService    external.CategoryServiceProvider
+	subCategoryService external.SubCategoryServiceProvider
+	gradeService       external.GradeServiceProvider
+	ageService         external.AgeServiceProvider
+}
+
+var (
+	_outcomeModel     IOutcomeModel
+	_outcomeModelOnce sync.Once
+)
+
+func GetOutcomeModel() IOutcomeModel {
+	_outcomeModelOnce.Do(func() {
+		_outcomeModel = &OutcomeModel{
+			outcomeDA:          da.GetOutcomeDA(),
+			outcomeRelationDA:  da.GetOutcomeRelationDA(),
+			outcomeSetDA:       da.GetOutcomeSetDA(),
+			milestoneDA:        da.GetMilestoneDA(),
+			milestoneOutcomeDA: *da.GetMilestoneOutcomeDA(),
+
+			userService:        external.GetUserServiceProvider(),
+			programService:     external.GetProgramServiceProvider(),
+			subjectService:     external.GetSubjectServiceProvider(),
+			categoryService:    external.GetCategoryServiceProvider(),
+			subCategoryService: external.GetSubCategoryServiceProvider(),
+			gradeService:       external.GetGradeServiceProvider(),
+			ageService:         external.GetAgeServiceProvider(),
+		}
+	})
+	return _outcomeModel
 }
 
 func (ocm OutcomeModel) GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error) {
@@ -239,79 +284,17 @@ func (ocm OutcomeModel) Create(ctx context.Context, operator *entity.Operator, o
 	return
 }
 
-func (ocm OutcomeModel) Get(ctx context.Context, operator *entity.Operator, outcomeID string) (outcome *entity.Outcome, err error) {
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		var err error
-		outcome, err = da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
-		if err == dbo.ErrRecordNotFound {
-			log.Warn(ctx, "Get: not found",
-				log.String("op", operator.UserID),
-				log.String("outcome_id", outcomeID))
-			return ErrResourceNotFound
-		}
-		if err != nil {
-			log.Error(ctx, "Get: GetOutcomeByID failed",
-				log.String("op", operator.UserID),
-				log.String("outcome_id", outcomeID))
-			return err
-		}
-		var outcomeRelations []*entity.OutcomeRelation
-		err = da.GetOutcomeRelationDA().QueryTx(ctx, tx, &da.RelationCondition{
-			MasterIDs:  dbo.NullStrings{Strings: []string{outcomeID}, Valid: true},
-			MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
-		}, &outcomeRelations)
-		if err != nil {
-			log.Error(ctx, "Get: QueryTx failed",
-				log.String("op", operator.UserID),
-				log.String("outcome_id", outcomeID))
-			return err
-		}
+func (ocm OutcomeModel) Get(ctx context.Context, operator *entity.Operator, outcomeID string) (*OutcomeDetailView, error) {
+	var outcome entity.Outcome
+	err := ocm.outcomeDA.Get(ctx, outcomeID, &outcome)
+	if err != nil {
+		log.Error(ctx, "ocm.outcomeDA.Get error",
+			log.Err(err),
+			log.String("outcome_id", outcomeID))
+		return nil, err
+	}
 
-		ocm.FillRelation(ctx, outcome, outcomeRelations)
-		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
-			OutcomeAncestor: sql.NullString{String: outcome.AncestorID, Valid: true},
-		})
-		if err != nil {
-			log.Error(ctx, "Get: SearchTx failed",
-				log.String("op", operator.UserID),
-				log.String("outcome", outcomeID))
-			return err
-		}
-		milestoneIDs := make([]string, len(milestoneOutcomes))
-		for i := range milestoneOutcomes {
-			milestoneIDs[i] = milestoneOutcomes[i].MilestoneID
-		}
-		if len(milestoneIDs) == 0 {
-			log.Warn(ctx, "Get: haven't bind milestone",
-				log.String("op", operator.UserID),
-				log.String("outcome", outcomeID))
-			return nil
-		}
-		_, milestones, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
-			IDs:      dbo.NullStrings{Strings: milestoneIDs, Valid: true},
-			Statuses: dbo.NullStrings{Strings: []string{entity.OutcomeStatusPublished, entity.OutcomeStatusDraft}, Valid: true},
-			OrderBy:  da.OrderByMilestoneUpdatedAtDesc,
-		})
-		if err != nil {
-			log.Error(ctx, "Get: Search failed",
-				log.String("op", operator.UserID),
-				log.String("outcome", outcomeID))
-			return err
-		}
-
-		for i := range milestones {
-			if milestones[i].Status == entity.OutcomeStatusDraft && milestones[i].SourceID != milestones[i].ID {
-				continue
-			}
-			// NML-1021
-			// if milestones[i].Type == entity.GeneralMilestoneType && len(milestones) != 1 {
-			// 	continue
-			// }
-			outcome.Milestones = append(outcome.Milestones, milestones[i])
-		}
-		return nil
-	})
-	return
+	return ocm.transformToOutcomeDetailView(ctx, operator, &outcome)
 }
 
 func (ocm OutcomeModel) updateOutcomeSet(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeID string, sets []*entity.Set) error {
@@ -555,117 +538,56 @@ func (ocm OutcomeModel) fillIDsBySetName(ctx context.Context, op *entity.Operato
 	return nil
 }
 
-func (ocm OutcomeModel) search(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
-	var err error
-	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, op, tx, da.NewOutcomeCondition(condition))
-	if err != nil {
-		log.Error(ctx, "Search: SearchOutcome failed",
-			log.String("op", op.UserID),
-			log.Any("condition", condition))
-		return 0, nil, err
-	}
-	if len(outcomes) == 0 {
-		log.Info(ctx, "Search: not found",
-			log.Any("op", op),
-			log.Any("cond", condition))
-		return total, outcomes, nil
-	}
-	outcomeIDs := make([]string, len(outcomes))
-	lockedOutcomeIDs := make([]string, 0)
-	for i := range outcomes {
-		outcomeIDs[i] = outcomes[i].ID
-		if outcomes[i].HasLocked() {
-			lockedOutcomeIDs = append(lockedOutcomeIDs, outcomes[i].ID)
-		}
-	}
-
-	var outcomeRelations []*entity.OutcomeRelation
-	err = da.GetOutcomeRelationDA().QueryTx(ctx, tx, &da.RelationCondition{
-		MasterIDs:  dbo.NullStrings{Strings: outcomeIDs, Valid: true},
-		MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
-	}, &outcomeRelations)
-	if err != nil {
-		log.Error(ctx, "Search: QueryTx failed",
-			log.Err(err),
-			log.Any("op", op),
-			log.Strings("outcome", outcomeIDs))
-		return 0, nil, err
-	}
-
-	lockedChildrenMap := make(map[string]*entity.Outcome, len(lockedOutcomeIDs))
-	if len(lockedOutcomeIDs) > 0 {
-		lockedChildrenCondition := &da.OutcomeCondition{
-			IncludeDeleted: false,
-			SourceIDs:      dbo.NullStrings{Strings: lockedOutcomeIDs, Valid: true},
-		}
-
-		_, lockedChildren, err := da.GetOutcomeDA().SearchOutcome(ctx, op, tx, lockedChildrenCondition)
-		if err != nil {
-			log.Error(ctx, "Search: SearchOutcome failed",
-				log.String("op", op.UserID),
-				log.Any("condition", lockedChildrenCondition))
-			return 0, nil, err
-		}
-
-		for _, v := range lockedChildren {
-			lockedChildrenMap[v.SourceID] = v
-		}
-	}
-
-	outcomeRelationsMap := make(map[string][]*entity.OutcomeRelation)
-	for i := range outcomeRelations {
-		outcomeRelationsMap[outcomeRelations[i].MasterID] = append(outcomeRelationsMap[outcomeRelations[i].MasterID], outcomeRelations[i])
-	}
-	for _, outcome := range outcomes {
-		ocm.FillRelation(ctx, outcome, outcomeRelationsMap[outcome.ID])
-		outcome.EditingOutcome = lockedChildrenMap[outcome.ID]
-	}
-
-	return total, outcomes, nil
-}
-
-func (ocm OutcomeModel) Search(ctx context.Context, user *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
-	if condition.OrganizationID == "" {
-		condition.OrganizationID = user.OrgID
-	}
-	if condition.AuthorName == constant.Self {
-		condition.AuthorID = user.UserID
-		condition.AuthorName = ""
-	}
-	if condition.PublishStatus == "" { // Must search published outcomes
-		condition.PublishStatus = entity.OutcomeStatusPublished
-	}
-
-	err := ocm.fillAuthorIDs(ctx, user, condition)
+func (ocm OutcomeModel) Search(ctx context.Context, op *entity.Operator, condition *entity.OutcomeCondition) (*SearchOutcomeResponse, error) {
+	err := ocm.fillAuthorIDs(ctx, op, condition)
 	if err != nil {
 		log.Error(ctx, "Search: fillAuthorIDs failed",
 			log.Any("err", err),
-			log.String("op", user.UserID),
+			log.String("op", op.UserID),
 			log.Any("condition", condition))
-		return 0, nil, err
-	}
-	err = ocm.fillIDsBySetName(ctx, user, condition)
-	if err != nil {
-		log.Error(ctx, "Search: fillIDsBySetName failed",
-			log.String("op", user.UserID),
-			log.Any("condition", condition))
-		return 0, nil, err
+		return nil, err
 	}
 
-	var total int
+	err = ocm.fillIDsBySetName(ctx, op, condition)
+	if err != nil {
+		log.Error(ctx, "Search: fillIDsBySetName failed",
+			log.String("op", op.UserID),
+			log.Any("condition", condition))
+		return nil, err
+	}
+
+	daCondition := da.NewOutcomeCondition(condition)
 	var outcomes []*entity.Outcome
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		var err error
-		total, outcomes, err = ocm.search(ctx, user, tx, condition)
-		if err != nil {
-			log.Error(ctx, "Search: search failed",
-				log.String("op", user.UserID),
-				log.Any("condition", condition))
-			return err
-		}
-		return nil
-	})
-	return total, outcomes, err
+	total, err := ocm.outcomeDA.Page(ctx, daCondition, &outcomes)
+	if err != nil {
+		log.Error(ctx, "ocm.outcomeDA.Page error",
+			log.Err(err),
+			log.Any("daCondition", daCondition))
+		return nil, err
+	}
+
+	if len(outcomes) == 0 {
+		log.Debug(ctx, "outcome record not found",
+			log.Any("op", op),
+			log.Any("daCondition", daCondition))
+		return &SearchOutcomeResponse{
+			Total: 0,
+			List:  []*OutcomeView{},
+		}, nil
+	}
+
+	outcomeViewList, err := ocm.transformToOutcomeView(ctx, op, outcomes)
+	if err != nil {
+		log.Error(ctx, "ocm.transformToOutcomeView error",
+			log.Err(err),
+			log.Any("outcomes", outcomes))
+		return nil, err
+	}
+
+	return &SearchOutcomeResponse{
+		Total: total,
+		List:  outcomeViewList,
+	}, nil
 }
 
 func (ocm OutcomeModel) SearchWithoutRelation(ctx context.Context, user *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
@@ -956,137 +878,175 @@ func (ocm OutcomeModel) BulkDelete(ctx context.Context, operator *entity.Operato
 	return err
 }
 
-func (ocm OutcomeModel) SearchPrivate(ctx context.Context, user *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
-	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, user, []external.PermissionName{
+func (ocm OutcomeModel) SearchPrivate(ctx context.Context, op *entity.Operator, condition *entity.OutcomeCondition) (*SearchOutcomeResponse, error) {
+	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
 		external.ViewMyUnpublishedLearningOutcome,  // my draft & my rejected
 		external.ViewOrgUnpublishedLearningOutcome, // org draft & org waiting for approved & org rejected
 		external.ViewMyPendingLearningOutcome,      // my waiting for approved
 	})
 	if err != nil {
 		log.Error(ctx, "SearchPrivate: HasOrganizationPermissions failed",
-			log.Any("op", user), log.Err(err))
-		return 0, nil, constant.ErrInternalServer
+			log.Any("op", op), log.Err(err))
+		return nil, constant.ErrInternalServer
 	}
-	condition.OrganizationID = user.OrgID
-	if !allowSearchPrivate(ctx, user, perms, condition) {
+	condition.OrganizationID = op.OrgID
+	if !allowSearchPrivate(ctx, op, perms, condition) {
 		log.Warn(ctx, "SearchPrivate: no permission",
-			log.Any("op", user),
+			log.Any("op", op),
 			log.Any("perms", perms),
 			log.Any("cond", condition))
-		return 0, nil, constant.ErrOperateNotAllowed
+		return nil, constant.ErrOperateNotAllowed
 	}
 
-	err = ocm.fillAuthorIDs(ctx, user, condition)
+	err = ocm.fillAuthorIDs(ctx, op, condition)
 	if err != nil {
 		log.Error(ctx, "SearchPrivate: fillAuthorIDs failed",
-			log.String("op", user.UserID),
+			log.String("op", op.UserID),
 			log.Any("condition", condition))
-		return 0, nil, err
+		return nil, err
 	}
-	err = ocm.fillIDsBySetName(ctx, user, condition)
+	err = ocm.fillIDsBySetName(ctx, op, condition)
 	if err != nil {
 		log.Error(ctx, "SearchPrivate: fillIDsBySetName failed",
-			log.String("op", user.UserID),
+			log.String("op", op.UserID),
 			log.Any("condition", condition))
-		return 0, nil, err
+		return nil, err
 	}
 
-	var total int
+	daCondition := da.NewOutcomeCondition(condition)
 	var outcomes []*entity.Outcome
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		var err error
-		total, outcomes, err = ocm.search(ctx, user, tx, condition)
-		if err != nil {
-			log.Error(ctx, "Search: search failed",
-				log.String("op", user.UserID),
-				log.Any("condition", condition))
-			return err
-		}
-		return nil
-	})
-	return total, outcomes, err
-}
-
-func (ocm OutcomeModel) SearchPending(ctx context.Context, user *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
-	if condition.PublishStatus != entity.OutcomeStatusPending {
-		log.Warn(ctx, "SearchPending: SearchPending failed",
-			log.String("op", user.UserID),
-			log.Any("condition", condition))
-		return 0, nil, ErrBadRequest
-	}
-	// as there is no level,orgID is the same as [user.OrgID]
-	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, user, external.ViewOrgPendingLearningOutcome)
-	if !hasPerm {
-		log.Warn(ctx, "SearchPending: no permission",
-			log.String("op", user.UserID),
-			log.Any("condition", condition))
-		return 0, nil, constant.ErrOperateNotAllowed
-	}
-	condition.PublishScope = user.OrgID
-	err = ocm.fillAuthorIDs(ctx, user, condition)
+	total, err := ocm.outcomeDA.Page(ctx, daCondition, &outcomes)
 	if err != nil {
-		log.Error(ctx, "SearchPending: fillAuthorIDs failed",
-			log.String("op", user.UserID),
-			log.Any("condition", condition))
-		return 0, nil, err
-	}
-	err = ocm.fillIDsBySetName(ctx, user, condition)
-	if err != nil {
-		log.Error(ctx, "SearchPending: fillIDsBySetName failed",
-			log.String("op", user.UserID),
-			log.Any("condition", condition))
-		return 0, nil, err
-	}
-	var total int
-	var outcomes []*entity.Outcome
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		var err error
-		total, outcomes, err = ocm.search(ctx, user, tx, condition)
-		if err != nil {
-			log.Error(ctx, "Search: search failed",
-				log.String("op", user.UserID),
-				log.Any("condition", condition))
-			return err
-		}
-		return nil
-	})
-	return total, outcomes, err
-}
-
-func (ocm OutcomeModel) SearchPublished(ctx context.Context, op *entity.Operator, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
-	condition.PublishStatus = entity.OutcomeStatusPublished
-	var outcomes []*entity.Outcome
-	total, err := da.GetOutcomeDA().Page(ctx, da.NewOutcomeCondition(condition), &outcomes)
-	if err != nil {
-		log.Error(ctx, "SearchPublished: da.GetOutcomeDA().Query failed",
-			log.Any("op", op),
-			log.Any("condition", condition),
-			log.Err(err))
-		return 0, nil, err
+		log.Error(ctx, "ocm.outcomeDA.Page error",
+			log.Err(err),
+			log.Any("daCondition", daCondition))
+		return nil, err
 	}
 
 	if len(outcomes) == 0 {
-		log.Info(ctx, "SearchPublished: not found",
+		log.Debug(ctx, "outcome record not found",
 			log.Any("op", op),
+			log.Any("daCondition", daCondition))
+		return &SearchOutcomeResponse{
+			Total: 0,
+			List:  []*OutcomeView{},
+		}, nil
+	}
+
+	outcomeViewList, err := ocm.transformToOutcomeView(ctx, op, outcomes)
+	if err != nil {
+		log.Error(ctx, "ocm.transformToOutcomeView error",
+			log.Err(err),
+			log.Any("outcomes", outcomes))
+		return nil, err
+	}
+
+	return &SearchOutcomeResponse{
+		Total: total,
+		List:  outcomeViewList,
+	}, nil
+}
+
+func (ocm OutcomeModel) SearchPending(ctx context.Context, op *entity.Operator, condition *entity.OutcomeCondition) (*SearchOutcomeResponse, error) {
+	if condition.PublishStatus != entity.OutcomeStatusPending {
+		log.Warn(ctx, "SearchPending: SearchPending failed",
+			log.String("op", op.UserID),
 			log.Any("condition", condition))
-		return total, outcomes, nil
+		return nil, ErrBadRequest
+	}
+	// as there is no level,orgID is the same as [user.OrgID]
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ViewOrgPendingLearningOutcome)
+	if !hasPerm {
+		log.Warn(ctx, "SearchPending: no permission",
+			log.String("op", op.UserID),
+			log.Any("condition", condition))
+		return nil, constant.ErrOperateNotAllowed
+	}
+	condition.PublishScope = op.OrgID
+	err = ocm.fillAuthorIDs(ctx, op, condition)
+	if err != nil {
+		log.Error(ctx, "SearchPending: fillAuthorIDs failed",
+			log.String("op", op.UserID),
+			log.Any("condition", condition))
+		return nil, err
+	}
+	err = ocm.fillIDsBySetName(ctx, op, condition)
+	if err != nil {
+		log.Error(ctx, "SearchPending: fillIDsBySetName failed",
+			log.String("op", op.UserID),
+			log.Any("condition", condition))
+		return nil, err
 	}
 
-	if err = ocm.fillOutcomeRelation(ctx, outcomes); err != nil {
-		log.Error(ctx, "SearchPublished: ocm.fillOutcomeRelation failed",
-			log.Any("outcomes", outcomes),
+	daCondition := da.NewOutcomeCondition(condition)
+	var outcomes []*entity.Outcome
+	total, err := ocm.outcomeDA.Page(ctx, daCondition, &outcomes)
+	if err != nil {
+		log.Error(ctx, "ocm.outcomeDA.Page error",
+			log.Err(err),
+			log.Any("daCondition", daCondition))
+		return nil, err
+	}
+
+	if len(outcomes) == 0 {
+		log.Debug(ctx, "outcome record not found",
+			log.Any("op", op),
+			log.Any("daCondition", daCondition))
+		return &SearchOutcomeResponse{
+			Total: 0,
+			List:  []*OutcomeView{},
+		}, nil
+	}
+
+	outcomeViewList, err := ocm.transformToOutcomeView(ctx, op, outcomes)
+	if err != nil {
+		log.Error(ctx, "ocm.transformToOutcomeView error",
+			log.Err(err),
+			log.Any("outcomes", outcomes))
+		return nil, err
+	}
+
+	return &SearchOutcomeResponse{
+		Total: total,
+		List:  outcomeViewList,
+	}, nil
+}
+
+func (o OutcomeModel) SearchPublished(ctx context.Context, op *entity.Operator, condition *entity.OutcomeCondition) (*SearchPublishedOutcomeResponse, error) {
+	var outcomes []*entity.Outcome
+	daCondition := da.NewOutcomeCondition(condition)
+	total, err := o.outcomeDA.Page(ctx, daCondition, &outcomes)
+	if err != nil {
+		log.Error(ctx, "o.outcomeDA.Page error",
+			log.Any("op", op),
+			log.Any("daCondition", daCondition),
 			log.Err(err))
-		return 0, nil, err
+		return nil, err
 	}
 
-	if err = ocm.fillOutcomeSets(ctx, outcomes); err != nil {
-		log.Error(ctx, "SearchPublished: ocm.fillOutcomeSets failed",
-			log.Any("outcomes", outcomes),
-			log.Err(err))
-		return 0, nil, err
+	if len(outcomes) == 0 {
+		log.Debug(ctx, "outcome record not found",
+			log.Any("op", op),
+			log.Any("daCondition", daCondition))
+		return &SearchPublishedOutcomeResponse{
+			Total: 0,
+			List:  []*PublishedOutcomeView{},
+		}, nil
 	}
 
-	return total, outcomes, err
+	publishedOutcomeViewList, err := o.transformToPublishedOutcomeView(ctx, op, outcomes)
+	if err != nil {
+		log.Error(ctx, "o.transformToPublishedOutcomeView error",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("outcomes", outcomes))
+		return nil, err
+	}
+
+	return &SearchPublishedOutcomeResponse{
+		Total: total,
+		List:  publishedOutcomeViewList,
+	}, err
 }
 
 func (ocm OutcomeModel) Approve(ctx context.Context, operator *entity.Operator, outcomeID string) error {
@@ -1743,18 +1703,6 @@ func allowSearchPrivate(ctx context.Context, operator *entity.Operator, perms ma
 	return false
 }
 
-var (
-	_outcomeModel     IOutcomeModel
-	_outcomeModelOnce sync.Once
-)
-
-func GetOutcomeModel() IOutcomeModel {
-	_outcomeModelOnce.Do(func() {
-		_outcomeModel = new(OutcomeModel)
-	})
-	return _outcomeModel
-}
-
 func (ocm OutcomeModel) CollectRelation(oc *entity.Outcome) []*entity.OutcomeRelation {
 	outcomeRelations := make([]*entity.OutcomeRelation, 0, len(oc.Programs)+len(oc.Subjects)+len(oc.Categories)+len(oc.Subcategories)+len(oc.Grades)+len(oc.Ages))
 	for i := range oc.Programs {
@@ -1958,19 +1906,6 @@ func (ocm OutcomeModel) SetStatus(ctx context.Context, oc *entity.Outcome, statu
 	return constant.ErrForbidden
 }
 
-func (ocm OutcomeModel) allowedToArchive(oc *entity.Outcome) bool {
-	switch oc.PublishStatus {
-	case entity.OutcomeStatusPublished:
-		return true
-	}
-	return false
-}
-
-func (ocm OutcomeModel) allowedToAttachment(oc *entity.Outcome) bool {
-	// TODO
-	return false
-}
-
 func (ocm OutcomeModel) allowedToPending(oc *entity.Outcome) bool {
 	switch oc.PublishStatus {
 	case entity.OutcomeStatusDraft, entity.OutcomeStatusRejected:
@@ -1995,70 +1930,683 @@ func (ocm OutcomeModel) allowedToHidden(oc *entity.Outcome) bool {
 	return false
 }
 
-func (ocm OutcomeModel) fillOutcomeRelation(ctx context.Context, outcomes []*entity.Outcome) error {
+func (o OutcomeModel) transformToPublishedOutcomeView(ctx context.Context, operator *entity.Operator, outcomes []*entity.Outcome) ([]*PublishedOutcomeView, error) {
+	result := make([]*PublishedOutcomeView, len(outcomes))
+	outcomeMap := make(map[string]*PublishedOutcomeView, len(outcomes))
 	outcomeIDs := make([]string, len(outcomes))
-	for i, v := range outcomes {
-		outcomeIDs[i] = v.ID
+	for i, outcome := range outcomes {
+		result[i] = &PublishedOutcomeView{
+			OutcomeID:   outcome.ID,
+			OutcomeName: outcome.Name,
+			Shortcode:   outcome.Shortcode,
+		}
+
+		outcomeIDs[i] = outcome.ID
+		outcomeMap[outcome.ID] = result[i]
 	}
 
-	var outcomeRelation []*entity.OutcomeRelation
-	err := da.GetOutcomeRelationDA().Query(ctx, &da.RelationCondition{
-		MasterIDs:  dbo.NullStrings{Strings: outcomeIDs, Valid: true},
-		MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
-	}, &outcomeRelation)
+	var outcomeRelations []*entity.OutcomeRelation
+	err := o.outcomeRelationDA.Query(ctx, &da.OutcomeRelationCondition{
+		MasterIDs: dbo.NullStrings{
+			Strings: outcomeIDs,
+			Valid:   true,
+		},
+	}, &outcomeRelations)
 	if err != nil {
-		log.Error(ctx, "fillOutcomeRelation: da.GetOutcomeRelationDA().Query failed",
-			log.Any("outcomeIDs", outcomeIDs),
-			log.Err(err))
-		return err
+		log.Error(ctx, "o.outcomeRelationDA.Query error",
+			log.Err(err),
+			log.Strings("outcomeIDs", outcomeIDs))
+		return nil, err
 	}
 
-	outcomeRelationMap := make(map[string][]*entity.OutcomeRelation, len(outcomes))
-	for _, v := range outcomeRelation {
-		outcomeRelationMap[v.MasterID] = append(outcomeRelationMap[v.MasterID], v)
-	}
-
-	for _, v := range outcomes {
-		for _, r := range outcomeRelationMap[v.ID] {
-			switch r.RelationType {
+	for _, outcomeRelation := range outcomeRelations {
+		if outcome, ok := outcomeMap[outcomeRelation.MasterID]; ok {
+			switch outcomeRelation.RelationType {
 			case entity.ProgramType:
-				v.Programs = append(v.Programs, r.RelationID)
+				outcome.ProgramIDs = append(outcome.ProgramIDs, outcomeRelation.RelationID)
 			case entity.SubjectType:
-				v.Subjects = append(v.Subjects, r.RelationID)
+				outcome.SubjectIDs = append(outcome.SubjectIDs, outcomeRelation.RelationID)
 			case entity.CategoryType:
-				v.Categories = append(v.Categories, r.RelationID)
+				outcome.CategoryIDs = append(outcome.CategoryIDs, outcomeRelation.RelationID)
 			case entity.SubcategoryType:
-				v.Subcategories = append(v.Subcategories, r.RelationID)
+				outcome.SubcategoryIDs = append(outcome.SubcategoryIDs, outcomeRelation.RelationID)
 			case entity.GradeType:
-				v.Grades = append(v.Grades, r.RelationID)
+				outcome.GradeIDs = append(outcome.GradeIDs, outcomeRelation.RelationID)
 			case entity.AgeType:
-				v.Ages = append(v.Ages, r.RelationID)
+				outcome.AgeIDs = append(outcome.AgeIDs, outcomeRelation.RelationID)
 			}
 		}
 	}
 
-	return nil
+	return result, nil
 }
 
-func (ocm OutcomeModel) fillOutcomeSets(ctx context.Context, outcomes []*entity.Outcome) error {
+func (o OutcomeModel) transformToOutcomeView(ctx context.Context, operator *entity.Operator, outcomes []*entity.Outcome) ([]*OutcomeView, error) {
+	result := make([]*OutcomeView, len(outcomes))
+	resultMap := make(map[string]*OutcomeView, len(outcomes))
 	outcomeIDs := make([]string, len(outcomes))
-	for i, v := range outcomes {
-		outcomeIDs[i] = v.ID
+	var lockedOutcomeIDs []string
+	var userIDs []string
+	var outcomeRelations []*entity.OutcomeRelation
+	var programIDs []string
+	var categoryIDs []string
+
+	for i, outcome := range outcomes {
+		result[i] = &OutcomeView{
+			OutcomeID:     outcome.ID,
+			OutcomeName:   outcome.Name,
+			Shortcode:     outcome.Shortcode,
+			Assumed:       outcome.Assumed,
+			LockedBy:      outcome.LockedBy,
+			AuthorID:      outcome.AuthorID,
+			AuthorName:    outcome.AuthorName,
+			PublishStatus: string(outcome.PublishStatus),
+			CreatedAt:     outcome.CreateAt,
+			UpdatedAt:     outcome.UpdateAt,
+		}
+
+		if outcome.HasLocked() {
+			userIDs = append(userIDs, outcome.LockedBy)
+			lockedOutcomeIDs = append(lockedOutcomeIDs, outcome.ID)
+		}
+
+		userIDs = append(userIDs, outcome.AuthorID)
+		outcomeIDs[i] = outcome.ID
+		resultMap[outcome.ID] = result[i]
 	}
 
-	if len(outcomeIDs) > 0 {
-		outcomeSets, err := da.GetOutcomeSetDA().SearchSetsByOutcome(ctx, dbo.MustGetDB(ctx), outcomeIDs)
+	err := o.outcomeRelationDA.Query(ctx, &da.OutcomeRelationCondition{
+		MasterIDs: dbo.NullStrings{
+			Strings: outcomeIDs,
+			Valid:   true,
+		},
+	}, &outcomeRelations)
+	if err != nil {
+		log.Error(ctx, "o.outcomeRelationDA.Query error",
+			log.Err(err),
+			log.Strings("outcomeIDs", outcomeIDs))
+		return nil, err
+	}
+
+	for _, outcomeRelation := range outcomeRelations {
+		switch outcomeRelation.RelationType {
+		case entity.ProgramType:
+			programIDs = append(programIDs, outcomeRelation.RelationID)
+		case entity.CategoryType:
+			categoryIDs = append(categoryIDs, outcomeRelation.RelationID)
+		}
+	}
+
+	programIDs = utils.StableSliceDeduplication(programIDs)
+	categoryIDs = utils.StableSliceDeduplication(categoryIDs)
+
+	g := new(errgroup.Group)
+	var outcomeSetMap map[string][]*entity.Set
+	var userNameMap map[string]string
+	lockedOutcomeChildrenMap := make(map[string]*entity.Outcome)
+	var programMap map[string]*external.Program
+	var categoryMap map[string]*external.Category
+
+	// get outcome set
+	g.Go(func() error {
+		outcomeSets, err := o.outcomeSetDA.SearchSetsByOutcome(ctx, dbo.MustGetDB(ctx), outcomeIDs)
 		if err != nil {
-			log.Error(ctx, "da.GetOutcomeSetDA().SearchSetsByOutcome error",
+			log.Error(ctx, "o.outcomeSetDA.SearchSetsByOutcome error",
 				log.Err(err),
 				log.Strings("outcomeIDs", outcomeIDs))
 			return err
 		}
 
-		for i := range outcomes {
-			outcomes[i].Sets = outcomeSets[outcomes[i].ID]
+		outcomeSetMap = outcomeSets
+		return nil
+	})
+
+	// get user name map
+	if len(userIDs) > 0 {
+		g.Go(func() error {
+			users, err := o.userService.BatchGetNameMap(ctx, operator, userIDs)
+			if err != nil {
+				log.Error(ctx, "s.userService.BatchGetMap error",
+					log.Err(err),
+					log.Strings("userIDs", userIDs))
+				return err
+			}
+
+			userNameMap = users
+
+			return nil
+		})
+	}
+
+	// get locked outcome children
+	if len(lockedOutcomeIDs) > 0 {
+		g.Go(func() error {
+			var lockedOutcomeChildren []*entity.Outcome
+			lockedChildrenCondition := &da.OutcomeCondition{
+				IncludeDeleted: false,
+				SourceIDs:      dbo.NullStrings{Strings: lockedOutcomeIDs, Valid: true},
+			}
+
+			err := o.outcomeDA.Query(ctx, lockedChildrenCondition, &lockedOutcomeChildren)
+			if err != nil {
+				log.Error(ctx, "o.outcomeDA.Query",
+					log.Err(err),
+					log.Any("condition", lockedChildrenCondition))
+				return err
+			}
+
+			for _, outcome := range lockedOutcomeChildren {
+				lockedOutcomeChildrenMap[outcome.SourceID] = outcome
+			}
+
+			return nil
+		})
+	}
+
+	// get program info
+	if len(programIDs) > 0 {
+		g.Go(func() error {
+			programs, err := o.programService.BatchGetMap(ctx, operator, programIDs)
+			if err != nil {
+				log.Error(ctx, "o.programService.BatchGetMap error",
+					log.Err(err),
+					log.Strings("programIDs", programIDs))
+				return err
+			}
+
+			programMap = programs
+
+			return nil
+		})
+	}
+
+	// get category info
+	if len(categoryIDs) > 0 {
+		g.Go(func() error {
+			categories, err := o.categoryService.BatchGetMap(ctx, operator, categoryIDs)
+			if err != nil {
+				log.Error(ctx, "o.categoryService.BatchGetMap error",
+					log.Err(err),
+					log.Strings("categoryIDs", categoryIDs))
+				return err
+			}
+
+			categoryMap = categories
+
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		log.Error(ctx, "transformToOutcomeView error",
+			log.Err(err))
+		return nil, err
+	}
+
+	for i, outcome := range outcomes {
+		outcomeView := result[i]
+		// fill outcome sets
+		if outcomeSets, ok := outcomeSetMap[outcome.ID]; ok {
+			for _, set := range outcomeSets {
+				outcomeView.Sets = append(outcomeView.Sets, &OutcomeSetCreateView{
+					SetID:   set.ID,
+					SetName: set.Name,
+				})
+			}
+		}
+
+		// fill author name
+		if userName, ok := userNameMap[outcome.AuthorID]; ok {
+			outcomeView.AuthorName = userName
+		} else {
+			log.Error(ctx, "author not found", log.String("userID", outcome.AuthorID))
+		}
+
+		if outcome.HasLocked() {
+			if lockedOutcomeChildren, ok := lockedOutcomeChildrenMap[outcome.SourceID]; ok {
+				outcomeView.LockedLocation = []string{string(lockedOutcomeChildren.PublishStatus)}
+				outcomeView.LastEditedAt = lockedOutcomeChildren.CreateAt
+				if userName, ok := userNameMap[outcome.LockedBy]; ok {
+					outcomeView.LastEditedBy = userName
+				} else {
+					log.Error(ctx, "locked by user not found", log.String("userID", outcome.LockedBy))
+				}
+			} else {
+				log.Error(ctx, "fill outcome locked info error", log.Any("outcome", outcome))
+				return nil, ErrOutcomeInvalidData
+			}
 		}
 	}
 
-	return nil
+	// fill program and category
+	for _, outcomeRelation := range outcomeRelations {
+		if outcomeView, ok := resultMap[outcomeRelation.MasterID]; ok {
+			switch outcomeRelation.RelationType {
+			case entity.ProgramType:
+				if program, ok := programMap[outcomeRelation.RelationID]; ok {
+					outcomeView.Program = append(outcomeView.Program,
+						Program{
+							ProgramID:   program.ID,
+							ProgramName: program.Name,
+						})
+				} else {
+					log.Error(ctx, "program record not found", log.String("programID", outcomeRelation.RelationID))
+				}
+			case entity.CategoryType:
+				if category, ok := categoryMap[outcomeRelation.RelationID]; ok {
+					outcomeView.Developmental = append(outcomeView.Developmental,
+						Developmental{
+							DevelopmentalID:   category.ID,
+							DevelopmentalName: category.Name,
+						})
+				} else {
+					log.Error(ctx, "category record not found", log.String("categoryID", outcomeRelation.RelationID))
+				}
+			}
+		}
+	}
+
+	return result, nil
+}
+
+func (o OutcomeModel) transformToOutcomeDetailView(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) (*OutcomeDetailView, error) {
+	var userIDs []string
+
+	result := &OutcomeDetailView{
+		OutcomeID:     outcome.ID,
+		OutcomeName:   outcome.Name,
+		Shortcode:     outcome.Shortcode,
+		Description:   outcome.Description,
+		AuthorID:      outcome.AuthorID,
+		AuthorName:    outcome.AuthorName,
+		Assumed:       outcome.Assumed,
+		PublishStatus: string(outcome.PublishStatus),
+		RejectReason:  outcome.RejectReason,
+		LockedBy:      outcome.LockedBy,
+		Keywords:      strings.Split(outcome.Keywords, ","),
+		CreatedAt:     outcome.CreateAt,
+		UpdatedAt:     outcome.UpdateAt,
+	}
+
+	if outcome.HasLocked() {
+		userIDs = append(userIDs, outcome.LockedBy)
+	}
+	userIDs = append(userIDs, outcome.AuthorID)
+
+	var outcomeRelations []*entity.OutcomeRelation
+	var programIDs []string
+	var subjectIDs []string
+	var categoryIDs []string
+	var subCategoryIDs []string
+	var ageIDs []string
+	var gradeIDs []string
+
+	err := o.outcomeRelationDA.Query(ctx, &da.OutcomeRelationCondition{
+		MasterIDs: dbo.NullStrings{
+			Strings: []string{outcome.ID},
+			Valid:   true,
+		},
+	}, &outcomeRelations)
+	if err != nil {
+		log.Error(ctx, "o.outcomeRelationDA.Query error",
+			log.Err(err),
+			log.String("outcomeID", outcome.ID))
+		return nil, err
+	}
+
+	for _, outcomeRelation := range outcomeRelations {
+		switch outcomeRelation.RelationType {
+		case entity.ProgramType:
+			programIDs = append(programIDs, outcomeRelation.RelationID)
+		case entity.SubjectType:
+			subjectIDs = append(subjectIDs, outcomeRelation.RelationID)
+		case entity.CategoryType:
+			categoryIDs = append(categoryIDs, outcomeRelation.RelationID)
+		case entity.SubcategoryType:
+			subCategoryIDs = append(subCategoryIDs, outcomeRelation.RelationID)
+		case entity.GradeType:
+			gradeIDs = append(gradeIDs, outcomeRelation.RelationID)
+		case entity.AgeType:
+			ageIDs = append(ageIDs, outcomeRelation.RelationID)
+		}
+	}
+
+	programIDs = utils.StableSliceDeduplication(programIDs)
+	subjectIDs = utils.StableSliceDeduplication(subjectIDs)
+	categoryIDs = utils.StableSliceDeduplication(categoryIDs)
+	subCategoryIDs = utils.StableSliceDeduplication(subCategoryIDs)
+	gradeIDs = utils.StableSliceDeduplication(gradeIDs)
+	ageIDs = utils.StableSliceDeduplication(ageIDs)
+
+	g := new(errgroup.Group)
+	var outcomeSetMap map[string][]*entity.Set
+	var userNameMap map[string]string
+	lockedOutcomeChildrenMap := make(map[string]*entity.Outcome)
+	var programMap map[string]*external.Program
+	var subjectMap map[string]*external.Subject
+	var categoryMap map[string]*external.Category
+	var subCategoryMap map[string]*external.SubCategory
+	var gradeMap map[string]*external.Grade
+	var ageMap map[string]*external.Age
+	var outcomeMilestones []*Milestone
+
+	// get outcome set
+	g.Go(func() error {
+		outcomeSets, err := o.outcomeSetDA.SearchSetsByOutcome(ctx, dbo.MustGetDB(ctx), []string{outcome.ID})
+		if err != nil {
+			log.Error(ctx, "o.outcomeSetDA.SearchSetsByOutcome error",
+				log.Err(err),
+				log.String("outcomeID", outcome.ID))
+			return err
+		}
+
+		outcomeSetMap = outcomeSets
+		return nil
+	})
+
+	// get user name map
+	if len(userIDs) > 0 {
+		g.Go(func() error {
+			users, err := o.userService.BatchGetNameMap(ctx, operator, userIDs)
+			if err != nil {
+				log.Error(ctx, "s.userService.BatchGetMap error",
+					log.Err(err),
+					log.Strings("userIDs", userIDs))
+				return err
+			}
+
+			userNameMap = users
+
+			return nil
+		})
+	}
+
+	// get locked outcome children
+	if outcome.HasLocked() {
+		g.Go(func() error {
+			var lockedOutcomeChildren []*entity.Outcome
+			lockedChildrenCondition := &da.OutcomeCondition{
+				IncludeDeleted: false,
+				SourceID:       sql.NullString{String: outcome.ID, Valid: true},
+			}
+
+			err := o.outcomeDA.Query(ctx, lockedChildrenCondition, &lockedOutcomeChildren)
+			if err != nil {
+				log.Error(ctx, "o.outcomeDA.Query",
+					log.Err(err),
+					log.Any("condition", lockedChildrenCondition))
+				return err
+			}
+
+			for _, outcome := range lockedOutcomeChildren {
+				lockedOutcomeChildrenMap[outcome.SourceID] = outcome
+			}
+
+			return nil
+		})
+	}
+
+	// get program info
+	if len(programIDs) > 0 {
+		g.Go(func() error {
+			programs, err := o.programService.BatchGetMap(ctx, operator, programIDs)
+			if err != nil {
+				log.Error(ctx, "o.programService.BatchGetMap error",
+					log.Err(err),
+					log.Strings("programIDs", programIDs))
+				return err
+			}
+
+			programMap = programs
+
+			return nil
+		})
+	}
+
+	// get subject info
+	if len(subjectIDs) > 0 {
+		g.Go(func() error {
+			subjects, err := o.subjectService.BatchGetMap(ctx, operator, subjectIDs)
+			if err != nil {
+				log.Error(ctx, "o.subjectService.BatchGetMap error",
+					log.Err(err),
+					log.Strings("subjectIDs", subjectIDs))
+				return err
+			}
+
+			subjectMap = subjects
+
+			return nil
+		})
+	}
+
+	// get category info
+	if len(categoryIDs) > 0 {
+		g.Go(func() error {
+			categories, err := o.categoryService.BatchGetMap(ctx, operator, categoryIDs)
+			if err != nil {
+				log.Error(ctx, "o.categoryService.BatchGetMap error",
+					log.Err(err),
+					log.Strings("categoryIDs", categoryIDs))
+				return err
+			}
+
+			categoryMap = categories
+
+			return nil
+		})
+	}
+
+	// get sub category info
+	if len(subCategoryIDs) > 0 {
+		g.Go(func() error {
+			subCategories, err := o.subCategoryService.BatchGetMap(ctx, operator, subCategoryIDs)
+			if err != nil {
+				log.Error(ctx, "o.subCategoryService.BatchGetMap error",
+					log.Err(err),
+					log.Strings("subCategoryIDs", subCategoryIDs))
+				return err
+			}
+
+			subCategoryMap = subCategories
+
+			return nil
+		})
+	}
+
+	// get grade info
+	if len(gradeIDs) > 0 {
+		g.Go(func() error {
+			grades, err := o.gradeService.BatchGetMap(ctx, operator, gradeIDs)
+			if err != nil {
+				log.Error(ctx, "o.gradeService.BatchGetMap error",
+					log.Err(err),
+					log.Strings("gradeIDs", gradeIDs))
+				return err
+			}
+
+			gradeMap = grades
+
+			return nil
+		})
+	}
+
+	// get age info
+	if len(ageIDs) > 0 {
+		g.Go(func() error {
+			ages, err := o.ageService.BatchGetMap(ctx, operator, ageIDs)
+			if err != nil {
+				log.Error(ctx, "o.ageService.BatchGetMap error",
+					log.Err(err),
+					log.Strings("ageIDs", ageIDs))
+				return err
+			}
+
+			ageMap = ages
+
+			return nil
+		})
+	}
+
+	// TODO: bad database query
+	// get milestones
+	g.Go(func() error {
+		milestoneOutcomes, err := o.milestoneOutcomeDA.SearchTx(ctx, dbo.MustGetDB(ctx),
+			&da.MilestoneOutcomeCondition{
+				OutcomeAncestor: sql.NullString{String: outcome.AncestorID, Valid: true},
+			})
+		if err != nil {
+			log.Error(ctx, "o.milestoneOutcomeDA.SearchTx error",
+				log.Err(err),
+				log.Any("outcome", outcome))
+			return err
+		}
+
+		milestoneIDs := make([]string, len(milestoneOutcomes))
+		for i := range milestoneOutcomes {
+			milestoneIDs[i] = milestoneOutcomes[i].MilestoneID
+		}
+
+		if len(milestoneIDs) == 0 {
+			log.Debug(ctx, "milestone outcome relation record not found", log.Any("outcome", outcome))
+			return nil
+		}
+
+		_, milestones, err := o.milestoneDA.Search(ctx, dbo.MustGetDB(ctx), &da.MilestoneCondition{
+			IDs: dbo.NullStrings{Strings: milestoneIDs, Valid: true},
+			// TODO: why use OutcomeStatus in milestong?
+			Statuses: dbo.NullStrings{Strings: []string{entity.OutcomeStatusPublished, entity.OutcomeStatusDraft}, Valid: true},
+			OrderBy:  da.OrderByMilestoneUpdatedAtDesc,
+		})
+		if err != nil {
+			log.Error(ctx, "o.MilestoneDA.Search error",
+				log.Strings("milestoneIDs", milestoneIDs))
+			return err
+		}
+
+		for _, milestone := range milestones {
+			if milestone.Status == entity.OutcomeStatusDraft && milestone.SourceID != milestone.ID {
+				continue
+			}
+			// NML-1021
+			// if milestones[i].Type == entity.GeneralMilestoneType && len(milestones) != 1 {
+			// 	continue
+			// }
+			outcomeMilestones = append(outcomeMilestones, &Milestone{
+				MilestoneID:   milestone.ID,
+				MilestoneName: milestone.Name,
+			})
+		}
+
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		log.Error(ctx, "transformToOutcomeView error",
+			log.Err(err))
+		return nil, err
+	}
+
+	// fill author name
+	if userName, ok := userNameMap[outcome.AuthorID]; ok {
+		result.AuthorName = userName
+	} else {
+		log.Error(ctx, "author not found", log.String("userID", outcome.AuthorID))
+	}
+
+	// fill outcome sets
+	if outcomeSets, ok := outcomeSetMap[outcome.ID]; ok {
+		for _, set := range outcomeSets {
+			result.Sets = append(result.Sets, &OutcomeSetCreateView{
+				SetID:   set.ID,
+				SetName: set.Name,
+			})
+		}
+	}
+
+	// fill outcome milestones
+	result.Milestones = outcomeMilestones
+
+	if outcome.HasLocked() {
+		if lockedOutcomeChildren, ok := lockedOutcomeChildrenMap[outcome.SourceID]; ok {
+			result.LockedLocation = []string{string(lockedOutcomeChildren.PublishStatus)}
+			result.LastEditedAt = lockedOutcomeChildren.CreateAt
+			if userName, ok := userNameMap[outcome.LockedBy]; ok {
+				result.LastEditedBy = userName
+			} else {
+				log.Error(ctx, "locked by user not found", log.String("userID", outcome.LockedBy))
+			}
+		} else {
+			log.Error(ctx, "fill outcome locked info error", log.Any("outcome", outcome))
+			return nil, ErrOutcomeInvalidData
+		}
+	}
+
+	// fill program, subject, category, subCategory, grade, age
+	for _, outcomeRelation := range outcomeRelations {
+		switch outcomeRelation.RelationType {
+		case entity.ProgramType:
+			if program, ok := programMap[outcomeRelation.RelationID]; ok {
+				result.Program = append(result.Program,
+					Program{
+						ProgramID:   program.ID,
+						ProgramName: program.Name,
+					})
+			} else {
+				log.Error(ctx, "program record not found", log.String("programID", outcomeRelation.RelationID))
+			}
+		case entity.SubjectType:
+			if subject, ok := subjectMap[outcomeRelation.RelationID]; ok {
+				result.Subject = append(result.Subject,
+					Subject{
+						SubjectID:   subject.ID,
+						SubjectName: subject.Name,
+					})
+			} else {
+				log.Error(ctx, "subject record not found", log.String("subjectID", outcomeRelation.RelationID))
+			}
+		case entity.CategoryType:
+			if category, ok := categoryMap[outcomeRelation.RelationID]; ok {
+				result.Developmental = append(result.Developmental,
+					Developmental{
+						DevelopmentalID:   category.ID,
+						DevelopmentalName: category.Name,
+					})
+			} else {
+				log.Error(ctx, "category record not found", log.String("categoryID", outcomeRelation.RelationID))
+			}
+		case entity.SubcategoryType:
+			if subCategory, ok := subCategoryMap[outcomeRelation.RelationID]; ok {
+				result.Skills = append(result.Skills,
+					Skill{
+						SkillID:   subCategory.ID,
+						SkillName: subCategory.Name,
+					})
+			} else {
+				log.Error(ctx, "subCategory record not found", log.String("subCategoryID", outcomeRelation.RelationID))
+			}
+		case entity.GradeType:
+			if grade, ok := gradeMap[outcomeRelation.RelationID]; ok {
+				result.Grade = append(result.Grade,
+					Grade{
+						GradeID:   grade.ID,
+						GradeName: grade.Name,
+					})
+			} else {
+				log.Error(ctx, "grade record not found", log.String("gradeID", outcomeRelation.RelationID))
+			}
+		case entity.AgeType:
+			if age, ok := ageMap[outcomeRelation.RelationID]; ok {
+				result.Age = append(result.Age,
+					Age{
+						AgeID:   age.ID,
+						AgeName: age.Name,
+					})
+			} else {
+				log.Error(ctx, "age record not found", log.String("ageID", outcomeRelation.RelationID))
+			}
+		}
+	}
+
+	return result, nil
 }
