@@ -1939,6 +1939,13 @@ func (o OutcomeModel) transformToPublishedOutcomeView(ctx context.Context, opera
 			OutcomeID:   outcome.ID,
 			OutcomeName: outcome.Name,
 			Shortcode:   outcome.Shortcode,
+			// init zero value
+			ProgramIDs:     []string{},
+			SubjectIDs:     []string{},
+			CategoryIDs:    []string{},
+			SubcategoryIDs: []string{},
+			GradeIDs:       []string{},
+			AgeIDs:         []string{},
 		}
 
 		outcomeIDs[i] = outcome.ID
@@ -2003,6 +2010,12 @@ func (o OutcomeModel) transformToOutcomeView(ctx context.Context, operator *enti
 			PublishStatus: string(outcome.PublishStatus),
 			CreatedAt:     outcome.CreateAt,
 			UpdatedAt:     outcome.UpdateAt,
+
+			// init zero value
+			LockedLocation: []string{},
+			Program:        []Program{},
+			Developmental:  []Developmental{},
+			Sets:           []*OutcomeSetCreateView{},
 		}
 
 		if outcome.HasLocked() {
@@ -2226,6 +2239,16 @@ func (o OutcomeModel) transformToOutcomeDetailView(ctx context.Context, operator
 		Keywords:      strings.Split(outcome.Keywords, ","),
 		CreatedAt:     outcome.CreateAt,
 		UpdatedAt:     outcome.UpdateAt,
+		// init zero value
+		LockedLocation: []string{},
+		Program:        []Program{},
+		Subject:        []Subject{},
+		Developmental:  []Developmental{},
+		Skills:         []Skill{},
+		Age:            []Age{},
+		Grade:          []Grade{},
+		Sets:           []*OutcomeSetCreateView{},
+		Milestones:     []*Milestone{},
 	}
 
 	if outcome.HasLocked() {

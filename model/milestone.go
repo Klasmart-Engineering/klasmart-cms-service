@@ -1397,14 +1397,15 @@ func (m *MilestoneModel) transformToMilestoneDetailView(ctx context.Context, ope
 		Type:         milestone.Type,
 		Status:       string(milestone.Status),
 		RejectReason: milestone.RejectReason,
-		Program:      []*Program{},
-		Subject:      []*Subject{},
-		Category:     []*Category{},
-		SubCategory:  []*SubCategory{},
-		Age:          []*Age{},
-		Grade:        []*Grade{},
-		Outcomes:     []*MilestoneOutcomeView{},
-		CreateAt:     milestone.CreateAt,
+		// init zero value
+		Program:     []*Program{},
+		Subject:     []*Subject{},
+		Category:    []*Category{},
+		SubCategory: []*SubCategory{},
+		Age:         []*Age{},
+		Grade:       []*Grade{},
+		Outcomes:    []*MilestoneOutcomeView{},
+		CreateAt:    milestone.CreateAt,
 	}
 
 	userIDs := []string{milestone.AuthorID}
@@ -1758,11 +1759,12 @@ func (m *MilestoneModel) transformToMilestoneOutcomeView(ctx context.Context, op
 
 	for i, outcome := range outcomes {
 		result[i] = &MilestoneOutcomeView{
-			OutcomeID:     outcome.ID,
-			OutcomeName:   outcome.Name,
-			Shortcode:     outcome.Shortcode,
-			AncestorID:    outcome.AncestorID,
-			Assumed:       outcome.Assumed,
+			OutcomeID:   outcome.ID,
+			OutcomeName: outcome.Name,
+			Shortcode:   outcome.Shortcode,
+			AncestorID:  outcome.AncestorID,
+			Assumed:     outcome.Assumed,
+			// init zero value
 			Program:       []Program{},
 			Developmental: []Developmental{},
 			Sets:          []*OutcomeSetCreateView{},
