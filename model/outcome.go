@@ -2001,6 +2001,7 @@ func (o OutcomeModel) transformToOutcomeView(ctx context.Context, operator *enti
 	for i, outcome := range outcomes {
 		result[i] = &OutcomeView{
 			OutcomeID:     outcome.ID,
+			AncestorID:    outcome.AncestorID,
 			OutcomeName:   outcome.Name,
 			Shortcode:     outcome.Shortcode,
 			Assumed:       outcome.Assumed,
