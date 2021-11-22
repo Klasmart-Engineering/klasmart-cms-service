@@ -159,7 +159,7 @@ query ($or:[UserFilter!]){
 				  id
 				  name
 				  status
-				  studentsConnection(filter:{userStatus:{operator: eq, value: "active"}}){
+				  studentsConnection(filter:{userStatus:{operator: eq, value: "active"}, organizationUserStatus:{operator:eq, value: "active"}}){
 					edges{
 					  node{
 						id
