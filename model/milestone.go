@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"sync"
 	"time"
 
@@ -18,6 +19,10 @@ import (
 )
 
 var (
+	ErrMilestoneInvalidData = errors.New("invalid milestone data")
+)
+
+var (
 	_milestoneModel     IMilestoneModel
 	_milestoneModelOnce sync.Once
 )
@@ -27,7 +32,7 @@ type IMilestoneModel interface {
 	Obtain(ctx context.Context, op *entity.Operator, milestoneID string) (*MilestoneDetailView, error)
 	Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeIDs []string) error
 	Delete(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, IDs []string) error
-	Search(ctx context.Context, op *entity.Operator, condition *entity.MilestoneCondition) (int, []*entity.Milestone, error)
+	Search(ctx context.Context, op *entity.Operator, condition *entity.MilestoneCondition) (*SearchMilestoneResponse, error)
 	Occupy(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error)
 	// Deprecated
 	// Publish(ctx context.Context, op *entity.Operator, IDs []string) error
@@ -365,133 +370,51 @@ func (m MilestoneModel) Delete(ctx context.Context, op *entity.Operator, perms m
 	return err
 }
 
-func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, condition *entity.MilestoneCondition) (int, []*entity.Milestone, error) {
-	var count int
+func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, condition *entity.MilestoneCondition) (*SearchMilestoneResponse, error) {
 	var milestones []*entity.Milestone
-	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		var err error
-		count, milestones, err = da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
-			ID:          sql.NullString{String: condition.ID, Valid: condition.ID != ""},
-			IDs:         dbo.NullStrings{Strings: condition.IDs, Valid: len(condition.IDs) > 0},
-			Description: sql.NullString{String: condition.Description, Valid: condition.Description != ""},
-			Name:        sql.NullString{String: condition.Name, Valid: condition.Name != ""},
-			Shortcode:   sql.NullString{String: condition.Shortcode, Valid: condition.Shortcode != ""},
-			SearchKey:   sql.NullString{String: condition.SearchKey, Valid: condition.SearchKey != ""},
+	daCondition := &da.MilestoneCondition{
+		ID:          sql.NullString{String: condition.ID, Valid: condition.ID != ""},
+		IDs:         dbo.NullStrings{Strings: condition.IDs, Valid: len(condition.IDs) > 0},
+		Description: sql.NullString{String: condition.Description, Valid: condition.Description != ""},
+		Name:        sql.NullString{String: condition.Name, Valid: condition.Name != ""},
+		Shortcode:   sql.NullString{String: condition.Shortcode, Valid: condition.Shortcode != ""},
+		SearchKey:   sql.NullString{String: condition.SearchKey, Valid: condition.SearchKey != ""},
 
-			AuthorID:  sql.NullString{String: condition.AuthorID, Valid: condition.AuthorID != ""},
-			AuthorIDs: dbo.NullStrings{Strings: condition.AuthorIDs, Valid: len(condition.AuthorIDs) > 0},
+		AuthorID:  sql.NullString{String: condition.AuthorID, Valid: condition.AuthorID != ""},
+		AuthorIDs: dbo.NullStrings{Strings: condition.AuthorIDs, Valid: len(condition.AuthorIDs) > 0},
 
-			OrganizationID: sql.NullString{String: condition.OrganizationID, Valid: condition.OrganizationID != ""},
-			Status:         sql.NullString{String: condition.Status, Valid: condition.Status != ""},
-			OrderBy:        da.NewMilestoneOrderBy(condition.OrderBy),
-			Pager:          utils.GetDboPager(condition.Page, condition.PageSize),
-		})
-		if err != nil {
-			log.Error(ctx, "Search: Search failed",
-				log.Err(err),
-				log.Any("op", op),
-				log.Any("condition", condition))
-			return err
-		}
-
-		if len(milestones) == 0 {
-			log.Debug(ctx, "Search: not found",
-				log.Any("op", op),
-				log.Any("condition", condition))
-			// NKL-1021
-			// if condition.Status != entity.OutcomeStatusPublished {
-			// 	return nil
-			// }
-
-			// general, err := m.CreateGeneral(ctx, op, tx, "")
-			// if err != nil {
-			// 	log.Error(ctx, "Search: CreateGeneral failed",
-			// 		log.Any("op", op))
-			// 	return err
-			// }
-			// count = 1
-			// milestones = append(milestones, general)
-			return nil
-		}
-
-		var generalIDs, normalIDs []string
-		milestoneIDs := make([]string, len(milestones))
-		lockedMilestoneIDs := make([]string, 0)
-		for i := range milestones {
-			if milestones[i].Type == entity.GeneralMilestoneType {
-				generalIDs = append(generalIDs, milestones[i].ID)
-			}
-			if milestones[i].Type == entity.CustomMilestoneType {
-				normalIDs = append(normalIDs, milestones[i].ID)
-			}
-			milestoneIDs[i] = milestones[i].ID
-			if milestones[i].HasLocked() {
-				lockedMilestoneIDs = append(lockedMilestoneIDs, milestones[i].ID)
-			}
-		}
-
-		lockedChildrenMap := make(map[string]*entity.Milestone, len(lockedMilestoneIDs))
-		if len(lockedMilestoneIDs) > 0 {
-			lockedChildrenCondition := &da.MilestoneCondition{
-				IncludeDeleted: false,
-				SourceIDs:      dbo.NullStrings{Strings: lockedMilestoneIDs, Valid: true},
-			}
-
-			_, lockedChildren, err := da.GetMilestoneDA().Search(ctx, tx, lockedChildrenCondition)
-			if err != nil {
-				log.Error(ctx, "Search: Search failed",
-					log.String("op", op.UserID),
-					log.Any("condition", lockedChildrenCondition))
-				return err
-			}
-
-			for _, v := range lockedChildren {
-				// ancestor's source_id is itself
-				if !v.IsAncestor() {
-					lockedChildrenMap[v.SourceID] = v
-				}
-			}
-		}
-
-		var milestoneRelations []*entity.MilestoneRelation
-		err = da.GetMilestoneRelationDA().QueryTx(ctx, tx, &da.MilestoneRelationCondition{
-			MasterIDs:  dbo.NullStrings{Strings: milestoneIDs, Valid: true},
-			MasterType: sql.NullString{String: string(entity.MilestoneType), Valid: true},
-		}, &milestoneRelations)
-		if err != nil {
-			log.Error(ctx, "Search: Search failed",
-				log.Err(err),
-				log.Any("op", op),
-				log.Strings("milestone", milestoneIDs))
-			return err
-		}
-		for i := range milestoneRelations {
-			for j := range milestones {
-				if milestoneRelations[i].MasterID == milestones[j].ID {
-					m.fillRelation(milestones[j], []*entity.MilestoneRelation{milestoneRelations[i]})
-					break
-				}
-			}
-		}
-		counts, err := da.GetMilestoneOutcomeDA().BatchCountTx(ctx, tx, generalIDs, normalIDs)
-		if err != nil {
-			log.Error(ctx, "Search: Count failed",
-				log.Err(err),
-				log.Any("op", op),
-				log.Strings("general", generalIDs),
-				log.Strings("normal", normalIDs))
-			return err
-		}
-		for i := range milestones {
-			milestones[i].LoCounts = counts[milestones[i].ID]
-			milestones[i].EditingMilestone = lockedChildrenMap[milestones[i].ID]
-		}
-		return nil
-	})
-	if err != nil {
-		return 0, nil, err
+		OrganizationID: sql.NullString{String: condition.OrganizationID, Valid: condition.OrganizationID != ""},
+		Status:         sql.NullString{String: condition.Status, Valid: condition.Status != ""},
+		OrderBy:        da.NewMilestoneOrderBy(condition.OrderBy),
+		Pager:          utils.GetDboPager(condition.Page, condition.PageSize),
 	}
-	return count, milestones, nil
+	total, err := m.milestoneDA.Page(ctx, daCondition, &milestones)
+	if err != nil {
+		log.Error(ctx, "m.milestoneDA.Page error",
+			log.Err(err),
+			log.Any("daCondition", daCondition))
+		return nil, err
+	}
+
+	if len(milestones) == 0 {
+		return &SearchMilestoneResponse{
+			Total:      total,
+			Milestones: []*SearchMilestoneView{},
+		}, nil
+	}
+
+	searchMilestoneView, err := m.transformToSearchMilestoneView(ctx, op, milestones)
+	if err != nil {
+		log.Error(ctx, "m.transformToSearchMilestoneView error",
+			log.Err(err),
+			log.Any("milestones", milestones))
+		return nil, err
+	}
+
+	return &SearchMilestoneResponse{
+		Total:      total,
+		Milestones: searchMilestoneView,
+	}, nil
 }
 
 func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error) {
@@ -1387,6 +1310,236 @@ func (m *MilestoneModel) allowDeleteMilestone(ctx context.Context, operator *ent
 	}
 
 	return false
+}
+
+func (m *MilestoneModel) transformToSearchMilestoneView(ctx context.Context, operator *entity.Operator, milestones []*entity.Milestone) ([]*SearchMilestoneView, error) {
+	result := make([]*SearchMilestoneView, len(milestones))
+	resultMap := make(map[string]*SearchMilestoneView, len(milestones))
+	milestoneIDs := make([]string, len(milestones))
+	var lockedMilestoneIDs []string
+	var userIDs []string
+	for i, milestone := range milestones {
+		result[i] = &SearchMilestoneView{
+			MilestoneID: milestone.ID,
+			Name:        milestone.Name,
+			Shortcode:   milestone.Shortcode,
+			Type:        milestone.Type,
+			Status:      string(milestone.Status),
+			Program:     []*Program{},
+			Category:    []*Category{},
+			LockedBy:    milestone.LockedBy,
+			CreateAt:    milestone.CreateAt,
+		}
+
+		if milestone.HasLocked() {
+			userIDs = append(userIDs, milestone.LockedBy)
+			lockedMilestoneIDs = append(lockedMilestoneIDs, milestone.ID)
+		}
+
+		userIDs = append(userIDs, milestone.AuthorID)
+		milestoneIDs[i] = milestone.ID
+		resultMap[milestone.ID] = result[i]
+	}
+
+	var milestoneRelations []*entity.MilestoneRelation
+	var programIDs []string
+	var categoryIDs []string
+
+	err := m.milestoneRelationDA.Query(ctx, &da.MilestoneRelationCondition{
+		MasterIDs: dbo.NullStrings{
+			Strings: milestoneIDs,
+			Valid:   true,
+		},
+	}, &milestoneRelations)
+	if err != nil {
+		log.Error(ctx, "m.milestoneRelationDA.Query error",
+			log.Err(err),
+			log.Strings("milestoneIDs", milestoneIDs))
+		return nil, err
+	}
+
+	for _, milestoneRelation := range milestoneRelations {
+		switch milestoneRelation.RelationType {
+		case entity.ProgramType:
+			programIDs = append(programIDs, milestoneRelation.RelationID)
+		case entity.CategoryType:
+			categoryIDs = append(categoryIDs, milestoneRelation.RelationID)
+		}
+	}
+
+	programIDs = utils.StableSliceDeduplication(programIDs)
+	categoryIDs = utils.StableSliceDeduplication(categoryIDs)
+
+	g := new(errgroup.Group)
+	var userNameMap map[string]string
+	var programNameMap map[string]string
+	var categoryNameMap map[string]string
+	var outcomeCountMap map[string]int
+	lockedMilestoneChildrenMap := make(map[string]*entity.Milestone)
+
+	// get user name map
+	if len(userIDs) > 0 {
+		g.Go(func() error {
+			userNames, err := m.userService.BatchGetNameMap(ctx, operator, userIDs)
+			if err != nil {
+				log.Error(ctx, "m.userService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("userIDs", userIDs))
+				return err
+			}
+
+			userNameMap = userNames
+
+			return nil
+		})
+	}
+
+	// get program info
+	if len(programIDs) > 0 {
+		g.Go(func() error {
+			programNames, err := m.programService.BatchGetNameMap(ctx, operator, programIDs)
+			if err != nil {
+				log.Error(ctx, "m.programService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("programIDs", programIDs))
+				return err
+			}
+
+			programNameMap = programNames
+
+			return nil
+		})
+	}
+
+	// get category info
+	if len(categoryIDs) > 0 {
+		g.Go(func() error {
+			categoryNames, err := m.categoryService.BatchGetNameMap(ctx, operator, categoryIDs)
+			if err != nil {
+				log.Error(ctx, "m.categoryService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("categoryIDs", categoryIDs))
+				return err
+			}
+
+			categoryNameMap = categoryNames
+
+			return nil
+		})
+	}
+
+	// TODO: bad database query
+	// get outcomes count
+	g.Go(func() error {
+		countMap, err := m.milestoneOutcomeDA.BatchCountTx(ctx, dbo.MustGetDB(ctx),
+			[]string{}, milestoneIDs)
+		if err != nil {
+			log.Error(ctx, "m.milestoneOutcomeDA.BatchCountTx", log.Err(err),
+				log.Strings("milestoneIDs", milestoneIDs))
+			return err
+		}
+
+		outcomeCountMap = countMap
+
+		return nil
+	})
+
+	// get locked milestone children
+	if len(lockedMilestoneIDs) > 0 {
+		g.Go(func() error {
+			var lockedMilestoneChildren []*entity.Milestone
+			lockedChildrenCondition := &da.MilestoneCondition{
+				IncludeDeleted: false,
+				SourceIDs:      dbo.NullStrings{Strings: lockedMilestoneIDs, Valid: true},
+			}
+
+			err := m.milestoneDA.Query(ctx, lockedChildrenCondition, &lockedMilestoneChildren)
+			if err != nil {
+				log.Error(ctx, "m.milestoneDA.Query error",
+					log.Err(err),
+					log.Any("condition", lockedChildrenCondition))
+				return err
+			}
+
+			for _, lockedMilestone := range lockedMilestoneChildren {
+				lockedMilestoneChildrenMap[lockedMilestone.SourceID] = lockedMilestone
+			}
+
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		log.Error(ctx, "transformToSearchMilestoneView error",
+			log.Err(err))
+		return nil, err
+	}
+
+	for i, milestone := range milestones {
+		milestoneView := result[i]
+
+		// fill author name
+		if userName, ok := userNameMap[milestone.AuthorID]; ok {
+			milestoneView.Author = AuthorView{
+				AuthorID:   milestone.AuthorID,
+				AuthorName: userName,
+			}
+		} else {
+			log.Error(ctx, "author not found", log.String("userID", milestone.AuthorID))
+		}
+
+		// fill outcome count
+		if outcomeCount, ok := outcomeCountMap[milestone.ID]; ok {
+			milestoneView.OutcomeCount = outcomeCount
+		} else {
+			log.Debug(ctx, "milestone outcome not found", log.Any("milestone", milestone))
+		}
+
+		if milestone.HasLocked() {
+			if lockedMilestoneChildren, ok := lockedMilestoneChildrenMap[milestone.ID]; ok {
+				milestoneView.LockedLocation = []string{string(lockedMilestoneChildren.Status)}
+				milestoneView.LastEditedAt = lockedMilestoneChildren.CreateAt
+				if userName, ok := userNameMap[milestone.LockedBy]; ok {
+					milestoneView.LastEditedBy = userName
+				} else {
+					log.Error(ctx, "locked by user not found", log.String("userID", milestone.LockedBy))
+				}
+			} else {
+				log.Error(ctx, "fill milestone locked info error", log.Any("milestone", milestone))
+				return nil, ErrMilestoneInvalidData
+			}
+		}
+	}
+
+	// fill program and category
+	for _, milestoneRelation := range milestoneRelations {
+		if milestoneView, ok := resultMap[milestoneRelation.MasterID]; ok {
+			switch milestoneRelation.RelationType {
+			case entity.ProgramType:
+				if programName, ok := programNameMap[milestoneRelation.RelationID]; ok {
+					milestoneView.Program = append(milestoneView.Program,
+						&Program{
+							ProgramID:   milestoneRelation.RelationID,
+							ProgramName: programName,
+						})
+				} else {
+					log.Error(ctx, "program record not found", log.String("programID", milestoneRelation.RelationID))
+				}
+			case entity.CategoryType:
+				if categoryName, ok := categoryNameMap[milestoneRelation.RelationID]; ok {
+					milestoneView.Category = append(milestoneView.Category,
+						&Category{
+							CategoryID:   milestoneRelation.RelationID,
+							CategoryName: categoryName,
+						})
+				} else {
+					log.Error(ctx, "category record not found", log.String("categoryID", milestoneRelation.RelationID))
+				}
+			}
+		}
+	}
+
+	return result, nil
 }
 
 func (m *MilestoneModel) transformToMilestoneDetailView(ctx context.Context, operator *entity.Operator, milestone *entity.Milestone) (*MilestoneDetailView, error) {

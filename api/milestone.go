@@ -341,22 +341,10 @@ func (s *Server) searchMilestone(c *gin.Context) {
 		return
 	}
 
-	total, milestones, err := model.GetMilestoneModel().Search(ctx, op, &condition)
+	response, err := model.GetMilestoneModel().Search(ctx, op, &condition)
 	switch err {
 	case nil:
-		views, err := model.FromMilestones(ctx, op, milestones)
-		if err != nil {
-			log.Error(ctx, "searchMilestone: Search failed",
-				log.Err(err),
-				log.Any("op", op),
-				log.Any("req", condition))
-			s.defaultErrorHandler(c, err)
-			return
-		}
-		c.JSON(http.StatusOK, model.SearchMilestoneResponse{
-			Total:      total,
-			Milestones: views,
-		})
+		c.JSON(http.StatusOK, response)
 	default:
 		log.Error(ctx, "searchMilestone: Search failed", log.Any("op", op), log.Any("req", condition))
 		s.defaultErrorHandler(c, err)
@@ -438,7 +426,7 @@ func (s *Server) searchPrivateMilestone(c *gin.Context) {
 		return
 	}
 
-	total, milestones, err := model.GetMilestoneModel().Search(ctx, op, &condition)
+	response, err := model.GetMilestoneModel().Search(ctx, op, &condition)
 	switch err {
 	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -457,18 +445,7 @@ func (s *Server) searchPrivateMilestone(c *gin.Context) {
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
-		views, err := model.FromMilestones(ctx, op, milestones)
-		if err != nil {
-			log.Error(ctx, "searchPrivateMilestone: search failed",
-				log.Any("op", op),
-				log.Any("req", condition))
-			s.defaultErrorHandler(c, err)
-			return
-		}
-		c.JSON(http.StatusOK, model.SearchMilestoneResponse{
-			Total:      total,
-			Milestones: views,
-		})
+		c.JSON(http.StatusOK, response)
 	default:
 		s.defaultErrorHandler(c, err)
 	}
@@ -542,7 +519,7 @@ func (s *Server) searchPendingMilestone(c *gin.Context) {
 		return
 	}
 
-	total, milestones, err := model.GetMilestoneModel().Search(ctx, op, &condition)
+	response, err := model.GetMilestoneModel().Search(ctx, op, &condition)
 	switch err {
 	case model.ErrBadRequest:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -563,18 +540,7 @@ func (s *Server) searchPendingMilestone(c *gin.Context) {
 	case constant.ErrOperateNotAllowed:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case nil:
-		views, err := model.FromMilestones(ctx, op, milestones)
-		if err != nil {
-			log.Error(ctx, "searchPendingMilestone: search failed",
-				log.Any("op", op),
-				log.Any("req", condition))
-			s.defaultErrorHandler(c, err)
-			return
-		}
-		c.JSON(http.StatusOK, model.SearchMilestoneResponse{
-			Total:      total,
-			Milestones: views,
-		})
+		c.JSON(http.StatusOK, response)
 	default:
 		s.defaultErrorHandler(c, err)
 	}

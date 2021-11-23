@@ -573,7 +573,7 @@ func (ocm OutcomeModel) Search(ctx context.Context, op *entity.Operator, conditi
 			log.Any("op", op),
 			log.Any("daCondition", daCondition))
 		return &SearchOutcomeResponse{
-			Total: 0,
+			Total: total,
 			List:  []*OutcomeView{},
 		}, nil
 	}
@@ -930,7 +930,7 @@ func (ocm OutcomeModel) SearchPrivate(ctx context.Context, op *entity.Operator, 
 			log.Any("op", op),
 			log.Any("daCondition", daCondition))
 		return &SearchOutcomeResponse{
-			Total: 0,
+			Total: total,
 			List:  []*OutcomeView{},
 		}, nil
 	}
@@ -995,7 +995,7 @@ func (ocm OutcomeModel) SearchPending(ctx context.Context, op *entity.Operator, 
 			log.Any("op", op),
 			log.Any("daCondition", daCondition))
 		return &SearchOutcomeResponse{
-			Total: 0,
+			Total: total,
 			List:  []*OutcomeView{},
 		}, nil
 	}
@@ -1031,7 +1031,7 @@ func (o OutcomeModel) SearchPublished(ctx context.Context, op *entity.Operator, 
 			log.Any("op", op),
 			log.Any("daCondition", daCondition))
 		return &SearchPublishedOutcomeResponse{
-			Total: 0,
+			Total: total,
 			List:  []*PublishedOutcomeView{},
 		}, nil
 	}

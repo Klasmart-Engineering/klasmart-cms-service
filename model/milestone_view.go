@@ -464,8 +464,25 @@ type MilestoneView struct {
 	CreateAt       int64                  `json:"create_at"`
 }
 
+type SearchMilestoneView struct {
+	MilestoneID    string                 `json:"milestone_id"`
+	Name           string                 `json:"milestone_name"`
+	Shortcode      string                 `json:"shortcode"`
+	Type           entity.TypeOfMilestone `json:"type"`
+	Status         string                 `json:"status"`
+	Author         AuthorView             `json:"author"`
+	OutcomeCount   int                    `json:"outcome_count"`
+	Program        []*Program             `json:"program"`
+	Category       []*Category            `json:"category"`
+	LockedBy       string                 `json:"locked_by"`
+	LockedLocation []string               `json:"locked_location"`
+	LastEditedBy   string                 `json:"last_edited_by"`
+	LastEditedAt   int64                  `json:"last_edited_at"`
+	CreateAt       int64                  `json:"create_at"`
+}
+
 type SearchMilestoneResponse struct {
-	Milestones []*CreateMilestoneView `json:"milestones"`
+	Milestones []*SearchMilestoneView `json:"milestones"`
 	Total      int                    `json:"total"`
 }
 
