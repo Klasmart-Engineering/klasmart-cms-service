@@ -66,13 +66,14 @@ type OutcomeModel struct {
 	milestoneDA        da.IMilestoneDA
 	milestoneOutcomeDA da.IMilestoneOutcomeDA
 
-	userService        external.UserServiceProvider
-	programService     external.ProgramServiceProvider
-	subjectService     external.SubjectServiceProvider
-	categoryService    external.CategoryServiceProvider
-	subCategoryService external.SubCategoryServiceProvider
-	gradeService       external.GradeServiceProvider
-	ageService         external.AgeServiceProvider
+	organizationService external.OrganizationServiceProvider
+	userService         external.UserServiceProvider
+	programService      external.ProgramServiceProvider
+	subjectService      external.SubjectServiceProvider
+	categoryService     external.CategoryServiceProvider
+	subCategoryService  external.SubCategoryServiceProvider
+	gradeService        external.GradeServiceProvider
+	ageService          external.AgeServiceProvider
 }
 
 var (
@@ -89,13 +90,14 @@ func GetOutcomeModel() IOutcomeModel {
 			milestoneDA:        da.GetMilestoneDA(),
 			milestoneOutcomeDA: da.GetMilestoneOutcomeDA(),
 
-			userService:        external.GetUserServiceProvider(),
-			programService:     external.GetProgramServiceProvider(),
-			subjectService:     external.GetSubjectServiceProvider(),
-			categoryService:    external.GetCategoryServiceProvider(),
-			subCategoryService: external.GetSubCategoryServiceProvider(),
-			gradeService:       external.GetGradeServiceProvider(),
-			ageService:         external.GetAgeServiceProvider(),
+			organizationService: external.GetOrganizationServiceProvider(),
+			userService:         external.GetUserServiceProvider(),
+			programService:      external.GetProgramServiceProvider(),
+			subjectService:      external.GetSubjectServiceProvider(),
+			categoryService:     external.GetCategoryServiceProvider(),
+			subCategoryService:  external.GetSubCategoryServiceProvider(),
+			gradeService:        external.GetGradeServiceProvider(),
+			ageService:          external.GetAgeServiceProvider(),
 		}
 	})
 	return _outcomeModel
@@ -1939,7 +1941,9 @@ func (o OutcomeModel) transformToPublishedOutcomeView(ctx context.Context, opera
 			OutcomeID:   outcome.ID,
 			OutcomeName: outcome.Name,
 			Shortcode:   outcome.Shortcode,
+			Assumed:     outcome.Assumed,
 			// init zero value
+			Sets:           []*OutcomeSetCreateView{},
 			ProgramIDs:     []string{},
 			SubjectIDs:     []string{},
 			CategoryIDs:    []string{},
@@ -1952,19 +1956,41 @@ func (o OutcomeModel) transformToPublishedOutcomeView(ctx context.Context, opera
 		outcomeMap[outcome.ID] = result[i]
 	}
 
+	g := new(errgroup.Group)
+	var outcomeSetMap map[string][]*entity.Set
 	var outcomeRelations []*entity.OutcomeRelation
-	err := o.outcomeRelationDA.Query(ctx, &da.OutcomeRelationCondition{
-		MasterIDs: dbo.NullStrings{
-			Strings: outcomeIDs,
-			Valid:   true,
-		},
-	}, &outcomeRelations)
-	if err != nil {
-		log.Error(ctx, "o.outcomeRelationDA.Query error",
-			log.Err(err),
-			log.Strings("outcomeIDs", outcomeIDs))
-		return nil, err
-	}
+
+	// get outcome set
+	g.Go(func() error {
+		outcomeSets, err := o.outcomeSetDA.SearchSetsByOutcome(ctx, dbo.MustGetDB(ctx), outcomeIDs)
+		if err != nil {
+			log.Error(ctx, "o.outcomeSetDA.SearchSetsByOutcome error",
+				log.Err(err),
+				log.Strings("outcomeIDs", outcomeIDs))
+			return err
+		}
+
+		outcomeSetMap = outcomeSets
+		return nil
+	})
+
+	// get outcome relations
+	g.Go(func() error {
+		err := o.outcomeRelationDA.Query(ctx, &da.OutcomeRelationCondition{
+			MasterIDs: dbo.NullStrings{
+				Strings: outcomeIDs,
+				Valid:   true,
+			},
+		}, &outcomeRelations)
+		if err != nil {
+			log.Error(ctx, "o.outcomeRelationDA.Query error",
+				log.Err(err),
+				log.Strings("outcomeIDs", outcomeIDs))
+			return err
+		}
+
+		return nil
+	})
 
 	for _, outcomeRelation := range outcomeRelations {
 		if outcome, ok := outcomeMap[outcomeRelation.MasterID]; ok {
@@ -1981,6 +2007,19 @@ func (o OutcomeModel) transformToPublishedOutcomeView(ctx context.Context, opera
 				outcome.GradeIDs = append(outcome.GradeIDs, outcomeRelation.RelationID)
 			case entity.AgeType:
 				outcome.AgeIDs = append(outcome.AgeIDs, outcomeRelation.RelationID)
+			}
+		}
+	}
+
+	for i, outcome := range outcomes {
+		outcomeView := result[i]
+		// fill outcome sets
+		if outcomeSets, ok := outcomeSetMap[outcome.ID]; ok {
+			for _, set := range outcomeSets {
+				outcomeView.Sets = append(outcomeView.Sets, &OutcomeSetCreateView{
+					SetID:   set.ID,
+					SetName: set.Name,
+				})
 			}
 		}
 	}
@@ -2227,19 +2266,21 @@ func (o OutcomeModel) transformToOutcomeDetailView(ctx context.Context, operator
 	var userIDs []string
 
 	result := &OutcomeDetailView{
-		OutcomeID:     outcome.ID,
-		OutcomeName:   outcome.Name,
-		Shortcode:     outcome.Shortcode,
-		Description:   outcome.Description,
-		AuthorID:      outcome.AuthorID,
-		AuthorName:    outcome.AuthorName,
-		Assumed:       outcome.Assumed,
-		PublishStatus: string(outcome.PublishStatus),
-		RejectReason:  outcome.RejectReason,
-		LockedBy:      outcome.LockedBy,
-		Keywords:      strings.Split(outcome.Keywords, ","),
-		CreatedAt:     outcome.CreateAt,
-		UpdatedAt:     outcome.UpdateAt,
+		OutcomeID:      outcome.ID,
+		AncestorID:     outcome.AncestorID,
+		OrganizationID: outcome.OrganizationID,
+		OutcomeName:    outcome.Name,
+		Shortcode:      outcome.Shortcode,
+		Description:    outcome.Description,
+		AuthorID:       outcome.AuthorID,
+		AuthorName:     outcome.AuthorName,
+		Assumed:        outcome.Assumed,
+		PublishStatus:  string(outcome.PublishStatus),
+		RejectReason:   outcome.RejectReason,
+		LockedBy:       outcome.LockedBy,
+		Keywords:       strings.Split(outcome.Keywords, ","),
+		CreatedAt:      outcome.CreateAt,
+		UpdatedAt:      outcome.UpdateAt,
 		// init zero value
 		LockedLocation: []string{},
 		Program:        []Program{},
@@ -2313,6 +2354,22 @@ func (o OutcomeModel) transformToOutcomeDetailView(ctx context.Context, operator
 	var gradeMap map[string]*external.Grade
 	var ageMap map[string]*external.Age
 	outcomeMilestones := []*Milestone{}
+	var orgNameMap map[string]string
+
+	// get org name
+	g.Go(func() error {
+		orgNames, err := o.organizationService.BatchGetNameMap(ctx, operator, []string{outcome.OrganizationID})
+		if err != nil {
+			log.Error(ctx, "o.organizationService.BatchGetNameMap error",
+				log.Err(err),
+				log.Strings("userIDs", userIDs))
+			return err
+		}
+
+		orgNameMap = orgNames
+
+		return nil
+	})
 
 	// get outcome set
 	g.Go(func() error {
@@ -2529,6 +2586,13 @@ func (o OutcomeModel) transformToOutcomeDetailView(ctx context.Context, operator
 		log.Error(ctx, "transformToOutcomeView error",
 			log.Err(err))
 		return nil, err
+	}
+
+	// fill org name
+	if orgName, ok := orgNameMap[outcome.OrganizationID]; ok {
+		result.OrganizationName = orgName
+	} else {
+		log.Error(ctx, "organization not found", log.String("orgID", outcome.OrganizationID))
 	}
 
 	// fill author name
