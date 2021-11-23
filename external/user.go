@@ -45,12 +45,12 @@ type User struct {
 
 type NullableUser struct {
 	Valid bool   `json:"valid"`
-	ID    string `json:"id"`
+	_ID   string `json:"_id"`
 	*User
 }
 
 func (n *NullableUser) StringID() string {
-	return n.ID
+	return n._ID
 }
 func (n *NullableUser) RelatedIDs() []*cache.RelatedEntity {
 	return nil
@@ -140,7 +140,7 @@ func (s AmsUserService) QueryByIDs(ctx context.Context, ids []string, options ..
 		users = append(users, &NullableUser{
 			Valid: user != nil,
 			User:  user,
-			ID:    ids[indexMapping[index]],
+			_ID:   ids[indexMapping[index]],
 		})
 	}
 
