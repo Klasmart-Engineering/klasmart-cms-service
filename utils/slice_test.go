@@ -84,3 +84,10 @@ func TestStableSliceDeduplication(t *testing.T) {
 	result := StableSliceDeduplication(testData)
 	fmt.Println(result)
 }
+
+func TestExcludeStrings(t *testing.T) {
+	source := []string{"1", "2", "3", "a", "b"}
+	targets := []string{"2", "3", "4", "c"}
+	result := ExcludeStrings(source, targets)
+	fmt.Println(result)
+}
