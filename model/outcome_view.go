@@ -275,15 +275,17 @@ type SearchOutcomeResponse struct {
 }
 
 type PublishedOutcomeView struct {
-	OutcomeID      string   `json:"outcome_id"`
-	OutcomeName    string   `json:"outcome_name"`
-	Shortcode      string   `json:"shortcode"`
-	ProgramIDs     []string `json:"program_ids"`
-	SubjectIDs     []string `json:"subject_ids"`
-	CategoryIDs    []string `json:"category_ids"`
-	SubcategoryIDs []string `json:"sub_category_ids"`
-	GradeIDs       []string `json:"grade_ids"`
-	AgeIDs         []string `json:"age_ids"`
+	OutcomeID      string                  `json:"outcome_id"`
+	OutcomeName    string                  `json:"outcome_name"`
+	Shortcode      string                  `json:"shortcode"`
+	Assumed        bool                    `json:"assumed"`
+	ProgramIDs     []string                `json:"program_ids"`
+	SubjectIDs     []string                `json:"subject_ids"`
+	CategoryIDs    []string                `json:"category_ids"`
+	SubcategoryIDs []string                `json:"sub_category_ids"`
+	GradeIDs       []string                `json:"grade_ids"`
+	AgeIDs         []string                `json:"age_ids"`
+	Sets           []*OutcomeSetCreateView `json:"sets"`
 }
 
 type SearchPublishedOutcomeResponse struct {
@@ -292,28 +294,31 @@ type SearchPublishedOutcomeResponse struct {
 }
 
 type OutcomeDetailView struct {
-	OutcomeID      string                  `json:"outcome_id"`
-	OutcomeName    string                  `json:"outcome_name"`
-	Shortcode      string                  `json:"shortcode"`
-	Description    string                  `json:"description"`
-	AuthorID       string                  `json:"author_id"`
-	AuthorName     string                  `json:"author_name"`
-	Assumed        bool                    `json:"assumed"`
-	PublishStatus  string                  `json:"publish_status"`
-	RejectReason   string                  `json:"reject_reason"`
-	LockedBy       string                  `json:"locked_by"`
-	LastEditedBy   string                  `json:"last_edited_by"`
-	LastEditedAt   int64                   `json:"last_edited_at"`
-	LockedLocation []string                `json:"locked_location"`
-	Keywords       []string                `json:"keywords"`
-	Program        []Program               `json:"program"`
-	Subject        []Subject               `json:"subject"`
-	Developmental  []Developmental         `json:"developmental"`
-	Skills         []Skill                 `json:"skills"`
-	Age            []Age                   `json:"age"`
-	Grade          []Grade                 `json:"grade"`
-	Sets           []*OutcomeSetCreateView `json:"sets"`
-	Milestones     []*Milestone            `json:"milestones"`
-	CreatedAt      int64                   `json:"created_at"`
-	UpdatedAt      int64                   `json:"update_at"`
+	OutcomeID        string                  `json:"outcome_id"`
+	AncestorID       string                  `json:"ancestor_id"`
+	OrganizationID   string                  `json:"organization_id"`
+	OrganizationName string                  `json:"organization_name"`
+	OutcomeName      string                  `json:"outcome_name"`
+	Shortcode        string                  `json:"shortcode"`
+	Description      string                  `json:"description"`
+	AuthorID         string                  `json:"author_id"`
+	AuthorName       string                  `json:"author_name"`
+	Assumed          bool                    `json:"assumed"`
+	PublishStatus    string                  `json:"publish_status"`
+	RejectReason     string                  `json:"reject_reason"`
+	LockedBy         string                  `json:"locked_by"`
+	LastEditedBy     string                  `json:"last_edited_by"`
+	LastEditedAt     int64                   `json:"last_edited_at"`
+	LockedLocation   []string                `json:"locked_location"`
+	Keywords         []string                `json:"keywords"`
+	Program          []Program               `json:"program"`
+	Subject          []Subject               `json:"subject"`
+	Developmental    []Developmental         `json:"developmental"`
+	Skills           []Skill                 `json:"skills"`
+	Age              []Age                   `json:"age"`
+	Grade            []Grade                 `json:"grade"`
+	Sets             []*OutcomeSetCreateView `json:"sets"`
+	Milestones       []*Milestone            `json:"milestones"`
+	CreatedAt        int64                   `json:"created_at"`
+	UpdatedAt        int64                   `json:"update_at"`
 }
