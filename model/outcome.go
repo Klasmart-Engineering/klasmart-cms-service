@@ -667,7 +667,7 @@ func (ocm OutcomeModel) Lock(ctx context.Context, operator *entity.Operator, out
 			return err
 		}
 		var outcomeRelations []*entity.OutcomeRelation
-		err = da.GetOutcomeRelationDA().QueryTx(ctx, tx, &da.RelationCondition{
+		err = da.GetOutcomeRelationDA().QueryTx(ctx, tx, &da.OutcomeRelationCondition{
 			MasterIDs:  dbo.NullStrings{Strings: []string{outcome.ID}, Valid: true},
 			MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
 		}, &outcomeRelations)
@@ -1480,7 +1480,7 @@ func (ocm OutcomeModel) fillRelation(ctx context.Context, operator *entity.Opera
 		}
 
 		var outcomeRelations []*entity.OutcomeRelation
-		err := da.GetOutcomeRelationDA().QueryTx(ctx, tx, &da.RelationCondition{
+		err := da.GetOutcomeRelationDA().QueryTx(ctx, tx, &da.OutcomeRelationCondition{
 			MasterIDs:  dbo.NullStrings{Strings: masterIDs, Valid: true},
 			MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
 		}, &outcomeRelations)
