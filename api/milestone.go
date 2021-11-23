@@ -259,7 +259,10 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 				s.defaultErrorHandler(c, err)
 				return
 			}
-			log.Warn(ctx, "deleteMilestone: Delete failed", log.Any("op", op), log.Strings("req", data.IDs))
+			log.Warn(ctx, "deleteMilestone: Delete failed",
+				log.Any("op", op),
+				log.Strings("req", data.IDs),
+				log.Any("lockedByErr", lockedByErr))
 			lable := AssessMsgLockedMilestone
 			if len(data.IDs) == 1 {
 				lable = AssessErrorMsgLocked

@@ -70,8 +70,13 @@ func (e *ErrContentAlreadyLocked) Error() string {
 func NewErrContentAlreadyLocked(ctx context.Context, lockedBy string, operator *entity.Operator) error {
 	user, err := external.GetUserServiceProvider().Get(ctx, operator, lockedBy)
 	if err != nil {
+		log.Error(ctx, "external.GetUserServiceProvider().Get error",
+			log.Err(err),
+			log.String("lockedBy", lockedBy))
 		return ErrUserNotFound
 	}
+
+	log.Debug(ctx, "locked by user", log.Any("user", user))
 	return &ErrContentAlreadyLocked{LockedBy: user}
 }
 
