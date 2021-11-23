@@ -454,7 +454,7 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 		}
 
 		var milestoneRelations []*entity.MilestoneRelation
-		err = da.GetMilestoneRelationDA().QueryTx(ctx, tx, &da.RelationCondition{
+		err = da.GetMilestoneRelationDA().QueryTx(ctx, tx, &da.MilestoneRelationCondition{
 			MasterIDs:  dbo.NullStrings{Strings: milestoneIDs, Valid: true},
 			MasterType: sql.NullString{String: string(entity.MilestoneType), Valid: true},
 		}, &milestoneRelations)
@@ -589,7 +589,7 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 		}
 
 		var milestoneRelations []*entity.MilestoneRelation
-		err = da.GetMilestoneRelationDA().QueryTx(ctx, tx, &da.RelationCondition{
+		err = da.GetMilestoneRelationDA().QueryTx(ctx, tx, &da.MilestoneRelationCondition{
 			MasterIDs:  dbo.NullStrings{Strings: []string{milestoneID}, Valid: true},
 			MasterType: sql.NullString{String: string(entity.MilestoneType), Valid: true},
 		}, &milestoneRelations)
@@ -1210,10 +1210,10 @@ func (m MilestoneModel) buildGeneral(ctx context.Context, op *entity.Operator) *
 	return general
 }
 
-func (m MilestoneModel) collectRelation(ms *entity.Milestone) []*entity.Relation {
-	relations := make([]*entity.Relation, 0, len(ms.Programs)+len(ms.Subjects)+len(ms.Categories)+len(ms.Subcategories)+len(ms.Grades)+len(ms.Ages))
+func (m MilestoneModel) collectRelation(ms *entity.Milestone) []*entity.MilestoneRelation {
+	relations := make([]*entity.MilestoneRelation, 0, len(ms.Programs)+len(ms.Subjects)+len(ms.Categories)+len(ms.Subcategories)+len(ms.Grades)+len(ms.Ages))
 	for i := range ms.Programs {
-		relation := entity.Relation{
+		relation := entity.MilestoneRelation{
 			MasterID:     ms.ID,
 			MasterType:   entity.MilestoneType,
 			RelationID:   ms.Programs[i],
@@ -1223,7 +1223,7 @@ func (m MilestoneModel) collectRelation(ms *entity.Milestone) []*entity.Relation
 	}
 
 	for i := range ms.Subjects {
-		relation := entity.Relation{
+		relation := entity.MilestoneRelation{
 			MasterID:     ms.ID,
 			MasterType:   entity.MilestoneType,
 			RelationID:   ms.Subjects[i],
@@ -1233,7 +1233,7 @@ func (m MilestoneModel) collectRelation(ms *entity.Milestone) []*entity.Relation
 	}
 
 	for i := range ms.Categories {
-		relation := entity.Relation{
+		relation := entity.MilestoneRelation{
 			MasterID:     ms.ID,
 			MasterType:   entity.MilestoneType,
 			RelationID:   ms.Categories[i],
@@ -1243,7 +1243,7 @@ func (m MilestoneModel) collectRelation(ms *entity.Milestone) []*entity.Relation
 	}
 
 	for i := range ms.Subcategories {
-		relation := entity.Relation{
+		relation := entity.MilestoneRelation{
 			MasterID:     ms.ID,
 			MasterType:   entity.MilestoneType,
 			RelationID:   ms.Subcategories[i],
@@ -1253,7 +1253,7 @@ func (m MilestoneModel) collectRelation(ms *entity.Milestone) []*entity.Relation
 	}
 
 	for i := range ms.Grades {
-		relation := entity.Relation{
+		relation := entity.MilestoneRelation{
 			MasterID:     ms.ID,
 			MasterType:   entity.MilestoneType,
 			RelationID:   ms.Grades[i],
@@ -1263,7 +1263,7 @@ func (m MilestoneModel) collectRelation(ms *entity.Milestone) []*entity.Relation
 	}
 
 	for i := range ms.Ages {
-		relation := entity.Relation{
+		relation := entity.MilestoneRelation{
 			MasterID:     ms.ID,
 			MasterType:   entity.MilestoneType,
 			RelationID:   ms.Ages[i],
