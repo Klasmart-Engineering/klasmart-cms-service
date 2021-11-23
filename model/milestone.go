@@ -602,6 +602,7 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 
 		for i := range milestoneRelations {
 			milestoneRelations[i].MasterID = newVersion.ID
+			milestoneRelations[i].ID = 0
 		}
 
 		_, err = da.GetMilestoneRelationDA().InsertTx(ctx, tx, milestoneRelations)
