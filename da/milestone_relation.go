@@ -36,7 +36,9 @@ func (milestoneRelationDA) TableName() string {
 
 func (mas milestoneRelationDA) DeleteTx(ctx context.Context, tx *dbo.DBContext, masterIDs []string) error {
 	if len(masterIDs) > 0 {
-		err := tx.Where("master_id in (?)", masterIDs).
+		tx.ResetCondition()
+		err := tx.Where("master_id in (?)", masterIDs).Debug().
+			Table(entity.MilestoneRelation{}.TableName()).
 			Delete(entity.MilestoneRelation{}).
 			Error
 		if err != nil {

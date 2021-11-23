@@ -3,14 +3,15 @@ package da
 import (
 	"context"
 	"fmt"
+	"os"
+	"testing"
+
 	"github.com/go-redis/redis"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/ro"
-	"os"
-	"testing"
 )
 
 func setup() {
@@ -67,7 +68,7 @@ func TestGetMilestoneDA_BatchUnLock(t *testing.T) {
 func TestCountTx(t *testing.T) {
 	setup()
 	ctx := context.TODO()
-	result, err := GetMilestoneOutcomeDA().CountTx(ctx, dbo.MustGetDB(ctx), []string{"607e7089eb753a919be411cf"}, []string{"6094f1e9de3afd06e06fc5d8"})
+	result, err := GetMilestoneOutcomeDA().BatchCountTx(ctx, dbo.MustGetDB(ctx), []string{"607e7089eb753a919be411cf"}, []string{"6094f1e9de3afd06e06fc5d8"})
 	if err != nil {
 		t.Fatal(err)
 	}

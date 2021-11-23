@@ -24,6 +24,7 @@ type outcomeRelationDA struct {
 // Deprecated
 func (*outcomeRelationDA) DeleteTx(ctx context.Context, tx *dbo.DBContext, masterIDs []string) error {
 	if len(masterIDs) > 0 {
+		tx.ResetCondition()
 		err := tx.Where("master_id in (?)", masterIDs).
 			Delete(entity.OutcomeRelation{}).
 			Error
