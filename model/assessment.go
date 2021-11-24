@@ -214,9 +214,11 @@ func (m *assessmentModel) PrepareAddInputWhenScheduleExist(ctx context.Context, 
 			ScheduleID:    item.ID,
 			ScheduleTitle: item.Title,
 			LessonPlanID:  item.LessonPlanID,
-			ClassID:       item.ClassRosterClass.ID,
 			ClassLength:   inputMapItem.ClassLength,
 			ClassEndTime:  inputMapItem.ClassEndTime,
+		}
+		if item.ClassRosterClass != nil {
+			assessmentArgsItem.ClassID = item.ClassRosterClass.ID
 		}
 
 		if assessmentType == entity.AssessmentTypeClass || assessmentType == entity.AssessmentTypeStudy {
