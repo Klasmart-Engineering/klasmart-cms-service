@@ -603,9 +603,9 @@ func (m *assessmentBase) toViews(ctx context.Context, operator *entity.Operator,
 
 	log.Debug(ctx, "convert assessments to views",
 		log.Any("result", result),
-		log.Any("operator", operator),
-		log.Any("assessments", assessments),
 		log.Any("options", options),
+		log.Any("teacherMap", teacherNameMap),
+		log.Any("studentMap", studentNameMap),
 	)
 
 	return result, nil
