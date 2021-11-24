@@ -145,55 +145,65 @@ from (
 
 func (r *ReportDA) MissedLessonsListInfo(ctx context.Context, request *entity.TeacherLoadMissedLessonsRequest) (model []*entity.TeacherLoadMissedLesson, err error) {
 	sql := `
-select sc.* from
-    (
-   	select 
+	select sr.* from 
+	(
+		select 
 		s.id,
-		sl.relation_id as teacher_id,
-		s.class_type, 
+		sl.relation_id as teacher_id ,
+		s.class_type,s.end_at,
 		s.title,
 		(
-            select relation_id from schedules_relations sel 
-            where sel.schedule_id=s.id 
-            and sel.relation_type='${class_roster_class}'
+			select relation_id from schedules_relations sel
+            where sel.schedule_id=s.id
+            and sel.relation_type=?
         ) as class_id,
-        (
-			select 
-				count(*) 
-			from schedules_relations sls 
-			where  sls.schedule_id=s.id 
-           	and sls.relation_type='${class_roster_student}'
+		(
+			select count(*)
+			from schedules_relations sls
+			where  sls.schedule_id=s.id
+           	and sls.relation_type=?
 		) as no_of_student,
 		s.start_at as start_date,
 		s.end_at as end_date
-   	from schedules s
-   	inner join schedules_relations sl
-    on s.id=sl.schedule_id
-   	where sl.relation_id=? -- teacherId params
-    and s.class_type in ('${OnlineClass}', '${OfflineClass}') 
-    and s.delete_at = 0
-  	and s.end_at >= ? and s.end_at <?
-    and class_id in (?)
-   	group by sl.schedule_id
-   	order by s.end_at desc
+		from 
+			(
+				select * from schedules 
+				where class_type in (?, ?)
+				and delete_at = 0
+				and end_at >= ? and end_at <?
+				and class_id in  (?) 
+			) s 
+		inner join schedules_relations sl 
+		on s.id=sl.schedule_id
+		where sl.relation_id =?
+		and sl.relation_type in (?, ?)
+	) sr
+	left join assessments ass 
+	on sr.id=ass.schedule_id
+	where not exists
+	( 
+		select attendance_id from assessments_attendances ast 
+		where ast.assessment_id = ass.id and ast.attendance_id=sr.teacher_id
 	)
-   sc left join  assessments ass on sc.id=ass.schedule_id
-   where !exists
-   ( 
-	  select attendance_id from assessments_attendances ast 
-     where ast.assessment_id = ass.id and ast.attendance_id=sc.teacher_id
-    )
+	order by sr.id,sr.end_at desc
 	LIMIT ? OFFSET ?`
-
-	sql = strings.Replace(sql, "${OnlineClass}", entity.ScheduleClassTypeOnlineClass.String(), -1)
-	sql = strings.Replace(sql, "${OfflineClass}", entity.ScheduleClassTypeOfflineClass.String(), -1)
-	sql = strings.Replace(sql, "${class_roster_student}", entity.ScheduleRelationTypeClassRosterStudent.String(), -1)
-	sql = strings.Replace(sql, "${class_roster_class}", entity.ScheduleRelationTypeClassRosterClass.String(), -1)
 	startAt, endAt, err := request.Duration.Value(ctx)
 	if err != nil {
 		return
 	}
-	err = r.QueryRawSQL(ctx, &model, sql, request.TeacherId, startAt, endAt, request.ClassIDs, request.PageSize, (request.Page-1)*request.PageSize)
+	err = r.QueryRawSQL(ctx, &model, sql,
+		entity.ScheduleRelationTypeClassRosterClass.String(),
+		entity.ScheduleRelationTypeClassRosterStudent.String(),
+		entity.ScheduleClassTypeOnlineClass.String(),
+		entity.ScheduleClassTypeOfflineClass.String(),
+		startAt,
+		endAt,
+		request.ClassIDs,
+		request.TeacherId,
+		entity.ScheduleRelationTypeClassRosterTeacher.String(),
+		entity.ScheduleRelationTypeParticipantTeacher.String(),
+		request.PageSize,
+		(request.Page-1)*request.PageSize)
 	if err != nil {
 		log.Error(ctx, "exec missedLessonsListInfo sql failed",
 			log.Err(err),
@@ -205,35 +215,41 @@ select sc.* from
 }
 func (r *ReportDA) MissedLessonsListTotal(ctx context.Context, request *entity.TeacherLoadMissedLessonsRequest) (total int, err error) {
 	sql := `
-select count(*) from
-    (
-   	select 
-		s.id,
-		sl.relation_id as teacher_id
-   	from schedules s
-   	inner join schedules_relations sl
-    on s.id=sl.schedule_id
-   	where sl.relation_id=? -- teacherId params
-    and s.class_type in ('${OnlineClass}', '${OfflineClass}') 
-    and s.delete_at = 0
-   	and s.end_at >= ? and s.end_at <?
-    and class_id in (?)
-   	group by sl.schedule_id
-   	order by s.end_at desc
-	)
-   sc left join  assessments ass on sc.id=ass.schedule_id
-   where !exists
-   ( 
-	  select attendance_id from assessments_attendances ast 
-     where ast.assessment_id = ass.id and ast.attendance_id=sc.teacher_id
-    )`
-	sql = strings.Replace(sql, "${OnlineClass}", entity.ScheduleClassTypeOnlineClass.String(), -1)
-	sql = strings.Replace(sql, "${OfflineClass}", entity.ScheduleClassTypeOfflineClass.String(), -1)
+	select count(*) from 
+	(
+		select s.id,sl.relation_id,s.end_at from 
+			(
+				select * from schedules 
+				where class_type in (?, ?) 
+				and delete_at = 0
+				and end_at >= ? and end_at <?
+				and class_id in (?) 
+			) s 
+		inner join schedules_relations sl 
+		on s.id=sl.schedule_id
+		where sl.relation_id =?
+		and sl.relation_type in (?, ?)
+	) sr
+	left join assessments ass 
+	on sr.id=ass.schedule_id
+	where not exists
+	( 
+		select attendance_id from assessments_attendances ast 
+		where ast.assessment_id = ass.id and ast.attendance_id=sr.relation_id
+	)`
 	startAt, endAt, err := request.Duration.Value(ctx)
 	if err != nil {
 		return
 	}
-	err = r.QueryRawSQL(ctx, &total, sql, request.TeacherId, startAt, endAt, request.ClassIDs)
+	err = r.QueryRawSQL(ctx, &total, sql,
+		entity.ScheduleClassTypeOnlineClass.String(),
+		entity.ScheduleClassTypeOfflineClass.String(),
+		startAt,
+		endAt,
+		request.ClassIDs,
+		request.TeacherId,
+		entity.ScheduleRelationTypeClassRosterTeacher.String(),
+		entity.ScheduleRelationTypeParticipantTeacher.String())
 	if err != nil {
 		log.Error(ctx, "exec missedLessonsListTotal sql failed",
 			log.Err(err),

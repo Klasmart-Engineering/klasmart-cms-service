@@ -41,7 +41,7 @@ type IContentDA interface {
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition *ContentCondition) (int, []*entity.Content, error)
 	SearchContentUnSafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (int, []*entity.Content, error)
 	QueryContent(cgtx context.Context, tx *dbo.DBContext, condition *ContentCondition) ([]*entity.Content, error)
-
+	QueryContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (contents []*entity.Content, err error)
 	SearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 ContentCondition, condition2 *FolderCondition) (int, []*entity.FolderContent, error)
 	SearchFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 *FolderCondition) (int, []*entity.FolderContent, error)
 	CountFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 *FolderCondition) (int, error)
@@ -434,6 +434,15 @@ func (cd *DBContentDA) QueryContent(ctx context.Context, tx *dbo.DBContext, cond
 	objs := make([]*entity.Content, 0)
 	err := cd.s.QueryTx(ctx, tx, condition, &objs)
 	return objs, err
+}
+
+func (cd *DBContentDA) QueryContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (contents []*entity.Content, err error) {
+	contents = make([]*entity.Content, 0)
+	err = cd.s.QueryTx(ctx, tx, condition, &contents)
+	if err != nil {
+		return
+	}
+	return
 }
 
 func (cm *DBContentDA) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error {

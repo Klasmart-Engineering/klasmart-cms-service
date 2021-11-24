@@ -18,7 +18,7 @@ import (
 // @Description Create milestone
 // @Accept json
 // @Produce json
-// @Param milestone body model.MilestoneView true "create milestone"
+// @Param milestone body model.CreateMilestoneView true "create milestone"
 // @Success 200 {object} model.MilestoneView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -28,7 +28,7 @@ import (
 func (s *Server) createMilestone(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	var data model.MilestoneView
+	var data model.CreateMilestoneView
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		log.Warn(ctx, "createMilestone: ShouldBind failed", log.Err(err))
@@ -85,7 +85,7 @@ func (s *Server) createMilestone(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param milestone_id path string true "milestone id"
-// @Success 200 {object} model.MilestoneView
+// @Success 200 {object} model.MilestoneDetailView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -99,22 +99,14 @@ func (s *Server) obtainMilestone(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	milestone, err := model.GetMilestoneModel().Obtain(ctx, op, milestoneID)
+	response, err := model.GetMilestoneModel().Obtain(ctx, op, milestoneID)
 
 	switch err {
 	case model.ErrResourceNotFound:
 		log.Warn(ctx, "obtainMilestone: Obtain failed", log.Any("op", op), log.String("milestone", milestoneID))
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
-		views, err := model.FromMilestones(ctx, op, []*entity.Milestone{milestone})
-		if err != nil {
-			log.Error(ctx, "obtainMilestone: fromMilestones failed",
-				log.String("milestone", milestoneID),
-				log.Any("milestones", views))
-			s.defaultErrorHandler(c, err)
-			return
-		}
-		c.JSON(http.StatusOK, views[0])
+		c.JSON(http.StatusOK, response)
 	default:
 		log.Error(ctx, "obtainMilestone: Obtain failed", log.String("milestone", milestoneID))
 		s.defaultErrorHandler(c, err)
@@ -128,7 +120,7 @@ func (s *Server) obtainMilestone(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param milestone_id path string true "milestone id"
-// @Param milestone body model.MilestoneView true "milestone"
+// @Param milestone body model.CreateMilestoneView true "milestone"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -140,7 +132,7 @@ func (s *Server) updateMilestone(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	milestoneID := c.Param("id")
-	var data model.MilestoneView
+	var data model.CreateMilestoneView
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		log.Warn(ctx, "updateMilestone: ShouldBind failed", log.Err(err))
@@ -267,7 +259,10 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 				s.defaultErrorHandler(c, err)
 				return
 			}
-			log.Warn(ctx, "deleteMilestone: Delete failed", log.Any("op", op), log.Strings("req", data.IDs))
+			log.Warn(ctx, "deleteMilestone: Delete failed",
+				log.Any("op", op),
+				log.Strings("req", data.IDs),
+				log.Any("lockedByErr", lockedByErr))
 			lable := AssessMsgLockedMilestone
 			if len(data.IDs) == 1 {
 				lable = AssessErrorMsgLocked
@@ -295,7 +290,7 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
-// @Success 200 {object} model.MilestoneSearchResponse
+// @Success 200 {object} model.SearchMilestoneResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -349,22 +344,10 @@ func (s *Server) searchMilestone(c *gin.Context) {
 		return
 	}
 
-	total, milestones, err := model.GetMilestoneModel().Search(ctx, op, &condition)
+	response, err := model.GetMilestoneModel().Search(ctx, op, &condition)
 	switch err {
 	case nil:
-		views, err := model.FromMilestones(ctx, op, milestones)
-		if err != nil {
-			log.Error(ctx, "searchMilestone: Search failed",
-				log.Err(err),
-				log.Any("op", op),
-				log.Any("req", condition))
-			s.defaultErrorHandler(c, err)
-			return
-		}
-		c.JSON(http.StatusOK, model.MilestoneSearchResponse{
-			Total:      total,
-			Milestones: views,
-		})
+		c.JSON(http.StatusOK, response)
 	default:
 		log.Error(ctx, "searchMilestone: Search failed", log.Any("op", op), log.Any("req", condition))
 		s.defaultErrorHandler(c, err)
@@ -386,7 +369,7 @@ func (s *Server) searchMilestone(c *gin.Context) {
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
-// @Success 200 {object} model.MilestoneSearchResponse
+// @Success 200 {object} model.SearchMilestoneResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -446,7 +429,7 @@ func (s *Server) searchPrivateMilestone(c *gin.Context) {
 		return
 	}
 
-	total, milestones, err := model.GetMilestoneModel().Search(ctx, op, &condition)
+	response, err := model.GetMilestoneModel().Search(ctx, op, &condition)
 	switch err {
 	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -465,18 +448,7 @@ func (s *Server) searchPrivateMilestone(c *gin.Context) {
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
-		views, err := model.FromMilestones(ctx, op, milestones)
-		if err != nil {
-			log.Error(ctx, "searchPrivateMilestone: search failed",
-				log.Any("op", op),
-				log.Any("req", condition))
-			s.defaultErrorHandler(c, err)
-			return
-		}
-		c.JSON(http.StatusOK, model.MilestoneSearchResponse{
-			Total:      total,
-			Milestones: views,
-		})
+		c.JSON(http.StatusOK, response)
 	default:
 		s.defaultErrorHandler(c, err)
 	}
@@ -497,7 +469,7 @@ func (s *Server) searchPrivateMilestone(c *gin.Context) {
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
-// @Success 200 {object} model.MilestoneSearchResponse
+// @Success 200 {object} model.SearchMilestoneResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -550,7 +522,7 @@ func (s *Server) searchPendingMilestone(c *gin.Context) {
 		return
 	}
 
-	total, milestones, err := model.GetMilestoneModel().Search(ctx, op, &condition)
+	response, err := model.GetMilestoneModel().Search(ctx, op, &condition)
 	switch err {
 	case model.ErrBadRequest:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -571,18 +543,7 @@ func (s *Server) searchPendingMilestone(c *gin.Context) {
 	case constant.ErrOperateNotAllowed:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case nil:
-		views, err := model.FromMilestones(ctx, op, milestones)
-		if err != nil {
-			log.Error(ctx, "searchPendingMilestone: search failed",
-				log.Any("op", op),
-				log.Any("req", condition))
-			s.defaultErrorHandler(c, err)
-			return
-		}
-		c.JSON(http.StatusOK, model.MilestoneSearchResponse{
-			Total:      total,
-			Milestones: views,
-		})
+		c.JSON(http.StatusOK, response)
 	default:
 		s.defaultErrorHandler(c, err)
 	}

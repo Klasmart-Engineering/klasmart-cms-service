@@ -16,7 +16,7 @@ import (
 )
 
 func setup() {
-	os.Setenv("connection_string", "root:Passw0rd@tcp(127.0.0.1:3306)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local")
+	os.Setenv("connection_string", "root:root@tcp(127.0.0.1:3306)/kidsloop2_alpha_temp?charset=utf8mb4&parseTime=True&loc=Local")
 	config.Set(&config.Config{
 		DBConfig: config.DBConfig{
 			ConnectionString: os.Getenv("connection_string"),
@@ -105,13 +105,13 @@ func TestOutcomeSetModel_CreateOutcomeSet(t *testing.T) {
 func TestSearch(t *testing.T) {
 	setup()
 	ctx := context.TODO()
-	count, outcomes, err := GetOutcomeModel().Search(ctx, &entity.Operator{OrgID: "92db7ddd-1f23-4f64-bd47-94f6d34a50c0"}, &entity.OutcomeCondition{})
+	response, err := GetOutcomeModel().Search(ctx, &entity.Operator{OrgID: "92db7ddd-1f23-4f64-bd47-94f6d34a50c0"}, &entity.OutcomeCondition{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(count)
-	for _, v := range outcomes {
-		t.Log(v.EditingOutcome)
+	t.Log(response.Total)
+	for _, v := range response.List {
+		t.Log(v)
 	}
 }
 
@@ -134,7 +134,7 @@ func TestSearchWithoutRelation(t *testing.T) {
 func TestSearchPublished(t *testing.T) {
 	setup()
 	ctx := context.TODO()
-	count, outcomes, err := GetOutcomeModel().SearchPublished(ctx, &entity.Operator{}, &entity.OutcomeCondition{
+	result, err := GetOutcomeModel().SearchPublished(ctx, &entity.Operator{}, &entity.OutcomeCondition{
 		ProgramIDs:     []string{"program_test_1"},
 		SubjectIDs:     []string{"subject_test_1"},
 		CategoryIDs:    []string{"category_test_1"},
@@ -142,13 +142,13 @@ func TestSearchPublished(t *testing.T) {
 		AgeIDs:         []string{"age_test_1"},
 		GradeIDs:       []string{"grade_test_1"},
 		Page:           1,
-		PageSize:       10,
+		PageSize:       5,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(count)
-	for _, v := range outcomes {
+	t.Log(result.Total)
+	for _, v := range result.List {
 		t.Log(v)
 	}
 }

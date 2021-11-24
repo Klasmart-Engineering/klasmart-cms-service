@@ -70,8 +70,13 @@ func (e *ErrContentAlreadyLocked) Error() string {
 func NewErrContentAlreadyLocked(ctx context.Context, lockedBy string, operator *entity.Operator) error {
 	user, err := external.GetUserServiceProvider().Get(ctx, operator, lockedBy)
 	if err != nil {
+		log.Error(ctx, "external.GetUserServiceProvider().Get error",
+			log.Err(err),
+			log.String("lockedBy", lockedBy))
 		return ErrUserNotFound
 	}
+
+	log.Debug(ctx, "locked by user", log.Any("user", user))
 	return &ErrContentAlreadyLocked{LockedBy: user}
 }
 
@@ -144,7 +149,7 @@ type IContentModel interface {
 	DeleteContentBulkTx(ctx context.Context, ids []string, user *entity.Operator) error
 	DeleteContentTx(ctx context.Context, cid string, user *entity.Operator) error
 
-	GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator) (lps []*entity.LessonPlanForSchedule, err error)
+	GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest) (lps []*entity.LessonPlanForSchedule, err error)
 }
 
 type ContentModel struct {
@@ -377,7 +382,7 @@ func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, co
 		return 0, nil, err
 	}
 
-	contentWithDetails, err := cm.buildContentWithDetailsForSearchContent(ctx, response, false, user)
+	contentWithDetails, err := cm.buildContentWithDetailsForSearchContent(ctx, response, user)
 	if err != nil {
 		log.Error(ctx, "build content details failed", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, err
@@ -2770,7 +2775,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	return contentDetailsList, nil
 }
 
-func (cm *ContentModel) buildContentWithDetailsForSearchContent(ctx context.Context, contentList []*entity.ContentInfo, includeOutcomes bool, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error) {
+func (cm *ContentModel) buildContentWithDetailsForSearchContent(ctx context.Context, contentList []*entity.ContentInfo, op *entity.Operator) ([]*entity.ContentInfoWithDetails, error) {
 	userNameMap := make(map[string]string)
 	userIDs := make([]string, 0)
 
@@ -2780,56 +2785,22 @@ func (cm *ContentModel) buildContentWithDetailsForSearchContent(ctx context.Cont
 	}
 
 	// map[userID]userName
-	userNameMap, err := external.GetUserServiceProvider().BatchGetNameMap(ctx, user, userIDs)
+	userNameMap, err := external.GetUserServiceProvider().BatchGetNameMap(ctx, op, userIDs)
 	if err != nil {
 		log.Error(ctx, "can't get user info", log.Err(err), log.Strings("ids", userIDs))
 	}
-
-	var outcomeDictionary map[string]*entity.Outcome
-	var outcomeSortIDs []string
-	if includeOutcomes {
-		outcomeMap := make(map[string]bool)
-		outcomeIDs := make([]string, 0)
-		for _, content := range contentList {
-			for _, id := range content.Outcomes {
-				if outcomeMap[id] {
-					continue
-				}
-
-				outcomeMap[id] = true
-				outcomeIDs = append(outcomeIDs, id)
-			}
-		}
-
-		outcomeDictionary, outcomeSortIDs, err = GetOutcomeModel().GetLatestOutcomes(ctx, user, dbo.MustGetDB(ctx), outcomeIDs)
-		if err != nil {
-			log.Warn(ctx, "get latest outcomes entity failed",
-				log.Err(err),
-				log.Strings("ids", outcomeIDs),
-				log.String("uid", user.UserID))
-		}
-	}
-
 	contentDetailsList := make([]*entity.ContentInfoWithDetails, len(contentList))
 	for i := range contentList {
 		contentList[i].AuthorName = userNameMap[contentList[i].Author]
 		contentDetailsList[i] = &entity.ContentInfoWithDetails{
 			ContentInfo:     *contentList[i],
 			ContentTypeName: contentList[i].ContentType.Name(),
-			IsMine:          contentList[i].Author == user.UserID,
-		}
-
-		if includeOutcomes {
-			for _, id := range outcomeSortIDs {
-				if utils.ContainsString(contentList[i].Outcomes, id) && outcomeDictionary != nil {
-					contentDetailsList[i].OutcomeEntities = append(contentDetailsList[i].OutcomeEntities, outcomeDictionary[id])
-				}
-			}
+			IsMine:          contentList[i].Author == op.UserID,
 		}
 	}
 
 	//fill content permission info
-	cm.fillContentPermission(ctx, contentDetailsList, user)
+	cm.fillContentPermission(ctx, contentDetailsList, op)
 
 	log.Info(ctx, "build content detail list successfully", log.Any("content", contentDetailsList))
 

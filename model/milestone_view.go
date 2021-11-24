@@ -31,7 +31,7 @@ type AuthorView struct {
 	AuthorName string `json:"author_name,omitempty"`
 }
 
-type MilestoneView struct {
+type CreateMilestoneView struct {
 	MilestoneID  string                 `json:"milestone_id,omitempty"`
 	Name         string                 `json:"milestone_name"`
 	Shortcode    string                 `json:"shortcode"`
@@ -68,7 +68,7 @@ type MilestoneView struct {
 	LockedLocation     []string `json:"locked_location"`
 }
 
-func (ms *MilestoneView) ToMilestone(ctx context.Context, op *entity.Operator) (*entity.Milestone, error) {
+func (ms *CreateMilestoneView) ToMilestone(ctx context.Context, op *entity.Operator) (*entity.Milestone, error) {
 	if len([]rune(ms.Name)) > constant.MilestoneNameLength {
 		return nil, constant.ErrExceededLimit
 	}
@@ -122,7 +122,7 @@ func (ms *MilestoneView) ToMilestone(ctx context.Context, op *entity.Operator) (
 	return milestone, nil
 }
 
-func (ms *MilestoneView) FillAllKindsOfName(program, subject, category, subCategory, grade, age map[string]string, milestone *entity.Milestone) {
+func (ms *CreateMilestoneView) FillAllKindsOfName(program, subject, category, subCategory, grade, age map[string]string, milestone *entity.Milestone) {
 	ms.Program = make([]*Program, len(milestone.Programs))
 	for i := range milestone.Programs {
 		pView := Program{
@@ -181,12 +181,8 @@ func (ms *MilestoneView) FillAllKindsOfName(program, subject, category, subCateg
 type MilestoneList struct {
 	IDs []string `json:"ids"`
 }
-type MilestoneSearchResponse struct {
-	Milestones []*MilestoneView `json:"milestones"`
-	Total      int              `json:"total"`
-}
 
-func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*entity.Milestone) ([]*MilestoneView, error) {
+func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*entity.Milestone) ([]*CreateMilestoneView, error) {
 	var orgIDs, usrIDs, prgIDs, sbjIDs, catIDs, sbcIDs, grdIDs, ageIDs []string
 	for i := range milestones {
 		orgIDs = append(orgIDs, milestones[i].OrganizationID)
@@ -237,9 +233,9 @@ func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*enti
 		return nil, err
 	}
 
-	milestoneViews := make([]*MilestoneView, len(milestones))
+	milestoneViews := make([]*CreateMilestoneView, len(milestones))
 	for i, milestone := range milestones {
-		milestoneView := MilestoneView{
+		milestoneView := CreateMilestoneView{
 			MilestoneID: milestone.ID,
 			Name:        milestone.Name,
 			Shortcode:   milestone.Shortcode,
@@ -265,9 +261,9 @@ func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*enti
 		milestoneView.FillAllKindsOfName(externalNameMap.ProgIDMap, externalNameMap.SubjectIDMap,
 			externalNameMap.CatIDMap, externalNameMap.SubcatIDMap, externalNameMap.GradeIDMap, externalNameMap.AgeIDMap, milestone)
 		milestoneView.Outcomes = make([]*OutcomeView, len(milestone.Outcomes))
-		for i, outcome := range milestone.Outcomes {
-			milestoneView.Outcomes[i] = buildOutcomeView(ctx, externalNameMap, outcome)
-		}
+		// for i, outcome := range milestone.Outcomes {
+		// 	milestoneView.Outcomes[i] = buildOutcomeView(ctx, externalNameMap, outcome)
+		// }
 
 		if milestone.HasLocked() {
 			milestoneView.LastEditedBy = externalNameMap.UsrIDMap[milestone.LockedBy]
@@ -449,4 +445,74 @@ type MilestoneRejectReq struct {
 type MilestoneBulkRejectRequest struct {
 	RejectReason string   `json:"reject_reason"`
 	MilestoneIDs []string `json:"milestone_ids"`
+}
+
+type MilestoneView struct {
+	MilestoneID    string                 `json:"milestone_id"`
+	Name           string                 `json:"milestone_name"`
+	Shortcode      string                 `json:"shortcode"`
+	Type           entity.TypeOfMilestone `json:"type"`
+	Program        []*Program             `json:"program"`
+	Category       []*Category            `json:"category"`
+	Status         string                 `json:"status"`
+	Author         *AuthorView            `json:"author,omitempty"`
+	LockedBy       string                 `json:"locked_by"`
+	LockedLocation []string               `json:"locked_location"`
+	LastEditedBy   string                 `json:"last_edited_by"`
+	LastEditedAt   int64                  `json:"last_edited_at"`
+	OutcomeCount   int                    `json:"outcome_count"`
+	CreateAt       int64                  `json:"create_at"`
+}
+
+type SearchMilestoneView struct {
+	MilestoneID    string                 `json:"milestone_id"`
+	Name           string                 `json:"milestone_name"`
+	Shortcode      string                 `json:"shortcode"`
+	Type           entity.TypeOfMilestone `json:"type"`
+	Status         string                 `json:"status"`
+	Author         AuthorView             `json:"author"`
+	OutcomeCount   int                    `json:"outcome_count"`
+	Program        []*Program             `json:"program"`
+	Category       []*Category            `json:"category"`
+	LockedBy       string                 `json:"locked_by"`
+	LockedLocation []string               `json:"locked_location"`
+	LastEditedBy   string                 `json:"last_edited_by"`
+	LastEditedAt   int64                  `json:"last_edited_at"`
+	CreateAt       int64                  `json:"create_at"`
+}
+
+type SearchMilestoneResponse struct {
+	Milestones []*SearchMilestoneView `json:"milestones"`
+	Total      int                    `json:"total"`
+}
+
+type MilestoneDetailView struct {
+	MilestoneID  string                  `json:"milestone_id"`
+	Name         string                  `json:"milestone_name"`
+	Shortcode    string                  `json:"shortcode"`
+	Organization *OrganizationView       `json:"organization,omitempty"`
+	Description  string                  `json:"description"`
+	Type         entity.TypeOfMilestone  `json:"type"`
+	Status       string                  `json:"status"`
+	RejectReason string                  `json:"reject_reason"`
+	Author       *AuthorView             `json:"author,omitempty"`
+	Program      []*Program              `json:"program"`
+	Subject      []*Subject              `json:"subject"`
+	Category     []*Category             `json:"category"`
+	SubCategory  []*SubCategory          `json:"sub_category"`
+	Age          []*Age                  `json:"age"`
+	Grade        []*Grade                `json:"grade"`
+	Outcomes     []*MilestoneOutcomeView `json:"outcomes"`
+	CreateAt     int64                   `json:"create_at"`
+}
+
+type MilestoneOutcomeView struct {
+	OutcomeID     string                  `json:"outcome_id"`
+	OutcomeName   string                  `json:"outcome_name"`
+	Shortcode     string                  `json:"shortcode"`
+	AncestorID    string                  `json:"ancestor_id"`
+	Assumed       bool                    `json:"assumed"`
+	Program       []Program               `json:"program"`
+	Developmental []Developmental         `json:"developmental"`
+	Sets          []*OutcomeSetCreateView `json:"sets"`
 }

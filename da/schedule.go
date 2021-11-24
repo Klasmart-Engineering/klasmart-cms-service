@@ -362,6 +362,8 @@ type ScheduleCondition struct {
 	OrgID                    sql.NullString
 	StartAtGe                sql.NullInt64
 	StartAtAndDueAtGe        sql.NullInt64
+	StartAtOrEndAtOrDueAtGe  sql.NullInt64
+	StartAtOrEndAtOrDueAtLe  sql.NullInt64
 	StartAtLt                sql.NullInt64
 	EndAtLe                  sql.NullInt64
 	EndAtAndDueAtLe          sql.NullInt64
@@ -416,6 +418,16 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	if c.StartAtAndDueAtGe.Valid {
 		wheres = append(wheres, "(start_at >= ? or due_at >= ?)")
 		params = append(params, c.StartAtAndDueAtGe.Int64, c.StartAtAndDueAtGe.Int64)
+	}
+
+	if c.StartAtOrEndAtOrDueAtGe.Valid {
+		wheres = append(wheres, "(start_at >= ? or end_at >= ? or due_at >= ?)")
+		params = append(params, c.StartAtOrEndAtOrDueAtGe.Int64, c.StartAtOrEndAtOrDueAtGe.Int64, c.StartAtOrEndAtOrDueAtGe.Int64)
+	}
+
+	if c.StartAtOrEndAtOrDueAtLe.Valid {
+		wheres = append(wheres, "(start_at <= ? or end_at <= ? or (due_at <= ? and due_at > 0))")
+		params = append(params, c.StartAtOrEndAtOrDueAtLe.Int64, c.StartAtOrEndAtOrDueAtLe.Int64, c.StartAtOrEndAtOrDueAtLe.Int64)
 	}
 
 	if len(c.StartAndEndRange) == 2 {

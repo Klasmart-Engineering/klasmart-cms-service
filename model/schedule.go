@@ -1707,94 +1707,6 @@ func (s *scheduleModel) GetSubjectsBySubjectIDs(ctx context.Context, operator *e
 	return subjectMap, nil
 }
 
-func (s *scheduleModel) processUsersAccessible(ctx context.Context, operator *entity.Operator, data *entity.ScheduleDetailsView) (*entity.ScheduleDetailsView, error) {
-	scheduleRelations, err := GetScheduleRelationModel().GetUsersByScheduleID(ctx, operator, data.ID)
-	if err != nil {
-		return nil, err
-	}
-	classRosterUserMap := make(map[string]*entity.ScheduleUserInput)
-	classRosterUserIDs := make([]string, 0)
-	partUserInput := make([]*entity.ScheduleUserInput, 0)
-	for _, item := range scheduleRelations {
-		switch item.RelationType {
-		case entity.ScheduleRelationTypeClassRosterTeacher, entity.ScheduleRelationTypeClassRosterStudent:
-			classRosterUserMap[item.RelationID] = &entity.ScheduleUserInput{
-				ID:   item.RelationID,
-				Type: item.RelationType,
-			}
-			classRosterUserIDs = append(classRosterUserIDs, item.RelationID)
-		case entity.ScheduleRelationTypeParticipantTeacher, entity.ScheduleRelationTypeParticipantStudent:
-			partUserInput = append(partUserInput, &entity.ScheduleUserInput{
-				ID:   item.RelationID,
-				Type: item.RelationType,
-			})
-		}
-	}
-	accessibleUserList := make([]*entity.ScheduleAccessibleUserView, 0)
-	if data.Class != nil {
-		isClassAccessible, err := s.AccessibleClass(ctx, operator, data.Class.ID)
-		if err != nil {
-			log.Error(ctx, "GetByID:AccessibleClassRosterUser error",
-				log.Err(err),
-				log.Any("operator", operator),
-				log.Any("data", data),
-			)
-			return nil, err
-		}
-		data.Class.Enable = isClassAccessible
-
-		userInfos, err := external.GetUserServiceProvider().BatchGet(ctx, operator, classRosterUserIDs)
-		if err != nil {
-			return nil, err
-		}
-		for _, item := range userInfos {
-			if !item.Valid {
-				continue
-			}
-			if u, ok := classRosterUserMap[item.ID]; ok {
-				temp := &entity.ScheduleAccessibleUserView{
-					ID:     item.ID,
-					Name:   item.Name,
-					Type:   u.Type,
-					Enable: isClassAccessible,
-				}
-				accessibleUserList = append(accessibleUserList, temp)
-			}
-		}
-	}
-	accessiblePart, err := s.accessibleParticipantUser(ctx, operator, partUserInput)
-	if err != nil {
-		log.Error(ctx, "s.accessibleParticipantUser error",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("userInput", partUserInput),
-		)
-		return nil, err
-	}
-	accessibleUserList = append(accessibleUserList, accessiblePart...)
-	for _, item := range accessibleUserList {
-		temp := &entity.ScheduleAccessibleUserView{
-			ID:     item.ID,
-			Name:   item.Name,
-			Type:   item.Type,
-			Enable: item.Enable,
-		}
-		switch item.Type {
-		case entity.ScheduleRelationTypeParticipantTeacher:
-			data.ParticipantsTeachers = append(data.ParticipantsTeachers, temp)
-		case entity.ScheduleRelationTypeParticipantStudent:
-			data.ParticipantsStudents = append(data.ParticipantsStudents, temp)
-		case entity.ScheduleRelationTypeClassRosterTeacher:
-			data.ClassRosterTeachers = append(data.ClassRosterTeachers, temp)
-		case entity.ScheduleRelationTypeClassRosterStudent:
-			data.ClassRosterStudents = append(data.ClassRosterStudents, temp)
-		}
-	}
-	data.Teachers = append(data.Teachers, data.ClassRosterTeachers...)
-	data.Teachers = append(data.Teachers, data.ParticipantsTeachers...)
-	return data, nil
-}
-
 func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, id string) (*entity.ScheduleDetailsView, error) {
 	var schedule = new(entity.Schedule)
 	err := s.scheduleDA.Get(ctx, id, schedule)
@@ -2770,11 +2682,17 @@ func (s *scheduleModel) Query(ctx context.Context, query *entity.ScheduleTimeVie
 	if err != nil {
 		return nil, err
 	}
-	result, err := s.QueryByCondition(ctx, op, condition, loc)
+
+	var scheduleList []*entity.Schedule
+	err = s.scheduleDA.Query(ctx, condition, &scheduleList)
 	if err != nil {
+		log.Error(ctx, "s.scheduleDA.Query error",
+			log.Err(err),
+			log.Any("condition", condition))
 		return nil, err
 	}
-	return result, nil
+
+	return s.transformToScheduleListView(ctx, op, scheduleList, loc)
 }
 
 func (s *scheduleModel) QueryScheduledDates(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]string, error) {
@@ -2837,17 +2755,32 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 
 	// StartAtGe query by start_at and due_at, required by APP team
 	if query.StartAtGe >= 0 {
-		condition.StartAtAndDueAtGe = sql.NullInt64{
-			Int64: query.StartAtGe,
-			Valid: true,
+		// apply to StartAtGe and EndAtLe, union will include schedules that are only partially within the specified time frame, intersect will not
+		if query.TimeBoundary == string(entity.UnionScheduleTimeBoundary) {
+			condition.StartAtOrEndAtOrDueAtGe = sql.NullInt64{
+				Int64: query.StartAtGe,
+				Valid: true,
+			}
+		} else {
+			condition.StartAtAndDueAtGe = sql.NullInt64{
+				Int64: query.StartAtGe,
+				Valid: true,
+			}
 		}
 	}
 
 	// EndAtLe query by end_at and due_at, required by APP team
 	if query.EndAtLe >= 0 {
-		condition.EndAtAndDueAtLe = sql.NullInt64{
-			Int64: query.EndAtLe,
-			Valid: true,
+		if query.TimeBoundary == string(entity.UnionScheduleTimeBoundary) {
+			condition.StartAtOrEndAtOrDueAtLe = sql.NullInt64{
+				Int64: query.EndAtLe,
+				Valid: true,
+			}
+		} else {
+			condition.EndAtAndDueAtLe = sql.NullInt64{
+				Int64: query.EndAtLe,
+				Valid: true,
+			}
 		}
 	}
 
@@ -3031,6 +2964,10 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 	}, &scheduleRelations)
 
 	var subjectIDs []string
+	var classRoasterTeacherIDs []string
+	var classRoasterStudentIDs []string
+	var participantTeacherIDs []string
+	var participantStudentIDs []string
 	for _, scheduleRelation := range scheduleRelations {
 		// get operator role type in the schedule
 		if scheduleRelation.RelationID == operator.UserID {
@@ -3048,6 +2985,14 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 			scheduleDetailsView.OutcomeIDs = append(scheduleDetailsView.OutcomeIDs, scheduleRelation.RelationID)
 		case entity.ScheduleRelationTypeSubject:
 			subjectIDs = append(subjectIDs, scheduleRelation.RelationID)
+		case entity.ScheduleRelationTypeClassRosterTeacher:
+			classRoasterTeacherIDs = append(classRoasterTeacherIDs, scheduleRelation.RelationID)
+		case entity.ScheduleRelationTypeClassRosterStudent:
+			classRoasterStudentIDs = append(classRoasterStudentIDs, scheduleRelation.RelationID)
+		case entity.ScheduleRelationTypeParticipantTeacher:
+			participantTeacherIDs = append(participantTeacherIDs, scheduleRelation.RelationID)
+		case entity.ScheduleRelationTypeParticipantStudent:
+			participantStudentIDs = append(participantStudentIDs, scheduleRelation.RelationID)
 		}
 	}
 
@@ -3062,6 +3007,12 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 	var scheduleExistFeedback bool
 	var scheduleExistAssessment bool
 	var scheduleCompleteAssessment bool
+	var userMap map[string]*external.NullableUser
+	var schedulePermissionMap map[external.PermissionName]bool
+	scheduleCanBeCreatedSchoolMap := make(map[string]bool)
+	var schoolByClass []*external.School
+	var classByOperator []*external.Class
+	var participantUserSchoolMap map[string][]*external.School
 
 	// get lesson plan
 	if schedule.LessonPlanID != "" {
@@ -3201,6 +3152,26 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 		})
 	}
 
+	// get user info map
+	userIDs := append(classRoasterTeacherIDs, classRoasterStudentIDs...)
+	userIDs = append(userIDs, participantTeacherIDs...)
+	userIDs = append(userIDs, participantStudentIDs...)
+	if len(userIDs) > 0 {
+		g.Go(func() error {
+			users, err := s.userService.BatchGetMap(ctx, operator, userIDs)
+			if err != nil {
+				log.Error(ctx, "s.userService.BatchGetMap error",
+					log.Err(err),
+					log.Strings("userIDs", userIDs))
+				return err
+			}
+
+			userMap = users
+
+			return nil
+		})
+	}
+
 	// check if the assessment completed, homefun homework
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
 		g.Go(func() error {
@@ -3255,6 +3226,92 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 		})
 	}
 
+	// check operator schedule permission
+	g.Go(func() error {
+		permissionMap, err := GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, operator, []external.PermissionName{
+			external.ScheduleCreateEvent,
+			external.ScheduleCreateMySchoolEvent,
+			external.ScheduleCreateMyEvent,
+		})
+		if err != nil {
+			log.Error(ctx, "GetSchedulePermissionModel().HasScheduleOrgPermissions error",
+				log.Any("operator", operator))
+			return nil
+		}
+
+		schedulePermissionMap = permissionMap
+
+		return nil
+	})
+
+	// search for schools where the operator has permission to create schedule
+	g.Go(func() error {
+		schoolList, err := s.schoolService.GetByPermission(ctx, operator, external.ScheduleCreateMySchoolEvent)
+		if err != nil {
+			log.Error(ctx, "s.schoolService.GetByPermission error",
+				log.Err(err))
+			return err
+		}
+
+		for _, school := range schoolList {
+			scheduleCanBeCreatedSchoolMap[school.ID] = true
+		}
+
+		return nil
+	})
+
+	// get isClassAccessible
+	if schedule.ClassID != "" {
+		// search for schools by class, for isClassAccessible
+		g.Go(func() error {
+			classSchoolMap, err := s.schoolService.GetByClasses(ctx, operator, []string{schedule.ClassID})
+			if err != nil {
+				log.Error(ctx, "s.schoolService.GetByClasses error",
+					log.Err(err),
+					log.String("classID", schedule.ClassID))
+				return err
+			}
+
+			schoolByClass = classSchoolMap[schedule.ClassID]
+
+			return nil
+		})
+
+		// search for classes by operator, for isClassAccessible
+		g.Go(func() error {
+			classes, err := s.classService.GetByUserID(ctx, operator, operator.UserID)
+			if err != nil {
+				log.Error(ctx, "s.classService.GetByUserID error",
+					log.Err(err),
+					log.Any("operator", operator))
+				return err
+			}
+
+			classByOperator = classes
+
+			return nil
+		})
+	}
+
+	// check participant user is accessible
+	participantUserIDs := append(participantStudentIDs, participantTeacherIDs...)
+	if len(participantUserIDs) > 0 {
+		// get participant user school map
+		g.Go(func() error {
+			userSchoolMap, err := s.schoolService.GetByUsers(ctx, operator, operator.OrgID, participantUserIDs)
+			if err != nil {
+				log.Error(ctx, "s.schoolService.GetByUsers error",
+					log.Err(err),
+					log.Strings("participantUserIDs", participantUserIDs))
+				return err
+			}
+
+			participantUserSchoolMap = userSchoolMap
+			return nil
+		})
+
+	}
+
 	if err := g.Wait(); err != nil {
 		log.Error(ctx, "transformToScheduleDetailsView error",
 			log.Err(err))
@@ -3273,13 +3330,106 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 	scheduleDetailsView.ExistAssessment = scheduleExistAssessment
 	scheduleDetailsView.CompleteAssessment = scheduleCompleteAssessment
 
-	scheduleDetailsView, err = s.processUsersAccessible(ctx, operator, scheduleDetailsView)
-	if err != nil {
-		log.Error(ctx, "s.processUsersAccessible error",
-			log.Err(err),
-			log.Any("scheduleDetailsView", scheduleDetailsView))
-		return nil, err
+	// get isClassAccessible
+	var isClassAccessible bool
+	if scheduleDetailsView.Class != nil {
+		if schedulePermissionMap[external.ScheduleCreateEvent] {
+			isClassAccessible = true
+		} else if schedulePermissionMap[external.ScheduleCreateMySchoolEvent] {
+			for _, school := range schoolByClass {
+				if scheduleCanBeCreatedSchoolMap[school.ID] {
+					isClassAccessible = true
+					break
+				}
+			}
+		} else if schedulePermissionMap[external.ScheduleCreateMyEvent] {
+			for _, class := range classByOperator {
+				if class.ID == schedule.ClassID {
+					isClassAccessible = true
+					break
+				}
+			}
+		}
+
+		scheduleDetailsView.Class.Enable = isClassAccessible
 	}
+
+	// fill class_roaster_teachers
+	for _, classclassRoasterTeacherID := range classRoasterTeacherIDs {
+		if user, ok := userMap[classclassRoasterTeacherID]; ok && user.Valid {
+			item := &entity.ScheduleAccessibleUserView{
+				ID:     user.ID,
+				Name:   user.Name,
+				Type:   entity.ScheduleRelationTypeClassRosterTeacher,
+				Enable: isClassAccessible,
+			}
+			scheduleDetailsView.ClassRosterTeachers = append(scheduleDetailsView.ClassRosterTeachers, item)
+		}
+	}
+
+	// fill class_roaster_students
+	for _, classclassRoasterStudentID := range classRoasterStudentIDs {
+		if user, ok := userMap[classclassRoasterStudentID]; ok && user.Valid {
+			item := &entity.ScheduleAccessibleUserView{
+				ID:     user.ID,
+				Name:   user.Name,
+				Type:   entity.ScheduleRelationTypeClassRosterStudent,
+				Enable: isClassAccessible,
+			}
+			scheduleDetailsView.ClassRosterStudents = append(scheduleDetailsView.ClassRosterStudents, item)
+		}
+	}
+
+	// fill participants_teachers
+	for _, participantTeacherID := range participantTeacherIDs {
+		if user, ok := userMap[participantTeacherID]; ok && user.Valid {
+			var enable bool
+			if schedulePermissionMap[external.ScheduleCreateEvent] {
+				enable = true
+			} else if schedulePermissionMap[external.ScheduleCreateMySchoolEvent] {
+				for _, school := range participantUserSchoolMap[user.ID] {
+					if scheduleCanBeCreatedSchoolMap[school.ID] {
+						enable = true
+						break
+					}
+				}
+			}
+			item := &entity.ScheduleAccessibleUserView{
+				ID:     user.ID,
+				Name:   user.Name,
+				Type:   entity.ScheduleRelationTypeParticipantTeacher,
+				Enable: enable,
+			}
+			scheduleDetailsView.ParticipantsTeachers = append(scheduleDetailsView.ParticipantsTeachers, item)
+		}
+	}
+
+	// fill participants_students
+	for _, participantStudentID := range participantStudentIDs {
+		if user, ok := userMap[participantStudentID]; ok && user.Valid {
+			var enable bool
+			if schedulePermissionMap[external.ScheduleCreateEvent] {
+				enable = true
+			} else if schedulePermissionMap[external.ScheduleCreateMySchoolEvent] {
+				for _, school := range participantUserSchoolMap[user.ID] {
+					if scheduleCanBeCreatedSchoolMap[school.ID] {
+						enable = true
+						break
+					}
+				}
+			}
+			item := &entity.ScheduleAccessibleUserView{
+				ID:     user.ID,
+				Name:   user.Name,
+				Type:   entity.ScheduleRelationTypeParticipantStudent,
+				Enable: enable,
+			}
+			scheduleDetailsView.ParticipantsStudents = append(scheduleDetailsView.ParticipantsStudents, item)
+		}
+	}
+
+	scheduleDetailsView.Teachers = append(scheduleDetailsView.Teachers, scheduleDetailsView.ClassRosterTeachers...)
+	scheduleDetailsView.Teachers = append(scheduleDetailsView.Teachers, scheduleDetailsView.ParticipantsTeachers...)
 
 	return scheduleDetailsView, nil
 }
@@ -3584,9 +3734,9 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 
 	g := new(errgroup.Group)
 	var scheduleExistAssessmentMap map[string]bool
-	var scheduleCompleteAssessmentMap map[string]bool
+	scheduleCompleteAssessmentMap := make(map[string]bool)
 	var scheduleExistFeedbackMap map[string]bool
-	var scheduleOperatorRoleTypeMap map[string]entity.ScheduleRoleType
+	scheduleOperatorRoleTypeMap := make(map[string]entity.ScheduleRoleType)
 
 	// check if the assessment exists, only not homefun homework
 	if len(notHomefunHomeworkIDs) > 0 {
@@ -3645,7 +3795,6 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 			for _, assessment := range assessments {
 				if assessment.Status == entity.AssessmentStatusComplete {
 					scheduleCompleteAssessmentMap[assessment.ScheduleID] = true
-					break
 				}
 			}
 		}
@@ -3708,6 +3857,12 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 
 		return nil
 	})
+
+	if err := g.Wait(); err != nil {
+		log.Error(ctx, "transformToScheduleListView error",
+			log.Err(err))
+		return nil, err
+	}
 
 	for i := range scheduleListView {
 		schedule := scheduleList[i]

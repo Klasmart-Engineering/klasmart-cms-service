@@ -2,67 +2,15 @@ package da
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"testing"
 
-	"github.com/go-redis/redis"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 	"github.com/stretchr/testify/assert"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/ro"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
-
-func initDB() {
-	dboHandler, err := dbo.NewWithConfig(func(c *dbo.Config) {
-		c.ShowLog = true
-		c.ShowSQL = true
-		c.MaxIdleConns = 2
-		c.MaxOpenConns = 4
-		//c.ConnectionString = "root:Passw0rd@tcp(127.0.0.1:3306)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local"
-		c.ConnectionString = os.Getenv("connection_string")
-	})
-	if err != nil {
-		log.Error(context.TODO(), "create dbo failed", log.Err(err))
-		panic(err)
-	}
-	config.Set(&config.Config{
-		RedisConfig: config.RedisConfig{
-			OpenCache: false,
-			Host:      "",
-			Port:      0,
-			Password:  "",
-		},
-	})
-	dbo.ReplaceGlobal(dboHandler)
-}
-
-func initRedis() {
-	config.Set(&config.Config{
-		RedisConfig: config.RedisConfig{
-			OpenCache: true,
-			Host:      "localhost",
-			Port:      6379,
-		},
-	})
-	ro.SetConfig(&redis.Options{
-		Addr:     fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
-		Password: config.Get().RedisConfig.Password,
-	})
-}
-
-func TestMain(m *testing.M) {
-	fmt.Println("begin test")
-	//initDB()
-	//initRedis()
-	m.Run()
-	fmt.Println("end test")
-}
 
 func TestCreateTable(t *testing.T) {
 	dsn := "root:Badanamu123456@tcp(127.0.0.1:3306)/kidsloop2_temp?charset=utf8mb4&parseTime=True&loc=Local"

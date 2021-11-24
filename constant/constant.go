@@ -43,6 +43,7 @@ var (
 	ErrOverflow          = errors.New("over flow")
 	ErrOutOfDate         = errors.New("out of date")
 	ErrSqlBuilderFailed  = errors.New("sql builder failed")
+	ErrAmsHttpFailed     = errors.New("ams http failed")
 )
 
 const (
