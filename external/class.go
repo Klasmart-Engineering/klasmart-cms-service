@@ -41,11 +41,11 @@ type Class struct {
 type NullableClass struct {
 	Class
 	Valid bool   `json:"valid"`
-	_ID   string `json:"_id"`
+	StrID string `json:"str_id"`
 }
 
 func (n *NullableClass) StringID() string {
-	return n._ID
+	return n.StrID
 }
 func (n *NullableClass) RelatedIDs() []*cache.RelatedEntity {
 	return nil
@@ -163,13 +163,13 @@ func (s AmsClassService) QueryByIDs(ctx context.Context, ids []string, options .
 		if class == nil {
 			classes = append(classes, &NullableClass{
 				Valid: false,
-				_ID:   ids[indexMapping[index]],
+				StrID: ids[indexMapping[index]],
 			})
 		} else {
 			classes = append(classes, &NullableClass{
 				Class: *class,
 				Valid: true,
-				_ID:   ids[indexMapping[index]],
+				StrID: ids[indexMapping[index]],
 			})
 		}
 	}
