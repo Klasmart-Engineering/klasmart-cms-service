@@ -184,7 +184,7 @@ func (s AmsUserService) BatchGetNameMap(ctx context.Context, operator *entity.Op
 		}
 		dict[user.ID] = user.Name
 	}
-
+	log.Debug(ctx, "BatchGetNameMap:dict", log.Any("dict", dict))
 	return dict, nil
 }
 
