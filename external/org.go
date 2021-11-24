@@ -37,12 +37,12 @@ type Organization struct {
 
 type NullableOrganization struct {
 	Organization
-	ID    string `json:"id"`
+	_ID   string `json:"_id"`
 	Valid bool   `json:"valid"`
 }
 
 func (n *NullableOrganization) StringID() string {
-	return n.ID
+	return n._ID
 }
 func (n *NullableOrganization) RelatedIDs() []*cache.RelatedEntity {
 	return nil
@@ -108,13 +108,13 @@ func (s AmsOrganizationService) QueryByIDs(ctx context.Context, ids []string, op
 	for index := range ids {
 		if payload[indexMapping[index]] == nil {
 			nullableOrganizations[index] = &NullableOrganization{
-				ID:    ids[indexMapping[index]],
+				_ID:   ids[indexMapping[index]],
 				Valid: false,
 			}
 		} else {
 			nullableOrganizations[index] = &NullableOrganization{
 				Organization: *payload[indexMapping[index]],
-				ID:           ids[indexMapping[index]],
+				_ID:          ids[indexMapping[index]],
 				Valid:        true,
 			}
 		}
