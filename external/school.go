@@ -38,12 +38,12 @@ type School struct {
 
 type NullableSchool struct {
 	Valid bool   `json:"valid"`
-	_ID   string `json:"_id"`
+	StrID string `json:"str_id"`
 	*School
 }
 
 func (n *NullableSchool) StringID() string {
-	return n._ID
+	return n.StrID
 }
 func (n *NullableSchool) RelatedIDs() []*cache.RelatedEntity {
 	return nil
@@ -134,7 +134,7 @@ func (s AmsSchoolService) QueryByIDs(ctx context.Context, ids []string, options 
 		schools = append(schools, &NullableSchool{
 			Valid:  school != nil,
 			School: school,
-			_ID:    ids[indexMapping[index]],
+			StrID:  ids[indexMapping[index]],
 		})
 	}
 

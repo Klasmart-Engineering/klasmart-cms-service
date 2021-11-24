@@ -34,12 +34,12 @@ type Student struct {
 
 type NullableStudent struct {
 	Valid bool   `json:"valid"`
-	_ID   string `json:"_id"`
+	StrID string `json:"str_id"`
 	*Student
 }
 
 func (n *NullableStudent) StringID() string {
-	return n._ID
+	return n.StrID
 }
 func (n *NullableStudent) RelatedIDs() []*cache.RelatedEntity {
 	return nil
@@ -109,7 +109,7 @@ func (s AmsStudentService) QueryByIDs(ctx context.Context, ids []string, options
 	for index, user := range users {
 		student := &NullableStudent{
 			Valid: user.Valid,
-			_ID:   user.ID,
+			StrID: user.ID,
 		}
 		if user.Valid {
 			student.Student = &Student{
