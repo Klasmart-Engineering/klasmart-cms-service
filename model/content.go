@@ -937,7 +937,7 @@ func (cm *ContentModel) validatePublishContentWithAssets(ctx context.Context, co
 	return nil
 }
 
-func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
+func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope []string, user *entity.Operator) error {
 	//创建data对象
 	//create content data object
 	cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
@@ -988,11 +988,21 @@ func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx
 		Age:         contentProperties.Age,
 		Grade:       contentProperties.Grade,
 	}
-	_, err = cm.CreateContent(ctx, req, user)
+	pid, err := cm.CreateContent(ctx, req, user)
 	if err != nil {
 		log.Warn(ctx, "create assets failed", log.Err(err), log.String("uid", user.UserID), log.Any("req", req))
 		return err
 	}
+
+	// fix: KLR-147
+	err = cm.insertContentVisibilitySettings(ctx, tx, pid, scope)
+	if err != nil {
+		log.Error(ctx, "insertContentVisibilitySettings failed",
+			log.Err(err),
+			log.String("pid", pid))
+		return err
+	}
+	// fix: KLR-147
 
 	//更新content状态
 	//update content status
@@ -1103,9 +1113,9 @@ func (cm *ContentModel) publishMaterialWithAssets(ctx context.Context, tx *dbo.D
 		return err
 	}
 
-	//准备发布（1.创建assets，2.修改contentdata）
+	//准备发布（1.创建assets，2.修改contentdata, 3.发布assets）
 	//preparing to publish (1.create assets 2.update content data)
-	err = cm.prepareForPublishMaterialsAssets(ctx, tx, content, user)
+	err = cm.prepareForPublishMaterialsAssets(ctx, tx, content, scope, user)
 	if err != nil {
 		return err
 	}
@@ -1184,11 +1194,20 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 			PublishScope: contentVisibilitySettings.VisibilitySettings,
 			Data:         assetsDataJSON,
 		}
-		_, err = cm.CreateContent(ctx, req, user)
+		pid, err := cm.CreateContent(ctx, req, user)
 		if err != nil {
 			log.Warn(ctx, "create assets failed", log.Err(err), log.String("uid", user.UserID), log.Any("req", req))
 			return err
 		}
+		// fix: KLR-147
+		err = cm.insertContentVisibilitySettings(ctx, tx, pid, scope)
+		if err != nil {
+			log.Error(ctx, "insertContentVisibilitySettings failed",
+				log.Err(err),
+				log.String("pid", pid))
+			return err
+		}
+		// fix: KLR-147
 	}
 	//do publish
 	err = cm.doPublishContent(ctx, tx, content, scope, user)
