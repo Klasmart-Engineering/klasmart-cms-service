@@ -995,7 +995,7 @@ func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx
 	}
 
 	// fix: KLR-147
-	err = cm.insertContentVisibilitySettings(ctx, tx, pid, scope)
+	err = cm.insertContentVisibilitySettings(ctx, tx, pid, []string{user.OrgID})
 	if err != nil {
 		log.Error(ctx, "insertContentVisibilitySettings failed",
 			log.Err(err),
@@ -1200,7 +1200,7 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 			return err
 		}
 		// fix: KLR-147
-		err = cm.insertContentVisibilitySettings(ctx, tx, pid, scope)
+		err = cm.insertContentVisibilitySettings(ctx, tx, pid, []string{user.OrgID})
 		if err != nil {
 			log.Error(ctx, "insertContentVisibilitySettings failed",
 				log.Err(err),
