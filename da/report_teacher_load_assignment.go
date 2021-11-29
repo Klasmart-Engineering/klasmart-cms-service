@@ -38,14 +38,16 @@ inner join schedules_relations sr on
 		hfs.schedule_id = sr.schedule_id
 where hfs.status=?
 and sr.relation_type = ?
+and sr.relation_id in (?)
 and JSON_contains(teacher_ids,?) 
-union 
+union all
 `
 		args = append(
 			args,
 			teacherID,
 			entity.AssessmentStatusInProgress,
 			entity.ScheduleRelationTypeClassRosterClass,
+			req.ClassIDList,
 			fmt.Sprintf(`"%s"`, teacherID),
 		)
 	}
@@ -78,48 +80,46 @@ from
 	where s.is_home_fun = 0 
 	and s.class_type=?
 	and sr.relation_type =  ?
+	and sr.relation_id in (?)
 	and sr2.relation_type = ?
+	and sr2.relation_id in (?)
 	and sr3.relation_type = ?
 	and a2.status=?
 ) t
 
-where t.teacher_id in (%s)
-and t.class_id in (%s)
-and t.is_home_fun in (%s)
+where t.teacher_id in (?)
+and t.class_id in (?)
+and t.is_home_fun in (?)
 group by t.teacher_id
 	`,
-		plHomeFun,
-		r.getPlaceHolder(len(req.TeacherIDList)),
-		r.getPlaceHolder(len(req.ClassIDList)),
-		r.getPlaceHolder(len(req.ClassTypeList)),
-	)
+		plHomeFun)
 	args = append(
 		args,
 		entity.ScheduleClassTypeHomework,
 		entity.ScheduleRelationTypeClassRosterTeacher,
+		req.TeacherIDList,
 		entity.ScheduleRelationTypeClassRosterClass,
+		req.ClassIDList,
 		entity.ScheduleRelationTypeClassRosterStudent,
 		entity.AssessmentStatusInProgress,
+		req.TeacherIDList,
+		req.ClassIDList,
 	)
 
-	for _, teacherID := range req.TeacherIDList {
-		args = append(args, teacherID)
-	}
-	for _, classID := range req.ClassIDList {
-		args = append(args, classID)
-	}
+	var classTypeValues []int
 	for _, classType := range req.ClassTypeList {
 		switch classType {
 		case constant.ReportClassTypeStudy:
-			args = append(args, 0)
+			classTypeValues = append(classTypeValues, 0)
 		case constant.ReportClassTypeHomeFun:
-			args = append(args, 1)
+			classTypeValues = append(classTypeValues, 1)
 		default:
 			log.Error(ctx, "invalid class_type", log.Any("request", req))
 			err = constant.ErrInvalidArgs
 			return
 		}
 	}
+	args = append(args, classTypeValues)
 
 	err = r.QueryRawSQL(ctx, &res, sql, args...)
 	if err != nil {
