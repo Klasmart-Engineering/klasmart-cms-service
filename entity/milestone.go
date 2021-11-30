@@ -1,6 +1,10 @@
 package entity
 
 const (
+	MilestoneTable = "milestones"
+)
+
+const (
 	MilestoneStatusDraft     MilestoneStatus = "draft"
 	MilestoneStatusPending   MilestoneStatus = "pending"
 	MilestoneStatusPublished MilestoneStatus = "published"

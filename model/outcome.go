@@ -108,26 +108,21 @@ func (ocm OutcomeModel) GenerateShortcode(ctx context.Context, op *entity.Operat
 	var index int
 	cursor, err := ocm.Current(ctx, op)
 	if err != nil {
-		log.Debug(ctx, "GenerateShortcode: Current failed",
+		log.Error(ctx, "ocm.Current error",
+			log.Err(err),
 			log.Any("op", op),
 			log.Int("cursor", cursor))
 		return "", err
 	}
-	shortcodeModel := GetShortcodeModel()
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		index, shortcode, err = shortcodeModel.generate(ctx, op, tx, cursor+1, ocm)
-		if err != nil {
-			log.Debug(ctx, "GenerateShortcode",
-				log.Any("op", op),
-				log.Int("cursor", cursor))
-			return err
-		}
-		return nil
-	})
 
+	index, shortcode, err = GetShortcodeModel().generate(ctx, op, dbo.MustGetDB(ctx), cursor+1, ocm)
 	if err != nil {
+		log.Error(ctx, "GetShortcodeModel().generate error",
+			log.Any("op", op),
+			log.Int("cursor", cursor))
 		return "", err
 	}
+
 	err = ocm.Cache(ctx, op, index, shortcode)
 	return shortcode, err
 }
@@ -136,22 +131,25 @@ func (ocm OutcomeModel) Current(ctx context.Context, op *entity.Operator) (int, 
 	return da.GetShortcodeRedis(ctx).Get(ctx, op, string(entity.KindOutcome))
 }
 
-func (ocm OutcomeModel) Intersect(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, shortcodes []string) (map[string]bool, error) {
-	_, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, op, tx, &da.OutcomeCondition{
-		Shortcodes:     dbo.NullStrings{Strings: shortcodes, Valid: true},
-		OrganizationID: sql.NullString{String: op.OrgID, Valid: true},
-		OrderBy:        da.OrderByShortcode,
-	})
+func (ocm OutcomeModel) Intersect(ctx context.Context, tx *dbo.DBContext, orgID string, shortcodeNum int) (map[string]bool, error) {
+	shortcodeNums, err := ocm.outcomeDA.GetLargerShortcode(ctx, tx, orgID, shortcodeNum, constant.ShortcodeFindStep)
 	if err != nil {
-		log.Debug(ctx, "Intersect: Search failed",
-			log.Any("op", op),
-			log.Strings("shortcode", shortcodes))
+		log.Debug(ctx, "ocm.outcomeDA.GetLargerShortcode error",
+			log.String("orgID", orgID),
+			log.Int("shortcodeNum", shortcodeNum))
 		return nil, err
 	}
-	mapShortcode := make(map[string]bool)
-	for i := range outcomes {
-		mapShortcode[outcomes[i].Shortcode] = true
+	mapShortcode := make(map[string]bool, len(shortcodeNums))
+	for _, shortcodeNum := range shortcodeNums {
+		shortcode, err := utils.NumToBHex(ctx, shortcodeNum, constant.ShortcodeBaseCustom, ocm.ShortcodeLength())
+		if err != nil {
+			log.Debug(ctx, "utils.NumToBHex error",
+				log.Int("shortcodeNum", shortcodeNum))
+			return nil, err
+		}
+		mapShortcode[shortcode] = true
 	}
+
 	return mapShortcode, nil
 }
 
