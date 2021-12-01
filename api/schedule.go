@@ -1068,57 +1068,6 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 	}
 }
 
-// @Summary get schedule filter schools
-// @Description get get schedule filter schools
-// @Tags schedule
-// @ID getScheduleFilterSchool
-// @Accept json
-// @Produce json
-// @Success 200 {array} entity.ScheduleFilterSchool
-// @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules_filter/schools [get]
-func (s Server) getSchoolInScheduleFilter(c *gin.Context) {
-	ctx := c.Request.Context()
-	op := s.getOperator(c)
-	result, err := model.GetSchedulePermissionModel().GetSchoolsByOperator(ctx, op)
-	switch err {
-	case constant.ErrForbidden:
-		c.JSON(http.StatusOK, []*entity.ScheduleFilterSchool{})
-	case nil:
-		c.JSON(http.StatusOK, result)
-	default:
-		s.defaultErrorHandler(c, err)
-	}
-}
-
-// @Summary get schedule filter classes
-// @Description get schedule filter classes
-// @Tags schedule
-// @ID getScheduleFilterClasses
-// @Accept json
-// @Produce json
-// @Param school_id query string false "school id,if "-1",return classes without school"
-// @Success 200 {array} entity.ScheduleFilterClass
-// @Failure 400 {object} BadRequestResponse
-// @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules_filter/classes [get]
-func (s Server) getClassesInScheduleFilter(c *gin.Context) {
-	ctx := c.Request.Context()
-	op := s.getOperator(c)
-	schoolID := c.Query("school_id")
-	result, err := model.GetSchedulePermissionModel().GetClassesByOperator(ctx, op, schoolID)
-	switch err {
-	case nil:
-		c.JSON(http.StatusOK, result)
-	case constant.ErrForbidden, constant.ErrRecordNotFound:
-		c.JSON(http.StatusOK, []*entity.ScheduleFilterClass{})
-	case constant.ErrInvalidArgs:
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	default:
-		s.defaultErrorHandler(c, err)
-	}
-}
-
 // @Summary updateScheduleShowOption
 // @ID updateScheduleShowOption
 // @Description update schedule show option
