@@ -825,6 +825,7 @@ type ScheduleTimeViewQuery struct {
 	ClassIDs       []string `json:"class_ids"`
 	SubjectIDs     []string `json:"subject_ids"`
 	ProgramIDs     []string `json:"program_ids"`
+	UserIDs        []string `json:"user_ids"`
 	ClassTypes     []string `json:"class_types"`
 	StartAtGe      int64    `json:"start_at_ge"`
 	EndAtLe        int64    `json:"end_at_le"`
@@ -863,6 +864,7 @@ type ScheduleTimeView struct {
 	LessonPlanID string            `json:"lesson_plan_id"`
 	// Accurate for Home Fun Study only, in_progress: submitted, complete: completed, empty string: never submitted
 	AssessmentStatus AssessmentStatus `json:"assessment_status" enums:"in_progress,complete"`
+	CreateAt         int64            `json:"create_at"`
 }
 
 type ScheduleTimeBoundary string
@@ -880,6 +882,7 @@ type ScheduleTimeViewListRequest struct {
 	SchoolIDs      []string `json:"school_ids"`
 	TeacherIDs     []string `json:"teacher_ids"`
 	ClassIDs       []string `json:"class_ids"`
+	UserIDs        []string `json:"user_ids"`
 	SubjectIDs     []string `json:"subject_ids"`
 	ProgramIDs     []string `json:"program_ids"`
 	ClassTypes     []string `json:"class_types"`
