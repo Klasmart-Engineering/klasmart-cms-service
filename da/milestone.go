@@ -15,6 +15,11 @@ import (
 
 type IMilestoneDA interface {
 	dbo.DataAccesser
+
+	// return the min shortcode in each idle interval, excluding deleted
+	GetIdleShortcode(ctx context.Context, tx *dbo.DBContext, orgID string) ([]int, error)
+	GetLargerShortcode(ctx context.Context, tx *dbo.DBContext, orgID string, shortcodeNum, size int) ([]int, error)
+
 	// TODO: remove duplicate interfaces
 	Create(ctx context.Context, tx *dbo.DBContext, milestone *entity.Milestone) error
 	UpdateMilestone(ctx context.Context, tx *dbo.DBContext, milestone *entity.Milestone) error
@@ -43,6 +48,61 @@ func GetMilestoneDA() IMilestoneDA {
 		_milestoneDA = new(milestoneDA)
 	})
 	return _milestoneDA
+}
+
+func (m milestoneDA) GetLargerShortcode(ctx context.Context, tx *dbo.DBContext, orgID string, shortcodeNum, size int) ([]int, error) {
+	tx.ResetCondition()
+
+	var result []int
+	err := tx.Table(entity.MilestoneTable).
+		Where("organization_id = ? and shortcode_num >= ?", orgID, shortcodeNum).
+		Order("shortcode_num asc").
+		Limit(size).
+		Pluck("shortcode_num", &result).Error
+	if err != nil {
+		log.Error(ctx, "GetLargerShortcode error",
+			log.Err(err),
+			log.String("orgID", orgID),
+			log.Int("shortcodeNum", shortcodeNum),
+			log.Int("size", size))
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (m milestoneDA) GetIdleShortcode(ctx context.Context, tx *dbo.DBContext, orgID string) ([]int, error) {
+	tx.ResetCondition()
+
+	var result []int
+	sql := `
+	SELECT DISTINCT
+		a.shortcode_num 
+	FROM
+		milestones AS a
+		LEFT JOIN milestones AS b ON b.shortcode_num = a.shortcode_num + 1 
+		AND a.organization_id = b.organization_id 
+	WHERE
+		a.organization_id = ? 
+		AND b.shortcode_num IS NULL 
+	ORDER BY
+		a.shortcode_num ASC;
+	`
+	err := tx.Raw(sql, orgID).
+		Scan(&result).Error
+	if err != nil {
+		log.Error(ctx, "GetIdleShortcode error",
+			log.Err(err),
+			log.String("orgID", orgID),
+			log.String("sql", sql))
+		return result, err
+	}
+
+	for i := range result {
+		result[i] = result[i] + 1
+	}
+
+	return result, nil
 }
 
 func (m milestoneDA) Create(ctx context.Context, tx *dbo.DBContext, milestone *entity.Milestone) error {

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -53,12 +54,20 @@ type Milestone struct {
 }
 
 func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator) (*entity.Outcome, error) {
+	shortcodeNum, err := utils.BHexToNum(ctx, req.Shortcode)
+	if err != nil {
+		log.Error(ctx, "utils.BHexToNum error",
+			log.Err(err),
+			log.String("shortcode", req.Shortcode))
+
+	}
 	outcome := entity.Outcome{
 		Name:          req.OutcomeName,
 		Assumed:       req.Assumed,
 		EstimatedTime: req.Estimated,
 		Description:   req.Description,
 		Shortcode:     req.Shortcode,
+		ShortcodeNum:  shortcodeNum,
 	}
 
 	if len(req.Program) == 0 || len(req.Subject) == 0 {
@@ -71,7 +80,7 @@ func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator)
 		return nil, &ErrValidFailed{Msg: "shortcode mismatch"}
 	}
 
-	_, err := prepareAllNeededName(ctx, op, entity.ExternalOptions{
+	_, err = prepareAllNeededName(ctx, op, entity.ExternalOptions{
 		OrgIDs:     []string{op.OrgID},
 		UsrIDs:     []string{op.UserID},
 		ProgIDs:    req.Program,

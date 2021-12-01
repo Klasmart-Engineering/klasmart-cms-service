@@ -24,6 +24,10 @@ type IOutcomeDA interface {
 	SearchOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, condition *OutcomeCondition) (int, []*entity.Outcome, error)
 
 	UpdateLatestHead(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, oldHeader, newHeader string) error
+
+	// return the min shortcode in each idle interval, excluding deleted
+	GetIdleShortcode(ctx context.Context, tx *dbo.DBContext, orgID string) ([]int, error)
+	GetLargerShortcode(ctx context.Context, tx *dbo.DBContext, orgID string, shortcodeNum, size int) ([]int, error)
 }
 
 type outcomeDA struct {
@@ -318,6 +322,61 @@ func (c *OutcomeCondition) GetOrderBy() string {
 	default:
 		return "update_at desc"
 	}
+}
+
+func (o *outcomeDA) GetLargerShortcode(ctx context.Context, tx *dbo.DBContext, orgID string, shortcodeNum, size int) ([]int, error) {
+	tx.ResetCondition()
+
+	var result []int
+	err := tx.Table(entity.OutcomeTable).
+		Where("organization_id = ? and shortcode_num >= ?", orgID, shortcodeNum).
+		Order("shortcode_num asc").
+		Limit(size).
+		Pluck("shortcode_num", &result).Error
+	if err != nil {
+		log.Error(ctx, "GetLargerShortcode error",
+			log.Err(err),
+			log.String("orgID", orgID),
+			log.Int("shortcodeNum", shortcodeNum),
+			log.Int("size", size))
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (o *outcomeDA) GetIdleShortcode(ctx context.Context, tx *dbo.DBContext, orgID string) ([]int, error) {
+	tx.ResetCondition()
+
+	var result []int
+	sql := `
+	SELECT DISTINCT
+		a.shortcode_num 
+	FROM
+		learning_outcomes AS a
+		LEFT JOIN learning_outcomes AS b ON b.shortcode_num = a.shortcode_num + 1 
+		AND a.organization_id = b.organization_id 
+	WHERE
+		a.organization_id = ? 
+		AND b.shortcode_num IS NULL 
+	ORDER BY
+		a.shortcode_num ASC;
+	`
+	err := tx.Raw(sql, orgID).
+		Scan(&result).Error
+	if err != nil {
+		log.Error(ctx, "GetMaxConsecutiveShortcode error",
+			log.Err(err),
+			log.String("orgID", orgID),
+			log.String("sql", sql))
+		return nil, err
+	}
+
+	for i := range result {
+		result[i] = result[i] + 1
+	}
+
+	return result, nil
 }
 
 func (o *outcomeDA) CreateOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {

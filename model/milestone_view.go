@@ -75,10 +75,20 @@ func (ms *CreateMilestoneView) ToMilestone(ctx context.Context, op *entity.Opera
 	if ms.Type == "" {
 		ms.Type = entity.CustomMilestoneType
 	}
+
+	shortcodeNum, err := utils.BHexToNum(ctx, ms.Shortcode)
+	if err != nil {
+		log.Error(ctx, "utils.BHexToNum error",
+			log.Err(err),
+			log.String("shortcode", ms.Shortcode))
+		return nil, err
+	}
+
 	milestone := &entity.Milestone{
 		ID:             ms.MilestoneID,
 		Name:           ms.Name,
 		Shortcode:      ms.Shortcode,
+		ShortcodeNum:   shortcodeNum,
 		OrganizationID: op.OrgID,
 		AuthorID:       op.UserID,
 		Description:    ms.Description,
@@ -102,7 +112,7 @@ func (ms *CreateMilestoneView) ToMilestone(ctx context.Context, op *entity.Opera
 		log.Warn(ctx, "ToMilestone: program and subject is required", log.Any("op", op), log.Any("milestone", ms))
 		return nil, &ErrValidFailed{Msg: "program and subject is required"}
 	}
-	_, err := prepareAllNeededName(ctx, op, entity.ExternalOptions{
+	_, err = prepareAllNeededName(ctx, op, entity.ExternalOptions{
 		OrgIDs:     []string{op.OrgID},
 		UsrIDs:     []string{op.UserID},
 		ProgIDs:    ms.ProgramIDs,
