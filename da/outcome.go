@@ -25,7 +25,8 @@ type IOutcomeDA interface {
 
 	UpdateLatestHead(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, oldHeader, newHeader string) error
 
-	GetMaxConsecutiveShortcode(ctx context.Context, tx *dbo.DBContext, orgID string) (int, error)
+	// return the min shortcode in each idle interval, excluding deleted
+	GetIdleShortcode(ctx context.Context, tx *dbo.DBContext, orgID string) ([]int, error)
 	GetLargerShortcode(ctx context.Context, tx *dbo.DBContext, orgID string, shortcodeNum, size int) ([]int, error)
 }
 
@@ -344,10 +345,10 @@ func (o *outcomeDA) GetLargerShortcode(ctx context.Context, tx *dbo.DBContext, o
 	return result, nil
 }
 
-func (o *outcomeDA) GetMaxConsecutiveShortcode(ctx context.Context, tx *dbo.DBContext, orgID string) (int, error) {
+func (o *outcomeDA) GetIdleShortcode(ctx context.Context, tx *dbo.DBContext, orgID string) ([]int, error) {
 	tx.ResetCondition()
 
-	var result int = -1
+	var result []int
 	sql := `
 	SELECT DISTINCT
 		a.shortcode_num 
@@ -359,8 +360,7 @@ func (o *outcomeDA) GetMaxConsecutiveShortcode(ctx context.Context, tx *dbo.DBCo
 		a.organization_id = ? 
 		AND b.shortcode_num IS NULL 
 	ORDER BY
-		a.shortcode_num ASC 
-		LIMIT 1;
+		a.shortcode_num ASC;
 	`
 	err := tx.Raw(sql, orgID).
 		Scan(&result).Error
@@ -369,10 +369,14 @@ func (o *outcomeDA) GetMaxConsecutiveShortcode(ctx context.Context, tx *dbo.DBCo
 			log.Err(err),
 			log.String("orgID", orgID),
 			log.String("sql", sql))
-		return 0, err
+		return nil, err
 	}
 
-	return result + 1, nil
+	for i := range result {
+		result[i] = result[i] + 1
+	}
+
+	return result, nil
 }
 
 func (o *outcomeDA) CreateOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
