@@ -802,20 +802,14 @@ func (m MilestoneModel) GenerateShortcode(ctx context.Context, op *entity.Operat
 		return "", err
 	}
 	shortcodeModel := GetShortcodeModel()
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		index, shortcode, err = shortcodeModel.generate(ctx, op, tx, cursor+1, m)
-		if err != nil {
-			log.Debug(ctx, "GenerateShortcode",
-				log.Any("op", op),
-				log.Int("cursor", cursor))
-			return err
-		}
-		return nil
-	})
-
+	index, shortcode, err = shortcodeModel.generate(ctx, op, dbo.MustGetDB(ctx), cursor+1, m)
 	if err != nil {
+		log.Error(ctx, "shortcodeModel.generate error",
+			log.Any("op", op),
+			log.Int("cursor", cursor))
 		return "", err
 	}
+
 	err = m.Cache(ctx, op, index, shortcode)
 	return shortcode, err
 }
@@ -934,22 +928,25 @@ func (m MilestoneModel) Current(ctx context.Context, op *entity.Operator) (int, 
 	return da.GetShortcodeRedis(ctx).Get(ctx, op, string(entity.KindMileStone))
 }
 
-func (m MilestoneModel) Intersect(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, shortcodes []string) (map[string]bool, error) {
-	_, milestones, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
-		Shortcodes:     dbo.NullStrings{Strings: shortcodes, Valid: true},
-		OrganizationID: sql.NullString{String: op.OrgID, Valid: true},
-		OrderBy:        da.OrderByMilestoneShortcode,
-	})
+func (ocm MilestoneModel) Intersect(ctx context.Context, tx *dbo.DBContext, orgID string, shortcodeNum int) (map[string]bool, error) {
+	shortcodeNums, err := ocm.milestoneDA.GetLargerShortcode(ctx, tx, orgID, shortcodeNum, constant.ShortcodeFindStep)
 	if err != nil {
-		log.Debug(ctx, "Intersect: Search failed",
-			log.Any("op", op),
-			log.Strings("shortcode", shortcodes))
+		log.Debug(ctx, "ocm.milestoneDA.GetLargerShortcode error",
+			log.String("orgID", orgID),
+			log.Int("shortcodeNum", shortcodeNum))
 		return nil, err
 	}
-	mapShortcode := make(map[string]bool)
-	for i := range milestones {
-		mapShortcode[milestones[i].Shortcode] = true
+	mapShortcode := make(map[string]bool, len(shortcodeNums))
+	for _, shortcodeNum := range shortcodeNums {
+		shortcode, err := utils.NumToBHex(ctx, shortcodeNum, constant.ShortcodeBaseCustom, ocm.ShortcodeLength())
+		if err != nil {
+			log.Debug(ctx, "utils.NumToBHex error",
+				log.Int("shortcodeNum", shortcodeNum))
+			return nil, err
+		}
+		mapShortcode[shortcode] = true
 	}
+
 	return mapShortcode, nil
 }
 
@@ -965,7 +962,7 @@ func (m MilestoneModel) IsShortcodeExists(ctx context.Context, op *entity.Operat
 		return false, err
 	}
 	for i := range milestones {
-		if ancestor != milestones[i].AncestorID {
+		if ancestor != milestones[i].AncestorID && milestones[i].Status != entity.MilestoneStatusHidden {
 			return true, nil
 		}
 	}

@@ -2,17 +2,18 @@ package model
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
 )
 
 type ShortcodeProvider interface {
 	Current(ctx context.Context, op *entity.Operator) (int, error)
-	Intersect(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, shortcodes []string) (map[string]bool, error)
+	Intersect(ctx context.Context, tx *dbo.DBContext, orgID string, shortcodeNum int) (map[string]bool, error)
 	IsShortcodeExists(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestor string, shortcode string) (bool, error)
 	IsShortcodeCached(ctx context.Context, op *entity.Operator, shortcode string) (bool, error)
 	RemoveShortcode(ctx context.Context, op *entity.Operator, shortcode string) error
@@ -45,20 +46,21 @@ func (scm *ShortcodeModel) generate(ctx context.Context, op *entity.Operator, tx
 		if index >= constant.ShortcodeSpace {
 			break
 		}
+
 		code, err := utils.NumToBHex(ctx, index, constant.ShortcodeBaseCustom, provider.ShortcodeLength())
 		if err != nil {
-			log.Debug(ctx, "Generate: NumToBHex failed",
-				log.Any("op", op),
-				log.Int("cursor", cursor),
+			log.Error(ctx, "utils.NumToBHex error",
+				log.Err(err),
 				log.Int("index", index))
 			return 0, "", err
 		}
+
 		shortcodes = append(shortcodes, code)
 	}
 
-	intersects, err := provider.Intersect(ctx, op, tx, shortcodes)
+	intersects, err := provider.Intersect(ctx, tx, op.OrgID, cursor)
 	if err != nil {
-		log.Debug(ctx, "Generate: Intersect failed",
+		log.Error(ctx, "provider.Intersect error",
 			log.Any("op", op),
 			log.Int("cursor", cursor))
 		return 0, "", err

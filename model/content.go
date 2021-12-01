@@ -937,7 +937,7 @@ func (cm *ContentModel) validatePublishContentWithAssets(ctx context.Context, co
 	return nil
 }
 
-func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
+func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope []string, user *entity.Operator) error {
 	//创建data对象
 	//create content data object
 	cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
@@ -981,12 +981,13 @@ func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx
 		SuggestTime: content.SuggestTime,
 		Data:        assetsDataJSON,
 
-		Program:     contentProperties.Program,
-		Subject:     contentProperties.Subject,
-		Category:    contentProperties.Category,
-		SubCategory: contentProperties.SubCategory,
-		Age:         contentProperties.Age,
-		Grade:       contentProperties.Grade,
+		Program:      contentProperties.Program,
+		Subject:      contentProperties.Subject,
+		Category:     contentProperties.Category,
+		SubCategory:  contentProperties.SubCategory,
+		Age:          contentProperties.Age,
+		Grade:        contentProperties.Grade,
+		PublishScope: []string{user.OrgID},
 	}
 	_, err = cm.CreateContent(ctx, req, user)
 	if err != nil {
@@ -1103,9 +1104,9 @@ func (cm *ContentModel) publishMaterialWithAssets(ctx context.Context, tx *dbo.D
 		return err
 	}
 
-	//准备发布（1.创建assets，2.修改contentdata）
+	//准备发布（1.创建assets，2.修改contentdata, 3.发布assets）
 	//preparing to publish (1.create assets 2.update content data)
-	err = cm.prepareForPublishMaterialsAssets(ctx, tx, content, user)
+	err = cm.prepareForPublishMaterialsAssets(ctx, tx, content, scope, user)
 	if err != nil {
 		return err
 	}
@@ -1130,13 +1131,6 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 	contentProperties, err := cm.getContentProperties(ctx, content.ID)
 	if err != nil {
 		log.Warn(ctx, "getContentProperties failed",
-			log.Err(err), log.String("cid", content.ID))
-		return ErrInvalidContentData
-	}
-
-	contentVisibilitySettings, err := cm.getContentVisibilitySettings(ctx, content.ID)
-	if err != nil {
-		log.Warn(ctx, "getContentVisibilitySettings failed",
 			log.Err(err), log.String("cid", content.ID))
 		return ErrInvalidContentData
 	}
@@ -1181,7 +1175,7 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 			SubCategory:  contentProperties.SubCategory,
 			Age:          contentProperties.Age,
 			Grade:        contentProperties.Grade,
-			PublishScope: contentVisibilitySettings.VisibilitySettings,
+			PublishScope: []string{user.OrgID},
 			Data:         assetsDataJSON,
 		}
 		_, err = cm.CreateContent(ctx, req, user)

@@ -390,6 +390,7 @@ type ScheduleCondition struct {
 	RelationClassIDs    entity.NullStrings
 	RelationTeacherIDs  entity.NullStrings
 	RelationStudentIDs  entity.NullStrings
+	RelationUserIDs     entity.NullStrings
 	TeachLoadTimeRanges []*entity.ScheduleTimeRange
 	TeachLoadTeacherIDs entity.NullStrings
 
@@ -579,6 +580,18 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 			constant.TableNameScheduleRelation, constant.TableNameSchedule, constant.TableNameScheduleRelation)
 		wheres = append(wheres, sql)
 		params = append(params, c.RelationStudentIDs.Strings, []entity.ScheduleRelationType{
+			entity.ScheduleRelationTypeClassRosterStudent,
+			entity.ScheduleRelationTypeParticipantStudent,
+		})
+	}
+
+	if c.RelationUserIDs.Valid {
+		sql := fmt.Sprintf("exists(select 1 from %s where relation_id in (?) and relation_type in (?) and %s.id = %s.schedule_id)",
+			constant.TableNameScheduleRelation, constant.TableNameSchedule, constant.TableNameScheduleRelation)
+		wheres = append(wheres, sql)
+		params = append(params, c.RelationTeacherIDs.Strings, []entity.ScheduleRelationType{
+			entity.ScheduleRelationTypeClassRosterTeacher,
+			entity.ScheduleRelationTypeParticipantTeacher,
 			entity.ScheduleRelationTypeClassRosterStudent,
 			entity.ScheduleRelationTypeParticipantStudent,
 		})

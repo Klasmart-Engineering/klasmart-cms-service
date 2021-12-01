@@ -2579,77 +2579,73 @@ func (s *scheduleModel) PrepareScheduleTimeViewCondition(ctx context.Context, qu
 		condition.StartAndEndTimeViewRange = startAndEndTimeViewRange
 	}
 
-	relationIDs := make([]string, 0)
-	condition.SubjectIDs = entity.NullStrings{
-		Strings: query.SubjectIDs,
-		Valid:   len(query.SubjectIDs) > 0,
+	if len(query.SubjectIDs) > 0 {
+		condition.SubjectIDs = entity.NullStrings{
+			Strings: query.SubjectIDs,
+			Valid:   true,
+		}
 	}
-	condition.ProgramIDs = entity.NullStrings{
-		Strings: query.ProgramIDs,
-		Valid:   len(query.ProgramIDs) > 0,
+
+	if len(query.ProgramIDs) > 0 {
+		condition.ProgramIDs = entity.NullStrings{
+			Strings: query.ProgramIDs,
+			Valid:   true,
+		}
 	}
-	condition.ClassTypes = entity.NullStrings{
-		Strings: query.ClassTypes,
-		Valid:   len(query.ClassTypes) > 0,
+
+	if len(query.ClassTypes) > 0 {
+		condition.ClassTypes = entity.NullStrings{
+			Strings: query.ClassTypes,
+			Valid:   true,
+		}
 	}
+
+	if len(query.UserIDs) > 0 {
+		condition.RelationUserIDs = entity.NullStrings{
+			Strings: query.UserIDs,
+			Valid:   true,
+		}
+	}
+
+	if len(query.SchoolIDs) > 0 {
+		condition.RelationSchoolIDs = entity.NullStrings{
+			Strings: query.SchoolIDs,
+			Valid:   true,
+		}
+	}
+
+	if len(query.ClassIDs) > 0 {
+		condition.RelationClassIDs = entity.NullStrings{
+			Strings: query.ClassIDs,
+			Valid:   true,
+		}
+	}
+
 	condition.OrderBy = da.NewScheduleOrderBy(query.OrderBy)
+
 	condition.OrgID = sql.NullString{
 		String: op.OrgID,
 		Valid:  true,
 	}
-	schoolIDs := entity.NullStrings{
-		Strings: query.SchoolIDs,
-		Valid:   len(query.SchoolIDs) > 0,
-	}
-	classIDs := entity.NullStrings{
-		Strings: query.ClassIDs,
-		Valid:   len(query.ClassIDs) > 0,
-	}
-	relationIDs = append(relationIDs, schoolIDs.Strings...)
-	relationIDs = append(relationIDs, classIDs.Strings...)
-	hasUndefinedClass := false
-	for _, classID := range classIDs.Strings {
-		if classID == entity.ScheduleFilterUndefinedClass {
-			hasUndefinedClass = true
-			break
-		}
-	}
-	if hasUndefinedClass {
-		userInfo, err := GetSchedulePermissionModel().GetOnlyUnderOrgUsers(ctx, op)
+
+	relationIDs := make([]string, 0)
+	if permissionMap[external.ScheduleViewOrgCalendar] {
+	} else if permissionMap[external.ScheduleViewSchoolCalendar] {
+		schoolList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, external.ScheduleViewSchoolCalendar)
 		if err != nil {
-			log.Error(ctx, "GetSchedulePermissionModel.GetOnlyUnderOrgUsers error",
+			log.Error(ctx, "GetSchoolServiceProvider.GetByPermission error",
 				log.Err(err),
 				log.Any("op", op),
+				log.String("permission", external.ScheduleViewSchoolCalendar.String()),
 			)
 			return nil, constant.ErrInternalServer
 		}
-		for _, item := range userInfo {
-			relationIDs = append(relationIDs, item.ID)
+		var relationIds []string
+		for _, item := range schoolList {
+			relationIds = append(relationIds, item.ID)
 		}
-	}
 
-	if permissionMap[external.ScheduleViewOrgCalendar] {
-		condition.RelationIDs = entity.NullStrings{
-			Strings: relationIDs,
-			Valid:   len(relationIDs) > 0,
-		}
-	} else if permissionMap[external.ScheduleViewSchoolCalendar] {
-		if len(relationIDs) == 0 {
-			schoolList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, external.ScheduleViewSchoolCalendar)
-			if err != nil {
-				log.Error(ctx, "GetSchoolServiceProvider.GetByPermission error",
-					log.Err(err),
-					log.Any("op", op),
-					log.String("permission", external.ScheduleViewSchoolCalendar.String()),
-				)
-				return nil, constant.ErrInternalServer
-			}
-			for _, item := range schoolList {
-				relationIDs = append(relationIDs, item.ID)
-			}
-
-			relationIDs = append(relationIDs, op.UserID)
-		}
+		relationIDs = append(relationIDs, op.UserID)
 		condition.RelationIDs = entity.NullStrings{
 			Strings: relationIDs,
 			Valid:   true,
@@ -2658,10 +2654,6 @@ func (s *scheduleModel) PrepareScheduleTimeViewCondition(ctx context.Context, qu
 		condition.RelationID = sql.NullString{
 			String: op.UserID,
 			Valid:  true,
-		}
-		condition.RelationIDs = entity.NullStrings{
-			Strings: relationIDs,
-			Valid:   len(relationIDs) > 0,
 		}
 	}
 	condition.AnyTime = sql.NullBool{
@@ -2818,6 +2810,7 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 			IsHomeFun:    v.IsHomeFun,
 			IsRepeat:     v.RepeatID != "",
 			LessonPlanID: v.LessonPlanID,
+			CreatedAt:    v.CreatedAt,
 		}
 
 		// handle schedule status
