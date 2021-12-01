@@ -1429,37 +1429,6 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 	return total, result, nil
 }
 
-func (s *scheduleModel) queryByCache(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleListView, error) {
-	result, err := da.GetScheduleRedisDA().GetScheduleListView(ctx, op.OrgID, condition)
-	if err != nil {
-		log.Info(ctx, "Query from cache error",
-			log.Err(err),
-			log.Any("op", op),
-			log.Any("condition", condition),
-		)
-		return nil, err
-	}
-
-	if len(result) == 0 {
-		log.Info(ctx, "Query from cache not found",
-			log.Err(err),
-			log.Any("op", op),
-			log.Any("condition", condition),
-		)
-		return nil, constant.ErrRecordNotFound
-	}
-
-	for _, item := range result {
-		item.Status = item.Status.GetScheduleStatus(entity.ScheduleStatusInput{
-			EndAt:     item.EndAt,
-			DueAt:     item.DueAt,
-			ClassType: item.ClassType,
-		})
-	}
-
-	return result, nil
-}
-
 func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operator, scheduleList []*entity.Schedule, loc *time.Location) ([]*entity.ScheduleListView, error) {
 	result := make([]*entity.ScheduleListView, 0, len(scheduleList))
 
@@ -2629,7 +2598,6 @@ func (s *scheduleModel) PrepareScheduleTimeViewCondition(ctx context.Context, qu
 		Valid:  true,
 	}
 
-	relationIDs := make([]string, 0)
 	if permissionMap[external.ScheduleViewOrgCalendar] {
 	} else if permissionMap[external.ScheduleViewSchoolCalendar] {
 		schoolList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, external.ScheduleViewSchoolCalendar)
@@ -2641,9 +2609,9 @@ func (s *scheduleModel) PrepareScheduleTimeViewCondition(ctx context.Context, qu
 			)
 			return nil, constant.ErrInternalServer
 		}
-		var relationIds []string
+		var relationIDs []string
 		for _, item := range schoolList {
-			relationIds = append(relationIds, item.ID)
+			relationIDs = append(relationIDs, item.ID)
 		}
 
 		relationIDs = append(relationIDs, op.UserID)

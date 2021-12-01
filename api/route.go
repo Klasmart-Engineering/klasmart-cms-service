@@ -91,8 +91,6 @@ func (s Server) registeRoute() {
 		schedules.PUT("/schedules/:id/status", s.mustLogin, s.updateScheduleStatus)
 		schedules.GET("/schedules_lesson_plans", s.mustLogin, s.getLessonPlans)
 		schedules.GET("/schedules_time_view/dates", s.mustLogin, s.getScheduledDates)
-		schedules.GET("/schedules_filter/schools", s.mustLogin, s.getSchoolInScheduleFilter)
-		schedules.GET("/schedules_filter/classes", s.mustLogin, s.getClassesInScheduleFilter)
 		schedules.PUT("/schedules/:id/show_option", s.mustLogin, s.updateScheduleShowOption)
 		schedules.GET("/schedules/:id/operator/newest_feedback", s.mustLogin, s.getScheduleNewestFeedbackByOperator)
 		schedules.GET("/schedules_filter/programs", s.mustLogin, s.getProgramsInScheduleFilter)
