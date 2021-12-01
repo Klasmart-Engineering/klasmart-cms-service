@@ -2811,7 +2811,7 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 			IsHomeFun:    v.IsHomeFun,
 			IsRepeat:     v.RepeatID != "",
 			LessonPlanID: v.LessonPlanID,
-			CreateAt:     v.CreatedAt,
+			CreatedAt:    v.CreatedAt,
 		}
 
 		// handle schedule status

@@ -864,7 +864,7 @@ type ScheduleTimeView struct {
 	LessonPlanID string            `json:"lesson_plan_id"`
 	// Accurate for Home Fun Study only, in_progress: submitted, complete: completed, empty string: never submitted
 	AssessmentStatus AssessmentStatus `json:"assessment_status" enums:"in_progress,complete"`
-	CreateAt         int64            `json:"create_at"`
+	CreatedAt        int64            `json:"created_at"`
 }
 
 type ScheduleTimeBoundary string
