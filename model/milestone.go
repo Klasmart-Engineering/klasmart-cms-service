@@ -962,7 +962,7 @@ func (m MilestoneModel) IsShortcodeExists(ctx context.Context, op *entity.Operat
 		return false, err
 	}
 	for i := range milestones {
-		if ancestor != milestones[i].AncestorID {
+		if ancestor != milestones[i].AncestorID && milestones[i].Status != entity.MilestoneStatusHidden {
 			return true, nil
 		}
 	}

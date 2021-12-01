@@ -181,7 +181,7 @@ func (ocm OutcomeModel) IsShortcodeExists(ctx context.Context, op *entity.Operat
 		return false, err
 	}
 	for i := range outcomes {
-		if ancestor != outcomes[i].AncestorID {
+		if ancestor != outcomes[i].AncestorID && outcomes[i].PublishStatus != entity.OutcomeStatusHidden {
 			return true, nil
 		}
 	}
