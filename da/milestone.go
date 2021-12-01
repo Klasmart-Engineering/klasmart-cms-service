@@ -16,7 +16,8 @@ import (
 type IMilestoneDA interface {
 	dbo.DataAccesser
 
-	GetMaxConsecutiveShortcode(ctx context.Context, tx *dbo.DBContext, orgID string) (int, error)
+	// return the min shortcode in each idle interval, excluding deleted
+	GetIdleShortcode(ctx context.Context, tx *dbo.DBContext, orgID string) ([]int, error)
 	GetLargerShortcode(ctx context.Context, tx *dbo.DBContext, orgID string, shortcodeNum, size int) ([]int, error)
 
 	// TODO: remove duplicate interfaces
@@ -70,10 +71,10 @@ func (m milestoneDA) GetLargerShortcode(ctx context.Context, tx *dbo.DBContext, 
 	return result, nil
 }
 
-func (m milestoneDA) GetMaxConsecutiveShortcode(ctx context.Context, tx *dbo.DBContext, orgID string) (int, error) {
+func (m milestoneDA) GetIdleShortcode(ctx context.Context, tx *dbo.DBContext, orgID string) ([]int, error) {
 	tx.ResetCondition()
 
-	var result int = -1
+	var result []int
 	sql := `
 	SELECT DISTINCT
 		a.shortcode_num 
@@ -85,20 +86,23 @@ func (m milestoneDA) GetMaxConsecutiveShortcode(ctx context.Context, tx *dbo.DBC
 		a.organization_id = ? 
 		AND b.shortcode_num IS NULL 
 	ORDER BY
-		a.shortcode_num ASC 
-		LIMIT 1;
+		a.shortcode_num ASC;
 	`
 	err := tx.Raw(sql, orgID).
 		Scan(&result).Error
 	if err != nil {
-		log.Error(ctx, "GetMaxConsecutiveShortcode error",
+		log.Error(ctx, "GetIdleShortcode error",
 			log.Err(err),
 			log.String("orgID", orgID),
 			log.String("sql", sql))
-		return 0, err
+		return result, err
 	}
 
-	return result + 1, nil
+	for i := range result {
+		result[i] = result[i] + 1
+	}
+
+	return result, nil
 }
 
 func (m milestoneDA) Create(ctx context.Context, tx *dbo.DBContext, milestone *entity.Milestone) error {

@@ -18,6 +18,7 @@ type Milestone struct {
 	ID             string          `gorm:"column:id;primary_key" json:"milestone_id"`
 	Name           string          `gorm:"column:name" json:"milestone_name"`
 	Shortcode      string          `gorm:"column:shortcode" json:"shortcode"`
+	ShortcodeNum   int             `gorm:"column:shortcode_num" json:"shortcode_num"`
 	OrganizationID string          `gorm:"column:organization_id" json:"organization_id"`
 	AuthorID       string          `gorm:"column:author_id" json:"author_id"`
 	Description    string          `gorm:"column:describe" json:"description"`
