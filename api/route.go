@@ -321,8 +321,8 @@ func (s Server) registeRoute() {
 
 	internal := s.engine.Group("/v1/internal")
 	{
-		internal.GET("/contents", s.mustLogin, s.queryContentInternal)
-		internal.GET("/schedules", s.mustLogin, s.queryScheduleInternal)
+		internal.GET("/contents", s.mustLoginWithoutOrgID, s.queryContentInternal)
+		internal.GET("/schedules", s.mustLoginWithoutOrgID, s.queryScheduleInternal)
 	}
 }
 
