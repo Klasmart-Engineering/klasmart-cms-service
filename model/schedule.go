@@ -2702,6 +2702,7 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 		ClassIDs:       query.ClassIDs,
 		SubjectIDs:     query.SubjectIDs,
 		ProgramIDs:     query.ProgramIDs,
+		UserIDs:        query.UserIDs,
 		ClassTypes:     query.ClassTypes,
 		StartAtGe:      query.StartAtGe,
 		EndAtLe:        query.EndAtLe,
