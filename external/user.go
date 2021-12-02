@@ -140,7 +140,7 @@ func (s AmsUserService) QueryByIDs(ctx context.Context, ids []string, options ..
 		users = append(users, &NullableUser{
 			Valid: user != nil,
 			User:  user,
-			StrID: ids[indexMapping[index]],
+			StrID: _ids[indexMapping[index]],
 		})
 	}
 
