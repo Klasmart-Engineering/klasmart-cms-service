@@ -695,6 +695,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 // @Param time_zone_offset query integer false "time zone offset"
 // @Param school_ids query string false "school id,separated by comma"
 // @Param teacher_ids query string false "teacher id,separated by comma"
+// @Param user_ids query string false "user id,separated by comma"
 // @Param class_ids query string false "class id,separated by comma,special classes id is 'Undefined',this class members only under org"
 // @Param subject_ids query string false "subject id,separated by comma"
 // @Param program_ids query string false "program id,separated by comma"
@@ -841,6 +842,7 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context, loc *time.Location
 	condition.SubjectIDs = entity.SplitStringToNullStrings(c.Query("subject_ids"))
 	condition.ProgramIDs = entity.SplitStringToNullStrings(c.Query("program_ids"))
 	condition.ClassTypes = entity.SplitStringToNullStrings(c.Query("class_types"))
+	condition.RelationUserIDs = entity.SplitStringToNullStrings(c.Query("user_ids"))
 	condition.OrderBy = da.NewScheduleOrderBy(c.Query("order_by"))
 	err = s.processTimeQuery(c, condition)
 	if err != nil {
@@ -854,27 +856,6 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context, loc *time.Location
 	classIDs := entity.SplitStringToNullStrings(c.Query("class_ids"))
 	relationIDs = append(relationIDs, schoolIDs.Strings...)
 	relationIDs = append(relationIDs, classIDs.Strings...)
-	hasUndefinedClass := false
-	for _, classID := range classIDs.Strings {
-		if classID == entity.ScheduleFilterUndefinedClass {
-			hasUndefinedClass = true
-			break
-		}
-	}
-	if hasUndefinedClass {
-		userInfo, err := model.GetSchedulePermissionModel().GetOnlyUnderOrgUsers(ctx, op)
-		if err != nil {
-			log.Error(ctx, "GetSchedulePermissionModel.GetOnlyUnderOrgUsers error",
-				log.Err(err),
-				log.Any("op", op),
-			)
-			s.defaultErrorHandler(c, err)
-			return nil, constant.ErrInternalServer
-		}
-		for _, item := range userInfo {
-			relationIDs = append(relationIDs, item.ID)
-		}
-	}
 
 	if permissionMap[external.ScheduleViewOrgCalendar] {
 		condition.RelationIDs = entity.NullStrings{
