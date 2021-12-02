@@ -15,7 +15,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"golang.org/x/sync/errgroup"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/errgroup"
 )
 
 var (
