@@ -79,15 +79,15 @@ func (s AmsStudentService) BatchGet(ctx context.Context, operator *entity.Operat
 	if len(ids) == 0 {
 		return []*NullableStudent{}, nil
 	}
-	res := make([]*NullableStudent, 0, len(ids))
-	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
+
+	students, err := s.QueryByIDs(ctx, ids, operator)
 	if err != nil {
 		return nil, err
 	}
-	log.Info(ctx, "BatchGet students success",
-		log.Strings("ids", ids),
-		log.Any("res", res))
-
+	res := make([]*NullableStudent, 0, len(ids))
+	for i := range students {
+		res = append(res, students[i].(*NullableStudent))
+	}
 	return res, nil
 }
 

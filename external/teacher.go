@@ -80,12 +80,15 @@ func (s AmsTeacherService) BatchGet(ctx context.Context, operator *entity.Operat
 	if len(ids) == 0 {
 		return []*NullableTeacher{}, nil
 	}
-	res := make([]*NullableTeacher, 0, len(ids))
-	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
+
+	teachers, err := s.QueryByIDs(ctx, ids, operator)
 	if err != nil {
 		return nil, err
 	}
-
+	res := make([]*NullableTeacher, 0, len(ids))
+	for i := range teachers {
+		res = append(res, teachers[i].(*NullableTeacher))
+	}
 	return res, nil
 }
 func (s AmsTeacherService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
