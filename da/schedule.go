@@ -589,7 +589,7 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		sql := fmt.Sprintf("exists(select 1 from %s where relation_id in (?) and relation_type in (?) and %s.id = %s.schedule_id)",
 			constant.TableNameScheduleRelation, constant.TableNameSchedule, constant.TableNameScheduleRelation)
 		wheres = append(wheres, sql)
-		params = append(params, c.RelationTeacherIDs.Strings, []entity.ScheduleRelationType{
+		params = append(params, c.RelationUserIDs.Strings, []entity.ScheduleRelationType{
 			entity.ScheduleRelationTypeClassRosterTeacher,
 			entity.ScheduleRelationTypeParticipantTeacher,
 			entity.ScheduleRelationTypeClassRosterStudent,
