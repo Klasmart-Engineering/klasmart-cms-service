@@ -23,7 +23,7 @@ type IScheduleDA interface {
 	GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
 	UpdateProgram(ctx context.Context, tx *sql.Tx, orgID string, oldProgramID string, newProgramID string) error
 	UpdateSubject(ctx context.Context, tx *sql.Tx, orgID string, oldSubjectID string, oldProgramID string, newSubjectID string) error
-	GetPrograms(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
+	GetProgramIDs(ctx context.Context, tx *dbo.DBContext, orgID string, relationIDs []string) ([]string, error)
 	GetClassTypes(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
 	GetTeachLoadByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]*ScheduleTeachLoadDBResult, error)
 }
@@ -32,30 +32,29 @@ type scheduleDA struct {
 	dbo.BaseDA
 }
 
-func (s *scheduleDA) GetPrograms(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error) {
-	wheres, parameters := condition.GetConditions()
-	whereSql := strings.Join(wheres, " and ")
-	var scheduleList []*entity.Schedule
-	err := tx.Table(constant.TableNameSchedule).Select("distinct program_id").Where(whereSql, parameters...).Find(&scheduleList).Error
-	if gorm.IsRecordNotFoundError(err) {
-		return nil, constant.ErrRecordNotFound
+func (s *scheduleDA) GetProgramIDs(ctx context.Context, tx *dbo.DBContext, orgID string, relationIDs []string) ([]string, error) {
+	tx.ResetCondition()
+	var programIDs []string
+	db := tx.Table(constant.TableNameSchedule).
+		Select("distinct program_id").
+		Where("schedules.org_id = ? and delete_at = 0", orgID)
+
+	if len(relationIDs) > 0 {
+		db = db.Joins("left join schedules_relations ON schedules.id = schedules_relations.schedule_id").
+			Where("schedules_relations.relation_id in (?)", relationIDs)
 	}
+
+	err := db.Scan(&programIDs).Error
 	if err != nil {
-		log.Error(ctx, "get programs ids from db error",
+		log.Error(ctx, "GetProgramIDs error",
 			log.Err(err),
-			log.Any("condition", condition),
+			log.String("orgID", orgID),
+			log.Strings("relation_ids", relationIDs),
 		)
 		return nil, err
 	}
-	var result = make([]string, 0, len(scheduleList))
-	for _, item := range scheduleList {
-		if item.ProgramID == "" {
-			continue
-		}
-		result = append(result, item.ProgramID)
-	}
-	log.Debug(ctx, "ProgramIDs", log.Strings("ProgramIDs", result))
-	return result, nil
+
+	return programIDs, nil
 }
 
 func (s *scheduleDA) GetClassTypes(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error) {

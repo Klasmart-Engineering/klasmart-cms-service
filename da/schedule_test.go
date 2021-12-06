@@ -80,3 +80,16 @@ func TestScheduleDA_SoftDelete(t *testing.T) {
 		UserID: "64a36ec1-7aa2-53ab-bb96-4c4ff752096b",
 	})
 }
+
+func TestGetPrograms(t *testing.T) {
+	ctx := context.TODO()
+	var relationIDs []string = []string{"1fe2ac5c-bc61-4290-adf5-27eec9e17b5c"}
+	result, err := GetScheduleDA().GetProgramIDs(ctx, dbo.MustGetDB(ctx), "f27efd10-000e-4542-bef2-0ccda39b93d3", relationIDs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, v := range result {
+		t.Log(v)
+	}
+}
