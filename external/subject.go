@@ -3,12 +3,13 @@ package external
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"strings"
 )
 
 type SubjectServiceProvider interface {
@@ -100,12 +101,23 @@ func (s AmsSubjectService) QueryByIDs(ctx context.Context, ids []string, options
 
 	return subjects, nil
 }
+
 func (s AmsSubjectService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Subject, error) {
 	if len(ids) == 0 {
 		return []*Subject{}, nil
 	}
-	res := make([]*Subject, 0, len(ids))
-	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
+
+	uuids := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if utils.IsValidUUID(id) {
+			uuids = append(uuids, id)
+		} else {
+			log.Warn(ctx, "invalid uuid type", log.String("id", id))
+		}
+	}
+
+	res := make([]*Subject, 0, len(uuids))
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), uuids, &res, operator)
 	if err != nil {
 		return nil, err
 	}
