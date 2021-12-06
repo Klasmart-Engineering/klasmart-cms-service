@@ -88,13 +88,23 @@ func (s AmsUserService) Get(ctx context.Context, operator *entity.Operator, id s
 func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableUser, error) {
 	log.Info(ctx, "Doing BatchGet user",
 		log.Strings("ids", ids))
-	res := make([]*NullableUser, 0, len(ids))
-	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
+
+	uuids := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if utils.IsValidUUID(id) {
+			uuids = append(uuids, id)
+		} else {
+			log.Warn(ctx, "invalid uuid type", log.String("id", id))
+		}
+	}
+
+	res := make([]*NullableUser, 0, len(uuids))
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), uuids, &res, operator)
 	if err != nil {
 		return nil, err
 	}
 	log.Info(ctx, "BatchGet user success",
-		log.Strings("ids", ids),
+		log.Strings("ids", uuids),
 		log.Any("res", res))
 	return res, nil
 }
