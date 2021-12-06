@@ -2292,6 +2292,8 @@ func (s *scheduleModel) GetPrograms(ctx context.Context, op *entity.Operator) ([
 		return nil, err
 	}
 
+	programIDs = utils.SliceDeduplicationExcludeEmpty(programIDs)
+
 	programNameMap, err := s.programService.BatchGetNameMap(ctx, op, programIDs)
 	if err != nil {
 		log.Error(ctx, "s.programService.BatchGetNameMap error",
@@ -2356,6 +2358,8 @@ func (s *scheduleModel) GetSubjects(ctx context.Context, op *entity.Operator, pr
 			log.Any("schedulePermissionRelationIDs", schedulePermissionRelationIDs))
 		return nil, err
 	}
+
+	subjectIDs = utils.SliceDeduplicationExcludeEmpty(subjectIDs)
 
 	subjectNameMap, err := s.subjectService.BatchGetNameMap(ctx, op, subjectIDs)
 	if err != nil {
