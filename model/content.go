@@ -867,12 +867,30 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 	return err
 }
 
+func (cm *ContentModel) convertAuthedOrgIDToParentsPath(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest) error {
+	if !condition.AuthedOrgID.Valid || len(condition.AuthedOrgID.Strings) <= 0 {
+		return nil
+	}
+	parents, err := da.GetFolderDA().GetSharedContentParentPath(ctx, tx, condition.AuthedOrgID.Strings)
+	if err != nil {
+		return err
+	}
+	condition.ParentsPath.Strings = parents
+	condition.ParentsPath.Valid = len(parents) > 0
+	return nil
+}
+
 //TODO:For authed content => implement search auth content => done
 func (cm *ContentModel) SearchAuthedContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	//set condition with authed flag
 	condition.AuthedOrgID = entity.NullStrings{
 		Strings: []string{user.OrgID, constant.ShareToAll},
 		Valid:   true,
+	}
+
+	err := cm.convertAuthedOrgIDToParentsPath(ctx, tx, condition)
+	if err != nil {
+		return 0, nil, err
 	}
 	condition.PublishStatus = []string{entity.ContentStatusPublished}
 	return cm.searchContent(ctx, tx, condition, user)
@@ -3183,6 +3201,7 @@ func (cm *ContentModel) conditionRequestToCondition(c entity.ContentConditionReq
 		},
 		ContentName:    c.ContentName,
 		AuthedOrgID:    c.AuthedOrgID,
+		ParentPath:     c.ParentsPath,
 		OrderBy:        da.NewContentOrderBy(c.OrderBy),
 		Pager:          c.Pager,
 		JoinUserIDList: c.JoinUserIDList,

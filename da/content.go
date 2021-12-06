@@ -98,6 +98,7 @@ type ContentCondition struct {
 
 	//AuthedContentFlag bool           `json:"authed_content"`
 	AuthedOrgID entity.NullStrings `json:"authed_org_ids"`
+	ParentPath  entity.NullStrings `json:"parent_path"`
 	OrderBy     ContentOrderBy     `json:"order_by"`
 	Pager       utils.Pager
 
@@ -156,17 +157,26 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	//Search authed content
-	if s.AuthedOrgID.Valid && len(s.AuthedOrgID.Strings) > 0 {
-		authContentTable := entity.AuthedContentRecord{}.TableName()
-		contentTable := entity.Content{}.TableName()
-		sql := fmt.Sprintf(`select content_id from %v where %v.org_id in (?) and %v.content_id = %v.id and delete_at = 0`,
-			authContentTable,
-			authContentTable,
-			authContentTable,
-			contentTable)
-		condition := fmt.Sprintf("exists (%v)", sql)
+	//if s.AuthedOrgID.Valid && len(s.AuthedOrgID.Strings) > 0 {
+	//	authContentTable := entity.AuthedContentRecord{}.TableName()
+	//	contentTable := entity.Content{}.TableName()
+	//	sql := fmt.Sprintf(`select content_id from %v where %v.org_id in (?) and %v.content_id = %v.id and delete_at = 0`,
+	//		authContentTable,
+	//		authContentTable,
+	//		authContentTable,
+	//		contentTable)
+	//	condition := fmt.Sprintf("exists (%v)", sql)
+	//	conditions = append(conditions, condition)
+	//	params = append(params, s.AuthedOrgID.Strings)
+	//}
+
+	if s.ParentPath.Valid && len(s.ParentPath.Strings) > 0 {
+		conds := make([]string, len(s.ParentPath.Strings))
+		for i, v := range s.ParentPath.Strings {
+			conds[i] = "dir_path like " + "'" + v + "%" + "'"
+		}
+		condition := fmt.Sprintf("(%s)", strings.Join(conds, " or "))
 		conditions = append(conditions, condition)
-		params = append(params, s.AuthedOrgID.Strings)
 	}
 
 	if len(s.VisibilitySettings) > 0 {
