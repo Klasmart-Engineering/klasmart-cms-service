@@ -2292,6 +2292,8 @@ func (s *scheduleModel) GetPrograms(ctx context.Context, op *entity.Operator) ([
 		return nil, err
 	}
 
+	programIDs = utils.SliceDeduplicationExcludeEmpty(programIDs)
+
 	programNameMap, err := s.programService.BatchGetNameMap(ctx, op, programIDs)
 	if err != nil {
 		log.Error(ctx, "s.programService.BatchGetNameMap error",
@@ -2300,11 +2302,13 @@ func (s *scheduleModel) GetPrograms(ctx context.Context, op *entity.Operator) ([
 		return nil, err
 	}
 
-	result := make([]*entity.ScheduleShortInfo, len(programIDs))
-	for i, programID := range programIDs {
-		result[i] = &entity.ScheduleShortInfo{
-			ID:   programID,
-			Name: programNameMap[programID],
+	result := make([]*entity.ScheduleShortInfo, 0, len(programIDs))
+	for _, programID := range programIDs {
+		if programName, ok := programNameMap[programID]; ok {
+			result = append(result, &entity.ScheduleShortInfo{
+				ID:   programID,
+				Name: programName,
+			})
 		}
 	}
 
@@ -2357,6 +2361,8 @@ func (s *scheduleModel) GetSubjects(ctx context.Context, op *entity.Operator, pr
 		return nil, err
 	}
 
+	subjectIDs = utils.SliceDeduplicationExcludeEmpty(subjectIDs)
+
 	subjectNameMap, err := s.subjectService.BatchGetNameMap(ctx, op, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "s.subjectService.BatchGetNameMap error",
@@ -2366,11 +2372,13 @@ func (s *scheduleModel) GetSubjects(ctx context.Context, op *entity.Operator, pr
 		return nil, err
 	}
 
-	result := make([]*entity.ScheduleShortInfo, len(subjectIDs))
-	for i, subjectID := range subjectIDs {
-		result[i] = &entity.ScheduleShortInfo{
-			ID:   subjectID,
-			Name: subjectNameMap[subjectID],
+	result := make([]*entity.ScheduleShortInfo, 0, len(subjectIDs))
+	for _, subjectID := range subjectIDs {
+		if subjectName, ok := subjectNameMap[subjectID]; ok {
+			result = append(result, &entity.ScheduleShortInfo{
+				ID:   subjectID,
+				Name: subjectName,
+			})
 		}
 	}
 
