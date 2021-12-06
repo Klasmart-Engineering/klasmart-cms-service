@@ -22,6 +22,7 @@ type IScheduleRelationDA interface {
 	MultipleBatchInsert(ctx context.Context, tx *dbo.DBContext, relations []*entity.ScheduleRelation) (int64, error)
 	GetRelationIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleRelationCondition) ([]string, error)
 	DeleteByIDs(ctx context.Context, tx *dbo.DBContext, ids []string) error
+	GetSubjectIDsByProgramID(ctx context.Context, tx *dbo.DBContext, orgID, programID string, schedulePermissionRelationIDs []string) ([]string, error)
 }
 
 type scheduleRelationDA struct {
@@ -98,6 +99,31 @@ func (s *scheduleRelationDA) DeleteByIDs(ctx context.Context, tx *dbo.DBContext,
 		return err
 	}
 	return nil
+}
+
+func (*scheduleRelationDA) GetSubjectIDsByProgramID(ctx context.Context, tx *dbo.DBContext, orgID, programID string, relationIDs []string) ([]string, error) {
+	tx.ResetCondition()
+	var subjectIDs []string
+	db := tx.Table(constant.TableNameScheduleRelation).
+		Select("distinct schedules_relations.relation_id").
+		Joins("left join schedules on schedules.id = schedules_relations.schedule_id").
+		Where("schedules_relations.relation_type = ?", entity.ScheduleRelationTypeSubject).
+		Where("schedules.org_id = ? and schedules.program_id = ? and schedules.delete_at = 0", orgID, programID)
+	if len(relationIDs) > 0 {
+		db = db.Joins("left join schedules_relations AS b ON schedules.id = b.schedule_id ").
+			Where("b.relation_id in (?)", relationIDs)
+	}
+
+	err := db.Scan(&subjectIDs).Error
+	if err != nil {
+		log.Error(ctx, "GetSubjectIDsByProgramID error",
+			log.Err(err),
+			log.String("orgID", orgID),
+			log.String("programID", programID))
+		return nil, err
+	}
+
+	return subjectIDs, nil
 }
 
 var (

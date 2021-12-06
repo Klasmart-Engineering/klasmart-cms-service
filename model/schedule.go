@@ -2248,27 +2248,24 @@ func (s *scheduleModel) GetVariableDataByIDs(ctx context.Context, op *entity.Ope
 	return result, nil
 }
 
-func (s *scheduleModel) getRelationCondition(ctx context.Context, op *entity.Operator) (*da.ScheduleCondition, error) {
+func (s *scheduleModel) GetPrograms(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error) {
+	// TODO: cause poor query performance, bad design
+	var schedulePermissionRelationIDs []string
+	// check schedule permission
 	permissionMap, err := GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
 		external.ScheduleViewOrgCalendar,
 		external.ScheduleViewSchoolCalendar,
 		external.ScheduleViewMyCalendar,
 	})
 	if err != nil {
+		log.Error(ctx, "GetSchedulePermissionModel.HasScheduleOrgPermissions error",
+			log.Err(err),
+			log.Any("op", op))
 		return nil, err
 	}
 
-	condition := &da.ScheduleCondition{
-		OrgID: sql.NullString{
-			String: op.OrgID,
-			Valid:  true,
-		},
-	}
-
 	if permissionMap[external.ScheduleViewOrgCalendar] {
-		return condition, nil
-	}
-	if permissionMap[external.ScheduleViewSchoolCalendar] {
+	} else if permissionMap[external.ScheduleViewSchoolCalendar] {
 		schoolList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, external.ScheduleViewSchoolCalendar)
 		if err != nil {
 			log.Error(ctx, "GetSchoolServiceProvider.GetByPermission error",
@@ -2278,115 +2275,105 @@ func (s *scheduleModel) getRelationCondition(ctx context.Context, op *entity.Ope
 			)
 			return nil, constant.ErrInternalServer
 		}
-		relationIDs := make([]string, len(schoolList))
-		for i, item := range schoolList {
-			relationIDs[i] = item.ID
+		for _, school := range schoolList {
+			schedulePermissionRelationIDs = append(schedulePermissionRelationIDs, school.ID)
 		}
 
-		condition.RelationIDs = entity.NullStrings{
-			Strings: relationIDs,
-			Valid:   true,
-		}
-		return condition, nil
+		schedulePermissionRelationIDs = append(schedulePermissionRelationIDs, op.UserID)
+	} else if permissionMap[external.ScheduleViewMyCalendar] {
+		schedulePermissionRelationIDs = append(schedulePermissionRelationIDs, op.UserID)
 	}
-	if permissionMap[external.ScheduleViewMyCalendar] {
-		condition.RelationIDs = entity.NullStrings{
-			Strings: []string{op.UserID},
-			Valid:   true,
-		}
-		return condition, nil
-	}
-	return condition, nil
-}
 
-func (s *scheduleModel) getProgramCondition(ctx context.Context, op *entity.Operator) (*da.ScheduleCondition, error) {
-	return s.getRelationCondition(ctx, op)
-}
-
-func (s *scheduleModel) GetPrograms(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error) {
-	condition, err := s.getProgramCondition(ctx, op)
+	programIDs, err := s.scheduleDA.GetProgramIDs(ctx, dbo.MustGetDB(ctx), op.OrgID, schedulePermissionRelationIDs)
 	if err != nil {
-		return nil, err
-	}
-	dbProgramIDs, err := da.GetScheduleDA().GetPrograms(ctx, dbo.MustGetDB(ctx), condition)
-	if err != nil {
-		log.Error(ctx, "get program ids from db error", log.Err(err), log.Any("condition", condition))
-		return nil, err
-	}
-	amsPrograms, err := external.GetProgramServiceProvider().GetByOrganization(ctx, op)
-	if err != nil {
-		log.Error(ctx, "get program from ams error", log.Err(err), log.Any("op", op))
+		log.Error(ctx, "s.scheduleDA.GetProgramIDs error",
+			log.Err(err),
+			log.Any("schedulePermissionRelationIDs", schedulePermissionRelationIDs))
 		return nil, err
 	}
 
-	amsProgramMap := make(map[string]*external.Program, len(amsPrograms))
-	for _, amsProgram := range amsPrograms {
-		amsProgramMap[amsProgram.ID] = amsProgram
+	programNameMap, err := s.programService.BatchGetNameMap(ctx, op, programIDs)
+	if err != nil {
+		log.Error(ctx, "s.programService.BatchGetNameMap error",
+			log.Err(err),
+			log.Any("programIDs", programIDs))
+		return nil, err
 	}
 
-	result := make([]*entity.ScheduleShortInfo, 0, len(amsPrograms))
-	for _, sID := range dbProgramIDs {
-		if program, ok := amsProgramMap[sID]; ok {
-			result = append(result, &entity.ScheduleShortInfo{
-				ID:   program.ID,
-				Name: program.Name,
-			})
+	result := make([]*entity.ScheduleShortInfo, len(programIDs))
+	for i, programID := range programIDs {
+		result[i] = &entity.ScheduleShortInfo{
+			ID:   programID,
+			Name: programNameMap[programID],
 		}
 	}
 
 	return result, nil
 }
 
-func (s *scheduleModel) getSubjectCondition(ctx context.Context, op *entity.Operator, programID string) (*da.ScheduleRelationCondition, error) {
-	condition, err := s.getRelationCondition(ctx, op)
-	if err != nil {
-		return nil, err
-	}
-
-	relationCondition := &da.ScheduleRelationCondition{
-		ScheduleFilterSubject: &da.ScheduleFilterSubject{
-			ProgramID: sql.NullString{
-				String: programID,
-				Valid:  true,
-			},
-			OrgID:       condition.OrgID,
-			RelationIDs: condition.RelationIDs,
-		},
-	}
-	return relationCondition, nil
-}
-
 func (s *scheduleModel) GetSubjects(ctx context.Context, op *entity.Operator, programID string) ([]*entity.ScheduleShortInfo, error) {
-	condition, err := s.getSubjectCondition(ctx, op, programID)
+	// TODO: cause poor query performance, bad design
+	var schedulePermissionRelationIDs []string
+	// check schedule permission
+	permissionMap, err := GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
+		external.ScheduleViewOrgCalendar,
+		external.ScheduleViewSchoolCalendar,
+		external.ScheduleViewMyCalendar,
+	})
 	if err != nil {
+		log.Error(ctx, "GetSchedulePermissionModel.HasScheduleOrgPermissions error",
+			log.Err(err),
+			log.Any("op", op))
 		return nil, err
 	}
 
-	dbSubjectIDs, err := da.GetScheduleRelationDA().GetRelationIDsByCondition(ctx, dbo.MustGetDB(ctx), condition)
-	if err != nil {
-		log.Error(ctx, "get subject ids from db error", log.Err(err), log.Any("condition", condition))
-		return nil, err
+	if permissionMap[external.ScheduleViewOrgCalendar] {
+	} else if permissionMap[external.ScheduleViewSchoolCalendar] {
+		schoolList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, external.ScheduleViewSchoolCalendar)
+		if err != nil {
+			log.Error(ctx, "GetSchoolServiceProvider.GetByPermission error",
+				log.Err(err),
+				log.Any("op", op),
+				log.String("permission", external.ScheduleViewSchoolCalendar.String()),
+			)
+			return nil, constant.ErrInternalServer
+		}
+		for _, school := range schoolList {
+			schedulePermissionRelationIDs = append(schedulePermissionRelationIDs, school.ID)
+		}
+
+		schedulePermissionRelationIDs = append(schedulePermissionRelationIDs, op.UserID)
+	} else if permissionMap[external.ScheduleViewMyCalendar] {
+		schedulePermissionRelationIDs = append(schedulePermissionRelationIDs, op.UserID)
 	}
-	amsSubjects, err := external.GetSubjectServiceProvider().GetByProgram(ctx, op, programID)
+
+	subjectIDs, err := s.scheduleRelationDA.GetSubjectIDsByProgramID(ctx, dbo.MustGetDB(ctx), op.OrgID, programID, schedulePermissionRelationIDs)
 	if err != nil {
-		log.Error(ctx, "get subject ids by program id from ams error", log.Err(err), log.Any("op", op), log.Any("programID", programID))
+		log.Error(ctx, "s.scheduleRelationDA.GetSubjectIDsByProgramID error",
+			log.Err(err),
+			log.Any("op", op),
+			log.String("programID", programID),
+			log.Any("schedulePermissionRelationIDs", schedulePermissionRelationIDs))
 		return nil, err
 	}
 
-	amsSubjectMap := make(map[string]*external.Subject, len(amsSubjects))
-	for _, amsSubject := range amsSubjects {
-		amsSubjectMap[amsSubject.ID] = amsSubject
+	subjectNameMap, err := s.subjectService.BatchGetNameMap(ctx, op, subjectIDs)
+	if err != nil {
+		log.Error(ctx, "s.subjectService.BatchGetNameMap error",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("subjectIDs", subjectIDs))
+		return nil, err
 	}
 
-	result := make([]*entity.ScheduleShortInfo, 0, len(amsSubjects))
-	for _, sID := range dbSubjectIDs {
-		if subject, ok := amsSubjectMap[sID]; ok {
-			result = append(result, &entity.ScheduleShortInfo{
-				ID:   subject.ID,
-				Name: subject.Name,
-			})
+	result := make([]*entity.ScheduleShortInfo, len(subjectIDs))
+	for i, subjectID := range subjectIDs {
+		result[i] = &entity.ScheduleShortInfo{
+			ID:   subjectID,
+			Name: subjectNameMap[subjectID],
 		}
 	}
+
 	return result, nil
 }
 
