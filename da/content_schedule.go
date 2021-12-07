@@ -24,7 +24,7 @@ func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity
 	} else {
 		conds := make([]string, len(paths))
 		for i, v := range paths {
-			conds[i] = "dir_path like " + "'" + v + "%" + "'"
+			conds[i] = "cc.dir_path like " + "'" + v + "%" + "'"
 		}
 		condition = fmt.Sprintf("(%s)", strings.Join(conds, " or "))
 	}
