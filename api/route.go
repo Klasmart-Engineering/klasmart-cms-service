@@ -57,8 +57,8 @@ func (s Server) registeRoute() {
 		content.GET("/contents/:content_id/statistics", s.mustLogin, s.contentDataCount)
 		content.GET("/contents_private", s.mustLogin, s.queryPrivateContent)
 		content.GET("/contents_pending", s.mustLogin, s.queryPendingContent)
-		content.GET("/contents_folders" /*s.mustLogin,*/, s.queryFolderContent)
-		content.GET("/contents_authed" /*s.mustLogin,*/, s.queryAuthContent)
+		content.GET("/contents_folders", s.mustLogin, s.queryFolderContent)
+		content.GET("/contents_authed", s.mustLogin, s.queryAuthContent)
 
 		content.PUT("/contents_bulk/publish", s.mustLogin, s.publishContentBulk)
 		content.DELETE("/contents_bulk", s.mustLogin, s.deleteContentBulk)
@@ -67,7 +67,7 @@ func (s Server) registeRoute() {
 		content.GET("/contents_resources/:resource_id", s.mustLoginWithoutOrgID, s.getContentResourcePath)
 		content.GET("/contents_resources/:resource_id/download", s.mustLoginWithoutOrgID, s.getDownloadPath)
 		content.GET("/contents/:content_id/live/token", s.mustLogin, s.getContentLiveToken)
-		content.GET("/contents_lesson_plans" /*s.mustLogin,*/, s.getLessonPlansCanSchedule)
+		content.GET("/contents_lesson_plans", s.mustLogin, s.getLessonPlansCanSchedule)
 	}
 
 	schedules := s.engine.Group("/v1")
