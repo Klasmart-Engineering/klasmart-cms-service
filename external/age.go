@@ -3,8 +3,9 @@ package external
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"strings"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -46,8 +47,17 @@ func (s AmsAgeService) BatchGet(ctx context.Context, operator *entity.Operator, 
 		return []*Age{}, nil
 	}
 
-	res := make([]*Age, 0, len(ids))
-	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), ids, &res, operator)
+	uuids := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if utils.IsValidUUID(id) {
+			uuids = append(uuids, id)
+		} else {
+			log.Warn(ctx, "invalid uuid type", log.String("id", id))
+		}
+	}
+
+	res := make([]*Age, 0, len(uuids))
+	err := cache.GetPassiveCacheRefresher().BatchGet(ctx, s.Name(), uuids, &res, operator)
 	if err != nil {
 		return nil, err
 	}
