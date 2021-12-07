@@ -52,18 +52,25 @@ type FolderDA struct {
 }
 
 func (fda *FolderDA) GetSharedContentParentPath(ctx context.Context, tx *dbo.DBContext, orgIDs []string) ([]string, error) {
+	if len(orgIDs) <= 0 {
+		return []string{}, nil
+	}
+
+	sql := fmt.Sprintf(`select distinct if(dir_path ='/', concat(dir_path, id), concat(dir_path, '/', id)) as parent_path from %s
+	where id in (select folder_id from %s where org_id in (?) and delete_at = 0 )`, entity.FolderItem{}.TableName(), entity.SharedFolderRecord{}.TableName())
 
 	//	sql := fmt.Sprintf(`select distinct if(dir_path ='/', concat(dir_path, id), concat(dir_path, '/', id)) as parent_path from %s
-	//where id in (select folder_id from %s where org_id in (?) and delete_at = 0 )`, entity.FolderItem{}.TableName(), entity.SharedFolderRecord{}.TableName())
-
-	sql := fmt.Sprintf(`select distinct if(dir_path ='/', concat(dir_path, id), concat(dir_path, '/', id)) as parent_path from %s  
-where id in (select folder_id from %s where org_id in (?))`, entity.FolderItem{}.TableName(), entity.SharedFolderRecord{}.TableName())
+	//where id in (select folder_id from %s where org_id in (?))`, entity.FolderItem{}.TableName(), entity.SharedFolderRecord{}.TableName())
 
 	var result []struct {
 		ParentPath string `json:"parent_path" gorm:"column:parent_path"`
 	}
 	err := tx.Raw(sql, orgIDs).Scan(&result).Error
 	if err != nil {
+		log.Error(ctx, "GetSharedContentParentPath failed",
+			log.Strings("orgs", orgIDs),
+			log.String("sql", sql),
+			log.Err(err))
 		return nil, err
 	}
 	parentsPath := make([]string, len(result))

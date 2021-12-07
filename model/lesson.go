@@ -319,11 +319,17 @@ func (l *LessonData) filterMaterialsByPermission(ctx context.Context, contentLis
 	}
 	//if contains materials is not from org, check auth
 	if len(pendingCheckAuthContents) > 0 {
-		condition := da.AuthedContentCondition{
-			OrgIDs:     []string{operator.OrgID, constant.ShareToAll},
-			ContentIDs: pendingCheckAuthIDs,
+		//condition := da.AuthedContentCondition{
+		//	OrgIDs:     []string{operator.OrgID, constant.ShareToAll},
+		//	ContentIDs: pendingCheckAuthIDs,
+		//}
+		condition := &entity.ContentConditionRequest{
+			AuthedOrgID: entity.NullStrings{Strings: []string{operator.OrgID, constant.ShareToAll}, Valid: true},
+			ContentIDs:  entity.NullStrings{Strings: pendingCheckAuthIDs, Valid: len(pendingCheckAuthIDs) > 0},
 		}
-		authRecords, err := da.GetAuthedContentRecordsDA().QueryAuthedContentRecords(ctx, dbo.MustGetDB(ctx), condition)
+
+		//authRecords, err := da.GetAuthedContentRecordsDA().QueryAuthedContentRecords(ctx, dbo.MustGetDB(ctx), condition)
+		authRecords, err := GetContentModel().GetAuthedContents(ctx, operator, condition)
 		if err != nil {
 			log.Error(ctx, "search auth content failed",
 				log.Err(err),
@@ -332,7 +338,7 @@ func (l *LessonData) filterMaterialsByPermission(ctx context.Context, contentLis
 		}
 		for i := range pendingCheckAuthContents {
 			for j := range authRecords {
-				if pendingCheckAuthContents[i].ID == authRecords[j].ContentID &&
+				if pendingCheckAuthContents[i].ID == authRecords[j].ID &&
 					pendingCheckAuthContents[i].PublishStatus == entity.ContentStatusPublished {
 					result = append(result, pendingCheckAuthContents[i])
 					break

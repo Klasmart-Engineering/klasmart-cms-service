@@ -30,30 +30,30 @@ type BatchDeleteAuthedContentByOrgsRequest struct {
 	ContentIDs []string `json:"content_ids"`
 }
 
-type AuthedContentRecord struct {
-	ID           string `json:"record_id" gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT"`
-	OrgID        string `json:"org_id" gorm:"type:varchar(50);NOT NULL;column:org_id"`
-	FromFolderID string `json:"from_folder_id" gorm:"type:varchar(50);column:from_folder_id"`
-	ContentID    string `json:"content_id" gorm:"type:varchar(50);NOT NULL;column:content_id"`
-	Creator      string `json:"creator" gorm:"type:varchar(50);NOT NULL;column:creator"`
-	CreateAt     int64  `json:"create_at" gorm:"type:int;NOT NULL;column:create_at"`
-	DeleteAt     int64  `json:"delete_at" gorm:"type:int;NOT NULL;DEFAULT: 0;column:delete_at"`
-	Duration     int    `json:"duration" gorm:"type:int;NOT NULL;DEFAULT: 0;column:duration"`
-}
+//type AuthedContentRecord struct {
+//	ID           string `json:"record_id" gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT"`
+//	OrgID        string `json:"org_id" gorm:"type:varchar(50);NOT NULL;column:org_id"`
+//	FromFolderID string `json:"from_folder_id" gorm:"type:varchar(50);column:from_folder_id"`
+//	ContentID    string `json:"content_id" gorm:"type:varchar(50);NOT NULL;column:content_id"`
+//	Creator      string `json:"creator" gorm:"type:varchar(50);NOT NULL;column:creator"`
+//	CreateAt     int64  `json:"create_at" gorm:"type:int;NOT NULL;column:create_at"`
+//	DeleteAt     int64  `json:"delete_at" gorm:"type:int;NOT NULL;DEFAULT: 0;column:delete_at"`
+//	Duration     int    `json:"duration" gorm:"type:int;NOT NULL;DEFAULT: 0;column:duration"`
+//}
 
-func (AuthedContentRecord) TableName() string {
-	return "cms_authed_contents"
-}
+//func (AuthedContentRecord) TableName() string {
+//	return "cms_authed_contents"
+//}
 
-type AuthedContentRecordInfo struct {
-	AuthedContentRecord
-	ContentInfoWithDetails
-}
+//type AuthedContentRecordInfo struct {
+//	AuthedContentRecord
+//	ContentInfoWithDetails
+//}
 
-type AuthedContentRecordInfoResponse struct {
-	Total int                        `json:"total"`
-	List  []*AuthedContentRecordInfo `json:"list"`
-}
+//type AuthedContentRecordInfoResponse struct {
+//	Total int                        `json:"total"`
+//	List  []*AuthedContentRecordInfo `json:"list"`
+//}
 
 type AuthedOrgList struct {
 	Total int                 `json:"total"`

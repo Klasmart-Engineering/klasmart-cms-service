@@ -96,11 +96,9 @@ type ContentCondition struct {
 	DirPathRecursionList []string `json:"dir_path_recursion_list"`
 	ContentName          string   `json:"content_name"`
 
-	//AuthedContentFlag bool           `json:"authed_content"`
-	AuthedOrgID entity.NullStrings `json:"authed_org_ids"`
-	ParentPath  entity.NullStrings `json:"parent_path"`
-	OrderBy     ContentOrderBy     `json:"order_by"`
-	Pager       utils.Pager
+	ParentPath entity.NullStrings `json:"parent_path"`
+	OrderBy    ContentOrderBy     `json:"order_by"`
+	Pager      utils.Pager
 
 	DataSourceID string `json:"data_source_id"`
 
@@ -155,20 +153,6 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		}
 		conditions = append(conditions, "("+strings.Join(subConditions, " or ")+")")
 	}
-
-	//Search authed content
-	//if s.AuthedOrgID.Valid && len(s.AuthedOrgID.Strings) > 0 {
-	//	authContentTable := entity.AuthedContentRecord{}.TableName()
-	//	contentTable := entity.Content{}.TableName()
-	//	sql := fmt.Sprintf(`select content_id from %v where %v.org_id in (?) and %v.content_id = %v.id and delete_at = 0`,
-	//		authContentTable,
-	//		authContentTable,
-	//		authContentTable,
-	//		contentTable)
-	//	condition := fmt.Sprintf("exists (%v)", sql)
-	//	conditions = append(conditions, condition)
-	//	params = append(params, s.AuthedOrgID.Strings)
-	//}
 
 	if s.ParentPath.Valid && len(s.ParentPath.Strings) > 0 {
 		conds := make([]string, len(s.ParentPath.Strings))

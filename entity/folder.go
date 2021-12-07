@@ -178,7 +178,7 @@ type ReplaceLinkedContentPathRequest struct {
 type HandleSharedFolderAndAuthedContentRequest struct {
 	SharedFolderPendingOrgsMap map[string]*ShareFoldersDeleteAddOrgList
 	ShareFolders               []*FolderItem
-	ContentFolderMap           *ContentFolderMap
+	//ContentFolderMap           *ContentFolderMap
 }
 
 type ContentFolderMap struct {
