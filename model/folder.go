@@ -215,15 +215,6 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 			log.Any("orgsMap", orgsMap))
 		return err
 	}
-	//fetch all related contents & folder content relation
-	//contentFolderMap, err := f.fetchSharedContentIDs(ctx, folders, operator)
-	//if err != nil {
-	//	log.Error(ctx, "fetchSharedContentIDs failed",
-	//		log.Err(err),
-	//		log.Any("folders", folders),
-	//		log.Any("operator", operator))
-	//	return err
-	//}
 
 	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		//5.Remove folder share records & Remove content auth records & Get contents from folders
@@ -287,72 +278,8 @@ func (f *FolderModel) addSharedFolderAndAuthedContent(ctx context.Context, tx *d
 			return err
 		}
 	}
-
-	//Batch add content auth records
-	//log.Info(ctx, "records authed Data",
-	//	log.Any("folders", req.ShareFolders),
-	//	log.Any("allContentIDs", req.ContentFolderMap.ContentFolderMap),
-	//	log.Any("sharedFolderPendingOrgsMap", req.SharedFolderPendingOrgsMap))
-	//authData := make([]*entity.AddAuthedContentRequest, 0)
-	//for i := range req.ShareFolders {
-	//	for j := range req.ContentFolderMap.ContentFolderMap[req.ShareFolders[i].ID] {
-	//		for k := range req.SharedFolderPendingOrgsMap[req.ShareFolders[i].ID].AddOrgs {
-	//			authData = append(authData, &entity.AddAuthedContentRequest{
-	//				FromFolderID: req.ShareFolders[i].ID,
-	//				ContentID:    req.ContentFolderMap.ContentFolderMap[req.ShareFolders[i].ID][j],
-	//				OrgID:        req.SharedFolderPendingOrgsMap[req.ShareFolders[i].ID].AddOrgs[k],
-	//			})
-	//		}
-	//	}
-	//}
-	//
-	//log.Info(ctx, "authData",
-	//	log.Any("authData", authData))
-	//if len(authData) > 0 {
-	//	err := GetAuthedContentRecordsModel().BatchAddByOrgIDs(ctx, tx, authData, operator)
-	//	if err != nil {
-	//		log.Error(ctx, "Batch add auth contents failed",
-	//			log.Err(err),
-	//			log.Any("authData", authData),
-	//			log.Any("operator", operator))
-	//		return err
-	//	}
-	//}
 	return nil
 }
-
-//func (f *FolderModel) fetchSharedContentIDs(ctx context.Context, folders []*entity.FolderItem, operator *entity.Operator) (*entity.ContentFolderMap, error) {
-//	allContentFolderMap := make(map[string][]string, 0)
-//	folderPathList := make([]string, len(folders))
-//	for i := range folders {
-//		folderPathList[i] = folders[i].ChildrenPath().String()
-//	}
-//
-//	//4.Get contents from folders
-//	condition := &da.ContentCondition{
-//		ContentType:    []int{entity.ContentTypePlan, entity.ContentTypeMaterial},
-//		DirPath:        entity.NullStrings{Strings: folderPathList, Valid: true},
-//		IncludeDeleted: true,
-//	}
-//	contents, err := da.GetContentDA().QueryContent(ctx, dbo.MustGetDB(ctx), condition)
-//	if err != nil {
-//		log.Error(ctx, "Search folder items failed",
-//			log.Err(err),
-//			log.Any("condition", condition),
-//			log.Any("operator", operator))
-//		return nil, err
-//	}
-//
-//	contentIDs := make([]string, len(contents))
-//	for i := range contents {
-//		allContentFolderMap[contents[i].DirPath.Parent()] = append(allContentFolderMap[contents[i].DirPath.Parent()], contents[i].ID)
-//		contentIDs[i] = contents[i].ID
-//	}
-//	return &entity.ContentFolderMap{
-//		ContentFolderMap: allContentFolderMap,
-//		AllContentIDs:    contentIDs,
-//	}, nil
-//}
 
 func (f *FolderModel) removeSharedFolderAndAuthedContent(ctx context.Context, tx *dbo.DBContext,
 	req *entity.HandleSharedFolderAndAuthedContentRequest, operator *entity.Operator) error {
@@ -370,35 +297,6 @@ func (f *FolderModel) removeSharedFolderAndAuthedContent(ctx context.Context, tx
 			}
 		}
 	}
-
-	//Remove content share records
-
-	//fetch all folders has content
-	//for i := range req.ShareFolders {
-	//	//Judge if folder should delete share org
-	//	deleteOrgs := req.SharedFolderPendingOrgsMap[req.ShareFolders[i].ID].DeleteOrgs
-	//	if len(deleteOrgs) < 1 {
-	//		continue
-	//	}
-	//	//remove authed content when it should be deleted
-	//	contentIDs := req.ContentFolderMap.ContentFolderMap[req.ShareFolders[i].ID]
-	//	if len(contentIDs) > 0 {
-	//		err := GetAuthedContentRecordsModel().BatchDelete(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
-	//			OrgIDs:     deleteOrgs,
-	//			FolderIDs:  []string{req.ShareFolders[i].ID},
-	//			ContentIDs: contentIDs,
-	//		}, operator)
-	//		if err != nil {
-	//			log.Error(ctx, "Batch delete auth content failed",
-	//				log.Err(err),
-	//				log.Strings("orgIDs", req.SharedFolderPendingOrgsMap[req.ShareFolders[i].ID].DeleteOrgs),
-	//				log.Strings("contentIDs", contentIDs),
-	//				log.Any("operator", operator))
-	//			return err
-	//		}
-	//	}
-	//}
-	//
 	return nil
 }
 

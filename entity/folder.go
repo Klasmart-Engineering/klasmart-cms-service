@@ -157,6 +157,20 @@ type ShareFoldersRequest struct {
 	OrgIDs    []string `json:"org_ids"`
 }
 
+type SharedFolderRecord struct {
+	ID       string `json:"record_id" gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT"`
+	FolderID string `json:"folder_id" gorm:"type:varchar(255);NOT NULL;column:folder_id"`
+	OrgID    string `json:"org_id" gorm:"type:varchar(255);NOT NULL;column:org_id"`
+	Creator  string `json:"creator" gorm:"type:varchar(255);NOT NULL;column:creator"`
+	CreateAt int64  `json:"create_at" gorm:"type:int;NOT NULL;column:create_at"`
+	UpdateAt int64  `json:"update_at" gorm:"type:int;NOT NULL;column:update_at"`
+	DeleteAt int64  `json:"delete_at" gorm:"type:int;NOT NULL;DEFAULT: 0;column:delete_at"`
+}
+
+func (SharedFolderRecord) TableName() string {
+	return "cms_shared_folders"
+}
+
 type FolderShareRecord struct {
 	FolderID string              `json:"folder_id"`
 	Orgs     []*OrganizationInfo `json:"orgs"`

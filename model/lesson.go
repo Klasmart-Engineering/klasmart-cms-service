@@ -329,7 +329,7 @@ func (l *LessonData) filterMaterialsByPermission(ctx context.Context, contentLis
 		}
 
 		//authRecords, err := da.GetAuthedContentRecordsDA().QueryAuthedContentRecords(ctx, dbo.MustGetDB(ctx), condition)
-		authRecords, err := GetContentModel().GetAuthedContents(ctx, operator, condition)
+		authRecords, err := GetContentModel().GetSharedContents(ctx, operator, condition)
 		if err != nil {
 			log.Error(ctx, "search auth content failed",
 				log.Err(err),
