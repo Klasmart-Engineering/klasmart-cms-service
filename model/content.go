@@ -1463,7 +1463,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 	}
 	//获取最新数据
 	//fetch newest data
-	if obj.LatestID != "" {
+	if obj.LatestID != "" && obj.LatestID != obj.ID {
 		obj, err = da.GetContentDA().GetContentByID(ctx, tx, obj.LatestID)
 		if err != nil {
 			log.Error(ctx, "can't read content", log.Err(err), log.String("cid", cid))
@@ -1858,6 +1858,15 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 				log.Any("condition", condition))
 			return 0, nil, err
 		}
+		if plan.LatestID != "" && plan.LatestID != plan.ID {
+			plan, err = da.GetContentDA().GetContentByID(ctx, tx, plan.LatestID)
+			if err != nil {
+				log.Error(ctx, "get latest plan failed", log.Err(err),
+					log.Any("plan", plan),
+					log.Any("condition", condition))
+				return 0, nil, err
+			}
+		}
 		if plan.ContentType != entity.ContentTypePlan {
 			log.Error(ctx, "content data parse failed",
 				log.Any("plan", plan))
@@ -1868,6 +1877,15 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 			log.Error(ctx, "content data parse failed",
 				log.Err(err),
 				log.Any("plan", plan))
+			return 0, nil, err
+		}
+		err = cd.PrepareVersion(ctx)
+		if err != nil {
+			log.Error(ctx, "prepare material failed",
+				log.Err(err),
+				log.Any("cd", cd),
+				log.Any("plan", plan),
+				log.Any("condition", condition))
 			return 0, nil, err
 		}
 		planData, ok := cd.(*LessonData)
