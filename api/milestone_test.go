@@ -41,7 +41,7 @@ func setupMilestone() {
 
 func TestCreateMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	req := model.MilestoneView{
 		Name:      "mile02",
 		Shortcode: "Y0002",
@@ -68,14 +68,14 @@ func TestCreateMilestone(t *testing.T) {
 
 func TestObtainMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	res := DoHttpWithOperator(http.MethodGet, op, prefix+"/milestones/"+"609b807f047581d7b0d46d17"+"?org_id="+op.OrgID, "")
 	fmt.Println(res)
 }
 
 func TestUpdateMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	req := model.MilestoneView{
 		Name:      "name07",
 		Shortcode: "00007",
@@ -101,7 +101,7 @@ func TestUpdateMilestone(t *testing.T) {
 
 func TestDeleteMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	req := model.MilestoneList{
 		IDs: []string{},
 	}
@@ -115,7 +115,7 @@ func TestDeleteMilestone(t *testing.T) {
 
 func TestSearchMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	queryCondition := []string{
 		//"search_key=name01",
 		//"name=name01",
@@ -143,7 +143,7 @@ func TestSearchMilestone(t *testing.T) {
 
 func TestSearchPrivateMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	queryCondition := []string{
 		//"search_key=name01",
 		//"name=name01",
@@ -172,7 +172,7 @@ func TestSearchPrivateMilestone(t *testing.T) {
 
 func TestPublishMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	req := model.MilestoneList{
 		IDs: []string{"609b9636b8f830a9402b0ba3"},
 	}
@@ -186,21 +186,21 @@ func TestPublishMilestone(t *testing.T) {
 
 func TestOccupyMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	res := DoHttpWithOperator(http.MethodPut, op, prefix+"/milestones/"+"609b9636b8f830a9402b0ba3/occupy"+"?org_id="+op.OrgID, "")
 	fmt.Println(res)
 }
 
 func TestCreateGeneral(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	res := DoHttpWithOperator(http.MethodPost, op, prefix+"/milestones/general"+"?org_id="+op.OrgID, "")
 	fmt.Println(res)
 }
 
 func TestBulkPublishMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	req := model.MilestoneList{
 		IDs: []string{"60ac9512480ebf7e27dd84db"},
 	}
@@ -214,7 +214,7 @@ func TestBulkPublishMilestone(t *testing.T) {
 
 func TestBulkApproveMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	req := model.MilestoneList{
 		IDs: []string{"60ac9512480ebf7e27dd84db"},
 	}
