@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
@@ -54,17 +53,6 @@ func TestContentModel_CreateContent(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println(content)
-}
-
-func TestContentModel_AddAuthedContentIfFolderAlreadyShared(t *testing.T) {
-	ctx := context.Background()
-	contentIDs := []string{"6125ee2769b7f84d7af1aa0f", "6125ee5460fcb8f63b54bd75"}
-	operator := init2Operator(operatorOrgID, "brilliant.yang@badanamu.com.cn", "Try1try123")
-	err := GetContentModel().AddAuthedContentIfFolderAlreadyShared(ctx, dbo.MustGetDB(ctx), contentIDs, operator)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Println("ok")
 }
 
 func init2Operator(orgID string, authTo string, authCode string) *entity.Operator {

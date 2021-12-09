@@ -41,22 +41,22 @@ func setupMilestone() {
 
 func TestCreateMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	req := model.MilestoneView{
-		Name:           "mile02",
-		Shortcode:      "Y0002",
-		Organization:   &model.OrganizationView{OrganizationID: op.OrgID},
-		ProgramIDs:     []string{"75004121-0c0d-486c-ba65-4c57deacb44b"},
-		SubjectIDs:     []string{"5e9a201e-9c2f-4a92-bb6f-1ccf8177bb71", "36c4f793-9aa3-4fb8-84f0-68a2ab920d5a"},
-		CategoryIDs:    []string{"b4cd42b8-a09b-4f66-a03a-b9f6b6f69895", "fa8ff09d-9062-4955-9b20-5fa20757f1d9"},
-		SubcategoryIDs: []string{"d50cff7c-b0c7-43be-8ec7-877fa4c9a6fb", "49e73e4f-8ffc-47e3-9b87-0f9686d361d7"},
-		GradeIDs:       []string{"3ee3fd4c-6208-494f-9551-d48fabc4f42a"},
-		AgeIDs:         []string{"bb7982cd-020f-4e1a-93fc-4a6874917f07"},
-		OutcomeAncestorIDs: []string{
-			"609b7ec4f060b597ab4782c7",
-			"609b7fac691ad140891442cc",
-		},
-		WithPublish: true,
+		Name:      "mile02",
+		Shortcode: "Y0002",
+		//Organization:   &model.OrganizationView{OrganizationID: op.OrgID},
+		//ProgramIDs:     []string{"75004121-0c0d-486c-ba65-4c57deacb44b"},
+		//SubjectIDs:     []string{"5e9a201e-9c2f-4a92-bb6f-1ccf8177bb71", "36c4f793-9aa3-4fb8-84f0-68a2ab920d5a"},
+		//CategoryIDs:    []string{"b4cd42b8-a09b-4f66-a03a-b9f6b6f69895", "fa8ff09d-9062-4955-9b20-5fa20757f1d9"},
+		//SubcategoryIDs: []string{"d50cff7c-b0c7-43be-8ec7-877fa4c9a6fb", "49e73e4f-8ffc-47e3-9b87-0f9686d361d7"},
+		//GradeIDs:       []string{"3ee3fd4c-6208-494f-9551-d48fabc4f42a"},
+		//AgeIDs:         []string{"bb7982cd-020f-4e1a-93fc-4a6874917f07"},
+		//OutcomeAncestorIDs: []string{
+		//	"609b7ec4f060b597ab4782c7",
+		//	"609b7fac691ad140891442cc",
+		//},
+		//WithPublish: true,
 	}
 	data, err := json.Marshal(req)
 	if err != nil {
@@ -68,28 +68,28 @@ func TestCreateMilestone(t *testing.T) {
 
 func TestObtainMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	res := DoHttpWithOperator(http.MethodGet, op, prefix+"/milestones/"+"609b807f047581d7b0d46d17"+"?org_id="+op.OrgID, "")
 	fmt.Println(res)
 }
 
 func TestUpdateMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	req := model.MilestoneView{
-		Name:           "name07",
-		Shortcode:      "00007",
-		Organization:   &model.OrganizationView{OrganizationID: op.OrgID},
-		ProgramIDs:     []string{"75004121-0c0d-486c-ba65-4c57deacb44b"},
-		SubjectIDs:     []string{"5e9a201e-9c2f-4a92-bb6f-1ccf8177bb71", "36c4f793-9aa3-4fb8-84f0-68a2ab920d5a"},
-		CategoryIDs:    []string{"b4cd42b8-a09b-4f66-a03a-b9f6b6f69895", "fa8ff09d-9062-4955-9b20-5fa20757f1d9"},
-		SubcategoryIDs: []string{"d50cff7c-b0c7-43be-8ec7-877fa4c9a6fb", "49e73e4f-8ffc-47e3-9b87-0f9686d361d7"},
-		GradeIDs:       []string{"3ee3fd4c-6208-494f-9551-d48fabc4f42a"},
-		OutcomeAncestorIDs: []string{
-			"607e4a1e4225cb7dcdb55108",
-		},
-		Description: "Hello, Brilliant",
-		WithPublish: true,
+		Name:      "name07",
+		Shortcode: "00007",
+		//Organization:   &model.OrganizationView{OrganizationID: op.OrgID},
+		//ProgramIDs:     []string{"75004121-0c0d-486c-ba65-4c57deacb44b"},
+		//SubjectIDs:     []string{"5e9a201e-9c2f-4a92-bb6f-1ccf8177bb71", "36c4f793-9aa3-4fb8-84f0-68a2ab920d5a"},
+		//CategoryIDs:    []string{"b4cd42b8-a09b-4f66-a03a-b9f6b6f69895", "fa8ff09d-9062-4955-9b20-5fa20757f1d9"},
+		//SubcategoryIDs: []string{"d50cff7c-b0c7-43be-8ec7-877fa4c9a6fb", "49e73e4f-8ffc-47e3-9b87-0f9686d361d7"},
+		//GradeIDs:       []string{"3ee3fd4c-6208-494f-9551-d48fabc4f42a"},
+		//OutcomeAncestorIDs: []string{
+		//	"607e4a1e4225cb7dcdb55108",
+		//},
+		//Description: "Hello, Brilliant",
+		//WithPublish: true,
 	}
 	data, err := json.Marshal(req)
 	if err != nil {
@@ -101,7 +101,7 @@ func TestUpdateMilestone(t *testing.T) {
 
 func TestDeleteMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	req := model.MilestoneList{
 		IDs: []string{},
 	}
@@ -115,7 +115,7 @@ func TestDeleteMilestone(t *testing.T) {
 
 func TestSearchMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	queryCondition := []string{
 		//"search_key=name01",
 		//"name=name01",
@@ -143,7 +143,7 @@ func TestSearchMilestone(t *testing.T) {
 
 func TestSearchPrivateMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	queryCondition := []string{
 		//"search_key=name01",
 		//"name=name01",
@@ -172,7 +172,7 @@ func TestSearchPrivateMilestone(t *testing.T) {
 
 func TestPublishMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	req := model.MilestoneList{
 		IDs: []string{"609b9636b8f830a9402b0ba3"},
 	}
@@ -186,21 +186,21 @@ func TestPublishMilestone(t *testing.T) {
 
 func TestOccupyMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	res := DoHttpWithOperator(http.MethodPut, op, prefix+"/milestones/"+"609b9636b8f830a9402b0ba3/occupy"+"?org_id="+op.OrgID, "")
 	fmt.Println(res)
 }
 
 func TestCreateGeneral(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	res := DoHttpWithOperator(http.MethodPost, op, prefix+"/milestones/general"+"?org_id="+op.OrgID, "")
 	fmt.Println(res)
 }
 
 func TestBulkPublishMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	req := model.MilestoneList{
 		IDs: []string{"60ac9512480ebf7e27dd84db"},
 	}
@@ -214,7 +214,7 @@ func TestBulkPublishMilestone(t *testing.T) {
 
 func TestBulkApproveMilestone(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	req := model.MilestoneList{
 		IDs: []string{"60ac9512480ebf7e27dd84db"},
 	}

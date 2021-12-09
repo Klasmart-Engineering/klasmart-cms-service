@@ -2,6 +2,9 @@ package da
 
 import (
 	"context"
+	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
@@ -9,8 +12,25 @@ import (
 )
 
 func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator) (lps []*entity.LessonPlanForSchedule, err error) {
+
+	paths, err := GetFolderDA().GetSharedContentParentPath(ctx, dbo.MustGetDB(ctx), []string{op.OrgID, constant.ShareToAll})
+	if err != nil {
+		return
+	}
+
+	var condition string
+	if len(paths) <= 0 {
+		condition = "1=0"
+	} else {
+		conds := make([]string, len(paths))
+		for i, v := range paths {
+			conds[i] = "cc.dir_path like " + "'" + v + "%" + "'"
+		}
+		condition = fmt.Sprintf("(%s)", strings.Join(conds, " or "))
+	}
+
 	lps = []*entity.LessonPlanForSchedule{}
-	sql := `
+	sql := fmt.Sprintf(`
 select 
 	cc.id,
 	cc.content_name as name, 
@@ -21,21 +41,13 @@ where
 	cc.content_type=? 
 	and cc.publish_status in (?)
 	and ccp.property_type =? 
-	and cc.id in(
-		select  
-			content_id 
-		from cms_authed_contents 
-		where	org_id in (?, ?)			 
-		and delete_at = 0
-	)
+	and %s 
 order by cc.create_at 
-`
+`, condition)
 	args := []interface{}{
 		entity.ContentTypePlan,
 		entity.ContentStatusPublished,
 		entity.ContentPropertyTypeProgram,
-		op.OrgID,
-		constant.ShareToAll,
 	}
 	err = cd.s.QueryRawSQL(ctx, &lps, sql, args...)
 	if err != nil {

@@ -37,3 +37,8 @@ const (
 	OrganizationTypeNormal       OrganizationType = "normal"
 	OrganizationTypeHeadquarters OrganizationType = "headquarters"
 )
+
+type OrganizationInfo struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}

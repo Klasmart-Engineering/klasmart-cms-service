@@ -23,7 +23,7 @@ import (
 
 func TestCreateOutcome(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	createView := model.OutcomeCreateView{
 		OutcomeName:   "outcome001",
 		Shortcode:     "X0001",
@@ -52,7 +52,7 @@ func TestCreateOutcome(t *testing.T) {
 
 func TestGetOutcome(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	outcomeID := "609b7ec4f060b597ab4782c7"
 	url := fmt.Sprintf("%s/learning_outcomes/%s?org_id=%s", prefix, outcomeID, op.OrgID)
 	res := DoHttpWithOperator(http.MethodGet, op, url, "")
@@ -61,7 +61,7 @@ func TestGetOutcome(t *testing.T) {
 
 func TestUpdateOutcome(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	outcomeID := "607e4a1e4225cb7dcdb55108"
 	createView := model.OutcomeCreateView{
 		OutcomeName:   "TestModifyOutcomeXX",
@@ -95,7 +95,7 @@ func TestDeleteOutcome(t *testing.T) {
 
 func TestQueryOutcome(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	//query := fmt.Sprintf("set_name=%s&assumed=%d", "math", 1)
 	query := fmt.Sprintf("search_key=%s&publish_status=%s", "12345", "draft")
 	url := fmt.Sprintf("%s/learning_outcomes?org_id=%s&%s", prefix, op.OrgID, query)
@@ -105,7 +105,7 @@ func TestQueryOutcome(t *testing.T) {
 
 func TestLockOutcome(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	outcomeID := "607905030e4404103a3f595d"
 	url := fmt.Sprintf("%s/learning_outcomes/%s/lock?org_id=%s", prefix, outcomeID, op.OrgID)
 	res := DoHttpWithOperator(http.MethodPut, op, url, "")
@@ -114,7 +114,7 @@ func TestLockOutcome(t *testing.T) {
 
 func TestPublishOutcome(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	outcomeID := "609cbafd6b534d371d08c083"
 	req := model.PublishOutcomeReq{
 		Scope: "1",
@@ -130,7 +130,7 @@ func TestPublishOutcome(t *testing.T) {
 
 func TestApproveOutcome(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	outcomeID := "609cbafd6b534d371d08c083"
 	url := fmt.Sprintf("%s/learning_outcomes/%s/approve?org_id=%s", prefix, outcomeID, op.OrgID)
 	res := DoHttpWithOperator(http.MethodPut, op, url, "")
@@ -167,7 +167,7 @@ func TestQueryPendingOutcome(t *testing.T) {
 
 func TestGenerateShortcode(t *testing.T) {
 	setupMilestone()
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
 	data, err := json.Marshal(ShortcodeRequest{
 		Kind: entity.KindOutcome,
 	})

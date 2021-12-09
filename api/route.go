@@ -70,15 +70,6 @@ func (s Server) registeRoute() {
 		content.GET("/contents_lesson_plans", s.mustLogin, s.getLessonPlansCanSchedule)
 	}
 
-	authedContents := s.engine.Group("/v1")
-	{
-		authedContents.POST("/contents_auth", s.mustLogin, s.addAuthedContent)
-		authedContents.POST("/contents_auth/batch", s.mustLogin, s.batchAddAuthedContent)
-		authedContents.DELETE("/contents_auth", s.mustLogin, s.deleteAuthedContent)
-		authedContents.DELETE("/contents_auth/batch", s.mustLogin, s.batchDeleteAuthedContent)
-		authedContents.GET("/contents_auth/org", s.mustLogin, s.getOrgAuthedContent)
-		authedContents.GET("/contents_auth/content", s.mustLogin, s.getContentAuthedOrg)
-	}
 	schedules := s.engine.Group("/v1")
 	{
 		schedules.PUT("/schedules/:id", s.mustLogin, s.updateSchedule)

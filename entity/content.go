@@ -406,7 +406,10 @@ type ContentConditionRequest struct {
 	DataSourceID       string   `json:"data_source_id"`
 
 	//AuthedContentFlag bool           `json:"authed_content"`
+
+	ContentIDs  NullStrings `json:"content_ids"`
 	AuthedOrgID NullStrings `json:"authed_org_ids"`
+	ParentsPath NullStrings `json:"parents_path"`
 	OrderBy     string      `json:"order_by"`
 	Pager       utils.Pager
 

@@ -111,7 +111,6 @@ type IContentModel interface {
 	GetContentsSubContentsMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*SubContentsWithName, error)
 
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, remark, status string) error
-	AddAuthedContentIfFolderAlreadyShared(ctx context.Context, tx *dbo.DBContext, contentIDs []string, operator *entity.Operator) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
 
 	CountUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, error)
@@ -150,9 +149,62 @@ type IContentModel interface {
 	DeleteContentTx(ctx context.Context, cid string, user *entity.Operator) error
 
 	GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest) (lps []*entity.LessonPlanForSchedule, err error)
+
+	ContentsSharedMap(ctx context.Context, cids []string, operator *entity.Operator) (map[string]entity.ContentAuth, error)
+	GetSharedContents(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest) ([]*entity.Content, error)
 }
 
 type ContentModel struct {
+}
+
+func (cm *ContentModel) ContentsSharedMap(ctx context.Context, cids []string, operator *entity.Operator) (map[string]entity.ContentAuth, error) {
+	tx := dbo.MustGetDB(ctx)
+	authMap := make(map[string]entity.ContentAuth)
+	paths, err := da.GetFolderDA().GetSharedContentParentPath(ctx, tx, []string{operator.OrgID, constant.ShareToAll})
+	if err != nil {
+		return nil, err
+	}
+	if len(paths) <= 0 {
+		return authMap, nil
+	}
+	contents, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
+		IDS:        entity.NullStrings{Strings: cids, Valid: true},
+		ParentPath: entity.NullStrings{Strings: paths, Valid: len(paths) > 0},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range contents {
+		authMap[v.ID] = entity.ContentAuthed
+	}
+
+	for _, id := range cids {
+		if _, ok := authMap[id]; !ok {
+			authMap[id] = entity.ContentUnauthed
+		}
+	}
+	return authMap, nil
+}
+
+func (cm *ContentModel) GetSharedContents(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest) ([]*entity.Content, error) {
+	tx := dbo.MustGetDB(ctx)
+	paths, err := da.GetFolderDA().GetSharedContentParentPath(ctx, tx, cond.ParentsPath.Strings)
+	if err != nil {
+		return nil, err
+	}
+	contents, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
+		IDS:        cond.ContentIDs,
+		ParentPath: entity.NullStrings{Strings: paths, Valid: len(paths) > 0},
+	})
+	if err != nil {
+		log.Error(ctx, "GetSharedContents failed",
+			log.Any("condition", cond),
+			log.Strings("parents_path", paths),
+			log.Err(err))
+		return nil, err
+	}
+	return contents, err
 }
 
 func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBContext, contentID, sourceID string) error {
@@ -194,17 +246,6 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 
 		oldContentIDs[i] = oldContents[i].ID
 	}
-
-	//TODO:For authed content => handle source for authed content list version => done
-	err = GetAuthedContentRecordsModel().BatchUpdateVersion(ctx, tx, oldContentIDs, contentID)
-	if err != nil {
-		log.Error(ctx, "batch update authed content reocrds failed",
-			log.Err(err),
-			log.String("contentID", contentID),
-			log.Strings("oldContentIDs", oldContentIDs))
-		return err
-	}
-
 	return nil
 }
 
@@ -369,8 +410,25 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 	return nil
 }
 
+func (cm *ContentModel) convertAuthedOrgIDToParentsPath(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest) error {
+	if !condition.AuthedOrgID.Valid || len(condition.AuthedOrgID.Strings) <= 0 {
+		return nil
+	}
+	parents, err := da.GetFolderDA().GetSharedContentParentPath(ctx, tx, condition.AuthedOrgID.Strings)
+	if err != nil {
+		return err
+	}
+	condition.ParentsPath.Strings = parents
+	condition.ParentsPath.Valid = len(parents) > 0
+	return nil
+}
+
 func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	log.Debug(ctx, "search content ", log.Any("condition", condition), log.String("uid", user.UserID))
+	err := cm.convertAuthedOrgIDToParentsPath(ctx, tx, condition)
+	if err != nil {
+		return 0, nil, err
+	}
 	count, objs, err := da.GetContentDA().SearchContent(ctx, tx, cm.conditionRequestToCondition(*condition))
 	if err != nil {
 		log.Error(ctx, "can't read contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
@@ -653,74 +711,6 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	return nil
 }
 
-func (cm *ContentModel) AddAuthedContentIfFolderAlreadyShared(ctx context.Context, tx *dbo.DBContext, contentIDs []string, operator *entity.Operator) error {
-	contents, err := da.GetContentDA().GetContentByIDList(ctx, tx, contentIDs)
-	//content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
-	if err != nil {
-		log.Error(ctx, "AddAuthedContentIfFolderAlreadyShared can't find content", log.Err(err), log.Strings("content_ids", contentIDs))
-		return err
-	}
-
-	contentAncestorDirs := make(map[string]map[string]bool)
-	allParentIDs := make([]string, 0)
-	allContentsAncestorDir := make([]string, 0)
-	for i := range contents {
-		if contents[i].ContentType == entity.ContentTypeMaterial || contents[i].ContentType == entity.ContentTypePlan {
-			fids := contents[i].DirPath.Parents()
-			ancestorDirs := make(map[string]bool)
-			for j := range fids {
-				ancestorDirs[fids[j]] = true
-			}
-			contentAncestorDirs[contents[i].ID] = ancestorDirs
-			allContentsAncestorDir = append(allContentsAncestorDir, fids...)
-
-			if len(fids) > 0 && fids[len(fids)-1] != constant.FolderRootPath && fids[len(fids)-1] != "" {
-				allParentIDs = append(allParentIDs, fids[len(fids)-1])
-			}
-		}
-	}
-	folderSharedRecords, err := GetFolderModel().GetFoldersSharedRecords(ctx, allContentsAncestorDir, operator)
-	if err != nil {
-		log.Error(ctx, "AddAuthedContentIfFolderAlreadyShared get shared folders failed", log.Err(err), log.Any("contents", contents))
-		return err
-	}
-
-	batchAddRequest := make([]*entity.AddAuthedContentRequest, 0)
-	for _, fid := range folderSharedRecords.Data {
-		for k, v := range contentAncestorDirs {
-			if v[fid.FolderID] {
-				for _, org := range fid.Orgs {
-					authedContent := entity.AddAuthedContentRequest{
-						OrgID:        org.ID,
-						FromFolderID: fid.FolderID,
-						ContentID:    k,
-					}
-					batchAddRequest = append(batchAddRequest, &authedContent)
-				}
-			}
-		}
-	}
-
-	err = GetAuthedContentRecordsModel().BatchAddByOrgIDs(ctx, tx, batchAddRequest, operator)
-	if err != nil {
-		log.Error(ctx, "AddAuthedContentIfFolderAlreadyShared batchAddByOrgIDs failed",
-			log.Err(err),
-			log.Any("batchAddRequest", batchAddRequest),
-			log.Any("contents", contents))
-		return err
-	}
-
-	err = GetFolderModel().BatchUpdateFolderItemCount(ctx, tx, allParentIDs)
-	if err != nil {
-		log.Error(ctx, "AddAuthedContentIfFolderAlreadyShared BatchUpdateFolderItemCount failed",
-			log.Err(err),
-			log.Any("parents", allParentIDs),
-			log.Any("contents", contents))
-		return err
-	}
-	return nil
-}
-
 func (cm *ContentModel) UnlockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
@@ -874,6 +864,7 @@ func (cm *ContentModel) SearchAuthedContent(ctx context.Context, tx *dbo.DBConte
 		Strings: []string{user.OrgID, constant.ShareToAll},
 		Valid:   true,
 	}
+
 	condition.PublishStatus = []string{entity.ContentStatusPublished}
 	return cm.searchContent(ctx, tx, condition, user)
 }
@@ -2382,6 +2373,12 @@ func (cm *ContentModel) filterPublishedPublishStatus(ctx context.Context, status
 }
 
 func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, searchUserIDs []string, user *entity.Operator) (dbo.Conditions, error) {
+
+	err := cm.convertAuthedOrgIDToParentsPath(ctx, tx, condition)
+	if err != nil {
+		return nil, err
+	}
+
 	condition1 := *condition
 	condition2 := *condition
 
@@ -3200,7 +3197,8 @@ func (cm *ContentModel) conditionRequestToCondition(c entity.ContentConditionReq
 			Valid:   c.DirPath != "",
 		},
 		ContentName:    c.ContentName,
-		AuthedOrgID:    c.AuthedOrgID,
+		IDS:            c.ContentIDs,
+		ParentPath:     c.ParentsPath,
 		OrderBy:        da.NewContentOrderBy(c.OrderBy),
 		Pager:          c.Pager,
 		JoinUserIDList: c.JoinUserIDList,
