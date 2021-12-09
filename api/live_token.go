@@ -83,6 +83,8 @@ func (s *Server) getContentLiveToken(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrScheduleLessonPlanUnAuthed:
 		c.JSON(http.StatusBadRequest, L(ScheduleMessageLessonPlanInvalid))
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 	default:
 		log.Error(ctx, "make content live token error", log.Err(err), log.String("contentID", contentID))
 		s.defaultErrorHandler(c, err)
