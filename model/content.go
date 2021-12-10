@@ -148,7 +148,7 @@ type IContentModel interface {
 	DeleteContentBulkTx(ctx context.Context, ids []string, user *entity.Operator) error
 	DeleteContentTx(ctx context.Context, cid string, user *entity.Operator) error
 
-	GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest) (lps []*entity.LessonPlanForSchedule, err error)
+	GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest) (response *entity.GetLessonPlansCanScheduleResponse, err error)
 
 	ContentsVisibleMap(ctx context.Context, cids []string, operator *entity.Operator) (map[string]entity.ContentAuth, error)
 	GetSharedContents(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest) ([]*entity.Content, error)
