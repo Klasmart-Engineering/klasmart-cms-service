@@ -1997,9 +1997,9 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 
 func (s *scheduleModel) VerifyLessonPlanAuthed(ctx context.Context, operator *entity.Operator, lessonPlanID string) (bool, error) {
 	// verify lessPlan is valid
-	contentMap, err := GetContentModel().ContentsSharedMap(ctx, []string{lessonPlanID}, operator)
+	contentMap, err := GetContentModel().ContentsVisibleMap(ctx, []string{lessonPlanID}, operator)
 	if err != nil {
-		log.Error(ctx, "GetAuthedContentRecordsModel.ContentsSharedMap error", log.Err(err),
+		log.Error(ctx, "GetAuthedContentRecordsModel.ContentsVisibleMap error", log.Err(err),
 			log.String("lessonPlanID", lessonPlanID),
 			log.Any("operator", operator),
 		)
