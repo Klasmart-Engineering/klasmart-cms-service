@@ -6,6 +6,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -46,9 +49,31 @@ func initCache() {
 			Addr:     fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
 			Password: config.Get().RedisConfig.Password,
 		})
+		initDataSource()
 	}
 }
 
+func initDataSource() {
+	//init querier
+	ctx := context.Background()
+	engine := cache.GetCacheEngine()
+	engine.SetExpire(ctx, constant.MaxCacheExpire)
+	engine.OpenCache(ctx, config.Get().RedisConfig.OpenCache)
+	cache.GetPassiveCacheRefresher().SetUpdateFrequency(constant.MaxCacheExpire, constant.MinCacheExpire)
+
+	engine.AddDataSource(ctx, external.GetUserServiceProvider())
+	engine.AddDataSource(ctx, external.GetTeacherServiceProvider())
+	engine.AddDataSource(ctx, external.GetSubjectServiceProvider())
+	engine.AddDataSource(ctx, external.GetSubCategoryServiceProvider())
+	engine.AddDataSource(ctx, external.GetStudentServiceProvider())
+	engine.AddDataSource(ctx, external.GetSchoolServiceProvider())
+	engine.AddDataSource(ctx, external.GetProgramServiceProvider())
+	engine.AddDataSource(ctx, external.GetOrganizationServiceProvider())
+	engine.AddDataSource(ctx, external.GetGradeServiceProvider())
+	engine.AddDataSource(ctx, external.GetClassServiceProvider())
+	engine.AddDataSource(ctx, external.GetCategoryServiceProvider())
+	engine.AddDataSource(ctx, external.GetAgeServiceProvider())
+}
 func initOperator(orgID string, userID string, authTo string, authCode string) *entity.Operator {
 	if authTo == "" {
 		authTo = os.Getenv("auth_to")
@@ -295,6 +320,15 @@ func TestQueryContentsLessonPlan(t *testing.T) {
 	op := initOperator("a44da070-1907-46c4-bc4c-f26ced889439", "14494c07-0d4f-5141-9db2-15799993f448", "", "")
 	url := "/v1/contents_lesson_plans?org_id=a44da070-1907-46c4-bc4c-f26ced889439"
 	op.OrgID = "a44da070-1907-46c4-bc4c-f26ced889439"
+	res := DoHttpWithOperator(http.MethodGet, op, url, "")
+	fmt.Println(res)
+}
+
+func TestQueryContentAboutLessonPlan(t *testing.T) {
+	setupMilestone()
+	op := initOperator("60c064cc-bbd8-4724-b3f6-b886dce4774f", "afdfc0d9-ada9-4e66-b225-20f956d1a399", "org1119@yopmail.com", "Bada1234")
+	url := "/v1/contents/61a8788ab0af9acacbcd456f/live/token?org_id=60c064cc-bbd8-4724-b3f6-b886dce4774f"
+	op.OrgID = "60c064cc-bbd8-4724-b3f6-b886dce4774f"
 	res := DoHttpWithOperator(http.MethodGet, op, url, "")
 	fmt.Println(res)
 }

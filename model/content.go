@@ -150,40 +150,82 @@ type IContentModel interface {
 
 	GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest) (lps []*entity.LessonPlanForSchedule, err error)
 
-	ContentsSharedMap(ctx context.Context, cids []string, operator *entity.Operator) (map[string]entity.ContentAuth, error)
+	ContentsVisibleMap(ctx context.Context, cids []string, operator *entity.Operator) (map[string]entity.ContentAuth, error)
 	GetSharedContents(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest) ([]*entity.Content, error)
 }
 
 type ContentModel struct {
 }
 
-func (cm *ContentModel) ContentsSharedMap(ctx context.Context, cids []string, operator *entity.Operator) (map[string]entity.ContentAuth, error) {
+func (cm *ContentModel) ContentsVisibleMap(ctx context.Context, cids []string, operator *entity.Operator) (map[string]entity.ContentAuth, error) {
 	tx := dbo.MustGetDB(ctx)
+	contents, err := da.GetContentDA().GetContentByIDList(ctx, dbo.MustGetDB(ctx), cids)
+	if err != nil {
+		log.Error(ctx, "ContentsVisibleMap failed",
+			log.Err(err),
+			log.Any("op", operator),
+			log.Strings("contents", cids))
+		return nil, err
+	}
+
 	authMap := make(map[string]entity.ContentAuth)
-	paths, err := da.GetFolderDA().GetSharedContentParentPath(ctx, tx, []string{operator.OrgID, constant.ShareToAll})
-	if err != nil {
-		return nil, err
+	for _, v := range cids {
+		authMap[v] = entity.ContentUnauthed
 	}
-	if len(paths) <= 0 {
-		return authMap, nil
-	}
-	contents, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
-		IDS:        entity.NullStrings{Strings: cids, Valid: true},
-		ParentPath: entity.NullStrings{Strings: paths, Valid: len(paths) > 0},
-	})
-	if err != nil {
-		return nil, err
-	}
+	pendingAuthContentIDs := make([]string, 0)
 
-	for _, v := range contents {
-		authMap[v.ID] = entity.ContentAuthed
-	}
-
-	for _, id := range cids {
-		if _, ok := authMap[id]; !ok {
-			authMap[id] = entity.ContentUnauthed
+	contentLatestIDMap := make(map[string]string)
+	contentLatestIDRevert := make(map[string]string)
+	for i := range contents {
+		if contents[i].LatestID == "" {
+			contentLatestIDMap[contents[i].ID] = contents[i].ID
+			contentLatestIDRevert[contents[i].ID] = contents[i].ID
+		} else {
+			contentLatestIDMap[contents[i].ID] = contents[i].LatestID
+			contentLatestIDRevert[contents[i].LatestID] = contents[i].ID
 		}
 	}
+
+	for i := range contents {
+		if contents[i].Org == operator.OrgID {
+			authMap[contents[i].ID] = entity.ContentAuthed
+		} else {
+			authMap[contents[i].ID] = entity.ContentUnauthed
+			//search auth contents use latest id
+			pendingAuthContentIDs = append(pendingAuthContentIDs, contentLatestIDMap[contents[i].ID])
+		}
+	}
+
+	if len(pendingAuthContentIDs) > 0 {
+		paths, err := da.GetFolderDA().GetSharedContentParentPath(ctx, tx, []string{operator.OrgID, constant.ShareToAll})
+		if err != nil {
+			return nil, err
+		}
+		if len(paths) <= 0 {
+			log.Debug(ctx, "ContentsVisibleMap no shared",
+				log.Any("result", authMap))
+			return authMap, nil
+		}
+		visibleContents, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
+			IDS:        entity.NullStrings{Strings: pendingAuthContentIDs, Valid: true},
+			ParentPath: entity.NullStrings{Strings: paths, Valid: len(paths) > 0},
+		})
+		if err != nil {
+			log.Error(ctx, "ContentsVisibleMap failed",
+				log.Err(err),
+				log.Any("op", operator),
+				log.Strings("contents", cids),
+				log.Strings("pending_auth_ids", pendingAuthContentIDs),
+				log.Strings("parent_path", paths))
+			return nil, err
+		}
+
+		for i := range visibleContents {
+			//result revert to current id
+			authMap[contentLatestIDRevert[visibleContents[i].ID]] = entity.ContentAuthed
+		}
+	}
+
 	return authMap, nil
 }
 
