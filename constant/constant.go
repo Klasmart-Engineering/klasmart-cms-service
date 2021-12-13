@@ -111,12 +111,12 @@ const (
 )
 
 const (
-	DefaultPeriod  uint8 = 120
-	DefaultWindow  uint8 = 5
-	ValidDays            = 30
-	BounceMax            = 5
-	BounceInterval       = 2 //unit, hour
-	Step                 = 1000
+	DefaultPeriod     uint8 = 120
+	DefaultWindow     uint8 = 5
+	ValidDays               = 30
+	BounceMax               = 5
+	BounceInterval          = 2 //unit, hour
+	ShareAllBatchSize       = 1000
 )
 
 const (

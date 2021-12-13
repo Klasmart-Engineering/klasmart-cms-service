@@ -101,7 +101,7 @@ func (sf *SharedFolderDA) BatchDelete(ctx context.Context, tx *dbo.DBContext, or
 
 func (sf *SharedFolderDA) BatchDeleteByOrgIDs(ctx context.Context, tx *dbo.DBContext, folderID string, orgIDs []string) error {
 	now := time.Now().Unix()
-	step := constant.Step
+	step := constant.ShareAllBatchSize
 	var start, end int
 	i := 0
 	for {
