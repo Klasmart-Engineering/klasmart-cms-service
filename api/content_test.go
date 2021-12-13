@@ -332,3 +332,11 @@ func TestQueryContentAboutLessonPlan(t *testing.T) {
 	res := DoHttpWithOperator(http.MethodGet, op, url, "")
 	fmt.Println(res)
 }
+
+func TestQueryContentsID(t *testing.T) {
+	setupMilestone()
+	op := initOperator("60c064cc-bbd8-4724-b3f6-b886dce4774f", "0d3686a6-bf6a-4777-a716-31ce4aa0f516", "school1221a@yopmail.com", "Bada1234")
+	url := "/v1/contents/61ad878f5ab1da1a6faf50c5?org_id=60c064cc-bbd8-4724-b3f6-b886dce4774f"
+	res := DoHttpWithOperator(http.MethodGet, op, url, "")
+	fmt.Println(res)
+}

@@ -152,9 +152,66 @@ type IContentModel interface {
 
 	ContentsVisibleMap(ctx context.Context, cids []string, operator *entity.Operator) (map[string]entity.ContentAuth, error)
 	GetSharedContents(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest) ([]*entity.Content, error)
+	CheckContentVisible(ctx context.Context, cid string, operator *entity.Operator) (bool, error)
+	UpdateSharedContentsCount(ctx context.Context, tx *dbo.DBContext, cids []string, operator *entity.Operator) error
 }
 
 type ContentModel struct {
+}
+
+func (cm *ContentModel) UpdateSharedContentsCount(ctx context.Context, tx *dbo.DBContext, contentIDs []string, operator *entity.Operator) error {
+	contents, err := da.GetContentDA().GetContentByIDList(ctx, tx, contentIDs)
+	if err != nil {
+		log.Error(ctx, "UpdateSharedContentsCount failed", log.Err(err), log.Strings("content_ids", contentIDs))
+		return err
+	}
+
+	contentAncestorDirs := make(map[string]map[string]bool)
+	allParentIDs := make([]string, 0)
+	allContentsAncestorDir := make([]string, 0)
+	for i := range contents {
+		if contents[i].ContentType == entity.ContentTypeMaterial || contents[i].ContentType == entity.ContentTypePlan {
+			fids := contents[i].DirPath.Parents()
+			ancestorDirs := make(map[string]bool)
+			for j := range fids {
+				ancestorDirs[fids[j]] = true
+			}
+			contentAncestorDirs[contents[i].ID] = ancestorDirs
+			allContentsAncestorDir = append(allContentsAncestorDir, fids...)
+
+			if len(fids) > 0 && fids[len(fids)-1] != constant.FolderRootPath && fids[len(fids)-1] != "" {
+				allParentIDs = append(allParentIDs, fids[len(fids)-1])
+			}
+		}
+	}
+
+	err = GetFolderModel().BatchUpdateFolderItemCount(ctx, tx, allParentIDs)
+	if err != nil {
+		log.Error(ctx, "AddAuthedContentIfFolderAlreadyShared BatchUpdateFolderItemCount failed",
+			log.Err(err),
+			log.Any("parents", allParentIDs),
+			log.Any("contents", contents))
+		return err
+	}
+	return nil
+}
+
+func (cm *ContentModel) CheckContentVisible(ctx context.Context, cid string, operator *entity.Operator) (bool, error) {
+	visibilities, err := cm.GetSharedContents(ctx, operator, &entity.ContentConditionRequest{
+		ContentIDs:  entity.NullStrings{Strings: []string{cid}, Valid: true},
+		AuthedOrgID: entity.NullStrings{Strings: []string{operator.OrgID, constant.ShareToAll}},
+	})
+	if err != nil {
+		log.Error(ctx, "No permission",
+			log.Err(err),
+			log.String("cid", cid),
+			log.Any("op", operator))
+		return false, err
+	}
+	if len(visibilities) > 0 {
+		return true, nil
+	}
+	return false, nil
 }
 
 func (cm *ContentModel) ContentsVisibleMap(ctx context.Context, cids []string, operator *entity.Operator) (map[string]entity.ContentAuth, error) {
@@ -231,9 +288,13 @@ func (cm *ContentModel) ContentsVisibleMap(ctx context.Context, cids []string, o
 
 func (cm *ContentModel) GetSharedContents(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest) ([]*entity.Content, error) {
 	tx := dbo.MustGetDB(ctx)
-	paths, err := da.GetFolderDA().GetSharedContentParentPath(ctx, tx, cond.ParentsPath.Strings)
+	paths, err := da.GetFolderDA().GetSharedContentParentPath(ctx, tx, cond.AuthedOrgID.Strings)
 	if err != nil {
 		return nil, err
+	}
+	if len(paths) <= 0 {
+		log.Debug(ctx, "GetSharedContents: no shared", log.Any("op", op), log.Any("cond", cond))
+		return []*entity.Content{}, nil
 	}
 	contents, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
 		IDS:        cond.ContentIDs,

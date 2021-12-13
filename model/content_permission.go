@@ -130,17 +130,14 @@ func (c *ContentPermissionMySchoolModel) CheckPublishContentsPermission(ctx cont
 }
 
 func (c *ContentPermissionMySchoolModel) CheckGetContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
-	//hasAuth, err := c.checkAuthedContent(ctx, cid, user)
-	//if err != nil {
-	//	log.Error(ctx, "checkAuthedContent failed",
-	//		log.Err(err),
-	//		log.String("cid", cid),
-	//		log.Any("user", user))
-	//	return false, err
-	//}
-	//if hasAuth {
-	//	return true, nil
-	//}
+	visible, err := GetContentModel().CheckContentVisible(ctx, cid, user)
+	if err != nil {
+		return false, err
+	}
+
+	if visible {
+		return true, nil
+	}
 
 	profiles, err := c.buildViewContentProfileByID(ctx, cid, user)
 	if err != nil {
