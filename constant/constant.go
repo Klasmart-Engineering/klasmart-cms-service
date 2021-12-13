@@ -116,6 +116,7 @@ const (
 	ValidDays            = 30
 	BounceMax            = 5
 	BounceInterval       = 2 //unit, hour
+	Step                 = 1000
 )
 
 const (

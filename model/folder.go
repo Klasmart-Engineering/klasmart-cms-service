@@ -266,10 +266,11 @@ func (f *FolderModel) addSharedFolderAndAuthedContent(ctx context.Context, tx *d
 			})
 		}
 	}
-	log.Info(ctx, "recordsData",
-		log.Any("recordsData", recordsData))
+	//log.Info(ctx, "recordsData",
+	//	log.Any("recordsData", recordsData))
 	if len(recordsData) > 0 {
-		err := da.GetSharedFolderDA().BatchAdd(ctx, tx, recordsData)
+		//err := da.GetSharedFolderDA().BatchAdd(ctx, tx, recordsData)
+		err := da.GetSharedFolderDA().InsertBatchesTx(ctx, tx, recordsData)
 		if err != nil {
 			log.Error(ctx, "Batch add shared folder failed",
 				log.Err(err),

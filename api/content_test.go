@@ -245,6 +245,7 @@ func DoHttpWithOperator(method string, op *entity.Operator, url string, body str
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(method, url, bytes.NewBufferString(body))
 	req.Header.Add("Authorization", "")
+	req.Header.Add("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "access", Value: op.Token})
 	server.ServeHTTP(w, req)
 	res := w.Result()
@@ -338,5 +339,17 @@ func TestQueryContentsID(t *testing.T) {
 	op := initOperator("60c064cc-bbd8-4724-b3f6-b886dce4774f", "0d3686a6-bf6a-4777-a716-31ce4aa0f516", "school1221a@yopmail.com", "Bada1234")
 	url := "/v1/contents/61ad878f5ab1da1a6faf50c5?org_id=60c064cc-bbd8-4724-b3f6-b886dce4774f"
 	res := DoHttpWithOperator(http.MethodGet, op, url, "")
+	fmt.Println(res)
+}
+
+func TestSharedTooMany(t *testing.T) {
+	setupMilestone()
+	data, err := ioutil.ReadFile("../body.json")
+	if err != nil {
+		t.Error(err)
+	}
+	op := initOperator("a44da070-1907-46c4-bc4c-f26ced889439", "14494c07-0d4f-5141-9db2-15799993f448", "pj.williams@calmid.com", "LakersRBest2021")
+	url := "/v1/folders/share?org_id=a44da070-1907-46c4-bc4c-f26ced889439"
+	res := DoHttpWithOperator(http.MethodPut, op, url, string(data))
 	fmt.Println(res)
 }
