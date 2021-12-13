@@ -206,6 +206,7 @@ func (cm *ContentModel) CheckContentVisible(ctx context.Context, cid string, ope
 			log.Err(err),
 			log.String("cid", cid),
 			log.Any("op", operator))
+		return false, err
 	}
 	if len(visibilities) > 0 {
 		return true, nil
