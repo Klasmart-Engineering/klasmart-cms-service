@@ -375,3 +375,11 @@ INSERT IGNORE INTO outcomes_relations SELECT
 FROM
 	tmp_outcomes_relations;
 DROP TABLE tmp_outcomes_relations;
+
+--  remove unused columns
+ALTER TABLE learning_outcomes DROP COLUMN program,
+DROP COLUMN `subject`,
+DROP COLUMN developmental,
+DROP COLUMN skills,
+DROP COLUMN grade,
+DROP COLUMN age;

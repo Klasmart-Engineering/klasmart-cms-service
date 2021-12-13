@@ -35,7 +35,6 @@ func (MilestoneRelation) TableName() string {
 type OutcomeRelation struct {
 	ID           int64        `gorm:"column:id;primary_key"`
 	MasterID     string       `gorm:"column:master_id"`
-	MasterType   RelationType `gorm:"column:master_type"`
 	RelationID   string       `gorm:"column:relation_id"`
 	RelationType RelationType `gorm:"column:relation_type"`
 	CreateAt     int64        `gorm:"column:create_at" json:"created_at"`

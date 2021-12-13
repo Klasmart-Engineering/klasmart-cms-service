@@ -488,7 +488,9 @@ func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, o
 	{
 		developmentalID2OutcomeCountMap := map[string][]*entity.Outcome{}
 		for _, outcome := range outcomes {
-			developmentalID2OutcomeCountMap[outcome.Developmental] = append(developmentalID2OutcomeCountMap[outcome.Developmental], outcome)
+			for _, category := range outcome.Categories {
+				developmentalID2OutcomeCountMap[category] = append(developmentalID2OutcomeCountMap[category], outcome)
+			}
 		}
 		for developmentalID, outcomes := range developmentalID2OutcomeCountMap {
 			newItem := &entity.TeacherReportCategory{
