@@ -344,7 +344,7 @@ func TestQueryContentsID(t *testing.T) {
 
 func TestSharedTooMany(t *testing.T) {
 	setupMilestone()
-	data, err := ioutil.ReadFile("../body.json")
+	data, err := ioutil.ReadFile("/home/blt/Downloads/kidsloop_alpha_cms/body.json")
 	if err != nil {
 		t.Error(err)
 	}

@@ -102,12 +102,10 @@ func (sf *SharedFolderDA) BatchDelete(ctx context.Context, tx *dbo.DBContext, or
 func (sf *SharedFolderDA) BatchDeleteByOrgIDs(ctx context.Context, tx *dbo.DBContext, folderID string, orgIDs []string) error {
 	now := time.Now().Unix()
 	step := constant.ShareAllBatchSize
-	var start, end int
-	i := 0
-	for {
-		start = i * step
-		end = (i + 1) * step
-		if end > len(orgIDs) {
+
+	for start := 0; start < len(orgIDs); {
+		end := start + step
+		if end >= len(orgIDs) {
 			end = len(orgIDs)
 		}
 		ids := orgIDs[start:end]
@@ -115,15 +113,15 @@ func (sf *SharedFolderDA) BatchDeleteByOrgIDs(ctx context.Context, tx *dbo.DBCon
 		if err != nil {
 			log.Error(ctx, "batch delete cms_authed_contents: batch delete failed",
 				log.Err(err),
+				log.Int("start", start),
+				log.Int("end", end),
+				log.Strings("ids", ids),
 				log.Strings("orgIDs", ids),
 				log.String("folderID", folderID),
 			)
 			return err
 		}
-		if end == len(orgIDs) {
-			break
-		}
-		i++
+		start = end
 	}
 
 	return nil
