@@ -51,11 +51,11 @@ func (sf *SharedFolderDA) InsertBatchesTx(ctx context.Context, tx *dbo.DBContext
 		models = append(models, entity.SharedFolderRecord{ID: item.ID, OrgID: item.OrgID, FolderID: item.FolderID,
 			Creator: item.Creator, CreateAt: createAt, UpdateAt: createAt})
 	}
-	_, err := sf.s.InsertInBatchesTx(ctx, tx, &models, 1000)
+	_, err := sf.s.InsertInBatchesTx(ctx, tx, &models, constant.ShareAllBatchSize)
 	if err != nil {
 		log.Error(ctx, "batch insert cms_authed_contents: batch insert failed",
 			log.Err(err),
-			log.Any("items", req),
+			log.Any("items", models),
 		)
 		return err
 	}
