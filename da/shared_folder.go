@@ -115,7 +115,6 @@ func (sf *SharedFolderDA) BatchDeleteByOrgIDs(ctx context.Context, tx *dbo.DBCon
 				log.Err(err),
 				log.Int("start", start),
 				log.Int("end", end),
-				log.Strings("ids", ids),
 				log.Strings("orgIDs", ids),
 				log.String("folderID", folderID),
 			)
