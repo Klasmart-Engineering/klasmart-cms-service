@@ -1,3 +1,23 @@
+-- numbers 20 should be the maximum number of outcome relation of the same type, use the following script to query
+-- SELECT
+-- 	max(
+-- 		LENGTH( learning_outcomes.skills ) - LENGTH(
+-- 		REPLACE ( learning_outcomes.skills, ',', '' )))+ 1 
+-- FROM
+-- 	learning_outcomes UNION ALL
+-- SELECT
+-- 	max(
+-- 		LENGTH( learning_outcomes.age ) - LENGTH(
+-- 		REPLACE ( learning_outcomes.age, ',', '' )))+ 1 
+-- FROM
+-- 	learning_outcomes UNION ALL
+-- SELECT
+-- 	max(
+-- 		LENGTH( learning_outcomes.grade ) - LENGTH(
+-- 		REPLACE ( learning_outcomes.grade, ',', '' )))+ 1 
+-- FROM
+-- 	learning_outcomes
+
 -- Migrate program of learning outcome
 INSERT INTO outcomes_relations ( master_id, relation_id, relation_type, master_type, create_at, update_at, delete_at ) SELECT
 learning_outcomes.id AS master_id,
@@ -383,3 +403,5 @@ DROP COLUMN developmental,
 DROP COLUMN skills,
 DROP COLUMN grade,
 DROP COLUMN age;
+
+ALTER TABLE outcomes_relations DROP COLUMN master_type;
