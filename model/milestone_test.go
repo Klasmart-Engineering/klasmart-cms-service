@@ -23,7 +23,6 @@ func TestDelete(t *testing.T) {
 }
 
 func TestMilestoneModel_GenerateShortcode(t *testing.T) {
-	setup()
 	ctx := context.TODO()
 	op := initOperator()
 	shortcode, err := GetMilestoneModel().GenerateShortcode(ctx, op)

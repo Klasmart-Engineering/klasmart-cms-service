@@ -3,13 +3,13 @@ package model
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"testing"
 	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 func TestClassesAssignmentsModel_CreateRecord(t *testing.T) {
-	setup()
 	ctx := context.Background()
 	op := initOperator()
 	args := &entity.AddClassAndLiveAssessmentArgs{
@@ -26,7 +26,6 @@ func TestClassesAssignmentsModel_CreateRecord(t *testing.T) {
 }
 
 func TestClassesAssignmentsModel_GetOverview(t *testing.T) {
-	setup()
 	ctx := context.Background()
 	op := initOperator()
 	request := &entity.ClassesAssignmentOverViewRequest{
@@ -43,7 +42,6 @@ func TestClassesAssignmentsModel_GetOverview(t *testing.T) {
 }
 
 func TestClassesAssignmentsModel_GetStatistic(t *testing.T) {
-	setup()
 	ctx := context.Background()
 	op := initOperator()
 	request := &entity.ClassesAssignmentsViewRequest{
@@ -61,7 +59,6 @@ func TestClassesAssignmentsModel_GetStatistic(t *testing.T) {
 }
 
 func TestClassesAssignmentsModel_GetUnattended(t *testing.T) {
-	setup()
 	ctx := context.Background()
 	op := initOperator()
 	request := &entity.ClassesAssignmentsUnattendedViewRequest{
