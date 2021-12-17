@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
+
 	"github.com/go-redis/redis"
 	"gitlab.badanamu.com.cn/calmisland/common-cn/common"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -72,6 +74,7 @@ func initCache() {
 // @termsOfService http://swagger.io/terms/
 // @host https://kl2-test.kidsloop.net/v1
 func main() {
+	ctx := context.Background()
 	log.Info(context.TODO(), "start kidsloop2 api service")
 	defer func() {
 		if err := recover(); err != nil {
@@ -96,6 +99,16 @@ func main() {
 
 	log.Debug(context.TODO(), "init db successfully")
 	initCache()
+
+	conf := config.Get()
+	err := kl2cache.Init(ctx,
+		kl2cache.OptEnable(conf.RedisConfig.OpenCache),
+		kl2cache.OptRedis(conf.RedisConfig.Host, conf.RedisConfig.Port, conf.RedisConfig.Password),
+		kl2cache.OptStrategyFixed(constant.MaxCacheExpire),
+	)
+	if err != nil {
+		log.Panic(ctx, "kl2cache.Init failed", log.Err(err))
+	}
 
 	log.Debug(context.TODO(), "init cache successfully")
 	// init dynamodb connection
