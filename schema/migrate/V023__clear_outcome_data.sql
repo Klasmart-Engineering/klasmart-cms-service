@@ -18,6 +18,9 @@
 -- FROM
 -- 	learning_outcomes
 
+-- Remove old unique index
+ALTER TABLE outcomes_relations DROP INDEX master_relation_delete;
+
 -- Migrate program of learning outcome
 INSERT INTO outcomes_relations ( master_id, relation_id, relation_type, master_type, create_at, update_at, delete_at ) SELECT
 learning_outcomes.id AS master_id,
