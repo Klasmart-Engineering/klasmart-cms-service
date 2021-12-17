@@ -61,6 +61,7 @@ func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator)
 			log.String("shortcode", req.Shortcode))
 
 	}
+
 	outcome := entity.Outcome{
 		Name:          req.OutcomeName,
 		Assumed:       req.Assumed,
@@ -70,8 +71,17 @@ func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator)
 		ShortcodeNum:  shortcodeNum,
 	}
 
-	if len(req.Program) == 0 || len(req.Subject) == 0 {
-		log.Warn(ctx, "ToOutcome: program and subject is required", log.Any("op", op), log.Any("req", req))
+	programIDs := utils.SliceDeduplicationExcludeEmpty(req.Program)
+	subjectIDs := utils.SliceDeduplicationExcludeEmpty(req.Subject)
+	categoryIDs := utils.SliceDeduplicationExcludeEmpty(req.Developmental)
+	subCategoryIDs := utils.SliceDeduplicationExcludeEmpty(req.Skills)
+	gradeIDs := utils.SliceDeduplicationExcludeEmpty(req.Grade)
+	ageIDs := utils.SliceDeduplicationExcludeEmpty(req.Age)
+
+	if len(programIDs) == 0 || len(subjectIDs) == 0 {
+		log.Error(ctx, "ToOutcome: program and subject is required",
+			log.Any("op", op),
+			log.Any("req", req))
 		return nil, &ErrValidFailed{Msg: "program and subject is required"}
 	}
 
@@ -80,35 +90,13 @@ func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator)
 		return nil, &ErrValidFailed{Msg: "shortcode mismatch"}
 	}
 
-	_, err = prepareAllNeededName(ctx, op, entity.ExternalOptions{
-		OrgIDs:     []string{op.OrgID},
-		UsrIDs:     []string{op.UserID},
-		ProgIDs:    req.Program,
-		SubjectIDs: req.Subject,
-		CatIDs:     req.Developmental,
-		SubcatIDs:  req.Skills,
-		GradeIDs:   req.Grade,
-		AgeIDs:     req.Age,
-	})
-	if err != nil {
-		log.Error(ctx, "ToOutcome: prepareAllNeededName failed", log.Err(err), log.Any("op", op), log.Any("req", req))
-		return nil, &ErrValidFailed{Msg: "program and subject is required"}
-	}
-
-	outcome.Program = strings.Join(req.Program, entity.JoinComma)
-	outcome.Subject = strings.Join(req.Subject, entity.JoinComma)
-	outcome.Developmental = strings.Join(req.Developmental, entity.JoinComma)
-	outcome.Skills = strings.Join(req.Skills, entity.JoinComma)
-	outcome.Grade = strings.Join(req.Grade, entity.JoinComma)
-	outcome.Age = strings.Join(req.Age, entity.JoinComma)
 	outcome.Keywords = strings.Join(req.Keywords, entity.JoinComma)
-
-	outcome.Programs = req.Program
-	outcome.Subjects = req.Subject
-	outcome.Categories = req.Developmental
-	outcome.Subcategories = req.Skills
-	outcome.Grades = req.Grade
-	outcome.Ages = req.Age
+	outcome.Programs = programIDs
+	outcome.Subjects = subjectIDs
+	outcome.Categories = categoryIDs
+	outcome.Subcategories = subCategoryIDs
+	outcome.Grades = gradeIDs
+	outcome.Ages = ageIDs
 
 	outcome.Sets = make([]*entity.Set, len(req.Sets))
 	for i := range req.Sets {

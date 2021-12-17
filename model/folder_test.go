@@ -39,12 +39,6 @@ func initDB() {
 	dbo.ReplaceGlobal(dboHandler)
 }
 
-//func TestMain(m *testing.M) {
-//	//fmt.Println("begin test")
-//	//initDB()
-//	//m.Run()
-//	//fmt.Println("end test")
-//}
 func fakeOperator() *entity.Operator {
 	return &entity.Operator{
 		UserID: "1",

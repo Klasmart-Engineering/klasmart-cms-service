@@ -3,56 +3,12 @@ package model
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
-	"github.com/go-redis/redis"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/ro"
 )
-
-func setup() {
-	os.Setenv("connection_string", "root:root@tcp(127.0.0.1:3306)/kidsloop2_alpha_temp?charset=utf8mb4&parseTime=True&loc=Local")
-	config.Set(&config.Config{
-		DBConfig: config.DBConfig{
-			ConnectionString: os.Getenv("connection_string"),
-			MaxOpenConns:     8,
-			MaxIdleConns:     8,
-			ShowLog:          true,
-			ShowSQL:          true,
-		},
-		RedisConfig: config.RedisConfig{
-			OpenCache: true,
-			Host:      os.Getenv("redis_host"),
-			Port:      6379,
-			Password:  "",
-		},
-		AMS: config.AMSConfig{
-			EndPoint: os.Getenv("ams_endpoint"),
-		},
-	})
-	dboHandler, err := dbo.NewWithConfig(func(c *dbo.Config) {
-		dbConf := config.Get().DBConfig
-		c.ShowLog = dbConf.ShowLog
-		c.ShowSQL = dbConf.ShowSQL
-		c.MaxIdleConns = dbConf.MaxIdleConns
-		c.MaxOpenConns = dbConf.MaxOpenConns
-		c.ConnectionString = dbConf.ConnectionString
-	})
-	if err != nil {
-		log.Error(context.TODO(), "create dbo failed", log.Err(err))
-		panic(err)
-	}
-	dbo.ReplaceGlobal(dboHandler)
-	ro.SetConfig(&redis.Options{
-		Addr:     fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
-		Password: config.Get().RedisConfig.Password,
-	})
-}
 
 func initOperator() *entity.Operator {
 	return &entity.Operator{
@@ -62,7 +18,6 @@ func initOperator() *entity.Operator {
 }
 
 func TestOutcomeModel_GetLearningOutcomeByID(t *testing.T) {
-	setup()
 	ctx := context.TODO()
 	outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, dbo.MustGetDB(ctx), "60616800e7c9026bb00d1d6c")
 	if err != nil {
@@ -72,7 +27,6 @@ func TestOutcomeModel_GetLearningOutcomeByID(t *testing.T) {
 }
 
 func TestGenerateShortcode(t *testing.T) {
-	setup()
 	op := initOperator()
 	ctx := context.TODO()
 	shortcode, err := GetOutcomeModel().GenerateShortcode(ctx, op)
@@ -83,7 +37,6 @@ func TestGenerateShortcode(t *testing.T) {
 }
 
 func TestSearchSetsByOutcome(t *testing.T) {
-	setup()
 	ctx := context.TODO()
 	outcomesSets, err := da.GetOutcomeSetDA().SearchSetsByOutcome(ctx, dbo.MustGetDB(ctx), []string{"60616800e7c9026bb00d1d6c"})
 	if err != nil {
@@ -93,7 +46,6 @@ func TestSearchSetsByOutcome(t *testing.T) {
 }
 
 func TestOutcomeSetModel_CreateOutcomeSet(t *testing.T) {
-	setup()
 	ctx := context.TODO()
 	set, err := GetOutcomeSetModel().CreateOutcomeSet(ctx, &entity.Operator{OrgID: "org-1"}, "math2")
 	if err != nil {
@@ -103,7 +55,6 @@ func TestOutcomeSetModel_CreateOutcomeSet(t *testing.T) {
 }
 
 func TestSearch(t *testing.T) {
-	setup()
 	ctx := context.TODO()
 	response, err := GetOutcomeModel().Search(ctx, &entity.Operator{OrgID: "92db7ddd-1f23-4f64-bd47-94f6d34a50c0"}, &entity.OutcomeCondition{})
 	if err != nil {
@@ -116,7 +67,6 @@ func TestSearch(t *testing.T) {
 }
 
 func TestSearchWithoutRelation(t *testing.T) {
-	setup()
 	ctx := context.TODO()
 	count, outcomes, err := GetOutcomeModel().SearchWithoutRelation(ctx, &entity.Operator{}, &entity.OutcomeCondition{
 		Page:     1,
@@ -132,7 +82,6 @@ func TestSearchWithoutRelation(t *testing.T) {
 }
 
 func TestSearchPublished(t *testing.T) {
-	setup()
 	ctx := context.TODO()
 	result, err := GetOutcomeModel().SearchPublished(ctx, &entity.Operator{}, &entity.OutcomeCondition{
 		ProgramIDs:     []string{"program_test_1"},

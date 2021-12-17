@@ -667,8 +667,7 @@ func (ocm OutcomeModel) Lock(ctx context.Context, operator *entity.Operator, out
 		}
 		var outcomeRelations []*entity.OutcomeRelation
 		err = da.GetOutcomeRelationDA().QueryTx(ctx, tx, &da.OutcomeRelationCondition{
-			MasterIDs:  dbo.NullStrings{Strings: []string{outcome.ID}, Valid: true},
-			MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
+			MasterIDs: dbo.NullStrings{Strings: []string{outcome.ID}, Valid: true},
 		}, &outcomeRelations)
 		if err != nil {
 			log.Error(ctx, "Lock: QueryTx failed",
@@ -1480,8 +1479,8 @@ func (ocm OutcomeModel) fillRelation(ctx context.Context, operator *entity.Opera
 
 		var outcomeRelations []*entity.OutcomeRelation
 		err := da.GetOutcomeRelationDA().QueryTx(ctx, tx, &da.OutcomeRelationCondition{
-			MasterIDs:  dbo.NullStrings{Strings: masterIDs, Valid: true},
-			MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
+			MasterIDs: dbo.NullStrings{Strings: masterIDs, Valid: true},
+			// MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
 		}, &outcomeRelations)
 		if err != nil {
 			log.Error(ctx, "fillRelation: Query failed",
@@ -1707,7 +1706,6 @@ func (ocm OutcomeModel) CollectRelation(oc *entity.Outcome) []*entity.OutcomeRel
 	for i := range oc.Programs {
 		outcomeRelation := entity.OutcomeRelation{
 			MasterID:     oc.ID,
-			MasterType:   entity.OutcomeType,
 			RelationID:   oc.Programs[i],
 			RelationType: entity.ProgramType,
 		}
@@ -1717,7 +1715,6 @@ func (ocm OutcomeModel) CollectRelation(oc *entity.Outcome) []*entity.OutcomeRel
 	for i := range oc.Subjects {
 		outcomeRelation := entity.OutcomeRelation{
 			MasterID:     oc.ID,
-			MasterType:   entity.OutcomeType,
 			RelationID:   oc.Subjects[i],
 			RelationType: entity.SubjectType,
 		}
@@ -1727,7 +1724,6 @@ func (ocm OutcomeModel) CollectRelation(oc *entity.Outcome) []*entity.OutcomeRel
 	for i := range oc.Categories {
 		outcomeRelation := entity.OutcomeRelation{
 			MasterID:     oc.ID,
-			MasterType:   entity.OutcomeType,
 			RelationID:   oc.Categories[i],
 			RelationType: entity.CategoryType,
 		}
@@ -1737,7 +1733,6 @@ func (ocm OutcomeModel) CollectRelation(oc *entity.Outcome) []*entity.OutcomeRel
 	for i := range oc.Subcategories {
 		outcomeRelation := entity.OutcomeRelation{
 			MasterID:     oc.ID,
-			MasterType:   entity.OutcomeType,
 			RelationID:   oc.Subcategories[i],
 			RelationType: entity.SubcategoryType,
 		}
@@ -1747,7 +1742,6 @@ func (ocm OutcomeModel) CollectRelation(oc *entity.Outcome) []*entity.OutcomeRel
 	for i := range oc.Grades {
 		outcomeRelation := entity.OutcomeRelation{
 			MasterID:     oc.ID,
-			MasterType:   entity.OutcomeType,
 			RelationID:   oc.Grades[i],
 			RelationType: entity.GradeType,
 		}
@@ -1757,7 +1751,6 @@ func (ocm OutcomeModel) CollectRelation(oc *entity.Outcome) []*entity.OutcomeRel
 	for i := range oc.Ages {
 		outcomeRelation := entity.OutcomeRelation{
 			MasterID:     oc.ID,
-			MasterType:   entity.OutcomeType,
 			RelationID:   oc.Ages[i],
 			RelationType: entity.AgeType,
 		}
@@ -1766,7 +1759,6 @@ func (ocm OutcomeModel) CollectRelation(oc *entity.Outcome) []*entity.OutcomeRel
 	return outcomeRelations
 }
 
-// TODO: Kyle: outcome relation data sync check
 func (ocm OutcomeModel) FillRelation(ctx context.Context, oc *entity.Outcome, relations []*entity.OutcomeRelation) {
 	log.Debug(ctx, "fill relation",
 		log.Any("outcome", oc),
@@ -1788,36 +1780,37 @@ func (ocm OutcomeModel) FillRelation(ctx context.Context, oc *entity.Outcome, re
 			oc.Ages = append(oc.Ages, relations[i].RelationID)
 		}
 	}
-	if len(oc.Programs) > 0 {
-		oc.Program = strings.Join(oc.Programs, entity.JoinComma)
-	} else {
-		oc.Programs = strings.Split(oc.Program, entity.JoinComma)
-	}
-	if len(oc.Subjects) > 0 {
-		oc.Subject = strings.Join(oc.Subjects, entity.JoinComma)
-	} else {
-		oc.Subjects = strings.Split(oc.Subject, entity.JoinComma)
-	}
-	if len(oc.Categories) > 0 {
-		oc.Developmental = strings.Join(oc.Categories, entity.JoinComma)
-	} else {
-		oc.Categories = strings.Split(oc.Developmental, entity.JoinComma)
-	}
-	if len(oc.Subcategories) > 0 {
-		oc.Skills = strings.Join(oc.Subcategories, entity.JoinComma)
-	} else {
-		oc.Subcategories = strings.Split(oc.Skills, entity.JoinComma)
-	}
-	if len(oc.Grades) > 0 {
-		oc.Grade = strings.Join(oc.Grades, entity.JoinComma)
-	} else {
-		oc.Grades = strings.Split(oc.Grade, entity.JoinComma)
-	}
-	if len(oc.Ages) > 0 {
-		oc.Age = strings.Join(oc.Ages, entity.JoinComma)
-	} else {
-		oc.Ages = strings.Split(oc.Age, entity.JoinComma)
-	}
+
+	// if len(oc.Programs) > 0 {
+	// 	oc.Program = strings.Join(oc.Programs, entity.JoinComma)
+	// } else {
+	// 	oc.Programs = strings.Split(oc.Program, entity.JoinComma)
+	// }
+	// if len(oc.Subjects) > 0 {
+	// 	oc.Subject = strings.Join(oc.Subjects, entity.JoinComma)
+	// } else {
+	// 	oc.Subjects = strings.Split(oc.Subject, entity.JoinComma)
+	// }
+	// if len(oc.Categories) > 0 {
+	// 	oc.Developmental = strings.Join(oc.Categories, entity.JoinComma)
+	// } else {
+	// 	oc.Categories = strings.Split(oc.Developmental, entity.JoinComma)
+	// }
+	// if len(oc.Subcategories) > 0 {
+	// 	oc.Skills = strings.Join(oc.Subcategories, entity.JoinComma)
+	// } else {
+	// 	oc.Subcategories = strings.Split(oc.Skills, entity.JoinComma)
+	// }
+	// if len(oc.Grades) > 0 {
+	// 	oc.Grade = strings.Join(oc.Grades, entity.JoinComma)
+	// } else {
+	// 	oc.Grades = strings.Split(oc.Grade, entity.JoinComma)
+	// }
+	// if len(oc.Ages) > 0 {
+	// 	oc.Age = strings.Join(oc.Ages, entity.JoinComma)
+	// } else {
+	// 	oc.Ages = strings.Split(oc.Age, entity.JoinComma)
+	// }
 }
 
 func (ocm OutcomeModel) UpdateOutcome(data *entity.Outcome, oc *entity.Outcome) {
@@ -1826,12 +1819,12 @@ func (ocm OutcomeModel) UpdateOutcome(data *entity.Outcome, oc *entity.Outcome) 
 	}
 
 	oc.Assumed = data.Assumed
-	oc.Program = data.Program
-	oc.Subject = data.Subject
-	oc.Developmental = data.Developmental
-	oc.Skills = data.Skills
-	oc.Age = data.Age
-	oc.Grade = data.Grade
+	// oc.Program = data.Program
+	// oc.Subject = data.Subject
+	// oc.Developmental = data.Developmental
+	// oc.Skills = data.Skills
+	// oc.Age = data.Age
+	// oc.Grade = data.Grade
 	oc.EstimatedTime = data.EstimatedTime
 	oc.Keywords = data.Keywords
 	oc.Description = data.Description
@@ -1844,18 +1837,18 @@ func (ocm OutcomeModel) UpdateOutcome(data *entity.Outcome, oc *entity.Outcome) 
 func (ocm OutcomeModel) Clone(op *entity.Operator, oc *entity.Outcome) entity.Outcome {
 	now := time.Now().Unix()
 	return entity.Outcome{
-		ID:            utils.NewID(),
-		AncestorID:    oc.AncestorID,
-		Shortcode:     oc.Shortcode,
-		Name:          oc.Name,
-		Program:       oc.Program,
-		Subject:       oc.Subject,
-		Developmental: oc.Developmental,
-		Skills:        oc.Skills,
-		Age:           oc.Age,
-		Grade:         oc.Grade,
-		Keywords:      oc.Keywords,
-		Description:   oc.Description,
+		ID:         utils.NewID(),
+		AncestorID: oc.AncestorID,
+		Shortcode:  oc.Shortcode,
+		Name:       oc.Name,
+		// Program:       oc.Program,
+		// Subject:       oc.Subject,
+		// Developmental: oc.Developmental,
+		// Skills:        oc.Skills,
+		// Age:           oc.Age,
+		// Grade:         oc.Grade,
+		Keywords:    oc.Keywords,
+		Description: oc.Description,
 
 		EstimatedTime:  oc.EstimatedTime,
 		AuthorID:       op.UserID,

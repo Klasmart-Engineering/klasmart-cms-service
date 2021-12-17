@@ -2,7 +2,6 @@ package da
 
 import (
 	"context"
-	"database/sql"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -50,9 +49,7 @@ func GetOutcomeRelationDA() IOutcomeRelationDA {
 }
 
 type OutcomeRelationCondition struct {
-	MasterIDs  dbo.NullStrings
-	MasterType sql.NullString
-
+	MasterIDs      dbo.NullStrings
 	IncludeDeleted bool
 	OrderBy        OutcomeRelationOrderBy
 	Pager          dbo.Pager
@@ -65,11 +62,6 @@ func (c *OutcomeRelationCondition) GetConditions() ([]string, []interface{}) {
 	if c.MasterIDs.Valid {
 		wheres = append(wheres, "master_id in (?)")
 		params = append(params, c.MasterIDs.Strings)
-	}
-
-	if c.MasterType.Valid {
-		wheres = append(wheres, "master_type = ?")
-		params = append(params, c.MasterType.String)
 	}
 
 	if !c.IncludeDeleted {
