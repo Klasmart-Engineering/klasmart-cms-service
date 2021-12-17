@@ -1982,6 +1982,12 @@ func (o OutcomeModel) transformToPublishedOutcomeView(ctx context.Context, opera
 		return nil
 	})
 
+	if err := g.Wait(); err != nil {
+		log.Error(ctx, "transformToPublishedOutcomeView error",
+			log.Err(err))
+		return nil, err
+	}
+
 	for _, outcomeRelation := range outcomeRelations {
 		if outcome, ok := outcomeMap[outcomeRelation.MasterID]; ok {
 			switch outcomeRelation.RelationType {
