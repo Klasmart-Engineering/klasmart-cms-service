@@ -7,6 +7,8 @@ import (
 	"sync"
 	"text/template"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
+
 	"go.uber.org/zap/buffer"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -32,6 +34,10 @@ var (
 func GetPermissionServiceProvider() PermissionServiceProvider {
 	_amsPermissionOnce.Do(func() {
 		_amsPermissionService = &AmsPermissionService{
+			BaseCacheKey: kl2cache.KeyByStrings{
+				"kl2cache",
+				"AmsPermissionService",
+			},
 			client: chlorine.NewClient(config.Get().AMS.EndPoint),
 		}
 	})
@@ -40,7 +46,8 @@ func GetPermissionServiceProvider() PermissionServiceProvider {
 }
 
 type AmsPermissionService struct {
-	client *chlorine.Client
+	BaseCacheKey kl2cache.KeyByStrings
+	client       *chlorine.Client
 }
 
 func (s AmsPermissionService) HasOrganizationPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) (bool, error) {
@@ -137,63 +144,101 @@ func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, operator 
 	return data.User.SchoolMembership.CheckAllowed, nil
 }
 
-//TODO:No Test Program
-func (s AmsPermissionService) HasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissionNames []PermissionName) (map[PermissionName]bool, error) {
-	if len(permissionNames) == 0 {
-		return map[PermissionName]bool{}, nil
-	}
+type HasOrganizationPermissionKey struct {
+	Base           kl2cache.KeyByStrings
+	Op             *entity.Operator
+	PermissionName PermissionName
+}
 
+func (k *HasOrganizationPermissionKey) Key() string {
+	return strings.Join(append(k.Base, k.Op.OrgID, k.Op.UserID, k.PermissionName.String()), ":")
+}
+
+type OperatorHasPermission struct {
+	PermissionName PermissionName
+	HasePermission bool
+}
+
+func (s AmsPermissionService) HasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissionNames []PermissionName) (mPermission map[PermissionName]bool, err error) {
+	mPermission = map[PermissionName]bool{}
+	if len(permissionNames) == 0 {
+		return
+	}
 	pns := make([]string, len(permissionNames))
 	for index, permissionName := range permissionNames {
 		pns[index] = permissionName.String()
 	}
+	_permissionNames, _ := utils.SliceDeduplicationMap(pns)
 
-	_permissionNames, indexMapping := utils.SliceDeduplicationMap(pns)
-
-	sb := new(strings.Builder)
-	fmt.Fprintf(sb, "query($user_id: ID! $organization_id: ID! %s) {user(user_id: $user_id) {membership(organization_id: $organization_id) {",
-		utils.StringCountRange(ctx, "$permission_name_", ": ID!", len(_permissionNames)))
-
-	for index := range _permissionNames {
-		fmt.Fprintf(sb, "q%d: checkAllowed(permission_name: $permission_name_%d)\n", index, index)
+	var keys []kl2cache.Key
+	for _, permissionName := range _permissionNames {
+		keys = append(keys, &HasOrganizationPermissionKey{
+			Base:           s.BaseCacheKey,
+			Op:             operator,
+			PermissionName: PermissionName(permissionName),
+		})
 	}
-	sb.WriteString("}}}")
+	fGetData := func(ctx context.Context, keys []kl2cache.Key) (kvs []*kl2cache.KeyVal, err error) {
+		sb := new(strings.Builder)
+		fmt.Fprintf(sb, "query($user_id: ID! $organization_id: ID! %s) {user(user_id: $user_id) {membership(organization_id: $organization_id) {",
+			utils.StringCountRange(ctx, "$permission_name_", ": ID!", len(keys)))
 
-	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
-	request.Var("user_id", operator.UserID)
-	request.Var("organization_id", operator.OrgID)
-	for index, id := range _permissionNames {
-		request.Var(fmt.Sprintf("permission_name_%d", index), id)
+		for index := range keys {
+			fmt.Fprintf(sb, "q%d: checkAllowed(permission_name: $permission_name_%d)\n", index, index)
+		}
+		sb.WriteString("}}}")
+
+		request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+		request.Var("user_id", operator.UserID)
+		request.Var("organization_id", operator.OrgID)
+		for index, key := range keys {
+			request.Var(fmt.Sprintf("permission_name_%d", index), key.(*HasOrganizationPermissionKey).PermissionName)
+		}
+
+		data := make(map[string]bool, len(permissionNames))
+		response := &chlorine.Response{
+			Data: &struct {
+				User struct {
+					Membership map[string]bool `json:"membership"`
+				} `json:"user"`
+			}{struct {
+				Membership map[string]bool `json:"membership"`
+			}{Membership: data}},
+		}
+
+		_, err = GetAmsClient().Run(ctx, request, response)
+		if err != nil {
+			log.Error(ctx, "check org permissions success failed", log.Err(err), log.Any("permissionNames", permissionNames))
+			return
+		}
+
+		for index, key := range keys {
+			if hasPerm, ok := data[fmt.Sprintf("q%d", index)]; ok {
+				kvs = append(kvs, &kl2cache.KeyVal{
+					Key: key,
+					Val: &OperatorHasPermission{
+						PermissionName: key.(*HasOrganizationPermissionKey).PermissionName,
+						HasePermission: hasPerm,
+					},
+				})
+			}
+		}
+		log.Info(ctx, "check org permissions success",
+			log.Any("operator", operator),
+			log.Any("keys", keys),
+			log.Any("kvs", kvs),
+		)
+		return
 	}
-
-	data := make(map[PermissionName]bool, len(permissionNames))
-	response := &chlorine.Response{
-		Data: &struct {
-			User struct {
-				Membership map[PermissionName]bool `json:"membership"`
-			} `json:"user"`
-		}{struct {
-			Membership map[PermissionName]bool `json:"membership"`
-		}{Membership: data}},
-	}
-
-	_, err := GetAmsClient().Run(ctx, request, response)
+	valArr := []*OperatorHasPermission{}
+	err = kl2cache.DefaultProvider.BatchGet(ctx, keys, &valArr, fGetData)
 	if err != nil {
-		log.Error(ctx, "check org permissions success failed", log.Err(err), log.Any("permissionNames", permissionNames))
-		return nil, err
+		return
 	}
-
-	permissions := make(map[PermissionName]bool, len(data))
-	for index, permissionName := range permissionNames {
-		permissions[permissionName] = data[PermissionName(fmt.Sprintf("q%d", indexMapping[index]))]
+	for _, val := range valArr {
+		mPermission[val.PermissionName] = val.HasePermission
 	}
-
-	log.Info(ctx, "check org permissions success",
-		log.Any("operator", operator),
-		log.Any("permissionNames", permissionNames),
-		log.Any("permissions", permissions))
-
-	return permissions, nil
+	return
 }
 
 func (s AmsPermissionService) HasAnyOrganizationPermission(ctx context.Context, operator *entity.Operator, orgIDs []string, permissionName PermissionName) (bool, error) {
