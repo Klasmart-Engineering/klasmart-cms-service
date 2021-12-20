@@ -1,4 +1,4 @@
-package kl2cache
+package kl2cache_test
 
 import (
 	"context"
@@ -7,14 +7,26 @@ import (
 	"testing"
 	"time"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 
 	"github.com/google/uuid"
 )
 
+type User struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 func Test_redisProvider_Get(t *testing.T) {
 	ctx := context.Background()
-	err := Init(ctx, OptEnable(true), OptRedis("127.0.0.1", "6379", ""))
+	err := kl2cache.Init(
+		ctx,
+		kl2cache.OptEnable(true),
+		kl2cache.OptRedis("127.0.0.1", 6379, ""),
+		kl2cache.OptStrategyFixed(time.Minute),
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -31,7 +43,7 @@ func Test_redisProvider_Get(t *testing.T) {
 }
 func getUser(ctx context.Context, id string) (err error) {
 	r := &User{}
-	err = DefaultProvider.Get(ctx, KeyByStrings{
+	err = kl2cache.DefaultProvider.Get(ctx, kl2cache.KeyByStrings{
 		"HasPermission",
 		id,
 	}, r, func(ctx context.Context) (val interface{}, err error) {
@@ -47,7 +59,7 @@ func getUser(ctx context.Context, id string) (err error) {
 
 func Test_redisProvider_BatchGet(t *testing.T) {
 	ctx := context.Background()
-	err := Init(ctx, OptEnable(true), OptRedis("127.0.0.1", "6379", ""))
+	err := kl2cache.Init(ctx, kl2cache.OptEnable(true), kl2cache.OptRedis("127.0.0.1", 6379, ""))
 	if err != nil {
 		panic(err)
 	}
@@ -83,9 +95,9 @@ func (k *KeyHasPermission) Key() (key string) {
 func getUserByIds(ctx context.Context, ids []string) (err error) {
 	rs := &[]*User{}
 	op := &entity.Operator{}
-	var keys []Key
+	var keys []kl2cache.Key
 	for _, id := range ids {
-		keys = append(keys, KeyByStrings{
+		keys = append(keys, kl2cache.KeyByStrings{
 			"HasOrganizationPermission",
 			op.OrgID,
 			op.UserID,
@@ -93,44 +105,27 @@ func getUserByIds(ctx context.Context, ids []string) (err error) {
 		})
 	}
 
-	err = DefaultProvider.BatchGet(ctx, keys, rs, func(ctx context.Context, keys []Key) (val map[string]interface{}, err error) {
-		val = map[string]interface{}{}
+	fGetData := func(ctx context.Context, keys []kl2cache.Key) (valArr []*kl2cache.KeyValPair, err error) {
 		for _, k := range keys {
-			key := k.(KeyByStrings)
+			key := k.(kl2cache.KeyByStrings)
 			orgID := key[1]
 			userID := key[2]
 			id := key[3]
 
-			val[key.Key()] = &User{
-				ID:   id,
-				Name: orgID + userID,
-			}
+			valArr = append(valArr, &kl2cache.KeyValPair{
+				Key: key,
+				Val: &User{
+					ID:   id,
+					Name: orgID + userID,
+				},
+			})
 		}
 		return
-	})
+	}
+	err = kl2cache.DefaultProvider.BatchGet(ctx, keys, rs, fGetData)
 	if err != nil {
 		return
 	}
 	fmt.Println(*rs)
 	return
-}
-
-func TestMultiExec(t *testing.T) {
-	ctx := context.Background()
-	err := Init(ctx, OptEnable(true), OptStrategyFixed(time.Minute), OptRedis("127.0.0.1", "6379", ""))
-	if err != nil {
-		panic(err)
-	}
-
-	c := DefaultProvider.(*redisProvider).Client
-	tx := c.Pipeline()
-	tx.Set("1", 1, time.Minute)
-	tx.Set("3", 3, time.Minute)
-	tx.Set("2", 2, time.Minute)
-	cmds, err := tx.Exec()
-
-	fmt.Println(cmds, err)
-	for _, cmd := range cmds {
-		fmt.Println(cmd.Err())
-	}
 }

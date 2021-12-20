@@ -42,15 +42,6 @@ func OptStrategyFixed(ex time.Duration) Option {
 	}
 }
 
-//func OptStrategyLRU(extend, max time.Duration) Option {
-//	return func(c *config) {
-//		c.ExpireStrategy = func(stat *VisitedStat) (expiration time.Duration) {
-//
-//			return
-//		}
-//	}
-//}
-
 func OptEnable(enable bool) Option {
 	return func(c *config) {
 		c.Enable = enable

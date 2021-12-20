@@ -50,7 +50,7 @@ type User struct {
 	Name string
 }
 
-func (r *redisProvider) BatchGet(ctx context.Context, keys []Key, val interface{}, f func(ctx context.Context, keys []Key) (val map[string]interface{}, err error)) (err error) {
+func (r *redisProvider) BatchGet(ctx context.Context, keys []Key, val interface{}, fGetData func(ctx context.Context, keys []Key) (valArr []*KeyValPair, err error)) (err error) {
 	keyStrArr := []string{}
 	for _, key := range keys {
 		keyStrArr = append(keyStrArr, key.Key())
@@ -59,35 +59,37 @@ func (r *redisProvider) BatchGet(ctx context.Context, keys []Key, val interface{
 	if err != nil {
 		return
 	}
-	valStrArr := []string{}
+	var valStrArr []string
 	var missed []Key
+	mMissed := map[string]bool{}
 	for i := 0; i < len(keys); i++ {
 		s, ok := rs[i].(string)
 		if ok {
 			valStrArr = append(valStrArr, s)
 		} else {
 			missed = append(missed, keys[i])
+			mMissed[keys[i].Key()] = true
 		}
 	}
 	if len(missed) > 0 {
-		rsGot := map[string]interface{}{}
-		rsGot, err = f(ctx, missed)
+		var rsGot []*KeyValPair
+		rsGot, err = fGetData(ctx, missed)
 		if err != nil {
 			return
 		}
 		pipe := r.Client.Pipeline()
-		for _, mk := range missed {
-			k := mk.Key()
-			if v, ok := rsGot[k]; ok {
-				var buf []byte
-				buf, err = json.Marshal(v)
-				if err != nil {
-					return
-				}
-				s := string(buf)
-				pipe.Set(mk.Key(), s, r.ExpireStrategy(nil))
-				valStrArr = append(valStrArr, s)
+		for _, kv := range rsGot {
+			if !mMissed[kv.Key.Key()] {
+				continue
 			}
+			var buf []byte
+			buf, err = json.Marshal(kv.Val)
+			if err != nil {
+				return
+			}
+			s := string(buf)
+			pipe.Set(kv.Key.Key(), s, r.ExpireStrategy(nil))
+			valStrArr = append(valStrArr, s)
 		}
 		_, err = pipe.Exec()
 		if err != nil {
