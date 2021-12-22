@@ -155,8 +155,9 @@ func (k *HasOrganizationPermissionKey) Key() string {
 }
 
 type OperatorHasPermission struct {
-	PermissionName PermissionName
-	HasePermission bool
+	UserID         string         `json:"user_id"`
+	PermissionName PermissionName `json:"permission_name"`
+	HasePermission bool           `json:"hase_permission"`
 }
 
 func (s AmsPermissionService) HasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissionNames []PermissionName) (mPermission map[PermissionName]bool, err error) {
@@ -217,6 +218,7 @@ func (s AmsPermissionService) HasOrganizationPermissions(ctx context.Context, op
 				kvs = append(kvs, &kl2cache.KeyVal{
 					Key: key,
 					Val: &OperatorHasPermission{
+						UserID:         key.(*HasOrganizationPermissionKey).Op.UserID,
 						PermissionName: key.(*HasOrganizationPermissionKey).PermissionName,
 						HasePermission: hasPerm,
 					},
