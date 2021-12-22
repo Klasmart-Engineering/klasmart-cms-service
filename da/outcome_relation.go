@@ -65,7 +65,7 @@ func (c *OutcomeRelationCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if !c.IncludeDeleted {
-		wheres = append(wheres, "delete_at is null")
+		wheres = append(wheres, "delete_at = 0")
 	}
 	return wheres, params
 }
