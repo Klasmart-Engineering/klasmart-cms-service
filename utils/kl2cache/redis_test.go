@@ -105,14 +105,14 @@ func getUserByIds(ctx context.Context, ids []string) (err error) {
 		})
 	}
 
-	fGetData := func(ctx context.Context, keys []kl2cache.Key) (valArr []*kl2cache.KeyVal, err error) {
+	fGetData := func(ctx context.Context, keys []kl2cache.Key) (valArr []*kl2cache.KeyValue, err error) {
 		for _, k := range keys {
 			key := k.(kl2cache.KeyByStrings)
 			orgID := key[1]
 			userID := key[2]
 			id := key[3]
 
-			valArr = append(valArr, &kl2cache.KeyVal{
+			valArr = append(valArr, &kl2cache.KeyValue{
 				Key: key,
 				Val: &User{
 					ID:   id,

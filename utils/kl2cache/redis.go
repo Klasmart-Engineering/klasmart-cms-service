@@ -46,7 +46,7 @@ type redisProvider struct {
 	Client      *redis.Client
 }
 
-func (r *redisProvider) BatchGet(ctx context.Context, keys []Key, val interface{}, fGetData func(ctx context.Context, keys []Key) (kvs []*KeyVal, err error)) (err error) {
+func (r *redisProvider) BatchGet(ctx context.Context, keys []Key, val interface{}, fGetData func(ctx context.Context, keys []Key) (kvs []*KeyValue, err error)) (err error) {
 	var keyStrArr []string
 	for _, key := range keys {
 		keyStrArr = append(keyStrArr, key.Key())
@@ -76,7 +76,7 @@ func (r *redisProvider) BatchGet(ctx context.Context, keys []Key, val interface{
 	}
 	if len(missed) > 0 {
 		log.Info(ctx, "some key not in redis", log.Any("missed", missed))
-		var rsGot []*KeyVal
+		var rsGot []*KeyValue
 		rsGot, err = fGetData(ctx, missed)
 		if err != nil {
 			return

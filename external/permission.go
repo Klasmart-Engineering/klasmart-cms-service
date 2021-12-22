@@ -179,7 +179,7 @@ func (s AmsPermissionService) HasOrganizationPermissions(ctx context.Context, op
 			PermissionName: PermissionName(permissionName),
 		})
 	}
-	fGetData := func(ctx context.Context, keys []kl2cache.Key) (kvs []*kl2cache.KeyVal, err error) {
+	fGetData := func(ctx context.Context, keys []kl2cache.Key) (kvs []*kl2cache.KeyValue, err error) {
 		sb := new(strings.Builder)
 		fmt.Fprintf(sb, "query($user_id: ID! $organization_id: ID! %s) {user(user_id: $user_id) {membership(organization_id: $organization_id) {",
 			utils.StringCountRange(ctx, "$permission_name_", ": ID!", len(keys)))
@@ -215,7 +215,7 @@ func (s AmsPermissionService) HasOrganizationPermissions(ctx context.Context, op
 
 		for index, key := range keys {
 			if hasPerm, ok := data[fmt.Sprintf("q%d", index)]; ok {
-				kvs = append(kvs, &kl2cache.KeyVal{
+				kvs = append(kvs, &kl2cache.KeyValue{
 					Key: key,
 					Val: &OperatorHasPermission{
 						UserID:         key.(*HasOrganizationPermissionKey).Op.UserID,
