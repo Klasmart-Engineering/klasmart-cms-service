@@ -23,6 +23,7 @@ import (
 )
 
 func initDB() {
+	ctx := context.Background()
 	dboHandler, err := dbo.NewWithConfig(func(c *dbo.Config) {
 		dbConf := config.Get().DBConfig
 		c.ShowLog = dbConf.ShowLog
@@ -33,7 +34,7 @@ func initDB() {
 		c.LogLevel = dbo.Info
 	})
 	if err != nil {
-		log.Error(context.TODO(), "create dbo failed", log.Err(err))
+		log.Error(ctx, "create dbo failed", log.Err(err))
 		panic(err)
 	}
 	dbo.ReplaceGlobal(dboHandler)
@@ -85,16 +86,17 @@ func initCache() {
 // @termsOfService http://swagger.io/terms/
 // @host https://kl2-test.kidsloop.net/v1
 func main() {
-	log.Info(context.TODO(), "start kidsloop2 api service")
+	ctx := context.Background()
+	log.Info(ctx, "start kidsloop2 api service")
 	defer func() {
 		if err := recover(); err != nil {
-			log.Info(context.TODO(), "kidsloop2 api service stopped", log.Any("err", err))
+			log.Info(ctx, "kidsloop2 api service stopped", log.Any("err", err))
 		} else {
-			log.Info(context.TODO(), "kidsloop2 api service stopped")
+			log.Info(ctx, "kidsloop2 api service stopped")
 		}
 	}()
 
-	log.Debug(context.TODO(), "build information",
+	log.Debug(ctx, "build information",
 		log.String("gitHash", constant.GitHash),
 		log.String("buildTimestamp", constant.BuildTimestamp),
 		log.String("latestMigrate", constant.LatestMigrate))
@@ -102,19 +104,19 @@ func main() {
 	// read config
 	config.LoadEnvConfig()
 
-	log.Debug(context.TODO(), "load config successfully", log.Any("config", config.Get()))
+	log.Debug(ctx, "load config successfully", log.Any("config", config.Get()))
 
 	// init database connection
 	initDB()
 
-	log.Debug(context.TODO(), "init db successfully")
+	log.Debug(ctx, "init db successfully")
 	initCache()
 
-	log.Debug(context.TODO(), "init cache successfully")
+	log.Debug(ctx, "init cache successfully")
 	// init dynamodb connection
 	storage.DefaultStorage()
 
-	log.Debug(context.TODO(), "init storage successfully")
+	log.Debug(ctx, "init storage successfully")
 
 	if os.Getenv("env") == "HTTP" {
 		common.Setenv(common.EnvHTTP)
@@ -124,7 +126,7 @@ func main() {
 
 	go common.RunWithHTTPHandler(api.NewServer(), ":8088")
 
-	log.Debug(context.TODO(), "init api server successfully")
+	log.Debug(ctx, "init api server successfully")
 
 	quit := make(chan os.Signal)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
