@@ -7,7 +7,7 @@ import (
 
 type Provider interface {
 	WithExpireStrategy(ctx context.Context, strategy ExpireStrategy) (provider Provider)
-	Get(ctx context.Context, key Key, val interface{}, fGetData func(ctx context.Context) (val interface{}, err error)) (err error)
+	Get(ctx context.Context, key Key, val interface{}, fGetData func(ctx context.Context, key Key) (val interface{}, err error)) (err error)
 	BatchGet(ctx context.Context, keys []Key, val interface{}, fGetData func(ctx context.Context, keys []Key) (kvs []*KeyVal, err error)) (err error)
 }
 

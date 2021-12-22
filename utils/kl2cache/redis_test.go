@@ -46,7 +46,7 @@ func getUser(ctx context.Context, id string) (err error) {
 	err = kl2cache.DefaultProvider.Get(ctx, kl2cache.KeyByStrings{
 		"HasPermission",
 		id,
-	}, r, func(ctx context.Context) (val interface{}, err error) {
+	}, r, func(ctx context.Context, key kl2cache.Key) (val interface{}, err error) {
 		val = &User{
 			ID:   id,
 			Name: "111",

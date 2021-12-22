@@ -54,6 +54,7 @@ func (r *redisProvider) BatchGet(ctx context.Context, keys []Key, val interface{
 	log.Info(ctx, "start mget from redis", log.Any("keys", keyStrArr))
 	rsCached, err := r.Client.MGet(keyStrArr...).Result()
 	if err == redis.Nil {
+		log.Info(ctx, "redis mget got redis.Nil", log.Any("keys", keyStrArr), log.Err(err))
 		err = nil
 	}
 	if err != nil {
@@ -61,8 +62,8 @@ func (r *redisProvider) BatchGet(ctx context.Context, keys []Key, val interface{
 		return
 	}
 
-	var valStrArr []string
-	var missed []Key
+	valStrArr := make([]string, 0, len(keys))
+	missed := make([]Key, 0, len(keys))
 	mMissed := map[string]bool{}
 	for i := 0; i < len(keys); i++ {
 		s, ok := rsCached[i].(string)
@@ -122,7 +123,7 @@ func (r *redisProvider) WithExpireStrategy(ctx context.Context, strategy ExpireS
 	provider = &cloned
 	return
 }
-func (r *redisProvider) Get(ctx context.Context, key Key, val interface{}, fGetData func(ctx context.Context) (val interface{}, err error)) (err error) {
+func (r *redisProvider) Get(ctx context.Context, key Key, val interface{}, fGetData func(ctx context.Context, key Key) (val interface{}, err error)) (err error) {
 	var buf []byte
 	s, err := r.Client.Get(key.Key()).Result()
 	switch err {
@@ -131,7 +132,7 @@ func (r *redisProvider) Get(ctx context.Context, key Key, val interface{}, fGetD
 	case redis.Nil:
 		err = nil
 		var val1 interface{}
-		val1, err = fGetData(ctx)
+		val1, err = fGetData(ctx, key)
 		if err != nil {
 			return
 		}

@@ -3,6 +3,8 @@ package kl2cache
 import (
 	"context"
 	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
 type VisitedStat struct {
@@ -31,7 +33,7 @@ type config struct {
 }
 
 var conf = &config{
-	ExpireStrategy: ExpireStrategyFixed(time.Minute * 10),
+	ExpireStrategy: ExpireStrategyFixed(constant.MaxCacheExpire),
 }
 
 type Option func(c *config)

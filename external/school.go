@@ -293,7 +293,7 @@ func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, operator *ent
 		"GetByOrganizationID",
 		operator.UserID,
 		organizationID)
-	fGetData := func(ctx context.Context) (val interface{}, err error) {
+	fGetData := func(ctx context.Context, key kl2cache.Key) (val interface{}, err error) {
 		request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {
@@ -353,7 +353,7 @@ func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, operator *ent
 	if condition.Status.Valid {
 		stat = condition.Status.Status
 	}
-	var schools1 []*School
+	schools1 := make([]*School, 0, len(schools))
 	for _, s := range schools {
 		if s.Status != stat {
 			continue
@@ -454,7 +454,7 @@ func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Op
 	key := append(s.BaseCacheKey,
 		"GetByOperator",
 		operator.UserID)
-	fGetData := func(ctx context.Context) (val interface{}, err error) {
+	fGetData := func(ctx context.Context, key kl2cache.Key) (val interface{}, err error) {
 		request := chlorine.NewRequest(`
 	query($user_id: ID!) {
 		user(user_id: $user_id) {
@@ -527,7 +527,7 @@ func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Op
 	if condition.Status.Valid {
 		stat = condition.Status.Status
 	}
-	var schools1 []*School
+	schools1 := make([]*School, 0, len(schools))
 	for _, school := range schools {
 		if school.Status != stat {
 			continue
