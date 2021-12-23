@@ -138,7 +138,7 @@ func (r *redisProvider) Get(ctx context.Context, key Key, val interface{}, fGetD
 		}
 		buf, err = json.Marshal(val1)
 		if err != nil {
-			log.Error(ctx, "marshal value failed", log.Any("value", val1))
+			log.Error(ctx, "marshal value failed", log.Err(err), log.Any("value", val1))
 			return
 		}
 		err = r.Client.Set(key.Key(), string(buf), r.CalcExpired(nil)).Err()
@@ -147,7 +147,7 @@ func (r *redisProvider) Get(ctx context.Context, key Key, val interface{}, fGetD
 			return
 		}
 	default:
-		log.Error(ctx, "get value from redis failed", log.Any("key", key), log.Err(err))
+		log.Error(ctx, "get value from redis failed", log.Err(err), log.Any("key", key))
 		return
 	}
 
