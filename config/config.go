@@ -54,7 +54,8 @@ type Config struct {
 var config *Config
 
 type CORSConfig struct {
-	AllowOrigins []string `json:"allow_origins"`
+	AllowOrigins      []string `json:"allow_origins"`
+	AllowFileProtocol bool     `json:"allow_file_protocol"`
 }
 
 type CryptoConfig struct {
@@ -459,6 +460,7 @@ func loadH5PServiceConfig(ctx context.Context) {
 
 func loadCORSConfig(ctx context.Context) {
 	config.CORS.AllowOrigins = strings.Split(os.Getenv("cors_domain_list"), ",")
+	config.CORS.AllowFileProtocol, _ = strconv.ParseBool(os.Getenv("cors_allow_file_protocol"))
 }
 
 func loadUserConfig(ctx context.Context) {
