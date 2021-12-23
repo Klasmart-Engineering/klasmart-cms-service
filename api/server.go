@@ -51,6 +51,7 @@ func NewServer() *Server {
 			AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type"},
 			AllowCredentials: true,
 			AllowWildcard:    true,
+			AllowFiles:       config.Get().CORS.AllowFileProtocol,
 			MaxAge:           12 * time.Hour,
 		}))
 	}
