@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -56,13 +58,20 @@ var (
 
 func GetSchoolServiceProvider() SchoolServiceProvider {
 	_amsSchoolOnce.Do(func() {
-		_amsSchoolService = &AmsSchoolService{}
+		_amsSchoolService = &AmsSchoolService{
+			BaseCacheKey: kl2cache.KeyByStrings{
+				"kl2cache",
+				"AmsSchoolService",
+			},
+		}
 	})
 
 	return _amsSchoolService
 }
 
-type AmsSchoolService struct{}
+type AmsSchoolService struct {
+	BaseCacheKey kl2cache.KeyByStrings
+}
 
 func (s AmsSchoolService) Get(ctx context.Context, operator *entity.Operator, id string) (*School, error) {
 	schools, err := s.BatchGet(ctx, operator, []string{id})
@@ -278,10 +287,14 @@ func (s AmsSchoolService) GetByClasses(ctx context.Context, operator *entity.Ope
 	return schools, nil
 }
 
-func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, operator *entity.Operator, organizationID string, options ...APOption) ([]*School, error) {
-	condition := NewCondition(options...)
-
-	request := chlorine.NewRequest(`
+func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, operator *entity.Operator, organizationID string, options ...APOption) (schools []*School, err error) {
+	schools = []*School{}
+	key := append(s.BaseCacheKey,
+		"GetByOrganizationID",
+		operator.UserID,
+		organizationID)
+	fGetData := func(ctx context.Context, key kl2cache.Key) (val interface{}, err error) {
+		request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {
 			schools{
@@ -291,55 +304,64 @@ func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, operator *ent
 			}
 		}
 	}`, chlorine.ReqToken(operator.Token))
-	request.Var("organization_id", organizationID)
+		request.Var("organization_id", organizationID)
 
-	data := &struct {
-		Organization struct {
-			Schools []struct {
-				SchoolID   string   `json:"school_id"`
-				SchoolName string   `json:"school_name"`
-				Status     APStatus `json:"status"`
-			} `json:"schools"`
-		} `json:"organization"`
-	}{}
+		data := &struct {
+			Organization struct {
+				Schools []struct {
+					SchoolID   string   `json:"school_id"`
+					SchoolName string   `json:"school_name"`
+					Status     APStatus `json:"status"`
+				} `json:"schools"`
+			} `json:"organization"`
+		}{}
 
-	response := &chlorine.Response{
-		Data: data,
-	}
-
-	_, err := GetAmsClient().Run(ctx, request, response)
-	if err != nil {
-		log.Error(ctx, "query schools by organization failed",
-			log.Err(err),
-			log.String("organizationID", organizationID))
-		return nil, err
-	}
-
-	schools := make([]*School, 0, len(data.Organization.Schools))
-	for _, school := range data.Organization.Schools {
-		if condition.Status.Valid {
-			if condition.Status.Status != school.Status {
-				continue
-			}
-		} else {
-			// only status = "Active" data is returned by default
-			if school.Status != Active {
-				continue
-			}
+		response := &chlorine.Response{
+			Data: data,
 		}
 
-		schools = append(schools, &School{
-			ID:     school.SchoolID,
-			Name:   school.SchoolName,
-			Status: school.Status,
-		})
+		_, err = GetAmsClient().Run(ctx, request, response)
+		if err != nil {
+			log.Error(ctx, "query schools by organization failed",
+				log.Err(err),
+				log.String("organizationID", organizationID))
+			return
+		}
+
+		schools := make([]*School, 0, len(data.Organization.Schools))
+		for _, school := range data.Organization.Schools {
+			schools = append(schools, &School{
+				ID:     school.SchoolID,
+				Name:   school.SchoolName,
+				Status: school.Status,
+			})
+		}
+		val = schools
+
+		log.Info(ctx, "query schools by organization success",
+			log.String("organizationID", organizationID),
+			log.Any("schools", schools))
+		return
+	}
+	err = kl2cache.DefaultProvider.Get(ctx, key, &schools, fGetData)
+	if err != nil {
+		return
 	}
 
-	log.Info(ctx, "query schools by organization success",
-		log.String("organizationID", organizationID),
-		log.Any("schools", schools))
-
-	return schools, nil
+	condition := NewCondition(options...)
+	stat := Active
+	if condition.Status.Valid {
+		stat = condition.Status.Status
+	}
+	schools1 := make([]*School, 0, len(schools))
+	for _, s := range schools {
+		if s.Status != stat {
+			continue
+		}
+		schools1 = append(schools1, s)
+	}
+	schools = schools1
+	return
 }
 
 func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName, options ...APOption) ([]*School, error) {
@@ -427,10 +449,13 @@ func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.
 	return schools, nil
 }
 
-func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*School, error) {
-	condition := NewCondition(options...)
-
-	request := chlorine.NewRequest(`
+func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Operator, options ...APOption) (schools []*School, err error) {
+	schools = []*School{}
+	key := append(s.BaseCacheKey,
+		"GetByOperator",
+		operator.UserID)
+	fGetData := func(ctx context.Context, key kl2cache.Key) (val interface{}, err error) {
+		request := chlorine.NewRequest(`
 	query($user_id: ID!) {
 		user(user_id: $user_id) {
 			school_memberships{
@@ -445,65 +470,72 @@ func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Op
 			}
 		}
 	}`, chlorine.ReqToken(operator.Token))
-	request.Var("user_id", operator.UserID)
+		request.Var("user_id", operator.UserID)
 
-	data := &struct {
-		User struct {
-			SchoolMemberships []struct {
-				School struct {
-					SchoolID     string   `json:"school_id"`
-					SchoolName   string   `json:"school_name"`
-					Status       APStatus `json:"status"`
-					Organization struct {
-						OrganizationID string `json:"organization_id"`
-					} `json:"organization"`
-				} `json:"school"`
-			} `json:"school_memberships"`
-		} `json:"user"`
-	}{}
+		data := &struct {
+			User struct {
+				SchoolMemberships []struct {
+					School struct {
+						SchoolID     string   `json:"school_id"`
+						SchoolName   string   `json:"school_name"`
+						Status       APStatus `json:"status"`
+						Organization struct {
+							OrganizationID string `json:"organization_id"`
+						} `json:"organization"`
+					} `json:"school"`
+				} `json:"school_memberships"`
+			} `json:"user"`
+		}{}
 
-	response := &chlorine.Response{
-		Data: data,
+		response := &chlorine.Response{
+			Data: data,
+		}
+
+		_, err = GetAmsClient().Run(ctx, request, response)
+		if err != nil {
+			log.Error(ctx, "get schools by operator failed",
+				log.Err(err),
+				log.Any("operator", operator))
+			return nil, err
+		}
+
+		schools := make([]*School, 0, len(data.User.SchoolMemberships))
+		for _, membership := range data.User.SchoolMemberships {
+			// filtering by operator's org id
+			if membership.School.Organization.OrganizationID != operator.OrgID {
+				continue
+			}
+			schools = append(schools, &School{
+				ID:     membership.School.SchoolID,
+				Name:   membership.School.SchoolName,
+				Status: membership.School.Status,
+			})
+			val = schools
+		}
+
+		log.Info(ctx, "get schools by operator success",
+			log.Any("operator", operator),
+			log.Any("schools", schools))
+		return
 	}
-
-	_, err := GetAmsClient().Run(ctx, request, response)
+	err = kl2cache.DefaultProvider.Get(ctx, key, &schools, fGetData)
 	if err != nil {
-		log.Error(ctx, "get schools by operator failed",
-			log.Err(err),
-			log.Any("operator", operator))
-		return nil, err
+		return
 	}
-
-	schools := make([]*School, 0, len(data.User.SchoolMemberships))
-	for _, membership := range data.User.SchoolMemberships {
-		// filtering by operator's org id
-		if membership.School.Organization.OrganizationID != operator.OrgID {
+	condition := NewCondition(options...)
+	stat := Active
+	if condition.Status.Valid {
+		stat = condition.Status.Status
+	}
+	schools1 := make([]*School, 0, len(schools))
+	for _, school := range schools {
+		if school.Status != stat {
 			continue
 		}
-
-		if condition.Status.Valid {
-			if condition.Status.Status != membership.School.Status {
-				continue
-			}
-		} else {
-			// only status = "Active" data is returned by default
-			if membership.School.Status != Active {
-				continue
-			}
-		}
-
-		schools = append(schools, &School{
-			ID:     membership.School.SchoolID,
-			Name:   membership.School.SchoolName,
-			Status: membership.School.Status,
-		})
+		schools1 = append(schools1, school)
 	}
-
-	log.Info(ctx, "get schools by operator success",
-		log.Any("operator", operator),
-		log.Any("schools", schools))
-
-	return schools, nil
+	schools = schools1
+	return
 }
 
 func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Operator, orgID string, userIDs []string, options ...APOption) (map[string][]*School, error) {
