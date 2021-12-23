@@ -51,14 +51,20 @@ func (r *redisProvider) BatchGet(ctx context.Context, keys []Key, val interface{
 	for _, key := range keys {
 		keyStrArr = append(keyStrArr, key.Key())
 	}
-	log.Info(ctx, "start mget from redis", log.Any("keys", keyStrArr))
+	log.Info(ctx,
+		"start BatchGet",
+		log.Any("cache", "kl2cache"),
+		log.Any("provider", "redisProvider"),
+		log.Any("method", "redisProvider.Get"),
+		log.Any("keys", keyStrArr),
+	)
 	rsCached, err := r.Client.MGet(keyStrArr...).Result()
 	if err == redis.Nil {
 		log.Info(ctx, "redis mget got redis.Nil", log.Any("keys", keyStrArr), log.Err(err))
 		err = nil
 	}
 	if err != nil {
-		log.Error(ctx, "redis mget failed", log.Any("keys", keyStrArr))
+		log.Error(ctx, "redis mget failed", log.Err(err), log.Any("keys", keyStrArr))
 		return
 	}
 
@@ -74,8 +80,8 @@ func (r *redisProvider) BatchGet(ctx context.Context, keys []Key, val interface{
 			mMissed[keys[i].Key()] = true
 		}
 	}
+	log.Info(ctx, "missed keys", log.Any("keys", keyStrArr), log.Any("missed", missed))
 	if len(missed) > 0 {
-		log.Info(ctx, "some key not in redis", log.Any("missed", missed))
 		var rsGot []*KeyValue
 		rsGot, err = fGetData(ctx, missed)
 		if err != nil {
@@ -97,14 +103,23 @@ func (r *redisProvider) BatchGet(ctx context.Context, keys []Key, val interface{
 			s := string(buf)
 			err = pipe.Set(kv.Key.Key(), s, r.CalcExpired(nil)).Err()
 			if err != nil {
-				log.Error(ctx, "pipe set failed", log.Any("key", kv.Key.Key()), log.Any("val", s), log.Err(err))
+				log.Error(ctx,
+					"pipe set failed",
+					log.Err(err),
+					log.Any("key", kv.Key.Key()),
+					log.Any("val", s),
+				)
 				return
 			}
 			valStrArr = append(valStrArr, s)
 		}
 		_, err = pipe.Exec()
 		if err != nil {
-			log.Error(ctx, "set redis caches failed", log.Any("rsGot", rsGot), log.Err(err))
+			log.Error(ctx,
+				"set redis caches failed",
+				log.Err(err),
+				log.Any("rsGot", rsGot),
+			)
 			return
 		}
 	}
@@ -112,7 +127,12 @@ func (r *redisProvider) BatchGet(ctx context.Context, keys []Key, val interface{
 	valStr := "[" + strings.Join(valStrArr, ",") + "]"
 	err = json.Unmarshal([]byte(valStr), val)
 	if err != nil {
-		log.Error(ctx, "json.Unmarshal failed", log.Any("from", valStr), log.Any("to", val))
+		log.Error(ctx,
+			"json.Unmarshal failed",
+			log.Err(err),
+			log.Any("from", valStr),
+			log.Any("to", val),
+		)
 		return
 	}
 	return
@@ -124,18 +144,36 @@ func (r *redisProvider) WithExpireStrategy(ctx context.Context, strategy ExpireS
 	return
 }
 func (r *redisProvider) Get(ctx context.Context, key Key, val interface{}, fGetData func(ctx context.Context, key Key) (val interface{}, err error)) (err error) {
+	log.Info(ctx,
+		"start Get",
+		log.Any("cache", "kl2cache"),
+		log.Any("provider", "redisProvider"),
+		log.Any("method", "redisProvider.Get"),
+		log.Any("key", key.Key()),
+	)
 	var buf []byte
 	s, err := r.Client.Get(key.Key()).Result()
 	switch err {
 	case nil:
+		log.Info(ctx,
+			"got data from redis",
+			log.Any("key", key.Key()),
+			log.Any("val", s),
+		)
 		buf = []byte(s)
 	case redis.Nil:
+		log.Info(ctx,
+			"miss cache from redis,call fGetData",
+			log.Any("key", key.Key()),
+		)
 		err = nil
 		var val1 interface{}
 		val1, err = fGetData(ctx, key)
+		log.Info(ctx, "fGetData result", log.Any("val", val1), log.Err(err))
 		if err != nil {
 			return
 		}
+
 		buf, err = json.Marshal(val1)
 		if err != nil {
 			log.Error(ctx, "marshal value failed", log.Err(err), log.Any("value", val1))
@@ -153,7 +191,12 @@ func (r *redisProvider) Get(ctx context.Context, key Key, val interface{}, fGetD
 
 	err = json.Unmarshal(buf, val)
 	if err != nil {
-		log.Error(ctx, "json.Unmarshal failed", log.Err(err), log.Any("buf", string(buf)))
+		log.Error(ctx,
+			"json.Unmarshal failed",
+			log.Err(err),
+			log.Any("from", string(buf)),
+			log.Any("to", val),
+		)
 		return
 	}
 	return
