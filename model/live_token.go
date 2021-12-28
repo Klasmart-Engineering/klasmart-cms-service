@@ -353,7 +353,13 @@ func (s *liveTokenModel) GetMaterials(ctx context.Context, op *entity.Operator, 
 				log.Error(ctx, "invalid resource id", log.String("resourceId", source))
 				return nil, constant.ErrInvalidArgs
 			}
-			materialItem.URL = config.Get().LiveTokenConfig.AssetsUrlPrefix + fmt.Sprintf("/assets/%s", parts[1])
+
+			// KLS-271: pdf file special handler
+			if mData.Source.Ext() == constant.LiveTokenDocumentPDF {
+				materialItem.URL = fmt.Sprintf("/assets/%s", parts[1])
+			} else {
+				materialItem.URL = config.Get().LiveTokenConfig.AssetsUrlPrefix + fmt.Sprintf("/assets/%s", parts[1])
+			}
 		}
 		materials = append(materials, materialItem)
 	}
