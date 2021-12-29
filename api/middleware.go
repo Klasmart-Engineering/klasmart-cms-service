@@ -227,19 +227,10 @@ func (s Server) contextStopwatch() gin.HandlerFunc {
 
 func (s Server) getNewRelicMiddleware() gin.HandlerFunc {
 	nrCfg := &config.Get().NewRelic
-	nrApp, err := newrelic.NewApplication(newrelic.Config{
-		AppName: nrCfg.NewRelicAppName,
-		License: nrCfg.NewRelicLicenseKey,
-		Enabled: true,
-		Labels:  nrCfg.NewRelicLabels,
-		DistributedTracer: struct {
-			Enabled bool
-		}{Enabled: nrCfg.NewRelicDistributedTracingEnabled},
-		SpanEvents: struct {
-			Enabled    bool
-			Attributes newrelic.AttributeDestinationConfig
-		}{Enabled: true},
-	})
+	cfg := newrelic.NewConfig(nrCfg.NewRelicAppName, nrCfg.NewRelicLicenseKey)
+	cfg.Labels = nrCfg.NewRelicLabels
+	cfg.DistributedTracer.Enabled = nrCfg.NewRelicDistributedTracingEnabled
+	nrApp, err := newrelic.NewApplication(cfg)
 	if err != nil {
 		log.Panic(context.Background(), "failed to init new relic app", log.Any("new_relic_config", nrCfg))
 	}
