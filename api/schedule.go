@@ -77,10 +77,14 @@ func (s *Server) addSchedule(c *gin.Context) {
 		return
 	}
 
-	_, err = model.GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
+	permissionMap, err := model.GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
 		external.ScheduleCreateEvent,
 		external.ScheduleCreateMySchoolEvent,
 		external.ScheduleCreateMyEvent,
+		external.ScheduleCreateLiveCalendarEvents,
+		external.ScheduleCreateClassCalendarEvents,
+		external.ScheduleCreateStudyCalendarEvents,
+		external.ScheduleCreateHomefunCalendarEvents,
 	})
 	if err == constant.ErrForbidden {
 		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
@@ -88,6 +92,23 @@ func (s *Server) addSchedule(c *gin.Context) {
 	}
 	if err != nil {
 		s.defaultErrorHandler(c, err)
+		return
+	}
+
+	// schedule create permission
+	if !permissionMap[external.ScheduleCreateEvent] &&
+		!permissionMap[external.ScheduleCreateMySchoolEvent] &&
+		!permissionMap[external.ScheduleCreateMyEvent] {
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+		return
+	}
+
+	// specify the type of schedule create permission
+	if (data.ClassType == entity.ScheduleClassTypeOnlineClass && !permissionMap[external.ScheduleCreateLiveCalendarEvents]) ||
+		(data.ClassType == entity.ScheduleClassTypeOfflineClass && !permissionMap[external.ScheduleCreateClassCalendarEvents]) ||
+		(data.ClassType == entity.ScheduleClassTypeHomework && !data.IsHomeFun && !permissionMap[external.ScheduleCreateStudyCalendarEvents]) ||
+		(data.ClassType == entity.ScheduleClassTypeHomework && data.IsHomeFun && !permissionMap[external.ScheduleCreateHomefunCalendarEvents]) {
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
 		return
 	}
 
@@ -249,10 +270,14 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	}
 
 	// check permission
-	_, err = model.GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, operator, []external.PermissionName{
+	permissionMap, err := model.GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, operator, []external.PermissionName{
 		external.ScheduleCreateEvent,
 		external.ScheduleCreateMySchoolEvent,
 		external.ScheduleCreateMyEvent,
+		external.ScheduleCreateLiveCalendarEvents,
+		external.ScheduleCreateClassCalendarEvents,
+		external.ScheduleCreateStudyCalendarEvents,
+		external.ScheduleCreateHomefunCalendarEvents,
 	})
 	if err == constant.ErrForbidden {
 		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
@@ -260,6 +285,23 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	}
 	if err != nil {
 		s.defaultErrorHandler(c, err)
+		return
+	}
+
+	// schedule create permission
+	if !permissionMap[external.ScheduleCreateEvent] &&
+		!permissionMap[external.ScheduleCreateMySchoolEvent] &&
+		!permissionMap[external.ScheduleCreateMyEvent] {
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+		return
+	}
+
+	// specify the type of schedule create permission
+	if (scheduleUpdateView.ClassType == entity.ScheduleClassTypeOnlineClass && !permissionMap[external.ScheduleCreateLiveCalendarEvents]) ||
+		(scheduleUpdateView.ClassType == entity.ScheduleClassTypeOfflineClass && !permissionMap[external.ScheduleCreateClassCalendarEvents]) ||
+		(scheduleUpdateView.ClassType == entity.ScheduleClassTypeHomework && !scheduleUpdateView.IsHomeFun && !permissionMap[external.ScheduleCreateStudyCalendarEvents]) ||
+		(scheduleUpdateView.ClassType == entity.ScheduleClassTypeHomework && scheduleUpdateView.IsHomeFun && !permissionMap[external.ScheduleCreateHomefunCalendarEvents]) {
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
 		return
 	}
 
