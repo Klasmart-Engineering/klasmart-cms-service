@@ -49,12 +49,12 @@ type Outcome struct {
 	DeleteAt int64 `gorm:"type:bigint;column:delete_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
 
 	Sets           []*Set       `gorm:"-" json:"sets"`
-	Programs       []string     `gorm:"-"`
-	Subjects       []string     `gorm:"-"`
-	Categories     []string     `gorm:"-"`
-	Subcategories  []string     `gorm:"-"`
-	Grades         []string     `gorm:"-"`
-	Ages           []string     `gorm:"-"`
+	Programs       []string     `gorm:"-" json:"programs"`
+	Subjects       []string     `gorm:"-" json:"subjects"`
+	Categories     []string     `gorm:"-" json:"categories" `
+	Subcategories  []string     `gorm:"-" json:"subcategories"`
+	Grades         []string     `gorm:"-" json:"grades"`
+	Ages           []string     `gorm:"-" json:"ages"`
 	Milestones     []*Milestone `gorm:"-" json:"milestones"`
 	EditingOutcome *Outcome     `gorm:"-" json:"-"`
 }
