@@ -71,8 +71,8 @@ func initCache() {
 	ctx := context.Background()
 	conf := config.Get()
 	err := kl2cache.Init(ctx,
-		kl2cache.OptEnable(false),
-		//kl2cache.OptEnable(conf.RedisConfig.OpenCache),
+		//kl2cache.OptEnable(false),
+		kl2cache.OptEnable(conf.RedisConfig.OpenCache),
 		kl2cache.OptRedis(conf.RedisConfig.Host, conf.RedisConfig.Port, conf.RedisConfig.Password),
 		kl2cache.OptStrategyFixed(constant.MaxCacheExpire),
 	)
