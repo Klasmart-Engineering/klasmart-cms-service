@@ -3,8 +3,12 @@ package kl2cache
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"reflect"
 	"strings"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"github.com/go-redis/redis"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -17,36 +21,67 @@ func OptRedis(host string, port int, password string) Option {
 		c.Redis.Password = password
 	}
 }
-
-var redisClient = &redis.Client{}
-
 func initRedis(ctx context.Context, conf *config) (err error) {
+	rProvider := &redisProvider{
+		Enable: conf.Enable,
+	}
+	DefaultProvider = rProvider
 	if !conf.Enable {
 		return
 	}
-	redisClient = redis.NewClient(&redis.Options{
+	rProvider.CalcExpired = conf.ExpireStrategy
+
+	rProvider.Client = redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%v", conf.Redis.Host, conf.Redis.Port),
 		Password: conf.Redis.Password,
 	})
-	err = redisClient.Ping().Err()
+	err = rProvider.Client.Ping().Err()
 	if err != nil {
 		log.Error(ctx, "ping redis failed", log.Err(err))
 		return
-	}
-
-	DefaultProvider = &redisProvider{
-		CalcExpired: conf.ExpireStrategy,
-		Client:      redisClient,
 	}
 	return
 }
 
 type redisProvider struct {
+	Enable      bool
 	CalcExpired ExpireStrategy
 	Client      *redis.Client
 }
 
 func (r *redisProvider) BatchGet(ctx context.Context, keys []Key, val interface{}, fGetData func(ctx context.Context, keys []Key) (kvs []*KeyValue, err error)) (err error) {
+	if !r.Enable {
+		vRes := reflect.ValueOf(val)
+		if vRes.Kind() != reflect.Ptr {
+			log.Error(ctx, "val for BatchGet must be a pointer", log.Any("vRes", vRes))
+			err = constant.ErrBadUsageOfKl2Cache
+			return
+		}
+		vRes = vRes.Elem()
+		if vRes.Kind() != reflect.Slice {
+			log.Error(ctx, "val must be a pointer of slice")
+			err = constant.ErrBadUsageOfKl2Cache
+			return
+		}
+
+		var kvs []*KeyValue
+		kvs, err = fGetData(ctx, keys)
+		if err != nil {
+			return
+		}
+		for _, kv := range kvs {
+			vGot := reflect.ValueOf(kv.Val)
+			if vGot.Type() != reflect.TypeOf(val).Elem().Elem() {
+				log.Error(ctx, "the type of item in val for BatchGet must equal the type of KeyVal.Val return by fGetData")
+				err = constant.ErrBadUsageOfKl2Cache
+				return
+			}
+			vRes = reflect.Append(vRes, vGot)
+		}
+		reflect.ValueOf(val).Elem().Set(vRes)
+		return
+	}
+
 	var keyStrArr []string
 	for _, key := range keys {
 		keyStrArr = append(keyStrArr, key.Key())
@@ -144,6 +179,28 @@ func (r *redisProvider) WithExpireStrategy(ctx context.Context, strategy ExpireS
 	return
 }
 func (r *redisProvider) Get(ctx context.Context, key Key, val interface{}, fGetData func(ctx context.Context, key Key) (val interface{}, err error)) (err error) {
+	if !r.Enable {
+		vRes := reflect.ValueOf(val)
+		if vRes.Kind() != reflect.Ptr {
+			err = errors.New("val must be a pointer")
+			return
+		}
+		vRes = vRes.Elem()
+
+		var got interface{}
+		got, err = fGetData(ctx, key)
+		if err != nil {
+			return
+		}
+		vGot := reflect.ValueOf(got)
+		if vGot.Kind() == reflect.Ptr {
+			vGot = vGot.Elem()
+		}
+
+		vRes.Set(vGot)
+		return
+	}
+
 	log.Info(ctx,
 		"start Get",
 		log.Any("cache", "kl2cache"),
