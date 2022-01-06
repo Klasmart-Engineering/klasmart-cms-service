@@ -67,6 +67,7 @@ func (r *redisProvider) Get(ctx context.Context, key Key, val interface{}, fGetD
 			panic(rec)
 		}
 		err = fmt.Errorf("kl2cache(redisProvider).Get panic: %+v", rec)
+		log.Error(ctx, "Get panic", log.Err(err))
 		return
 	}()
 
@@ -96,6 +97,7 @@ func (r *redisProvider) getWithOutCache(ctx context.Context, key Key, val interf
 	vRes := reflect.ValueOf(val)
 	if vRes.Kind() != reflect.Ptr {
 		err = errors.New("val must be a pointer")
+		log.Error(ctx, "getWithOutCache invalid params", log.Err(err))
 		return
 	}
 	vRes = vRes.Elem()
@@ -181,6 +183,7 @@ func (r *redisProvider) BatchGet(ctx context.Context, keys []Key, val interface{
 			panic(rec)
 		}
 		err = fmt.Errorf("kl2cache(redisProvider).BatchGet panic: %+v", rec)
+		log.Error(ctx, "BatchGet panic", log.Err(err))
 		return
 	}()
 
