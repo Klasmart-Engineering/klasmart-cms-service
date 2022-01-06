@@ -510,8 +510,8 @@ func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Op
 				Name:   membership.School.SchoolName,
 				Status: membership.School.Status,
 			})
-			val = schools
 		}
+		val = schools
 
 		log.Info(ctx, "get schools by operator success",
 			log.Any("operator", operator),

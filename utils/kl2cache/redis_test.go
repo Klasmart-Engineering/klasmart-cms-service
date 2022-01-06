@@ -108,8 +108,8 @@ func getUserByIds(ctx context.Context, ids []string) (err error) {
 		})
 	}
 
-	fGetData := func(ctx context.Context, keys []kl2cache.Key) (valArr []*kl2cache.KeyValue, err error) {
-		for _, k := range keys {
+	fGetData := func(ctx context.Context, missedKeys []kl2cache.Key) (valArr []*kl2cache.KeyValue, err error) {
+		for _, k := range missedKeys {
 			key := k.(kl2cache.KeyByStrings)
 			orgID := key[1]
 			userID := key[2]
@@ -173,4 +173,37 @@ func Test_redisProvider_BatchGet_NoCache(t *testing.T) {
 		fmt.Println(err)
 	}
 
+}
+
+func Test_redisProvider_Get_NoCache_Val_Nil(t *testing.T) {
+	ctx := context.Background()
+	err := kl2cache.Init(
+		ctx,
+		kl2cache.OptEnable(false),
+	)
+	if err != nil {
+		fmt.Println(err)
+	}
+	id := uuid.NewString()
+	err = getUser1(ctx, id)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = getUser1(ctx, id)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func getUser1(ctx context.Context, id string) (err error) {
+	r := &User{}
+	err = kl2cache.DefaultProvider.Get(ctx, kl2cache.KeyByStrings{
+		"HasPermission",
+		id,
+	}, r, func(ctx context.Context, key kl2cache.Key) (val interface{}, err error) {
+		return
+	})
+	fmt.Println(*r)
+	return
 }
