@@ -2,13 +2,14 @@ package api
 
 import (
 	"database/sql"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 // @Summary list student report
@@ -122,6 +123,48 @@ func (s *Server) getTeacherReport(ctx *gin.Context) {
 	default:
 		ctx.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
+}
+
+// @Summary get teachers report
+// @Description get teacher sreport
+// @Tags reports
+// @ID getTeachersReport
+// @Accept json
+// @Produce json
+// @Success 200 {object} entity.TeacherReport
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /reports/teachers [get]
+func (s *Server) getTeachersReport(c *gin.Context) {
+	ctx := c.Request.Context()
+	operator := s.getOperator(c)
+	var err error
+	var result *entity.TeacherReport
+	defer func() {
+		switch err {
+		case nil:
+			c.JSON(http.StatusOK, result)
+		case constant.ErrInvalidArgs:
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		case constant.ErrRecordNotFound, sql.ErrNoRows:
+			c.JSON(http.StatusNotFound, L(GeneralUnknown))
+		case constant.ErrForbidden:
+			c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
+		default:
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		}
+	}()
+	teacherIDs, err := model.GetReportModel().GetTeacherIDsCanViewReports(ctx, operator)
+	if err != nil {
+		return
+	}
+	result, err = model.GetReportModel().GetTeacherReport(ctx, dbo.MustGetDB(ctx), operator, teacherIDs...)
+	if err != nil {
+		return
+	}
+	return
 }
 
 // @Summary list student performance report

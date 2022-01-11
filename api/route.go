@@ -126,6 +126,7 @@ func (s Server) registeRoute() {
 		reports.GET("/reports/students", s.mustLogin, s.listStudentsAchievementReport)
 		reports.GET("/reports/students/:id", s.mustLogin, s.getStudentAchievementReport)
 		reports.GET("/reports/teachers/:id", s.mustLogin, s.getTeacherReport)
+		reports.GET("/reports/teachers", s.mustLogin, s.getTeachersReport)
 
 		reports.GET("/reports/performance/students", s.mustLogin, s.listStudentsPerformanceReport)
 		reports.GET("/reports/performance/students/:id", s.mustLogin, s.getStudentPerformanceReport)
