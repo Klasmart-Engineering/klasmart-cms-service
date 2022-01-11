@@ -471,7 +471,7 @@ func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, o
 				Valid:  true,
 			},
 			TeacherIDs: entity.NullStrings{
-				Strings: []string{},
+				Strings: teacherIDs,
 				Valid:   true,
 			},
 		})
