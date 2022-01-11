@@ -18,7 +18,7 @@ import (
 type IReportModel interface {
 	ListStudentsReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsAchievementReportRequest) (*entity.StudentsAchievementReportResponse, error)
 	GetStudentReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.GetStudentAchievementReportRequest) (*entity.StudentAchievementReportResponse, error)
-	GetTeacherReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, teacherID string) (*entity.TeacherReport, error)
+	GetTeacherReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, teacherIDs ...string) (*entity.TeacherReport, error)
 	GetLessonPlanFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string) ([]*entity.ScheduleShortInfo, error)
 	// DEPRECATED
 	ListStudentsPerformanceReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsPerformanceReportRequest) (*entity.ListStudentsPerformanceReportResponse, error)
@@ -37,6 +37,7 @@ type IReportModel interface {
 	GetAssignmentCompletion(ctx context.Context, op *entity.Operator, args *entity.AssignmentRequest) (entity.AssignmentResponse, error)
 	GetStudentProgressLearnOutcomeAchievement(ctx context.Context, op *entity.Operator, req *entity.LearnOutcomeAchievementRequest) (res *entity.LearnOutcomeAchievementResponse, err error)
 	ClassAttendanceStatistics(ctx context.Context, op *entity.Operator, request *entity.ClassAttendanceRequest) (response *entity.ClassAttendanceResponse, err error)
+	GetTeacherIDsCanViewReports(ctx context.Context, operator *entity.Operator) (teacherIDs []string, err error)
 }
 
 var (
@@ -405,8 +406,62 @@ func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 
 	return &result, nil
 }
+func (rm *reportModel) GetTeacherIDsCanViewReports(ctx context.Context, operator *entity.Operator) (teacherIDs []string, err error) {
+	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, []external.PermissionName{
+		external.ReportViewMyReports614,
+		external.ReportViewReports610,
+		external.ReportViewMySchoolReports611,
+		external.ReportViewMyOrganizationsReports612,
+	})
+	if err != nil {
+		return
+	}
+	canViewOrg := perms[external.ReportViewReports610] || perms[external.ReportViewMyOrganizationsReports612]
+	if canViewOrg {
+		var teachers []*external.Teacher
+		teachers, err = external.GetTeacherServiceProvider().GetByOrganization(ctx, operator, operator.OrgID)
+		if err != nil {
+			return
+		}
+		for _, teacher := range teachers {
+			teacherIDs = append(teacherIDs, teacher.ID)
+		}
+	}
 
-func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, teacherID string) (*entity.TeacherReport, error) {
+	canViewSchool := perms[external.ReportViewReports610] || perms[external.ReportViewMySchoolReports611]
+	if canViewSchool {
+		var schools []*external.School
+		schools, err = external.GetSchoolServiceProvider().GetByOperator(ctx, operator)
+		if err != nil {
+			return
+		}
+		var schoolIDs []string
+		for _, school := range schools {
+			schoolIDs = append(schoolIDs, school.ID)
+		}
+		var teachersMap map[string][]*external.Teacher
+		teachersMap, err = external.GetTeacherServiceProvider().GetBySchools(ctx, operator, schoolIDs)
+		if err != nil {
+			return
+		}
+		for _, teachers := range teachersMap {
+			for _, teacher := range teachers {
+				teacherIDs = append(teacherIDs, teacher.ID)
+			}
+		}
+
+	}
+	if !canViewOrg && !canViewSchool && perms[external.ReportViewMyReports614] {
+		teacherIDs = append(teacherIDs, operator.UserID)
+	}
+	return
+}
+func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, teacherIDs ...string) (*entity.TeacherReport, error) {
+	if len(teacherIDs) < 1 {
+		return &entity.TeacherReport{
+			Categories: []*entity.TeacherReportCategory{},
+		}, nil
+	}
 	var assessmentIDs []string
 	{
 
@@ -416,7 +471,7 @@ func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, o
 				Valid:  true,
 			},
 			TeacherIDs: entity.NullStrings{
-				Strings: []string{teacherID},
+				Strings: teacherIDs,
 				Valid:   true,
 			},
 		})
@@ -464,7 +519,7 @@ func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, o
 			log.Error(ctx, "get teacher report: get learning outcome failed by ids",
 				log.Err(err),
 				log.Any("operator", operator),
-				log.String("teacher_id", teacherID),
+				log.Any("teacher_ids", teacherIDs),
 			)
 			return nil, err
 		}
@@ -475,7 +530,7 @@ func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, o
 		if err != nil {
 			log.Error(ctx, "get teacher report: query all developmental failed",
 				log.Err(err),
-				log.Any("teacher_id", teacherID),
+				log.Any("teacher_ids", teacherIDs),
 				log.Any("operator", operator),
 			)
 			return nil, err
