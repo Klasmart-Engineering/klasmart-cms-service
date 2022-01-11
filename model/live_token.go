@@ -40,6 +40,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		return "", err
 	}
 
+	// Check time if token generation is allowed
 	if tokenType == entity.LiveTokenTypeLive && schedule.ClassType != entity.ScheduleClassTypeHomework {
 		now := time.Now().Unix()
 		diff := utils.TimeStampDiff(schedule.StartAt, now)
@@ -75,6 +76,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		)
 		return "", constant.ErrInvalidArgs
 	}
+
 	liveTokenInfo := entity.LiveTokenInfo{
 		UserID:     op.UserID,
 		Type:       tokenType, //entity.LiveTokenTypeLive,
@@ -95,6 +97,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		return "", err
 	}
 	liveTokenInfo.Name = name
+
 	isTeacher, err := s.isTeacherByScheduleID(ctx, op, scheduleID)
 	if err != nil {
 		log.Error(ctx, "MakeScheduleLiveToken:judge is teacher error",
@@ -103,30 +106,93 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		return "", err
 	}
 	liveTokenInfo.Teacher = isTeacher
+
+	// task and homefun study not support live token
 	if schedule.ClassType == entity.ScheduleClassTypeTask || (schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun) {
 		liveTokenInfo.Materials = make([]*entity.LiveMaterial, 0)
 	} else {
-		_, err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
-		if err != nil {
-			log.Error(ctx, "MakeScheduleLiveToken:GetScheduleModel.VerifyLessonPlanAuthed error",
-				log.Err(err),
-				log.Any("op", op),
-				log.Any("schedule", schedule))
-			return "", err
-		}
-		materialInput := &entity.MaterialInput{
-			ScheduleID: scheduleID,
-			TokenType:  tokenType,
-			ContentID:  schedule.LessonPlanID,
-		}
-		liveTokenInfo.Materials, err = s.GetMaterials(ctx, op, materialInput, false)
-		if err != nil {
-			log.Error(ctx, "MakeScheduleLiveToken:get material error",
-				log.Err(err),
-				log.Any("op", op),
-				log.Any("liveTokenInfo", liveTokenInfo),
-				log.Any("schedule", schedule))
-			return "", err
+		// anyone has attempted live
+		if schedule.AnyoneAttemptedLive() {
+			// check lesson plan authed (unless lesson material)
+			_, err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LiveMaterials.LessonPlanID)
+			if err != nil {
+				log.Error(ctx, "MakeScheduleLiveToken:GetScheduleModel.VerifyLessonPlanAuthed error",
+					log.Err(err),
+					log.Any("op", op),
+					log.Any("schedule", schedule))
+				return "", err
+			}
+
+			liveTokenInfo.Materials = schedule.LiveMaterials.LessonMaterials
+		} else {
+			// No one attempted live
+			// check lesson plan authed (unless lesson material)
+			_, err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
+			if err != nil {
+				log.Error(ctx, "MakeScheduleLiveToken:GetScheduleModel.VerifyLessonPlanAuthed error",
+					log.Err(err),
+					log.Any("op", op),
+					log.Any("schedule", schedule))
+				return "", err
+			}
+
+			materialInput := &entity.MaterialInput{
+				ScheduleID: scheduleID,
+				TokenType:  tokenType,
+				ContentID:  schedule.LessonPlanID,
+			}
+			// get latest lesson plan and lesson material
+			liveTokenInfo.Materials, err = s.GetMaterials(ctx, op, materialInput, false)
+			if err != nil {
+				log.Error(ctx, "MakeScheduleLiveToken:get material error",
+					log.Err(err),
+					log.Any("op", op),
+					log.Any("liveTokenInfo", liveTokenInfo),
+					log.Any("schedule", schedule))
+				return "", err
+			}
+
+			// Save live materials to schedules table
+			// Get latest lesson plan name
+			latestLessonPlanID, err := GetContentModel().GetLatestContentIDByIDList(ctx, dbo.MustGetDB(ctx), []string{schedule.LessonPlanID})
+			if err != nil {
+				log.Error(ctx, "GetContentModel().GetLatestContentIDByIDList error",
+					log.Err(err),
+					log.Any("op", op),
+					log.String("scheduleID", schedule.LessonPlanID))
+				return "", err
+			}
+			if len(latestLessonPlanID) == 0 {
+				log.Error(ctx, "latest content id not found",
+					log.Err(err),
+					log.Any("op", op),
+					log.String("scheduleID", schedule.LessonPlanID))
+				return "", fmt.Errorf("latest content id not found")
+			}
+
+			lessonPlanName, err := GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), latestLessonPlanID[0])
+			if err != nil {
+				log.Error(ctx, " GetContentModel().GetContentNameByID error",
+					log.Err(err),
+					log.Any("op", op),
+					log.String("scheduleID", latestLessonPlanID[0]))
+				return "", err
+			}
+
+			scheduleLiveMaterials := entity.ScheduleLiveMaterial{
+				LessonPlanID:    schedule.LessonPlanID,
+				LessonPlanName:  lessonPlanName.Name,
+				LessonMaterials: liveTokenInfo.Materials,
+			}
+			err = GetScheduleModel().UpdateLiveMaterials(ctx, op, scheduleID, scheduleLiveMaterials)
+			if err != nil {
+				log.Error(ctx, "GetScheduleModel().UpdateLiveMaterials error",
+					log.Err(err),
+					log.Any("op", op),
+					log.String("scheduleID", scheduleID),
+					log.Any("scheduleLiveMaterials", scheduleLiveMaterials))
+				return "", err
+			}
 		}
 	}
 

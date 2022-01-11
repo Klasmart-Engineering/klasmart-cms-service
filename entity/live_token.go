@@ -59,7 +59,7 @@ type LiveTokenInfo struct {
 }
 
 type LiveMaterial struct {
-	ID          string       `json:"-"`
+	ID          string       `json:"id"`
 	ContentData interface{}  `json:"-"`
 	Name        string       `json:"name"`
 	URL         string       `json:"url,omitempty"`

@@ -93,3 +93,23 @@ func TestGetPrograms(t *testing.T) {
 		t.Log(v)
 	}
 }
+
+func TestUpdateLiveMaterials(t *testing.T) {
+	ctx := context.TODO()
+	liveMaterials := entity.ScheduleLiveMaterial{
+		LessonPlanID:   "lesson_plan_id",
+		LessonPlanName: "lesson_plan_name",
+		LessonMaterials: []*entity.LiveMaterial{
+			{
+				ID:       "lesson_material_id",
+				Name:     "lesson_material_name",
+				URL:      "lesson_material_url",
+				TypeName: entity.MaterialTypeImage,
+			},
+		},
+	}
+	err := GetScheduleDA().UpdateLiveMaterials(ctx, dbo.MustGetDB(ctx), "6099c496e05f6e940027387c", liveMaterials)
+	if err != nil {
+		t.Fatal(err)
+	}
+}

@@ -26,6 +26,7 @@ type IScheduleDA interface {
 	GetProgramIDs(ctx context.Context, tx *dbo.DBContext, orgID string, relationIDs []string) ([]string, error)
 	GetClassTypes(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
 	GetTeachLoadByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]*ScheduleTeachLoadDBResult, error)
+	UpdateLiveMaterials(ctx context.Context, tx *dbo.DBContext, scheduleID string, liveMaterials entity.ScheduleLiveMaterial) error
 }
 
 type scheduleDA struct {
@@ -295,6 +296,23 @@ func (s *scheduleDA) GetTeachLoadByCondition(ctx context.Context, tx *dbo.DBCont
 
 	log.Debug(ctx, "result", log.Any("result", result))
 	return result, nil
+}
+
+func (s *scheduleDA) UpdateLiveMaterials(ctx context.Context, tx *dbo.DBContext, scheduleID string, liveMaterials entity.ScheduleLiveMaterial) error {
+	tx.ResetCondition()
+
+	err := tx.Table(constant.TableNameSchedule).
+		Where("id = ?", scheduleID).
+		Update("live_materials", liveMaterials).Error
+	if err != nil {
+		log.Error(ctx, "UpdateLiveMaterials error",
+			log.Err(err),
+			log.String("scheduleID", scheduleID),
+			log.Any("liveMaterials", liveMaterials))
+		return err
+	}
+
+	return nil
 }
 
 var (

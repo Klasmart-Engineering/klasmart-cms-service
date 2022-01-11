@@ -3,7 +3,10 @@ package entity
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -283,13 +286,14 @@ type Schedule struct {
 	ID    string `gorm:"column:id;PRIMARY_KEY" json:"id"`
 	Title string `gorm:"column:title;type:varchar(100)" json:"title"`
 	// disabled
-	ClassID      string         `gorm:"column:class_id;type:varchar(100)" json:"class_id"`
-	LessonPlanID string         `gorm:"column:lesson_plan_id;type:varchar(100)" json:"lesson_plan_id"`
-	OrgID        string         `gorm:"column:org_id;type:varchar(100)" json:"org_id"`
-	StartAt      int64          `gorm:"column:start_at;type:bigint" json:"start_at"`
-	EndAt        int64          `gorm:"column:end_at;type:bigint" json:"end_at"`
-	Status       ScheduleStatus `gorm:"column:status;type:varchar(100)" json:"status"`
-	IsAllDay     bool           `gorm:"column:is_all_day;default:false" json:"is_all_day"`
+	ClassID       string               `gorm:"column:class_id;type:varchar(100)" json:"class_id"`
+	LessonPlanID  string               `gorm:"column:lesson_plan_id;type:varchar(100)" json:"lesson_plan_id"`
+	LiveMaterials ScheduleLiveMaterial `gorm:"column:live_materials;type:json" json:"live_materials"`
+	OrgID         string               `gorm:"column:org_id;type:varchar(100)" json:"org_id"`
+	StartAt       int64                `gorm:"column:start_at;type:bigint" json:"start_at"`
+	EndAt         int64                `gorm:"column:end_at;type:bigint" json:"end_at"`
+	Status        ScheduleStatus       `gorm:"column:status;type:varchar(100)" json:"status"`
+	IsAllDay      bool                 `gorm:"column:is_all_day;default:false" json:"is_all_day"`
 	// disabled
 	SubjectID       string            `gorm:"column:subject_id;type:varchar(100)" json:"subject_id"`
 	ProgramID       string            `gorm:"column:program_id;type:varchar(100)" json:"program_id"`
@@ -310,12 +314,48 @@ type Schedule struct {
 	DeleteAt        int64             `gorm:"column:delete_at;type:bigint" json:"delete_at"`
 }
 
+// Check if anyone has attempted live
+func (s *Schedule) AnyoneAttemptedLive() bool {
+	return s.LessonPlanID != "" && s.LiveMaterials.LessonPlanID != ""
+}
+
 func (s *Schedule) ToScheduleSimplified() *ScheduleSimplified {
-	return &ScheduleSimplified{
+	scheduleSimplified := &ScheduleSimplified{
 		ID:           s.ID,
 		LessonPlanID: s.LessonPlanID,
 		OrgID:        s.OrgID,
 	}
+
+	if s.AnyoneAttemptedLive() {
+		scheduleSimplified.LessonPlanID = s.LiveMaterials.LessonPlanID
+	}
+
+	return scheduleSimplified
+}
+
+type ScheduleLiveMaterial struct {
+	LessonPlanID    string          `json:"lesson_plan_id"`
+	LessonPlanName  string          `json:"lesson_plan_name"`
+	LessonMaterials []*LiveMaterial `json:"materials"`
+}
+
+// Scan scan value into Jsonb, implements sql.Scanner interface
+func (s *ScheduleLiveMaterial) Scan(value interface{}) error {
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New(fmt.Sprint("Failed to unmarshal JSONB value:", value))
+	}
+
+	result := ScheduleLiveMaterial{}
+	err := json.Unmarshal(bytes, &result)
+	*s = ScheduleLiveMaterial(result)
+	return err
+}
+
+// Value return json value, implement driver.Valuer interface
+func (s ScheduleLiveMaterial) Value() (driver.Value, error) {
+	b, err := json.Marshal(s)
+	return string(b), err
 }
 
 type ScheduleStatus string
