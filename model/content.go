@@ -522,7 +522,7 @@ func (cm *ContentModel) convertAuthedOrgIDToParentsPath(ctx context.Context, tx 
 		return err
 	}
 	condition.ParentsPath.Strings = parents
-	condition.ParentsPath.Valid = len(parents) > 0
+	condition.ParentsPath.Valid = true
 	return nil
 }
 
