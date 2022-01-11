@@ -278,9 +278,9 @@ func TestPrint(t *testing.T) {
 
 func TestQueryAuthContent(t *testing.T) {
 	setupMilestone()
-	op := initOperator("a44da070-1907-46c4-bc4c-f26ced889439", "14494c07-0d4f-5141-9db2-15799993f448", "", "")
+	op := initOperator("a44da070-1907-46c4-bc4c-f26ced889439", "8842b2ec-b903-46c6-b062-05920a3b7f79", "student112301@yopmail.com", "Bada1234")
 	url := "/v1/contents_authed?submenu=more+featured&program_group=More+Featured+Content&order_by=-update_at&page=1&page_size=20&org_id=a44da070-1907-46c4-bc4c-f26ced889439"
-	op.OrgID = "a44da070-1907-46c4-bc4c-f26ced889439"
+	op.OrgID = "73e33241-ecf2-40a6-a642-39b0e60fe820"
 	res := DoHttpWithOperator(http.MethodGet, op, url, "")
 	fmt.Println(res)
 }
