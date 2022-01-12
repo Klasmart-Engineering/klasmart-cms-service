@@ -417,12 +417,13 @@ type ContentConditionRequest struct {
 
 	PublishedQueryMode PublishedQueryMode `json:"published_query_mode"`
 	GroupNames         []string           `json:"group_names"`
-	ProgramIDs         []string           `json:"program_id"`
-	SubjectIDs         []string           `json:"subject_id"`
-	CategoryIDs        []string           `json:"category_id"`
-	SubCategoryIDs     []string           `json:"sub_category_id"`
-	AgeIDs             []string           `json:"age_id"`
-	GradeIDs           []string           `json:"grade_id"`
+	ProgramIDs         []string           `json:"program_ids"`
+	SubjectIDs         []string           `json:"subject_ids"`
+	CategoryIDs        []string           `json:"category_ids"`
+	SubCategoryIDs     []string           `json:"sub_category_ids"`
+	AgeIDs             []string           `json:"age_ids"`
+	GradeIDs           []string           `json:"grade_ids"`
+	LessonPlanName     string             `json:"lesson_plan_name"`
 }
 type OrganizationOrSchool struct {
 	ID    string

@@ -21,15 +21,9 @@ import (
 // @Accept json
 // @Produce json
 // @Tags content
-// @Param group_name query string true "group_name=Organization Content&group_name=Badanamu Content&group_name=More Featured Content"
-// @Param program_id query int false "program_id=XXXX&program_id=YYYY"
-// @Param subject_id query int false "subject_id=XXXX&subject_id=YYYY"
-// @Param category_id query int false "category_id=XXXX&category_id=YYYY"
-// @Param sub_category_id query int false "sub_category_id=XXXX&sub_category_id=YYYY"
-// @Param age_id query int false "age_id=XXXX&age_id=YYYY"
-// @Param grade_id query int false "grade_id=XXXX&grade_id=YYYY"
 // @Param page_size query int false "page"
 // @Param page query int false "page size"
+// @Param request body entity.ContentConditionRequest true "request args"
 // @Success 200 {object} entity.GetLessonPlansCanScheduleResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /contents_lesson_plans [get]
