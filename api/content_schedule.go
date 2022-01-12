@@ -21,7 +21,13 @@ import (
 // @Accept json
 // @Produce json
 // @Tags content
-// @Param group_name query string true "group_name=one of [Organization Content,Badanamu Content,More Featured Content]"
+// @Param group_name query string true "group_name=Organization Content&group_name=Badanamu Content&group_name=More Featured Content"
+// @Param program_id query int false "program_id=XXXX&program_id=YYYY"
+// @Param subject_id query int false "subject_id=XXXX&subject_id=YYYY"
+// @Param category_id query int false "category_id=XXXX&category_id=YYYY"
+// @Param sub_category_id query int false "sub_category_id=XXXX&sub_category_id=YYYY"
+// @Param age_id query int false "age_id=XXXX&age_id=YYYY"
+// @Param grade_id query int false "grade_id=XXXX&grade_id=YYYY"
 // @Param page_size query int false "page"
 // @Param page query int false "page size"
 // @Success 200 {object} entity.GetLessonPlansCanScheduleResponse
@@ -75,6 +81,12 @@ func (s *Server) getLessonPlansCanSchedule(c *gin.Context) {
 	if err != nil {
 		return
 	}
+	condition.ProgramIDs = c.QueryArray("program_id")
+	condition.SubjectIDs = c.QueryArray("subject_id")
+	condition.CategoryIDs = c.QueryArray("category_id")
+	condition.SubCategoryIDs = c.QueryArray("sub_category_id")
+	condition.AgeIDs = c.QueryArray("age_id")
+	condition.GradeIDs = c.QueryArray("grade_id")
 	r, err := model.GetContentModel().GetLessonPlansCanSchedule(ctx, op, condition)
 	if err != nil {
 		return
