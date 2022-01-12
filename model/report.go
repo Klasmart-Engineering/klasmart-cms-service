@@ -38,6 +38,7 @@ type IReportModel interface {
 	GetStudentProgressLearnOutcomeAchievement(ctx context.Context, op *entity.Operator, req *entity.LearnOutcomeAchievementRequest) (res *entity.LearnOutcomeAchievementResponse, err error)
 	ClassAttendanceStatistics(ctx context.Context, op *entity.Operator, request *entity.ClassAttendanceRequest) (response *entity.ClassAttendanceResponse, err error)
 	GetTeacherIDsCanViewReports(ctx context.Context, operator *entity.Operator) (teacherIDs []string, err error)
+	GetLearnerUsageOverview(ctx context.Context, op *entity.Operator, request *entity.LearnerUsageRequest) (response *entity.LearnerUsageResponse, err error)
 }
 
 var (
@@ -53,6 +54,10 @@ func GetReportModel() IReportModel {
 }
 
 type reportModel struct{}
+
+func (m *reportModel) GetLearnerUsageOverview(ctx context.Context, op *entity.Operator, request *entity.LearnerUsageRequest) (response *entity.LearnerUsageResponse, err error) {
+	panic("implement me")
+}
 
 // region assessment
 
