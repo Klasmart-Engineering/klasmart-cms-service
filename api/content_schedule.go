@@ -21,7 +21,7 @@ import (
 // @Accept json
 // @Produce json
 // @Tags content
-// @Param group_name query da.LessonPlanGroupName true "group_name=Organization%20Content,Badanamu%20Content,%20More Featured Content"
+// @Param group_name query string true "group_name=one of [Organization Content,Badanamu Content,More Featured Content]"
 // @Param page_size query int false "page"
 // @Param page query int false "page size"
 // @Success 200 {object} entity.GetLessonPlansCanScheduleResponse
