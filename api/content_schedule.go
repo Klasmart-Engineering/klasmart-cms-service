@@ -26,7 +26,7 @@ import (
 // @Param request body entity.ContentConditionRequest true "request args"
 // @Success 200 {object} entity.GetLessonPlansCanScheduleResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /contents_lesson_plans [get]
+// @Router /contents_lesson_plans [post]
 func (s *Server) getLessonPlansCanSchedule(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
