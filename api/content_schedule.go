@@ -21,7 +21,13 @@ import (
 // @Accept json
 // @Produce json
 // @Tags content
-// @Param group_name query string true "group_name=one of [Organization Content,Badanamu Content,More Featured Content]"
+// @Param group_name query string true "group_name=Organization Content&group_name=Badanamu Content&group_name=More Featured Content"
+// @Param program_id query int false "program_id"
+// @Param subject_id query int false "subject_id"
+// @Param category_id query int false "category_id"
+// @Param sub_category_id query int false "sub_category_id"
+// @Param age_id query int false "age_id"
+// @Param grade_id query int false "grade_id"
 // @Param page_size query int false "page"
 // @Param page query int false "page size"
 // @Success 200 {object} entity.GetLessonPlansCanScheduleResponse
@@ -75,6 +81,12 @@ func (s *Server) getLessonPlansCanSchedule(c *gin.Context) {
 	if err != nil {
 		return
 	}
+	condition.ProgramID = c.Query("program_id")
+	condition.SubjectID = c.Query("subject_id")
+	condition.CategoryID = c.Query("category_id")
+	condition.SubCategoryID = c.Query("sub_category_id")
+	condition.AgeID = c.Query("age_id")
+	condition.GradeID = c.Query("grade_id")
 	r, err := model.GetContentModel().GetLessonPlansCanSchedule(ctx, op, condition)
 	if err != nil {
 		return

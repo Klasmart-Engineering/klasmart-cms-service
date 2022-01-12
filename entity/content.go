@@ -417,6 +417,12 @@ type ContentConditionRequest struct {
 
 	PublishedQueryMode PublishedQueryMode `json:"published_query_mode"`
 	GroupNames         []string           `json:"group_names"`
+	ProgramID          string             `json:"program_id"`
+	SubjectID          string             `json:"subject_id"`
+	CategoryID         string             `json:"category_id"`
+	SubCategoryID      string             `json:"sub_category_id"`
+	AgeID              string             `json:"age_id"`
+	GradeID            string             `json:"grade_id"`
 }
 type OrganizationOrSchool struct {
 	ID    string
