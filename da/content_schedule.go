@@ -83,7 +83,7 @@ from  ({{.sbContents}})  cc
 left join cms_content_properties ccp on ccp.content_id =cc.id
 {{.sbBadaContentWhere}}
 order by cc.create_at 
-`)
+`).Replace(ctx, "sbContents", sbContents)
 		var programIDs []string
 		for _, pg := range programGroups {
 			programIDs = append(programIDs, pg.ProgramID)
@@ -137,7 +137,8 @@ union all
 	sql := fmt.Sprintf(`select 
 	t.id,
 	t.name,
-	t.group_name
+	t.group_name,
+	t.create_at
 from (
 	%s
 )t
