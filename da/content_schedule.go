@@ -17,33 +17,85 @@ import (
 )
 
 func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error) {
+	sqlContents := strings.Builder{}
+	sqlContents.WriteString(`select
+	distinct cc.*
+from cms_contents cc
+`)
+	var argContents []interface{}
+	innerJoinCPP := func(typ entity.ContentPropertyType, IDs []string) {
+		if len(IDs) == 0 {
+			return
+		}
+		sqlContents.WriteString(fmt.Sprintf("inner join cms_content_properties ccp_%v on ccp_%v.content_id =cc.id  and  ccp_%v.property_type =? and ccp_program.property_id in (?) ", typ, typ, typ))
+		argContents = append(argContents, typ, cond.ProgramIDs)
+	}
+	innerJoinCPP(entity.ContentPropertyTypeProgram, cond.ProgramIDs)
+	innerJoinCPP(entity.ContentPropertyTypeSubject, cond.SubjectIDs)
+	innerJoinCPP(entity.ContentPropertyTypeCategory, cond.CategoryIDs)
+	innerJoinCPP(entity.ContentPropertyTypeSubCategory, cond.SubCategoryIDs)
+	innerJoinCPP(entity.ContentPropertyTypeAge, cond.AgeIDs)
+	innerJoinCPP(entity.ContentPropertyTypeGrade, cond.GradeIDs)
+
+	if cond.LessonPlanName != "" {
+		sqlContents.WriteString("where cc.content_name like ?")
+		argContents = append(argContents, "%"+cond.LessonPlanName+"%")
+	}
+	sbContents := NewSqlBuilder(ctx, sqlContents.String(), argContents...)
+
 	var sqlArr []string
-	var args []interface{}
+	var sbOrgContent *sqlBuilder
 	if utils.ContainsString(cond.GroupNames, entity.LessonPlanGroupNameOrganizationContent.String()) {
-		wheres, args1 := condOrgContent.GetConditions()
-		sql := fmt.Sprintf(`select 
+		sql := strings.Builder{}
+		sql.WriteString(fmt.Sprintf(`select 
 id, 
 content_name as name,
 '%s' as group_name,
 create_at
-from cms_contents`, entity.LessonPlanGroupNameOrganizationContent)
-		if len(wheres) > 0 {
-			sql = fmt.Sprintf(`
-%s where %s
-`, sql, strings.Join(wheres, " and "))
+from ({{.sbContents}}) cc
+`, entity.LessonPlanGroupNameOrganizationContent))
+
+		sqlArr = append(sqlArr, "{{.sbOrgContent}}")
+		wheres, args1 := condOrgContent.GetConditions()
+		if len(wheres) == 0 {
+			sbOrgContent = NewSqlBuilder(ctx, sql.String()).Replace(ctx, "sbContents", sbContents)
+		} else {
+			sql.WriteString("{{.sbOrgContentWhere}}")
+			sbOrgContent = NewSqlBuilder(ctx, sql.String()).Replace(ctx, "sbContents", sbContents)
+			sbOrgContentWhere := NewSqlBuilder(ctx, "where "+strings.Join(wheres, " and "), args1...)
+			sbOrgContent = sbOrgContent.Replace(ctx, "sbOrgContentWhere", sbOrgContentWhere)
 		}
-		sqlArr = append(sqlArr, sql)
-		args = append(args, args1...)
 	}
 
+	var sbBadaContent *sqlBuilder
 	needBadaContent := utils.ContainsString(cond.GroupNames, entity.LessonPlanGroupNameBadanamuContent.String())
 	needMoreFeatured := utils.ContainsString(cond.GroupNames, entity.LessonPlanGroupNameMoreFeaturedContent.String())
 	if needBadaContent || needMoreFeatured {
+		sqlArr = append(sqlArr, "{{.sbBadaContent}}")
 		paths, err1 := GetFolderDA().GetSharedContentParentPath(ctx, dbo.MustGetDB(ctx), []string{op.OrgID, constant.ShareToAll})
 		if err1 != nil {
 			err = err1
 			return
 		}
+		sbBadaContent = NewSqlBuilder(ctx, `
+{{.sbBadaContentSelect}}
+from  ({{.sbContents}})  cc 
+left join cms_content_properties ccp on ccp.content_id =cc.id
+{{.sbBadaContentWhere}}
+order by cc.create_at 
+`)
+		var programIDs []string
+		for _, pg := range programGroups {
+			programIDs = append(programIDs, pg.ProgramID)
+		}
+		sbBadaContentSelect := NewSqlBuilder(ctx, `
+select 
+	cc.id,
+	cc.content_name as name,
+	if(ccp.property_id in (?),?,?) as group_name,
+	cc.create_at
+`, programIDs, entity.LessonPlanGroupNameBadanamuContent, entity.LessonPlanGroupNameMoreFeaturedContent)
+		sbBadaContent = sbBadaContent.Replace(ctx, "sbBadaContentSelect", sbBadaContentSelect)
 
 		var condition string
 		if len(paths) <= 0 {
@@ -55,48 +107,32 @@ from cms_contents`, entity.LessonPlanGroupNameOrganizationContent)
 			}
 			condition = fmt.Sprintf("(%s)", strings.Join(condArr, " or "))
 		}
-
+		var args []interface{}
+		args = append(args, entity.ContentTypePlan)
+		args = append(args, entity.ContentStatusPublished)
+		args = append(args, entity.ContentPropertyTypeProgram)
 		var whereGroupName string
 		if needBadaContent && !needMoreFeatured {
 			whereGroupName = "and ccp.property_id  in (?)"
+			args = append(args, programIDs)
 		}
 		if !needBadaContent && needMoreFeatured {
 			whereGroupName = "and ccp.property_id not in (?)"
+			args = append(args, programIDs)
 		}
-
-		sql := fmt.Sprintf(`
-select 
-	cc.id,
-	cc.content_name as name,
-	if(ccp.property_id in (?),?,?) as group_name,
-	cc.create_at
-from cms_contents cc 
-left join cms_content_properties ccp on ccp.content_id =cc.id
+		sbBadaContentWhere := NewSqlBuilder(ctx, fmt.Sprintf(`
 where 
 	cc.content_type=? 
 	and cc.publish_status in (?)
 	and ccp.property_type =? 
 	and %s 
 	%s
-order by cc.create_at 
-`, condition, whereGroupName)
-		var pgIDs []string
-		for _, pg := range programGroups {
-			pgIDs = append(pgIDs, pg.ProgramID)
-		}
-		sqlArr = append(sqlArr, sql)
-		args = append(args, entity.ContentTypePlan,
-			entity.ContentStatusPublished,
-			entity.ContentPropertyTypeProgram,
-			pgIDs,
-			entity.LessonPlanGroupNameBadanamuContent,
-			entity.LessonPlanGroupNameMoreFeaturedContent)
+`, condition, whereGroupName), args...)
+		sbBadaContent = sbBadaContent.Replace(ctx, "sbBadaContentWhere", sbBadaContentWhere)
 	}
 
 	subSql := strings.Join(sqlArr, `
-
 union all
-
 `)
 	sql := fmt.Sprintf(`select 
 	t.id,
@@ -106,6 +142,14 @@ from (
 	%s
 )t
 `, subSql)
+	sb := NewSqlBuilder(ctx, sql).
+		Replace(ctx, "sbContents", sbContents).
+		Replace(ctx, "sbOrgContent", sbOrgContent).
+		Replace(ctx, "sbBadaContent", sbBadaContent)
+	sql, args, err := sb.Build(ctx)
+	if err != nil {
+		return
+	}
 	lps = []*entity.LessonPlanForSchedule{}
 	total, err = cd.PageRawSQL(ctx, &lps, cond.OrderBy, sql, dbo.Pager{
 		Page:     int(cond.Pager.PageIndex),
