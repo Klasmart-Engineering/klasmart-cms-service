@@ -102,7 +102,7 @@ select
 		} else {
 			condArr := make([]string, len(paths))
 			for i, v := range paths {
-				condArr[i] = "cc.dir_path like " + "'" + v + "%" + "'"
+				condArr[i] = "cc2.dir_path like " + "'" + v + "%" + "'"
 			}
 			condition = fmt.Sprintf("(%s)", strings.Join(condArr, " or "))
 		}
