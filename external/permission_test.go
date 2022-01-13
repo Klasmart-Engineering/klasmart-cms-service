@@ -35,21 +35,3 @@ func TestHasAnySchoolPermission(t *testing.T) {
 	}
 	fmt.Println(has)
 }
-
-func TestAmsPermissionService_HasPermissionsAttachedMe(t *testing.T) {
-	config.Set(&config.Config{
-		AMS: config.AMSConfig{
-			//EndPoint: os.Getenv("ams_endpoint"),
-			EndPoint: "https://api.alpha.kidsloop.net/user/",
-		},
-	})
-	has, err := GetPermissionServiceProvider().HasPermissionsAttachedMe(context.TODO(), &entity.Operator{
-		UserID: "afdfc0d9-ada9-4e66-b225-20f956d1a399",
-		OrgID:  "60c064cc-bbd8-4724-b3f6-b886dce4774f",
-		Token:  token,
-	}, []PermissionName{ReportOrganizationalStudentUsage, ReportSchoolStudentUsage, ReportTeacherStudentUsage})
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Println(has)
-}
