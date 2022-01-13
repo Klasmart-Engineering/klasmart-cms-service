@@ -163,13 +163,13 @@ func (s AmsClassService) QueryByIDs(ctx context.Context, ids []string, options .
 		if class == nil {
 			classes = append(classes, &NullableClass{
 				Valid: false,
-				StrID: ids[indexMapping[index]],
+				StrID: ids[index],
 			})
 		} else {
 			classes = append(classes, &NullableClass{
 				Class: *class,
 				Valid: true,
-				StrID: ids[indexMapping[index]],
+				StrID: ids[index],
 			})
 		}
 	}

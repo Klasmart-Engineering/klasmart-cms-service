@@ -108,13 +108,13 @@ func (s AmsOrganizationService) QueryByIDs(ctx context.Context, ids []string, op
 	for index := range ids {
 		if payload[indexMapping[index]] == nil {
 			nullableOrganizations[index] = &NullableOrganization{
-				StrID: ids[indexMapping[index]],
+				StrID: ids[index],
 				Valid: false,
 			}
 		} else {
 			nullableOrganizations[index] = &NullableOrganization{
 				Organization: *payload[indexMapping[index]],
-				StrID:        ids[indexMapping[index]],
+				StrID:        ids[index],
 				Valid:        true,
 			}
 		}
