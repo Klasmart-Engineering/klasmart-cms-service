@@ -121,8 +121,8 @@ select
 		}
 		sbBadaContentWhere := NewSqlBuilder(ctx, fmt.Sprintf(`
 where 
-	cc.content_type=? 
-	and cc.publish_status in (?)
+	cc2.content_type=? 
+	and cc2.publish_status in (?)
 	and ccp.property_type =? 
 	and %s 
 	%s
