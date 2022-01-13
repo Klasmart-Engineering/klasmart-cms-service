@@ -1,13 +1,12 @@
 package external
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
 	"sync"
 	"text/template"
-
-	"go.uber.org/zap/buffer"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -217,8 +216,7 @@ query($user_id: ID!, $permission: ID!) {
 		log.Error(ctx, "temp error", log.String("raw", raw), log.Err(err))
 		return false, err
 	}
-	buf := buffer.Buffer{}
-
+	buf := bytes.Buffer{}
 	err = temp.Execute(&buf, utils.SliceDeduplication(orgIDs))
 	if err != nil {
 		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
@@ -283,7 +281,7 @@ query($user_id: ID!, $permission: ID!) {
 		log.Error(ctx, "temp error", log.String("raw", raw), log.Err(err))
 		return false, err
 	}
-	buf := buffer.Buffer{}
+	buf := bytes.Buffer{}
 
 	err = temp.Execute(&buf, utils.SliceDeduplication(schoolIDs))
 	if err != nil {

@@ -153,6 +153,9 @@ const (
 	ReportStudentProgressReportSchool       PermissionName = "report_student_progress_school_659"
 	ReportStudentProgressReportTeacher      PermissionName = "report_student_progress_teacher_660"
 	ReportStudentProgressReportStudent      PermissionName = "report_student_progress_student_661"
+	ReportOrganizationalStudentUsage        PermissionName = "report_organizational_student_usage_654"
+	ReportSchoolStudentUsage                PermissionName = "report_school_student_usage_655"
+	ReportTeacherStudentUsage               PermissionName = "report_teacher_student_usage_656"
 
 	ViewProgram20111  PermissionName = "view_program_20111"
 	ViewSubjects20115 PermissionName = "view_subjects_20115"

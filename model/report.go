@@ -38,7 +38,7 @@ type IReportModel interface {
 	GetStudentProgressLearnOutcomeAchievement(ctx context.Context, op *entity.Operator, req *entity.LearnOutcomeAchievementRequest) (res *entity.LearnOutcomeAchievementResponse, err error)
 	ClassAttendanceStatistics(ctx context.Context, op *entity.Operator, request *entity.ClassAttendanceRequest) (response *entity.ClassAttendanceResponse, err error)
 	GetTeacherIDsCanViewReports(ctx context.Context, operator *entity.Operator) (teacherIDs []string, err error)
-	GetLearnerUsageOverview(ctx context.Context, op *entity.Operator, request *entity.LearnerUsageRequest) (response *entity.LearnerUsageResponse, err error)
+	GetLearnerUsageOverview(ctx context.Context, op *entity.Operator, permissions map[external.PermissionName]bool, request *entity.LearnerUsageRequest) (response *entity.LearnerUsageResponse, err error)
 }
 
 var (
@@ -55,8 +55,54 @@ func GetReportModel() IReportModel {
 
 type reportModel struct{}
 
-func (m *reportModel) GetLearnerUsageOverview(ctx context.Context, op *entity.Operator, request *entity.LearnerUsageRequest) (response *entity.LearnerUsageResponse, err error) {
-	panic("implement me")
+func (m *reportModel) GetLearnerUsageOverview(ctx context.Context, op *entity.Operator, permissions map[external.PermissionName]bool, request *entity.LearnerUsageRequest) (response *entity.LearnerUsageResponse, err error) {
+	classes, err := external.GetClassServiceProvider().GetRelatedClassIDWithMeAccordPermission(ctx, op, permissions)
+	if err != nil {
+		log.Error(ctx, "GetLearnerUsageOverview: fetch class ids failed",
+			log.Any("op", op),
+			log.Any("request", request),
+			log.Any("permissions", permissions),
+			log.Err(err))
+		return nil, err
+	}
+	response = new(entity.LearnerUsageResponse)
+	if len(classes) == 0 {
+		log.Info(ctx, "GetLearnerUsageOverview: classes is empty")
+		response.ContentsUsed = 0
+		response.ClassScheduled = 0
+		response.AssignmentScheduled = 0
+		return
+	}
+	contentsUsage, err := GetReportModel().GetStudentUsageMaterial(ctx, op, &entity.StudentUsageMaterialReportRequest{
+		TimeRangeList:   request.Durations,
+		ClassIDList:     classes,
+		ContentTypeList: request.ContentTypeList,
+	})
+	if err != nil {
+		log.Error(ctx, "GetLearnerUsageOverview: GetStudentUsageMaterial failed",
+			log.Any("op", op),
+			log.Strings("classes", classes),
+			log.Any("request", request),
+			log.Err(err))
+		return nil, err
+	}
+	classesAssignmentOverView, err := GetClassesAssignmentsModel().GetOverview(ctx, op, &entity.ClassesAssignmentOverViewRequest{
+		ClassIDs:  classes,
+		Durations: request.Durations,
+	})
+	if err != nil {
+		log.Error(ctx, "GetLearnerUsageOverview: GetOverview failed",
+			log.Any("op", op),
+			log.Strings("classes", classes),
+			log.Any("request", request),
+			log.Err(err))
+		return nil, err
+	}
+
+	response.ContentsUsed = contentsUsage.ClassUsageList.TotalCount()
+	response.ClassScheduled = classesAssignmentOverView[0].Count
+	response.AssignmentScheduled = classesAssignmentOverView[1].Count + classesAssignmentOverView[2].Count
+	return
 }
 
 // region assessment
