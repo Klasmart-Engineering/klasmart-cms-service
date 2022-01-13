@@ -170,17 +170,14 @@ func (cd *DBContentDA) PageRawSQL(ctx context.Context, values interface{}, order
 		log.Any("args", args),
 	)
 	sqlCount := fmt.Sprintf(`select count(*) as count from (%s)t`, sql)
-	db := dbo.MustGetDB(ctx).Raw(sqlCount, args...)
-	if db.Error != nil {
-		err = db.Error
-		log.Error(ctx, "PageRawSQL:QueryCount failed",
-			log.Any("sqlCount", sqlCount),
-			log.Any("args", args),
-			log.Err(err),
-		)
+	countRes := &struct {
+		Count int `json:"count" gorm:"column:count" `
+	}{}
+	err = cd.s.QueryRawSQL(ctx, countRes, sqlCount, args...)
+	if err != nil {
 		return
 	}
-	count = int(db.RowsAffected)
+	count = countRes.Count
 
 	offset, limit := pager.Offset()
 	sqlQuery := fmt.Sprintf(`
