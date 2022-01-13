@@ -1,6 +1,7 @@
 package external
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
@@ -22,7 +23,6 @@ type PermissionServiceProvider interface {
 	HasAnyOrganizationPermission(ctx context.Context, operator *entity.Operator, orgIDs []string, permissionName PermissionName) (bool, error)
 	HasAnySchoolPermission(ctx context.Context, operator *entity.Operator, schoolIDs []string, permissionName PermissionName) (bool, error)
 	HasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissions []PermissionName) (map[PermissionName]bool, error)
-	HasPermissionsAttachedMe(ctx context.Context, operator *entity.Operator, permissions []PermissionName)(map[PermissionName]bool, error)
 }
 
 var (
@@ -218,8 +218,7 @@ query($user_id: ID!, $permission: ID!) {
 		log.Error(ctx, "temp error", log.String("raw", raw), log.Err(err))
 		return false, err
 	}
-	buf := buffer.Buffer{}
-
+	buf := bytes.Buffer{}
 	err = temp.Execute(&buf, utils.SliceDeduplication(orgIDs))
 	if err != nil {
 		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
@@ -327,60 +326,4 @@ query($user_id: ID!, $permission: ID!) {
 		}
 	}
 	return false, nil
-}
-func (s AmsPermissionService) HasPermissionsAttachedMe(ctx context.Context, operator *entity.Operator, permissionNames []PermissionName)(map[PermissionName]bool, error) {
-	if len(permissionNames) == 0 {
-		return map[PermissionName]bool{}, nil
-	}
-
-	pns := make([]string, len(permissionNames))
-	for index, permissionName := range permissionNames {
-		pns[index] = permissionName.String()
-	}
-
-	_permissionNames, indexMapping := utils.SliceDeduplicationMap(pns)
-
-	sb := new(strings.Builder)
-	fmt.Fprintf(sb, "query($organization_id: ID! %s) {me{membership(organization_id: $organization_id) {",
-		utils.StringCountRange(ctx, "$permission_name_", ": ID!", len(_permissionNames)))
-
-	for index := range _permissionNames {
-		fmt.Fprintf(sb, "q%d: checkAllowed(permission_name: $permission_name_%d)\n", index, index)
-	}
-	sb.WriteString("}}}")
-
-	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
-	request.Var("organization_id", operator.OrgID)
-	for index, id := range _permissionNames {
-		request.Var(fmt.Sprintf("permission_name_%d", index), id)
-	}
-
-	data := make(map[PermissionName]bool, len(permissionNames))
-	response := &chlorine.Response{
-		Data: &struct {
-			User struct {
-				Membership map[PermissionName]bool `json:"membership"`
-			} `json:"me"`
-		}{struct {
-			Membership map[PermissionName]bool `json:"membership"`
-		}{Membership: data}},
-	}
-
-	_, err := GetAmsClient().Run(ctx, request, response)
-	if err != nil {
-		log.Error(ctx, "check org permissions success failed", log.Err(err), log.Any("permissionNames", permissionNames))
-		return nil, err
-	}
-
-	permissions := make(map[PermissionName]bool, len(data))
-	for index, permissionName := range permissionNames {
-		permissions[permissionName] = data[PermissionName(fmt.Sprintf("q%d", indexMapping[index]))]
-	}
-
-	log.Info(ctx, "check org permissions success",
-		log.Any("operator", operator),
-		log.Any("permissionNames", permissionNames),
-		log.Any("permissions", permissions))
-
-	return permissions, nil
 }
