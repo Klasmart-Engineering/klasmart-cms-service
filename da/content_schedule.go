@@ -17,16 +17,17 @@ import (
 )
 
 func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error) {
-	sqlContents := `select
-	cc.*
+	sqlContents := strings.Builder{}
+	sqlContents.WriteString(`select
+	distinct cc.*
 from cms_contents cc
-`
+`)
 	var argContents []interface{}
 	innerJoinCPP := func(typ entity.ContentPropertyType, IDs []string) {
 		if len(IDs) == 0 {
 			return
 		}
-		sqlContents += fmt.Sprintf("inner join cms_content_properties ccp_%v on ccp_%v.content_id =cc.id  and  ccp_%v.property_type =? and ccp_program.property_id in (?) ", typ, typ, typ)
+		sqlContents.WriteString(fmt.Sprintf("inner join cms_content_properties ccp_%v on ccp_%v.content_id =cc.id  and  ccp_%v.property_type =? and ccp_program.property_id in (?) ", typ, typ, typ))
 		argContents = append(argContents, typ, cond.ProgramIDs)
 	}
 	innerJoinCPP(entity.ContentPropertyTypeProgram, cond.ProgramIDs)
@@ -37,26 +38,30 @@ from cms_contents cc
 	innerJoinCPP(entity.ContentPropertyTypeGrade, cond.GradeIDs)
 
 	if cond.LessonPlanName != "" {
-		sqlContents += "where cc.content_name like ?"
+		sqlContents.WriteString("where cc.content_name like ?")
 		argContents = append(argContents, "%"+cond.LessonPlanName+"%")
 	}
-	sbContents := NewSqlBuilder(ctx, sqlContents, argContents...)
+	sbContents := NewSqlBuilder(ctx, sqlContents.String(), argContents...)
 
 	var sqlArr []string
 	var sbOrgContent *sqlBuilder
 	if utils.ContainsString(cond.GroupNames, entity.LessonPlanGroupNameOrganizationContent.String()) {
-		sql := fmt.Sprintf(`select 
+		sql := strings.Builder{}
+		sql.WriteString(fmt.Sprintf(`select 
 id, 
 content_name as name,
 '%s' as group_name,
 create_at
 from ({{.sbContents}}) cc
-`, entity.LessonPlanGroupNameOrganizationContent)
-		sbOrgContent = NewSqlBuilder(ctx, sql).Replace(ctx, "sbContents", sbContents)
+`, entity.LessonPlanGroupNameOrganizationContent))
+
 		sqlArr = append(sqlArr, "{{.sbOrgContent}}")
 		wheres, args1 := condOrgContent.GetConditions()
-		if len(wheres) > 0 {
-			sql += "{{.sbOrgContentWhere}}"
+		if len(wheres) == 0 {
+			sbOrgContent = NewSqlBuilder(ctx, sql.String()).Replace(ctx, "sbContents", sbContents)
+		} else {
+			sql.WriteString("{{.sbOrgContentWhere}}")
+			sbOrgContent = NewSqlBuilder(ctx, sql.String()).Replace(ctx, "sbContents", sbContents)
 			sbOrgContentWhere := NewSqlBuilder(ctx, "where "+strings.Join(wheres, " and "), args1...)
 			sbOrgContent = sbOrgContent.Replace(ctx, "sbOrgContentWhere", sbOrgContentWhere)
 		}
