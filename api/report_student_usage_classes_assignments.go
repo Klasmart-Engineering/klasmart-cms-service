@@ -124,7 +124,7 @@ func (s *Server) getClassesAssignmentsUnattended(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/learner_usage/overview [get]
+// @Router /reports/learner_usage/overview [post]
 func (s *Server) getLearnerUsageOverview(c *gin.Context) {
 
 	ctx := c.Request.Context()
