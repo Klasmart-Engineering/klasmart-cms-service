@@ -102,7 +102,7 @@ select
 		} else {
 			condArr := make([]string, len(paths))
 			for i, v := range paths {
-				condArr[i] = "cc.dir_path like " + "'" + v + "%" + "'"
+				condArr[i] = "cc2.dir_path like " + "'" + v + "%" + "'"
 			}
 			condition = fmt.Sprintf("(%s)", strings.Join(condArr, " or "))
 		}
@@ -121,8 +121,8 @@ select
 		}
 		sbBadaContentWhere := NewSqlBuilder(ctx, fmt.Sprintf(`
 where 
-	cc.content_type=? 
-	and cc.publish_status in (?)
+	cc2.content_type=? 
+	and cc2.publish_status in (?)
 	and ccp.property_type =? 
 	and %s 
 	%s
