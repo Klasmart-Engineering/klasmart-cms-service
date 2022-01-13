@@ -65,6 +65,14 @@ func (m *reportModel) GetLearnerUsageOverview(ctx context.Context, op *entity.Op
 			log.Err(err))
 		return nil, err
 	}
+	response = new(entity.LearnerUsageResponse)
+	if len(classes) == 0 {
+		log.Info(ctx, "GetLearnerUsageOverview: classes is empty")
+		response.ContentsUsed = 0
+		response.ClassScheduled = 0
+		response.AssignmentScheduled = 0
+		return
+	}
 	contentsUsage, err := GetReportModel().GetStudentUsageMaterial(ctx, op, &entity.StudentUsageMaterialReportRequest{
 		TimeRangeList:   request.Durations,
 		ClassIDList:     classes,
@@ -91,7 +99,6 @@ func (m *reportModel) GetLearnerUsageOverview(ctx context.Context, op *entity.Op
 		return nil, err
 	}
 
-	response = new(entity.LearnerUsageResponse)
 	response.ContentsUsed = contentsUsage.ClassUsageList.TotalCount()
 	response.ClassScheduled = classesAssignmentOverView[0].Count
 	response.AssignmentScheduled = classesAssignmentOverView[1].Count + classesAssignmentOverView[2].Count
