@@ -106,6 +106,15 @@ type StudentUsageMaterialReportResponse struct {
 }
 type ClassUsageSlice []*ClassUsage
 
+func (cus ClassUsageSlice) TotalCount() (total int64) {
+	for _, cu := range cus {
+		for _, c := range cu.ContentUsageList {
+			total += c.Count
+		}
+	}
+	return
+}
+
 func (cus ClassUsageSlice) Find(id string) (classUsage *ClassUsage, found bool) {
 	for _, cu := range cus {
 		if cu.ID == id {

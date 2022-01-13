@@ -29,6 +29,7 @@ type ClassServiceProvider interface {
 	GetByOrganizationIDs(ctx context.Context, operator *entity.Operator, orgIDs []string, options ...APOption) (map[string][]*Class, error)
 	GetBySchoolIDs(ctx context.Context, operator *entity.Operator, schoolIDs []string, options ...APOption) (map[string][]*Class, error)
 	GetOnlyUnderOrgClasses(ctx context.Context, operator *entity.Operator, orgID string) ([]*NullableClass, error)
+	GetRelatedClassIDWithMeAccordPermission(ctx context.Context, operator *entity.Operator, permissions map[PermissionName]bool) ([]string, error)
 }
 
 type Class struct {
@@ -55,6 +56,84 @@ func GetClassServiceProvider() ClassServiceProvider {
 }
 
 type AmsClassService struct{}
+
+func (s AmsClassService) getOrganizationClasses(ctx context.Context, operator *entity.Operator) ([]string, error) {
+	result, err := s.GetByOrganizationIDs(ctx, operator, []string{operator.OrgID}, WithStatus(Active))
+	if err != nil {
+		log.Error(ctx, "getOrganizationClasses failed",
+			log.Any("op", operator),
+			log.Err(err))
+		return nil, err
+	}
+	classes := result[operator.OrgID]
+	classIDs := make([]string, len(classes))
+	for i, c := range classes {
+		classIDs[i] = c.ID
+	}
+	return classIDs, nil
+}
+
+func (s AmsClassService) getSchoolClasses(ctx context.Context, operator *entity.Operator) ([]string, error) {
+	schools, err := GetSchoolServiceProvider().GetByPermission(ctx, operator, ReportSchoolStudentUsage, WithStatus(Active))
+	if err != nil {
+		log.Error(ctx, "get schools failed",
+			log.Any("op", operator),
+			log.Err(err))
+		return nil, err
+	}
+	if len(schools) == 0 {
+		log.Info(ctx, "school is empty", log.Any("op", operator))
+		return []string{}, nil
+	}
+	schoolIDs := make([]string, len(schools))
+	for i, s := range schools {
+		schoolIDs[i] = s.ID
+	}
+	results, err := s.GetBySchoolIDs(ctx, operator, schoolIDs, WithStatus(Active))
+	if err != nil {
+		log.Error(ctx, "GetBySchoolIDs failed",
+			log.Any("op", operator),
+			log.Strings("schools", schoolIDs),
+			log.Err(err))
+	}
+	classIDs := make([]string, 0)
+	for _, sc := range results {
+		for _, c := range sc {
+			classIDs = append(classIDs, c.ID)
+		}
+	}
+	return classIDs, nil
+}
+
+func (s AmsClassService) getTeachClasses(ctx context.Context, operator *entity.Operator) ([]string, error) {
+	results, err := s.GetByUserID(ctx, operator, operator.UserID, WithStatus(Active))
+	if err != nil {
+		log.Error(ctx, "getTeachClasses failed",
+			log.Any("op", operator),
+			log.Err(err))
+		return nil, err
+	}
+	classIDs := make([]string, len(results))
+	for i, c := range results {
+		classIDs[i] = c.ID
+	}
+	return classIDs, nil
+}
+
+func (s AmsClassService) GetRelatedClassIDWithMeAccordPermission(ctx context.Context, operator *entity.Operator, permissions map[PermissionName]bool) ([]string, error) {
+	if permissions[ReportOrganizationalStudentUsage] {
+		return s.getOrganizationClasses(ctx, operator)
+	}
+
+	if permissions[ReportSchoolStudentUsage] {
+		return s.getSchoolClasses(ctx, operator)
+	}
+
+	if permissions[ReportTeacherStudentUsage] {
+		return s.getTeachClasses(ctx, operator)
+	}
+	return []string{}, nil
+}
 
 func (s AmsClassService) GetOnlyUnderOrgClasses(ctx context.Context, operator *entity.Operator, orgID string) ([]*NullableClass, error) {
 	orgClassMap, err := s.GetByOrganizationIDs(ctx, operator, []string{orgID})

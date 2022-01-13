@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-var token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFjZWJlM2E0LTljNzYtNWIxNC1iZDkwLTFkMWEwZWI1M2U4OSIsInBob25lIjoiKzg2MTg5Mzk4ODMxNzEiLCJleHAiOjE2MTc1MzgyMzksImlzcyI6ImtpZHNsb29wIn0.fCyD-U836T0ZKB7xZxS85YVFpWi2_NDLudqyV-dZb-iYYe3CtOrADqBx-E2xSGPMPeG0YHUfNiwx3ShAKD5HWRHPKtxnHblKnwQRVPq5p-tpRxazpj_SXX6xws2aX7rMxy7DbNFq02UvSFhlOSY3UAMpwudYmLwyqC6YGQg7wSMyO17Hs9mLVhdcd8AbPbVUzyEVSL2gJoUCPIZ1m7NGC2SoKXlcRtfvTcKBsSaQyAe6BhY5fPEeYjSnq8JreIuf17LijKXJEn56poVEKyFpoe5bYVPWMVlSyqvxXRFHcnP25gOndOdYuneTkefBKlDHmtWm69h6ygIu15Coac_TYw"
+var token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0MTk5OTE2MywiaXNzIjoia2lkc2xvb3AifQ.SAoVGuuqP84Y4fr0WNlgED3JEKElmGwrZJDHhtIVPdTtD7lMWV02612k1hfP6Tvl1GcMl_pCMrcy60KiHpCxmp10cVrbf9oOFiezdfFql49gQm15Skng5S4vaWMhZeKaV5lfDfwIIp8dx4kugHrHTL2o5zolFeJFlSJLjV2BnyHM7h_Y5oZdLAyuMaG1c4hv6FsZDGvLenLlbf0M-B8CkGVIuYmfyJ82V_GDCRCGgniP8Nog1XIy4vGYRoiMWzN4eSURePGU9utoXBeBr63Ty397su7HNzgw8_OLU-5_YFOTinifnL9djvlIyfBedxSq97f1NQLvVg7te2ro4vpmAw"
 
 func TestHasAnyOrganizationPermission(t *testing.T) {
 	config.LoadEnvConfig()
@@ -30,6 +30,24 @@ func TestHasAnySchoolPermission(t *testing.T) {
 		OrgID:  "",
 		Token:  token,
 	}, []string{"7e97287c-5e8b-4e78-9a4a-70b237bb5af5", "ae630b2e-59f8-4c35-8d17-57d6b9994f4e"}, "view_my_unpublished_learning_outcome_410")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(has)
+}
+
+func TestAmsPermissionService_HasPermissionsAttachedMe(t *testing.T) {
+	config.Set(&config.Config{
+		AMS: config.AMSConfig{
+			//EndPoint: os.Getenv("ams_endpoint"),
+			EndPoint: "https://api.alpha.kidsloop.net/user/",
+		},
+	})
+	has, err := GetPermissionServiceProvider().HasPermissionsAttachedMe(context.TODO(), &entity.Operator{
+		UserID: "afdfc0d9-ada9-4e66-b225-20f956d1a399",
+		OrgID:  "60c064cc-bbd8-4724-b3f6-b886dce4774f",
+		Token:  token,
+	}, []PermissionName{ReportOrganizationalStudentUsage, ReportSchoolStudentUsage, ReportTeacherStudentUsage})
 	if err != nil {
 		t.Fatal(err)
 	}

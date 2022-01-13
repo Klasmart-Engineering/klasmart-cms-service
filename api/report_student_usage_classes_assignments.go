@@ -1,6 +1,7 @@
 package api
 
 import (
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -138,7 +139,14 @@ func (s *Server) getLearnerUsageOverview(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	result, err := model.GetReportModel().GetLearnerUsageOverview(ctx, op, &request)
+
+	permissions, err := external.GetPermissionServiceProvider().HasPermissionsAttachedMe(ctx, op, []external.PermissionName{
+		external.ReportOrganizationalStudentUsage,
+		external.ReportSchoolStudentUsage,
+		external.ReportTeacherStudentUsage,
+	})
+
+	result, err := model.GetReportModel().GetLearnerUsageOverview(ctx, op, permissions, &request)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)

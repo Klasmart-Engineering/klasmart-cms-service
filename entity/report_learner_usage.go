@@ -6,4 +6,7 @@ type LearnerUsageRequest struct {
 }
 
 type LearnerUsageResponse struct {
+	ContentsUsed        int64 `json:"contents_used"`
+	ClassScheduled      int   `json:"class_scheduled"`
+	AssignmentScheduled int   `json:"assignment_scheduled"`
 }
