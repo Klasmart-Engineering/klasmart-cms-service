@@ -48,11 +48,11 @@ from cms_contents cc
 	if utils.ContainsString(cond.GroupNames, entity.LessonPlanGroupNameOrganizationContent.String()) {
 		sql := strings.Builder{}
 		sql.WriteString(fmt.Sprintf(`select 
-id, 
-content_name as name,
+cc1.id, 
+cc1.content_name as name,
 '%s' as group_name,
-create_at
-from ({{.sbContents}}) cc
+cc1.create_at
+from ({{.sbContents}}) cc1
 `, entity.LessonPlanGroupNameOrganizationContent))
 
 		sqlArr = append(sqlArr, "{{.sbOrgContent}}")
@@ -79,10 +79,9 @@ from ({{.sbContents}}) cc
 		}
 		sbBadaContent = NewSqlBuilder(ctx, `
 {{.sbBadaContentSelect}}
-from  ({{.sbContents}})  cc 
-left join cms_content_properties ccp on ccp.content_id =cc.id
+from  ({{.sbContents}})  cc2 
+left join cms_content_properties ccp on ccp.content_id =cc2.id
 {{.sbBadaContentWhere}}
-order by cc.create_at 
 `).Replace(ctx, "sbContents", sbContents)
 		var programIDs []string
 		for _, pg := range programGroups {
@@ -90,10 +89,10 @@ order by cc.create_at
 		}
 		sbBadaContentSelect := NewSqlBuilder(ctx, `
 select 
-	cc.id,
-	cc.content_name as name,
+	cc2.id,
+	cc2.content_name as name,
 	if(ccp.property_id in (?),?,?) as group_name,
-	cc.create_at
+	cc2.create_at
 `, programIDs, entity.LessonPlanGroupNameBadanamuContent, entity.LessonPlanGroupNameMoreFeaturedContent)
 		sbBadaContent = sbBadaContent.Replace(ctx, "sbBadaContentSelect", sbBadaContentSelect)
 
