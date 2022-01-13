@@ -27,8 +27,8 @@ from cms_contents cc
 		if len(IDs) == 0 {
 			return
 		}
-		sqlContents.WriteString(fmt.Sprintf("inner join cms_content_properties ccp_%v on ccp_%v.content_id =cc.id  and  ccp_%v.property_type =? and ccp_program.property_id in (?) ", typ, typ, typ))
-		argContents = append(argContents, typ, cond.ProgramIDs)
+		sqlContents.WriteString(fmt.Sprintf("inner join cms_content_properties ccp_%v on ccp_%v.content_id =cc.id  and  ccp_%v.property_type =? and ccp_%v.property_id in (?) ", typ, typ, typ, typ))
+		argContents = append(argContents, IDs)
 	}
 	innerJoinCPP(entity.ContentPropertyTypeProgram, cond.ProgramIDs)
 	innerJoinCPP(entity.ContentPropertyTypeSubject, cond.SubjectIDs)
