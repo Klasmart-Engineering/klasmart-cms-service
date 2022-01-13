@@ -39,6 +39,7 @@ var (
 
 	ErrNotHeadquartersShare     = errors.New("not headquarters share folder")
 	ErrUnknownHeadquarterRegion = errors.New("unknown headquarter region")
+	ErrInvalidArguments         = errors.New("invalid arguments")
 )
 
 type IFolderModel interface {
@@ -884,6 +885,14 @@ func (f *FolderModel) checkShareFolders(ctx context.Context, orgIDs []string, sh
 			log.Any("operator", operator))
 		return nil, err
 	}
+
+	if len(orgsMap) != len(orgIDs) {
+		log.Debug(ctx, "invalid organization ids",
+			log.Strings("ids", orgIDs),
+			log.Any("orgMap", orgsMap))
+		return nil, ErrInvalidArguments
+	}
+
 	log.Info(ctx, "check org maps",
 		log.Strings("orgIDs", orgIDs),
 		log.Any("orgsMap", orgsMap))
