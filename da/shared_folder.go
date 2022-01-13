@@ -2,12 +2,12 @@ package da
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"sync"
 	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
@@ -53,7 +53,7 @@ func (sf *SharedFolderDA) InsertBatchesTx(ctx context.Context, tx *dbo.DBContext
 	}
 	_, err := sf.s.InsertInBatchesTx(ctx, tx, &models, constant.ShareAllBatchSize)
 	if err != nil {
-		log.Error(ctx, "batch insert cms_authed_contents: batch insert failed",
+		log.Error(ctx, "batch insert cms_shared_folders: batch insert failed",
 			log.Err(err),
 			log.Any("items", models),
 		)
@@ -77,7 +77,7 @@ func (sf *SharedFolderDA) BatchAdd(ctx context.Context, tx *dbo.DBContext, req [
 	}
 	_, err := sf.s.InsertTx(ctx, tx, &models)
 	if err != nil {
-		log.Error(ctx, "batch insert cms_authed_contents: batch insert failed",
+		log.Error(ctx, "batch insert cms_shared_folders: batch insert failed",
 			log.Err(err),
 			log.Any("items", req),
 		)
@@ -89,7 +89,7 @@ func (sf *SharedFolderDA) BatchDelete(ctx context.Context, tx *dbo.DBContext, or
 	now := time.Now().Unix()
 	err := tx.Model(&entity.SharedFolderRecord{}).Where("org_id = ? and folder_id in (?)", orgID, folderIDs).Updates(entity.SharedFolderRecord{DeleteAt: now}).Error
 	if err != nil {
-		log.Error(ctx, "batch delete cms_authed_contents: batch delete failed",
+		log.Error(ctx, "batch delete cms_shared_folders: batch delete failed",
 			log.Err(err),
 			log.String("orgID", orgID),
 			log.Strings("folderIDs", folderIDs),
@@ -109,9 +109,9 @@ func (sf *SharedFolderDA) BatchDeleteByOrgIDs(ctx context.Context, tx *dbo.DBCon
 			end = len(orgIDs)
 		}
 		ids := orgIDs[start:end]
-		err := tx.Model(&entity.SharedFolderRecord{}).Where("org_id in (?) and folder_id = ?", ids, folderID).Updates(entity.SharedFolderRecord{DeleteAt: now}).Error
+		err := tx.Model(&entity.SharedFolderRecord{}).Where("org_id in (?) and folder_id = ? and delete_at=0", ids, folderID).Updates(entity.SharedFolderRecord{DeleteAt: now}).Error
 		if err != nil {
-			log.Error(ctx, "batch delete cms_authed_contents: batch delete failed",
+			log.Error(ctx, "batch delete cms_shared_folders: batch delete failed",
 				log.Err(err),
 				log.Int("start", start),
 				log.Int("end", end),

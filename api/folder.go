@@ -433,6 +433,8 @@ func (s *Server) shareFolders(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "")
+	case model.ErrInvalidArguments:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		s.defaultErrorHandler(c, err)
 	}
