@@ -8,8 +8,6 @@ import (
 	"sync"
 	"text/template"
 
-	"go.uber.org/zap/buffer"
-
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -283,7 +281,7 @@ query($user_id: ID!, $permission: ID!) {
 		log.Error(ctx, "temp error", log.String("raw", raw), log.Err(err))
 		return false, err
 	}
-	buf := buffer.Buffer{}
+	buf := bytes.Buffer{}
 
 	err = temp.Execute(&buf, utils.SliceDeduplication(schoolIDs))
 	if err != nil {

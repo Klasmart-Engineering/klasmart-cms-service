@@ -95,6 +95,7 @@ func (s AmsClassService) getSchoolClasses(ctx context.Context, operator *entity.
 			log.Any("op", operator),
 			log.Strings("schools", schoolIDs),
 			log.Err(err))
+		return nil, err
 	}
 	classIDs := make([]string, 0)
 	for _, sc := range results {
