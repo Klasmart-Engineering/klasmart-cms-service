@@ -36,18 +36,27 @@ func (s *Server) getLessonPlansCanSchedule(c *gin.Context) {
 			return
 		}
 		switch err {
+		case constant.ErrInvalidArgs:
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		default:
 			s.defaultErrorHandler(c, err)
 		}
 	}()
-
-	groupNames := c.QueryArray("group_name")
-	if len(groupNames) == 0 {
-		log.Info(ctx, "query group_name is required")
+	condition := &entity.ContentConditionRequest{}
+	err = c.ShouldBindJSON(condition)
+	if err != nil {
+		log.Error(ctx, "invalid args", log.Err(err))
 		err = constant.ErrInvalidArgs
 		return
 	}
-	for _, gn := range groupNames {
+	condition.Pager = utils.GetPager(c.Query("page"), c.Query("page_size"))
+
+	if len(condition.GroupNames) == 0 {
+		log.Info(ctx, "group_name is required")
+		err = constant.ErrInvalidArgs
+		return
+	}
+	for _, gn := range condition.GroupNames {
 		if !utils.ContainsString([]string{
 			entity.LessonPlanGroupNameOrganizationContent.String(),
 			entity.LessonPlanGroupNameBadanamuContent.String(),
@@ -59,14 +68,9 @@ func (s *Server) getLessonPlansCanSchedule(c *gin.Context) {
 		}
 	}
 
-	condition := &entity.ContentConditionRequest{
-		ContentType:   []int{entity.ContentTypePlan},
-		PublishStatus: []string{entity.ContentStatusPublished},
-		OrderBy:       "create_at",
-		Pager:         utils.GetPager(c.Query("page"), c.Query("page_size")),
-		GroupNames:    groupNames,
-	}
-
+	condition.OrderBy = "create_at"
+	condition.ContentType = []int{entity.ContentTypePlan}
+	condition.PublishStatus = []string{entity.ContentStatusPublished}
 	err = model.GetContentFilterModel().FilterPublishContent(ctx, condition, op)
 	if err == model.ErrNoAvailableVisibilitySettings {
 		condition.VisibilitySettings = []string{"none"}
@@ -75,12 +79,7 @@ func (s *Server) getLessonPlansCanSchedule(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	condition.ProgramIDs = c.QueryArray("program_id")
-	condition.SubjectIDs = c.QueryArray("subject_id")
-	condition.CategoryIDs = c.QueryArray("category_id")
-	condition.SubCategoryIDs = c.QueryArray("sub_category_id")
-	condition.AgeIDs = c.QueryArray("age_id")
-	condition.GradeIDs = c.QueryArray("grade_id")
+
 	r, err := model.GetContentModel().GetLessonPlansCanSchedule(ctx, op, condition)
 	if err != nil {
 		return
