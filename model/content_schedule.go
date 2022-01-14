@@ -3,46 +3,43 @@ package model
 import (
 	"context"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
-func (cm *ContentModel) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest) (lps []*entity.LessonPlanForSchedule, err error) {
-	lps = []*entity.LessonPlanForSchedule{}
-	userContentCondition, err := cm.buildUserContentCondition(ctx, dbo.MustGetDB(ctx), cond, []string{}, op)
-	if err != nil {
-		return
-	}
-	contents, err := da.GetContentDA().QueryContentUnsafe(ctx, dbo.MustGetDB(ctx), userContentCondition)
-	if err != nil {
-		return
-	}
-	for _, contentInfo := range contents {
-		lps = append(lps, &entity.LessonPlanForSchedule{
-			ID:        contentInfo.ID,
-			Name:      contentInfo.Name,
-			GroupName: entity.LessonPlanGroupNameOrganizationContent,
-		})
+func (cm *ContentModel) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest) (response *entity.GetLessonPlansCanScheduleResponse, err error) {
+	response = &entity.GetLessonPlansCanScheduleResponse{
+		Data: []*entity.LessonPlanForSchedule{},
 	}
 
-	lps1, err := da.GetContentDA().GetLessonPlansCanSchedule(ctx, op)
-	if err != nil {
-		return
+	var condOrgContent dbo.Conditions
+	if utils.ContainsString(cond.GroupNames, entity.LessonPlanGroupNameOrganizationContent.String()) {
+		condOrgContent, err = cm.buildUserContentCondition(ctx, dbo.MustGetDB(ctx), cond, []string{}, op)
+		if err != nil {
+			return
+		}
 	}
-	mPG, err := GetProgramGroupModel().QueryMap(ctx, &da.ProgramGroupQueryCondition{})
-	if err != nil {
-		return
+	needProgramGroup := false
+	if utils.ContainsString(cond.GroupNames, entity.LessonPlanGroupNameBadanamuContent.String()) {
+		needProgramGroup = true
 	}
-	for _, lp := range lps1 {
-		_, ok := mPG[lp.ProgramID]
-		if ok {
-			lp.GroupName = entity.LessonPlanGroupNameBadanamuContent
-		} else {
-			lp.GroupName = entity.LessonPlanGroupNameMoreFeaturedContent
+	if utils.ContainsString(cond.GroupNames, entity.LessonPlanGroupNameMoreFeaturedContent.String()) {
+		needProgramGroup = true
+	}
+	var programGroups []*entity.ProgramGroup
+	if needProgramGroup {
+		programGroups, err = GetProgramGroupModel().Query(ctx, &da.ProgramGroupQueryCondition{})
+		if err != nil {
+			return
 		}
 	}
 
-	lps = append(lps, lps1...)
+	response.Total, response.Data, err = da.GetContentDA().GetLessonPlansCanSchedule(ctx, op, cond, condOrgContent, programGroups)
+	if err != nil {
+		return
+	}
 	return
 }

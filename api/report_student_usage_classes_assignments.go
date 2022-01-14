@@ -1,6 +1,7 @@
 package api
 
 import (
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -104,6 +105,48 @@ func (s *Server) getClassesAssignmentsUnattended(c *gin.Context) {
 	}
 	request.ClassID = c.Param("class_id")
 	result, err := model.GetClassesAssignmentsModel().GetUnattended(ctx, op, &request)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		s.defaultErrorHandler(c, err)
+	}
+}
+
+// @Summary get learner usage Report
+// @Description get learner usage Report
+// @Tags reports/learnerUsage
+// @ID getLearnerUsageOverview
+// @Accept json
+// @Produce json
+// @Param classes_assignments body entity.LearnerUsageRequest true "classAssignments"
+// @Success 200 {object} entity.LearnerUsageResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /reports/learner_usage/overview [post]
+func (s *Server) getLearnerUsageOverview(c *gin.Context) {
+
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+
+	var request entity.LearnerUsageRequest
+	err := c.ShouldBindJSON(&request)
+	if err != nil {
+		log.Error(ctx, "getLearnerUsageOverview: ShouldBindJSON failed",
+			log.Err(err),
+			log.Any("request", request))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	permissions, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
+		external.ReportOrganizationalStudentUsage,
+		external.ReportSchoolStudentUsage,
+		external.ReportTeacherStudentUsage,
+	})
+
+	result, err := model.GetReportModel().GetLearnerUsageOverview(ctx, op, permissions, &request)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)

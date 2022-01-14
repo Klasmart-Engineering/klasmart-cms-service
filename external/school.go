@@ -143,7 +143,7 @@ func (s AmsSchoolService) QueryByIDs(ctx context.Context, ids []string, options 
 		schools = append(schools, &NullableSchool{
 			Valid:  school != nil,
 			School: school,
-			StrID:  ids[indexMapping[index]],
+			StrID:  ids[index],
 		})
 	}
 

@@ -416,6 +416,14 @@ type ContentConditionRequest struct {
 	JoinUserIDList []string `json:"join_user_id_list"`
 
 	PublishedQueryMode PublishedQueryMode `json:"published_query_mode"`
+	GroupNames         []string           `json:"group_names"`
+	ProgramIDs         []string           `json:"program_ids"`
+	SubjectIDs         []string           `json:"subject_ids"`
+	CategoryIDs        []string           `json:"category_ids"`
+	SubCategoryIDs     []string           `json:"sub_category_ids"`
+	AgeIDs             []string           `json:"age_ids"`
+	GradeIDs           []string           `json:"grade_ids"`
+	LessonPlanName     string             `json:"lesson_plan_name"`
 }
 type OrganizationOrSchool struct {
 	ID    string
@@ -754,4 +762,9 @@ type LessonPlanForSchedule struct {
 	Name      string              `json:"name" gorm:"column:name" `
 	GroupName LessonPlanGroupName `json:"group_name" gorm:"column:group_name" `
 	ProgramID string              `json:"-" gorm:"column:program_id" `
+}
+
+type GetLessonPlansCanScheduleResponse struct {
+	Total int                      `json:"total"`
+	Data  []*LessonPlanForSchedule `json:"data"`
 }

@@ -48,7 +48,7 @@ type IContentDA interface {
 
 	BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error
 
-	GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator) (lps []*entity.LessonPlanForSchedule, err error)
+	GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error)
 }
 
 type CombineConditions struct {
@@ -154,13 +154,18 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		conditions = append(conditions, "("+strings.Join(subConditions, " or ")+")")
 	}
 
-	if s.ParentPath.Valid && len(s.ParentPath.Strings) > 0 {
-		conds := make([]string, len(s.ParentPath.Strings))
-		for i, v := range s.ParentPath.Strings {
-			conds[i] = "dir_path like " + "'" + v + "%" + "'"
+	if s.ParentPath.Valid {
+		if len(s.ParentPath.Strings) > 0 {
+			conds := make([]string, len(s.ParentPath.Strings))
+			for i, v := range s.ParentPath.Strings {
+				conds[i] = "dir_path like " + "'" + v + "%" + "'"
+			}
+			condition := fmt.Sprintf("(%s)", strings.Join(conds, " or "))
+			conditions = append(conditions, condition)
+		} else {
+			condition := "1=0"
+			conditions = append(conditions, condition)
 		}
-		condition := fmt.Sprintf("(%s)", strings.Join(conds, " or "))
-		conditions = append(conditions, condition)
 	}
 
 	if len(s.VisibilitySettings) > 0 {

@@ -34,6 +34,10 @@ func (t ProgramGroupName) Valid() bool {
 
 type LessonPlanGroupName string
 
+func (lpg LessonPlanGroupName) String() string {
+	return string(lpg)
+}
+
 const (
 	LessonPlanGroupNameOrganizationContent LessonPlanGroupName = "Organization Content"
 	LessonPlanGroupNameBadanamuContent     LessonPlanGroupName = "Badanamu Content"

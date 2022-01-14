@@ -85,7 +85,7 @@ func (s AmsOrganizationService) QueryByIDs(ctx context.Context, ids []string, op
   	}
 }`
 
-	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+	_ids := utils.SliceDeduplication(ids)
 
 	req := cl.NewRequest(q, chlorine.ReqToken(operator.Token))
 	req.Var("orgIDs", _ids)
@@ -104,19 +104,29 @@ func (s AmsOrganizationService) QueryByIDs(ctx context.Context, ids []string, op
 		log.Error(ctx, "Res error", log.String("q", q), log.Any("res", res), log.Err(res.Errors))
 		return nil, res.Errors
 	}
+
+	// user service返回的结果会是乱序的，不会按照index顺序
+	// The results of querying user service may be out of order
+	organizations := make(map[string]*Organization, len(payload))
+	for _, organization := range payload {
+		organizations[organization.ID] = organization
+	}
+
 	nullableOrganizations := make([]cache.Object, len(ids))
-	for index := range ids {
-		if payload[indexMapping[index]] == nil {
+	for index, id := range ids {
+		organization, found := organizations[id]
+		if !found {
 			nullableOrganizations[index] = &NullableOrganization{
-				StrID: ids[indexMapping[index]],
+				StrID: ids[index],
 				Valid: false,
 			}
-		} else {
-			nullableOrganizations[index] = &NullableOrganization{
-				Organization: *payload[indexMapping[index]],
-				StrID:        ids[indexMapping[index]],
-				Valid:        true,
-			}
+			continue
+		}
+
+		nullableOrganizations[index] = &NullableOrganization{
+			Organization: *organization,
+			StrID:        organization.ID,
+			Valid:        true,
 		}
 	}
 

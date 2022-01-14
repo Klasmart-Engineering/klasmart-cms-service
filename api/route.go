@@ -67,7 +67,7 @@ func (s Server) registeRoute() {
 		content.GET("/contents_resources/:resource_id", s.mustLoginWithoutOrgID, s.getContentResourcePath)
 		content.GET("/contents_resources/:resource_id/download", s.mustLoginWithoutOrgID, s.getDownloadPath)
 		content.GET("/contents/:content_id/live/token", s.mustLogin, s.getContentLiveToken)
-		content.GET("/contents_lesson_plans", s.mustLogin, s.getLessonPlansCanSchedule)
+		content.POST("/contents_lesson_plans", s.mustLogin, s.getLessonPlansCanSchedule)
 	}
 
 	schedules := s.engine.Group("/v1")
@@ -126,6 +126,7 @@ func (s Server) registeRoute() {
 		reports.GET("/reports/students", s.mustLogin, s.listStudentsAchievementReport)
 		reports.GET("/reports/students/:id", s.mustLogin, s.getStudentAchievementReport)
 		reports.GET("/reports/teachers/:id", s.mustLogin, s.getTeacherReport)
+		reports.GET("/reports/teachers", s.mustLogin, s.getTeachersReport)
 
 		reports.GET("/reports/performance/students", s.mustLogin, s.listStudentsPerformanceReport)
 		reports.GET("/reports/performance/students/:id", s.mustLogin, s.getStudentPerformanceReport)
@@ -151,6 +152,8 @@ func (s Server) registeRoute() {
 		reports.POST("/reports/student_progress/learn_outcome_achievement", s.mustLogin, s.getLearnOutcomeAchievement)
 		reports.POST("/reports/student_progress/class_attendance", s.mustLogin, s.getClassAttendance)
 		reports.POST("/reports/student_progress/assignment_completion", s.mustLogin, s.getAssignmentsCompletion)
+
+		reports.POST("/reports/learner_usage/overview", s.mustLogin, s.getLearnerUsageOverview)
 	}
 
 	outcomes := s.engine.Group("/v1")
