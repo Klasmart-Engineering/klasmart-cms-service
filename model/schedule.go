@@ -77,7 +77,7 @@ type IScheduleModel interface {
 
 	QueryByConditionInternal(ctx context.Context, condition *da.ScheduleCondition) (int, []*entity.ScheduleSimplified, error)
 
-	UpdateLiveMaterials(ctx context.Context, op *entity.Operator, scheduleID string, liveMaterials entity.ScheduleLiveMaterial) error
+	UpdateLiveLessonPlan(ctx context.Context, op *entity.Operator, scheduleID string, liveLessonPlan *entity.ScheduleLiveLessonPlan) error
 }
 
 type scheduleModel struct {
@@ -2780,7 +2780,7 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 		}
 
 		if v.AnyoneAttemptedLive() {
-			result[i].LessonPlanID = v.LiveMaterials.LessonPlanID
+			result[i].LessonPlanID = v.LiveLessonPlan.LessonPlanID
 		}
 
 		// handle schedule status
@@ -2854,8 +2854,8 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 	return total, result, nil
 }
 
-func (s *scheduleModel) UpdateLiveMaterials(ctx context.Context, op *entity.Operator, scheduleID string, liveMaterials entity.ScheduleLiveMaterial) error {
-	err := s.scheduleDA.UpdateLiveMaterials(ctx, dbo.MustGetDB(ctx), scheduleID, liveMaterials)
+func (s *scheduleModel) UpdateLiveLessonPlan(ctx context.Context, op *entity.Operator, scheduleID string, liveMaterials *entity.ScheduleLiveLessonPlan) error {
+	err := s.scheduleDA.UpdateLiveLessonPlan(ctx, dbo.MustGetDB(ctx), scheduleID, liveMaterials)
 	if err != nil {
 		log.Error(ctx, "s.scheduleDA.UpdateLiveMaterials error",
 			log.Err(err),
@@ -2993,24 +2993,24 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 	if schedule.LessonPlanID != "" {
 		if schedule.AnyoneAttemptedLive() {
 			g.Go(func() error {
-				isAuth, err := s.VerifyLessonPlanAuthed(ctx, operator, schedule.LiveMaterials.LessonPlanID)
+				isAuth, err := s.VerifyLessonPlanAuthed(ctx, operator, schedule.LiveLessonPlan.LessonPlanID)
 				if err != nil && err != ErrScheduleLessonPlanUnAuthed {
 					log.Error(ctx, "s.VerifyLessonPlanAuthed error",
 						log.Err(err),
-						log.String("lessonPlanID", schedule.LiveMaterials.LessonPlanID))
+						log.String("lessonPlanID", schedule.LiveLessonPlan.LessonPlanID))
 					return err
 				}
 
 				scheduleLessonPlan = &entity.ScheduleLessonPlan{
-					ID:     schedule.LiveMaterials.LessonPlanID,
-					Name:   schedule.LiveMaterials.LessonPlanName,
+					ID:     schedule.LiveLessonPlan.LessonPlanID,
+					Name:   schedule.LiveLessonPlan.LessonPlanName,
 					IsAuth: isAuth,
 				}
 
-				for _, v := range schedule.LiveMaterials.LessonMaterials {
+				for _, v := range schedule.LiveLessonPlan.LessonMaterials {
 					scheduleLessonPlan.Materials = append(scheduleLessonPlan.Materials, &entity.ScheduleLessonPlanMaterial{
-						ID:   v.ID,
-						Name: v.Name,
+						ID:   v.LessonMaterialID,
+						Name: v.LessonMaterialName,
 					})
 				}
 
@@ -3534,24 +3534,24 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 	if schedule.LessonPlanID != "" {
 		if schedule.AnyoneAttemptedLive() {
 			g.Go(func() error {
-				isAuth, err := s.VerifyLessonPlanAuthed(ctx, operator, schedule.LiveMaterials.LessonPlanID)
+				isAuth, err := s.VerifyLessonPlanAuthed(ctx, operator, schedule.LiveLessonPlan.LessonPlanID)
 				if err != nil && err != ErrScheduleLessonPlanUnAuthed {
 					log.Error(ctx, "s.VerifyLessonPlanAuthed error",
 						log.Err(err),
-						log.String("lessonPlanID", schedule.LiveMaterials.LessonPlanID))
+						log.String("lessonPlanID", schedule.LiveLessonPlan.LessonPlanID))
 					return err
 				}
 
 				scheduleLessonPlan = &entity.ScheduleLessonPlan{
-					ID:     schedule.LiveMaterials.LessonPlanID,
-					Name:   schedule.LiveMaterials.LessonPlanName,
+					ID:     schedule.LiveLessonPlan.LessonPlanID,
+					Name:   schedule.LiveLessonPlan.LessonPlanName,
 					IsAuth: isAuth,
 				}
 
-				for _, v := range schedule.LiveMaterials.LessonMaterials {
+				for _, v := range schedule.LiveLessonPlan.LessonMaterials {
 					scheduleLessonPlan.Materials = append(scheduleLessonPlan.Materials, &entity.ScheduleLessonPlanMaterial{
-						ID:   v.ID,
-						Name: v.Name,
+						ID:   v.LessonMaterialID,
+						Name: v.LessonMaterialName,
 					})
 				}
 
@@ -3920,7 +3920,7 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 		}
 
 		if schedule.AnyoneAttemptedLive() {
-			item.LessonPlanID = schedule.LiveMaterials.LessonPlanID
+			item.LessonPlanID = schedule.LiveLessonPlan.LessonPlanID
 		}
 
 		// TODO: Perhaps this logic should be handed over to the frontend

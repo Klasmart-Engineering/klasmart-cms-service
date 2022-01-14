@@ -26,7 +26,7 @@ type IScheduleDA interface {
 	GetProgramIDs(ctx context.Context, tx *dbo.DBContext, orgID string, relationIDs []string) ([]string, error)
 	GetClassTypes(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
 	GetTeachLoadByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]*ScheduleTeachLoadDBResult, error)
-	UpdateLiveMaterials(ctx context.Context, tx *dbo.DBContext, scheduleID string, liveMaterials entity.ScheduleLiveMaterial) error
+	UpdateLiveLessonPlan(ctx context.Context, tx *dbo.DBContext, scheduleID string, liveMaterials *entity.ScheduleLiveLessonPlan) error
 }
 
 type scheduleDA struct {
@@ -298,17 +298,17 @@ func (s *scheduleDA) GetTeachLoadByCondition(ctx context.Context, tx *dbo.DBCont
 	return result, nil
 }
 
-func (s *scheduleDA) UpdateLiveMaterials(ctx context.Context, tx *dbo.DBContext, scheduleID string, liveMaterials entity.ScheduleLiveMaterial) error {
+func (s *scheduleDA) UpdateLiveLessonPlan(ctx context.Context, tx *dbo.DBContext, scheduleID string, liveLessonPlan *entity.ScheduleLiveLessonPlan) error {
 	tx.ResetCondition()
 
 	err := tx.Table(constant.TableNameSchedule).
 		Where("id = ?", scheduleID).
-		Update("live_materials", liveMaterials).Error
+		Update("live_lesson_plan", liveLessonPlan).Error
 	if err != nil {
 		log.Error(ctx, "UpdateLiveMaterials error",
 			log.Err(err),
 			log.String("scheduleID", scheduleID),
-			log.Any("liveMaterials", liveMaterials))
+			log.Any("liveLessonPlan", liveLessonPlan))
 		return err
 	}
 

@@ -114,7 +114,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		// anyone has attempted live
 		if schedule.AnyoneAttemptedLive() {
 			// check lesson plan authed (unless lesson material)
-			_, err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LiveMaterials.LessonPlanID)
+			_, err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LiveLessonPlan.LessonPlanID)
 			if err != nil {
 				log.Error(ctx, "MakeScheduleLiveToken:GetScheduleModel.VerifyLessonPlanAuthed error",
 					log.Err(err),
@@ -123,7 +123,17 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 				return "", err
 			}
 
-			liveTokenInfo.Materials = schedule.LiveMaterials.LessonMaterials
+			for _, v := range schedule.LiveLessonPlan.LessonMaterials {
+				liveMaterial, err := s.convertToLiveMaterial(ctx, op, scheduleID, tokenType, v)
+				if err != nil {
+					log.Error(ctx, "s.convertToLiveMaterial error",
+						log.Err(err),
+						log.Any("op", op),
+						log.Any("lesson_material", v))
+					return "", err
+				}
+				liveTokenInfo.Materials = append(liveTokenInfo.Materials, liveMaterial)
+			}
 		} else {
 			// No one attempted live
 			// check lesson plan authed (unless lesson material)
@@ -179,18 +189,25 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 				return "", err
 			}
 
-			scheduleLiveMaterials := entity.ScheduleLiveMaterial{
+			scheduleLiveLessonMaterials := make([]*entity.ScheduleLiveLessonMaterial, len(liveTokenInfo.Materials))
+			for _, v := range liveTokenInfo.Materials {
+				scheduleLiveLessonMaterials = append(scheduleLiveLessonMaterials, &entity.ScheduleLiveLessonMaterial{
+					LessonMaterialID:   v.ID,
+					LessonMaterialName: v.Name,
+				})
+			}
+			scheduleLiveLessonPlan := &entity.ScheduleLiveLessonPlan{
 				LessonPlanID:    schedule.LessonPlanID,
 				LessonPlanName:  lessonPlanName.Name,
-				LessonMaterials: liveTokenInfo.Materials,
+				LessonMaterials: scheduleLiveLessonMaterials,
 			}
-			err = GetScheduleModel().UpdateLiveMaterials(ctx, op, scheduleID, scheduleLiveMaterials)
+			err = GetScheduleModel().UpdateLiveLessonPlan(ctx, op, scheduleID, scheduleLiveLessonPlan)
 			if err != nil {
 				log.Error(ctx, "GetScheduleModel().UpdateLiveMaterials error",
 					log.Err(err),
 					log.Any("op", op),
 					log.String("scheduleID", scheduleID),
-					log.Any("scheduleLiveMaterials", scheduleLiveMaterials))
+					log.Any("scheduleLiveLessonPlan", scheduleLiveLessonPlan))
 				return "", err
 			}
 		}
@@ -430,6 +447,78 @@ func (s *liveTokenModel) GetMaterials(ctx context.Context, op *entity.Operator, 
 		materials = append(materials, materialItem)
 	}
 	return materials, nil
+}
+
+func (s *liveTokenModel) convertToLiveMaterial(ctx context.Context, op *entity.Operator, scheduleID string, tokenType entity.LiveTokenType, liveLessonMaterial *entity.ScheduleLiveLessonMaterial) (*entity.LiveMaterial, error) {
+	if liveLessonMaterial == nil {
+		return nil, nil
+	}
+
+	result := &entity.LiveMaterial{
+		ID:   liveLessonMaterial.LessonMaterialID,
+		Name: liveLessonMaterial.LessonMaterialName,
+	}
+
+	// TODO: need performance improvement, only query cms_contents
+	material, err := GetContentModel().GetContentByID(ctx, dbo.MustGetDB(ctx), liveLessonMaterial.LessonMaterialID, op)
+	if err != nil {
+		log.Error(ctx, "GetContentModel().GetContentByID error",
+			log.Err(err),
+			log.Any("materialID", liveLessonMaterial.LessonMaterialID))
+		return nil, err
+	}
+
+	m := new(MaterialData)
+	err = m.Unmarshal(ctx, material.Data)
+	if err != nil {
+		log.Error(ctx, "m.Unmarshal error",
+			log.Err(err),
+			log.Any("liveLessonMaterial", liveLessonMaterial))
+		return nil, err
+	}
+	result.ContentData = m
+
+	// material type
+	switch m.FileType {
+	case entity.FileTypeImage:
+		result.TypeName = entity.MaterialTypeImage
+	case entity.FileTypeAudio:
+		result.TypeName = entity.MaterialTypeAudio
+	case entity.FileTypeVideo:
+		result.TypeName = entity.MaterialTypeVideo
+	case entity.FileTypeH5p, entity.FileTypeH5pExtend:
+		result.TypeName = entity.MaterialTypeH5P
+	case entity.FileTypeDocument:
+		log.Debug(ctx, "content material doc type", log.Any("liveLessonMaterial", liveLessonMaterial))
+		result.TypeName = entity.MaterialTypeH5P
+	default:
+		log.Warn(ctx, "content material type is invalid", log.Any("liveLessonMaterial", liveLessonMaterial))
+	}
+
+	// material url
+	switch m.FileType {
+	case entity.FileTypeH5pExtend:
+		result.URL = fmt.Sprintf("/h5pextend/index.html?org_id=%s&content_id=%s&schedule_id=%s&type=%s#/live-h5p",
+			op.OrgID, liveLessonMaterial.LessonMaterialID, scheduleID, tokenType)
+	case entity.FileTypeH5p:
+		result.URL = fmt.Sprintf("/h5p/play/%v", m.Source)
+	default:
+		source := string(m.Source)
+		parts := strings.Split(source, "-")
+		if len(parts) != 2 {
+			log.Error(ctx, "invalid resource id", log.String("resourceId", source))
+			return nil, constant.ErrInvalidArgs
+		}
+
+		// KLS-271: pdf file special handler
+		if m.Source.Ext() == constant.LiveTokenDocumentPDF {
+			result.URL = fmt.Sprintf("/assets/%s", parts[1])
+		} else {
+			result.URL = config.Get().LiveTokenConfig.AssetsUrlPrefix + fmt.Sprintf("/assets/%s", parts[1])
+		}
+	}
+
+	return result, nil
 }
 
 type liveTokenModel struct {

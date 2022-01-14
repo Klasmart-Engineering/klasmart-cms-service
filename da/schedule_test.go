@@ -94,21 +94,19 @@ func TestGetPrograms(t *testing.T) {
 	}
 }
 
-func TestUpdateLiveMaterials(t *testing.T) {
+func TestUpdateLiveLessonPlan(t *testing.T) {
 	ctx := context.TODO()
-	liveMaterials := entity.ScheduleLiveMaterial{
+	liveLessonPlan := &entity.ScheduleLiveLessonPlan{
 		LessonPlanID:   "lesson_plan_id",
 		LessonPlanName: "lesson_plan_name",
-		LessonMaterials: []*entity.LiveMaterial{
+		LessonMaterials: []*entity.ScheduleLiveLessonMaterial{
 			{
-				ID:       "lesson_material_id",
-				Name:     "lesson_material_name",
-				URL:      "lesson_material_url",
-				TypeName: entity.MaterialTypeImage,
+				LessonMaterialID:   "lesson_material_id",
+				LessonMaterialName: "lesson_material_name",
 			},
 		},
 	}
-	err := GetScheduleDA().UpdateLiveMaterials(ctx, dbo.MustGetDB(ctx), "6099c496e05f6e940027387c", liveMaterials)
+	err := GetScheduleDA().UpdateLiveLessonPlan(ctx, dbo.MustGetDB(ctx), "6099c496e05f6e940027387c", liveLessonPlan)
 	if err != nil {
 		t.Fatal(err)
 	}
