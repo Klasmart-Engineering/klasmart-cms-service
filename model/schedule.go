@@ -1268,7 +1268,9 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 
 		classIDs = append(classIDs, schedule.ClassID)
 		programIDs = append(programIDs, schedule.ProgramID)
-		lessonPlanIDs = append(lessonPlanIDs, schedule.LessonPlanID)
+		if !schedule.AnyoneAttemptedLive() {
+			lessonPlanIDs = append(lessonPlanIDs, schedule.LessonPlanID)
+		}
 	}
 
 	// query schedule_relation, include teachers, students and subjects(one-to-many relationship)
@@ -1388,10 +1390,17 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 			}
 		}
 
-		if lessonPlan, ok := lessonPlanMap[schedule.LessonPlanID]; ok {
+		if schedule.AnyoneAttemptedLive() {
 			resultMap[schedule.ID].LessonPlan = &entity.ScheduleShortInfo{
-				ID:   lessonPlan.ID,
-				Name: lessonPlan.Name,
+				ID:   schedule.LiveLessonPlan.LessonPlanID,
+				Name: schedule.LiveLessonPlan.LessonPlanName,
+			}
+		} else {
+			if lessonPlan, ok := lessonPlanMap[schedule.LessonPlanID]; ok {
+				resultMap[schedule.ID].LessonPlan = &entity.ScheduleShortInfo{
+					ID:   lessonPlan.ID,
+					Name: lessonPlan.Name,
+				}
 			}
 		}
 
@@ -3467,6 +3476,10 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 		OutcomeIDs: []string{},
 		Teachers:   []*entity.ScheduleShortInfo{},
 		Students:   []*entity.ScheduleShortInfo{},
+	}
+
+	if schedule.AnyoneAttemptedLive() {
+		scheduleViewDetail.LessonPlanID = schedule.LiveLessonPlan.LessonPlanID
 	}
 
 	// get schedule status, business logic not status in database

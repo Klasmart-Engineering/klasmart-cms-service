@@ -336,15 +336,11 @@ func (s *Schedule) ToScheduleSimplified() *ScheduleSimplified {
 type ScheduleLiveLessonMaterial struct {
 	LessonMaterialID   string `json:"lesson_material_id"`
 	LessonMaterialName string `json:"lesson_material_name"`
-	// TODO: cannot use model.MaterialData, because package import cycle
-	// LessonMaterialData string `json:"lesson_material_data"`
 }
 
 type ScheduleLiveLessonPlan struct {
-	LessonPlanID   string `json:"lesson_plan_id"`
-	LessonPlanName string `json:"lesson_plan_name"`
-	// TODO: cannot use model.LessonData, because package import cycle
-	// LessonPlanData  string                        `json:"lesson_plan_data"`
+	LessonPlanID    string                        `json:"lesson_plan_id"`
+	LessonPlanName  string                        `json:"lesson_plan_name"`
 	LessonMaterials []*ScheduleLiveLessonMaterial `json:"materials"`
 }
 
