@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -430,18 +429,18 @@ func (s *liveTokenModel) GetMaterials(ctx context.Context, op *entity.Operator, 
 		case entity.FileTypeH5p:
 			materialItem.URL = fmt.Sprintf("/h5p/play/%v", mData.Source)
 		default:
-			source := string(mData.Source)
-			parts := strings.Split(source, "-")
-			if len(parts) != 2 {
-				log.Error(ctx, "invalid resource id", log.String("resourceId", source))
+			sourcePath, err := mData.Source.ConvertToPath(ctx)
+			if err != nil {
+				log.Error(ctx, "mData.Source.ConvertToPath error",
+					log.Any("source", mData.Source))
 				return nil, constant.ErrInvalidArgs
 			}
 
 			// KLS-271: pdf file special handler
 			if mData.Source.Ext() == constant.LiveTokenDocumentPDF {
-				materialItem.URL = fmt.Sprintf("/assets/%s", parts[1])
+				materialItem.URL = sourcePath
 			} else {
-				materialItem.URL = config.Get().LiveTokenConfig.AssetsUrlPrefix + fmt.Sprintf("/assets/%s", parts[1])
+				materialItem.URL = config.Get().LiveTokenConfig.AssetsUrlPrefix + sourcePath
 			}
 		}
 		materials = append(materials, materialItem)
@@ -503,18 +502,18 @@ func (s *liveTokenModel) convertToLiveMaterial(ctx context.Context, op *entity.O
 	case entity.FileTypeH5p:
 		result.URL = fmt.Sprintf("/h5p/play/%v", m.Source)
 	default:
-		source := string(m.Source)
-		parts := strings.Split(source, "-")
-		if len(parts) != 2 {
-			log.Error(ctx, "invalid resource id", log.String("resourceId", source))
+		sourcePath, err := m.Source.ConvertToPath(ctx)
+		if err != nil {
+			log.Error(ctx, "m.Source.ConvertToPath error",
+				log.Any("source", m.Source))
 			return nil, constant.ErrInvalidArgs
 		}
 
 		// KLS-271: pdf file special handler
 		if m.Source.Ext() == constant.LiveTokenDocumentPDF {
-			result.URL = fmt.Sprintf("/assets/%s", parts[1])
+			result.URL = sourcePath
 		} else {
-			result.URL = config.Get().LiveTokenConfig.AssetsUrlPrefix + fmt.Sprintf("/assets/%s", parts[1])
+			result.URL = config.Get().LiveTokenConfig.AssetsUrlPrefix + sourcePath
 		}
 	}
 
