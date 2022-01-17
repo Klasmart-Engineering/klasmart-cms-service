@@ -24,6 +24,16 @@ type AssetsData struct {
 
 type SourceID string
 
+func (s SourceID) ConvertToPath(ctx context.Context) (string, error) {
+	source := string(s)
+	parts := strings.Split(source, "-")
+	if len(parts) != 2 {
+		log.Error(ctx, "ConvertToPath", log.String("resourceId", source))
+		return "", constant.ErrInvalidArgs
+	}
+	return strings.Replace(source, "-", "/", -1), nil
+}
+
 func (s SourceID) Ext() string {
 	parts := strings.Split(string(s), ".")
 	if len(parts) < 2 {

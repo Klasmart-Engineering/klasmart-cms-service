@@ -76,6 +76,8 @@ type IScheduleModel interface {
 	QueryScheduleTimeView(ctx context.Context, query *entity.ScheduleTimeViewListRequest, op *entity.Operator, loc *time.Location) (int, []*entity.ScheduleTimeView, error)
 
 	QueryByConditionInternal(ctx context.Context, condition *da.ScheduleCondition) (int, []*entity.ScheduleSimplified, error)
+
+	UpdateLiveLessonPlan(ctx context.Context, op *entity.Operator, scheduleID string, liveLessonPlan *entity.ScheduleLiveLessonPlan) error
 }
 
 type scheduleModel struct {
@@ -1266,7 +1268,9 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 
 		classIDs = append(classIDs, schedule.ClassID)
 		programIDs = append(programIDs, schedule.ProgramID)
-		lessonPlanIDs = append(lessonPlanIDs, schedule.LessonPlanID)
+		if !schedule.AnyoneAttemptedLive() {
+			lessonPlanIDs = append(lessonPlanIDs, schedule.LessonPlanID)
+		}
 	}
 
 	// query schedule_relation, include teachers, students and subjects(one-to-many relationship)
@@ -1386,10 +1390,17 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 			}
 		}
 
-		if lessonPlan, ok := lessonPlanMap[schedule.LessonPlanID]; ok {
+		if schedule.AnyoneAttemptedLive() {
 			resultMap[schedule.ID].LessonPlan = &entity.ScheduleShortInfo{
-				ID:   lessonPlan.ID,
-				Name: lessonPlan.Name,
+				ID:   schedule.LiveLessonPlan.LessonPlanID,
+				Name: schedule.LiveLessonPlan.LessonPlanName,
+			}
+		} else {
+			if lessonPlan, ok := lessonPlanMap[schedule.LessonPlanID]; ok {
+				resultMap[schedule.ID].LessonPlan = &entity.ScheduleShortInfo{
+					ID:   lessonPlan.ID,
+					Name: lessonPlan.Name,
+				}
 			}
 		}
 
@@ -2777,6 +2788,10 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 			CreatedAt:    v.CreatedAt,
 		}
 
+		if v.AnyoneAttemptedLive() {
+			result[i].LessonPlanID = v.LiveLessonPlan.LessonPlanID
+		}
+
 		// handle schedule status
 		result[i].Status = v.Status.GetScheduleStatus(entity.ScheduleStatusInput{
 			EndAt:     v.EndAt,
@@ -2846,6 +2861,19 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 	}
 
 	return total, result, nil
+}
+
+func (s *scheduleModel) UpdateLiveLessonPlan(ctx context.Context, op *entity.Operator, scheduleID string, liveMaterials *entity.ScheduleLiveLessonPlan) error {
+	err := s.scheduleDA.UpdateLiveLessonPlan(ctx, dbo.MustGetDB(ctx), scheduleID, liveMaterials)
+	if err != nil {
+		log.Error(ctx, "s.scheduleDA.UpdateLiveMaterials error",
+			log.Err(err),
+			log.String("scheduleID", scheduleID),
+			log.Any("liveMaterials", liveMaterials))
+		return err
+	}
+
+	return nil
 }
 
 // Schedule model interval function
@@ -2972,19 +3000,46 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 
 	// get lesson plan
 	if schedule.LessonPlanID != "" {
-		g.Go(func() error {
-			lessonPlan, err := s.getLessonPlanWithMaterial(ctx, operator, schedule.LessonPlanID)
-			if err != nil {
-				log.Error(ctx, "s.getLessonPlanWithMaterial error",
-					log.Err(err),
-					log.String("lessonPlanID", schedule.LessonPlanID))
-				return err
-			}
+		if schedule.AnyoneAttemptedLive() {
+			g.Go(func() error {
+				isAuth, err := s.VerifyLessonPlanAuthed(ctx, operator, schedule.LiveLessonPlan.LessonPlanID)
+				if err != nil && err != ErrScheduleLessonPlanUnAuthed {
+					log.Error(ctx, "s.VerifyLessonPlanAuthed error",
+						log.Err(err),
+						log.String("lessonPlanID", schedule.LiveLessonPlan.LessonPlanID))
+					return err
+				}
 
-			scheduleLessonPlan = lessonPlan
+				scheduleLessonPlan = &entity.ScheduleLessonPlan{
+					ID:     schedule.LiveLessonPlan.LessonPlanID,
+					Name:   schedule.LiveLessonPlan.LessonPlanName,
+					IsAuth: isAuth,
+				}
 
-			return nil
-		})
+				for _, v := range schedule.LiveLessonPlan.LessonMaterials {
+					scheduleLessonPlan.Materials = append(scheduleLessonPlan.Materials, &entity.ScheduleLessonPlanMaterial{
+						ID:   v.LessonMaterialID,
+						Name: v.LessonMaterialName,
+					})
+				}
+
+				return nil
+			})
+		} else {
+			g.Go(func() error {
+				lessonPlan, err := s.getLessonPlanWithMaterial(ctx, operator, schedule.LessonPlanID)
+				if err != nil {
+					log.Error(ctx, "s.getLessonPlanWithMaterial error",
+						log.Err(err),
+						log.String("lessonPlanID", schedule.LessonPlanID))
+					return err
+				}
+
+				scheduleLessonPlan = lessonPlan
+
+				return nil
+			})
+		}
 	}
 
 	// get class info
@@ -3423,6 +3478,10 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 		Students:   []*entity.ScheduleShortInfo{},
 	}
 
+	if schedule.AnyoneAttemptedLive() {
+		scheduleViewDetail.LessonPlanID = schedule.LiveLessonPlan.LessonPlanID
+	}
+
 	// get schedule status, business logic not status in database
 	scheduleViewDetail.Status = schedule.Status.GetScheduleStatus(entity.ScheduleStatusInput{
 		EndAt:     schedule.EndAt,
@@ -3486,19 +3545,46 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 
 	// get lesson plan
 	if schedule.LessonPlanID != "" {
-		g.Go(func() error {
-			lessonPlan, err := s.getLessonPlanWithMaterial(ctx, operator, schedule.LessonPlanID)
-			if err != nil {
-				log.Error(ctx, "s.getLessonPlanWithMaterial error",
-					log.Err(err),
-					log.String("lessonPlanID", schedule.LessonPlanID))
-				return err
-			}
+		if schedule.AnyoneAttemptedLive() {
+			g.Go(func() error {
+				isAuth, err := s.VerifyLessonPlanAuthed(ctx, operator, schedule.LiveLessonPlan.LessonPlanID)
+				if err != nil && err != ErrScheduleLessonPlanUnAuthed {
+					log.Error(ctx, "s.VerifyLessonPlanAuthed error",
+						log.Err(err),
+						log.String("lessonPlanID", schedule.LiveLessonPlan.LessonPlanID))
+					return err
+				}
 
-			scheduleLessonPlan = lessonPlan
+				scheduleLessonPlan = &entity.ScheduleLessonPlan{
+					ID:     schedule.LiveLessonPlan.LessonPlanID,
+					Name:   schedule.LiveLessonPlan.LessonPlanName,
+					IsAuth: isAuth,
+				}
 
-			return nil
-		})
+				for _, v := range schedule.LiveLessonPlan.LessonMaterials {
+					scheduleLessonPlan.Materials = append(scheduleLessonPlan.Materials, &entity.ScheduleLessonPlanMaterial{
+						ID:   v.LessonMaterialID,
+						Name: v.LessonMaterialName,
+					})
+				}
+
+				return nil
+			})
+		} else {
+			g.Go(func() error {
+				lessonPlan, err := s.getLessonPlanWithMaterial(ctx, operator, schedule.LessonPlanID)
+				if err != nil {
+					log.Error(ctx, "s.getLessonPlanWithMaterial error",
+						log.Err(err),
+						log.String("lessonPlanID", schedule.LessonPlanID))
+					return err
+				}
+
+				scheduleLessonPlan = lessonPlan
+
+				return nil
+			})
+		}
 	}
 
 	// get class info
@@ -3844,6 +3930,10 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 				ClassType: schedule.ClassType,
 			}),
 			RoleType: entity.ScheduleRoleTypeUnknown,
+		}
+
+		if schedule.AnyoneAttemptedLive() {
+			item.LessonPlanID = schedule.LiveLessonPlan.LessonPlanID
 		}
 
 		// TODO: Perhaps this logic should be handed over to the frontend
