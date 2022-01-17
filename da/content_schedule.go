@@ -17,6 +17,10 @@ import (
 )
 
 func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error) {
+	lps = []*entity.LessonPlanForSchedule{}
+	if len(cond.ProgramIDs) == 0 {
+		return
+	}
 	sqlContents := strings.Builder{}
 	sqlContents.WriteString(`select
 	distinct cc.*
