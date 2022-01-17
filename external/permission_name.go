@@ -153,7 +153,7 @@ const (
 	ReportStudentProgressReportSchool       PermissionName = "report_student_progress_school_659"
 	ReportStudentProgressReportTeacher      PermissionName = "report_student_progress_teacher_660"
 	ReportStudentProgressReportStudent      PermissionName = "report_student_progress_student_661"
-	ReportOrganizationalStudentUsage        PermissionName = "report_organizational_student_usage_654"
+	ReportOrganizationStudentUsage          PermissionName = "report_organization_student_usage_654"
 	ReportSchoolStudentUsage                PermissionName = "report_school_student_usage_655"
 	ReportTeacherStudentUsage               PermissionName = "report_teacher_student_usage_656"
 

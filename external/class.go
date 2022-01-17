@@ -122,7 +122,7 @@ func (s AmsClassService) getTeachClasses(ctx context.Context, operator *entity.O
 }
 
 func (s AmsClassService) GetRelatedClassIDWithMeAccordPermission(ctx context.Context, operator *entity.Operator, permissions map[PermissionName]bool) ([]string, error) {
-	if permissions[ReportOrganizationalStudentUsage] {
+	if permissions[ReportOrganizationStudentUsage] {
 		return s.getOrganizationClasses(ctx, operator)
 	}
 
