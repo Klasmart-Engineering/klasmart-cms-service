@@ -141,7 +141,7 @@ func (s *Server) getLearnerUsageOverview(c *gin.Context) {
 	}
 
 	permissions, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
-		external.ReportOrganizationalStudentUsage,
+		external.ReportOrganizationStudentUsage,
 		external.ReportSchoolStudentUsage,
 		external.ReportTeacherStudentUsage,
 	})
