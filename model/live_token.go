@@ -188,7 +188,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 				return "", err
 			}
 
-			scheduleLiveLessonMaterials := make([]*entity.ScheduleLiveLessonMaterial, len(liveTokenInfo.Materials))
+			scheduleLiveLessonMaterials := make([]*entity.ScheduleLiveLessonMaterial, 0, len(liveTokenInfo.Materials))
 			for _, v := range liveTokenInfo.Materials {
 				scheduleLiveLessonMaterials = append(scheduleLiveLessonMaterials, &entity.ScheduleLiveLessonMaterial{
 					LessonMaterialID:   v.ID,
