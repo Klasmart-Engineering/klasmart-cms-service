@@ -983,13 +983,30 @@ func (m *assessmentBase) batchAddContents(
 ) error {
 	var assessmentContents []*entity.AssessmentContent
 	assessmentContentKeys := map[[2]string]bool{}
+	lessPlanOldIDs := make([]string, 0, len(newAssessments))
+	deDup := make(map[string]struct{})
+	for _, a := range newAssessments {
+		schedule := args.ScheduleIDToArgsItemMap[a.ScheduleID]
+		if _, ok := deDup[schedule.LessonPlanID]; !ok {
+			lessPlanOldIDs = append(lessPlanOldIDs, schedule.LessonPlanID)
+			deDup[schedule.LessonPlanID] = struct{}{}
+		}
+	}
+
+	lessPlanIDMap, err := GetContentModel().GetLatestContentIDMapByIDList(ctx, dbo.MustGetDB(ctx), lessPlanOldIDs)
+	if err != nil {
+		log.Error(ctx, "get latest content ids error", log.Strings("lessPlanOldIDs", lessPlanOldIDs))
+		return err
+	}
+
 	for _, a := range newAssessments {
 		schedule := args.ScheduleIDToArgsItemMap[a.ScheduleID]
 		if schedule == nil {
 			continue
 		}
-		lp := args.LessonPlanMap[schedule.LessonPlanID]
+		lp := args.LessonPlanMap[lessPlanIDMap[schedule.LessonPlanID]]
 		if lp == nil {
+			log.Warn(ctx, "lessPlan not found", log.Any("LessonPlanMap", args.LessonPlanMap), log.Any("schedule", schedule))
 			continue
 		}
 		assessmentContents = append(assessmentContents, &entity.AssessmentContent{
