@@ -1002,6 +1002,7 @@ func (m *assessmentBase) batchAddContents(
 	for _, a := range newAssessments {
 		schedule := args.ScheduleIDToArgsItemMap[a.ScheduleID]
 		if schedule == nil {
+			log.Warn(ctx, "schedule not found", log.Any("ScheduleIDToArgsItemMap", args.ScheduleIDToArgsItemMap), log.Any("assessment", a))
 			continue
 		}
 		lp := args.LessonPlanMap[lessPlanIDMap[schedule.LessonPlanID]]
