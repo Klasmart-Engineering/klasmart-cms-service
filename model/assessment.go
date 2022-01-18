@@ -106,7 +106,7 @@ func (m *assessmentModel) PrepareAddInputWhenCreateSchedule(ctx context.Context,
 	}
 
 	// processing args
-	superArgs, err := m.assessmentBase.prepareBatchAddSuperArgs(ctx, dbo.MustGetDB(ctx), operator, assessmentArgs)
+	superArgs, err := m.assessmentBase.prepareBatchAddSuperArgs(ctx, dbo.MustGetDB(ctx), operator, assessmentArgs, true)
 	if err != nil {
 		log.Error(ctx, "prepare add assessment args: prepare batch add super args failed",
 			log.Err(err),
@@ -283,7 +283,7 @@ func (m *assessmentModel) PrepareAddInputWhenScheduleExist(ctx context.Context, 
 	}
 
 	// processing args
-	superArgs, err := m.assessmentBase.prepareBatchAddSuperArgs(ctx, dbo.MustGetDB(ctx), operator, assessmentArgs)
+	superArgs, err := m.assessmentBase.prepareBatchAddSuperArgs(ctx, dbo.MustGetDB(ctx), operator, assessmentArgs, true)
 	if err != nil {
 		log.Error(ctx, "prepare add assessment args: prepare batch add super args failed",
 			log.Err(err),
