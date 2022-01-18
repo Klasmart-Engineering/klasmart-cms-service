@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -1622,9 +1623,26 @@ func (s *scheduleModel) getLessonPlanNameByIDs(ctx context.Context, tx *dbo.DBCo
 	return lessonPlanMap, nil
 }
 
+// get latest version content
 func (s *scheduleModel) getLessonPlanWithMaterial(ctx context.Context, op *entity.Operator, lessonPlanID string) (*entity.ScheduleLessonPlan, error) {
 	result := new(entity.ScheduleLessonPlan)
 	if lessonPlanID != "" {
+		latestLessonPlanID, err := GetContentModel().GetLatestContentIDByIDList(ctx, dbo.MustGetDB(ctx), []string{lessonPlanID})
+		if err != nil {
+			log.Error(ctx, " GetContentModel().GetLatestContentIDByIDList error",
+				log.Err(err),
+				log.Any("lessonPlanID", lessonPlanID))
+			return nil, err
+		}
+		if len(latestLessonPlanID) == 0 {
+			log.Error(ctx, "latest content id not found",
+				log.Err(err),
+				log.Any("op", op),
+				log.String("scheduleID", lessonPlanID))
+			return nil, fmt.Errorf("latest content id not found")
+		}
+
+		lessonPlanID = latestLessonPlanID[0]
 		lessonInfo, err := GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), lessonPlanID)
 		if err != nil {
 			log.Error(ctx, "get content name by id error",
