@@ -101,7 +101,6 @@ type IContentModel interface {
 	GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
 	GetContentByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error)
 	GetLatestContentIDByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error)
-	GetLatestContentIDMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) (map[string]string, error)
 	GetPastContentIDByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	GetRawContentByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.Content, error)
 	GetRawContentByIDListWithVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentWithVisibilitySettings, error)
@@ -1843,27 +1842,6 @@ func (cm *ContentModel) IsContentsOperatorByIDList(ctx context.Context, tx *dbo.
 		}
 	}
 	return true, nil
-}
-
-// key:oldID,value:latestID
-func (cm *ContentModel) GetLatestContentIDMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) (map[string]string, error) {
-	if len(cids) < 1 {
-		return nil, nil
-	}
-	resp := make(map[string]string)
-	data, err := da.GetContentDA().GetContentByIDList(ctx, tx, cids)
-	if err != nil {
-		log.Error(ctx, "can't search content", log.Err(err), log.Strings("cids", cids))
-		return nil, ErrReadContentFailed
-	}
-	for i := range data {
-		latestID := data[i].LatestID
-		if data[i].LatestID == "" {
-			latestID = data[i].ID
-		}
-		resp[data[i].ID] = latestID
-	}
-	return resp, nil
 }
 
 func (cm *ContentModel) GetContentByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error) {

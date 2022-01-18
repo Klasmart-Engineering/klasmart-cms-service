@@ -611,6 +611,25 @@ func (m *assessmentBase) toViews(ctx context.Context, operator *entity.Operator,
 	return result, nil
 }
 
+func (m *assessmentBase) getContentOutcomeIDsMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, contentIDs []string) (map[string][]string, error) {
+	contentIDs = utils.SliceDeduplication(contentIDs)
+
+	contents, err := GetContentModel().GetContentByIDList(ctx, tx, contentIDs, operator)
+	if err != nil {
+		log.Error(ctx, "toViews: GetContentModel().GetContentByIDList: get failed",
+			log.Err(err),
+			log.Strings("lesson_plan_ids", contentIDs),
+		)
+		return nil, err
+	}
+	result := make(map[string][]string, len(contents))
+	for _, item := range contents {
+		result[item.ID] = item.Outcomes
+	}
+
+	return result, nil
+}
+
 func (m *assessmentBase) batchGetLatestLessonPlanMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) (map[string]*entity.AssessmentExternalLessonPlan, error) {
 	lessonPlanIDs = utils.SliceDeduplication(lessonPlanIDs)
 
@@ -796,36 +815,36 @@ func (m *assessmentBase) prepareBatchAddSuperArgs(ctx context.Context, tx *dbo.D
 	}
 
 	// get contents
-	var lessonPlanIDs []string
-	for _, item := range args {
-		lessonPlanIDs = append(lessonPlanIDs, item.LessonPlanID)
-	}
-	lessonPlanMap, err := m.batchGetLatestLessonPlanMap(ctx, tx, operator, lessonPlanIDs)
-	if err != nil {
-		log.Error(ctx, "batch add assessments: batch get latest lesson plan map failed",
-			log.Err(err),
-			log.Strings("lesson_plan_ids", lessonPlanIDs),
-		)
-		return nil, err
-	}
+	//var lessonPlanIDs []string
+	//for _, item := range args {
+	//	lessonPlanIDs = append(lessonPlanIDs, item.LessonPlanID)
+	//}
+	//lessonPlanMap, err := m.batchGetLatestLessonPlanMap(ctx, tx, operator, lessonPlanIDs)
+	//if err != nil {
+	//	log.Error(ctx, "batch add assessments: batch get latest lesson plan map failed",
+	//		log.Err(err),
+	//		log.Strings("lesson_plan_ids", lessonPlanIDs),
+	//	)
+	//	return nil, err
+	//}
 
 	// get outcomes
 	var (
 		outcomeIDs                []string
 		scheduleIDToOutcomeIDsMap = make(map[string][]string, len(args))
+		lessonPlanMap             = make(map[string]*entity.AssessmentExternalLessonPlan)
 	)
 	for _, item := range args {
 		var itemOutcomeIDs []string
-		lp := lessonPlanMap[item.LessonPlanID]
-		if lp == nil {
-			continue
-		}
-		itemOutcomeIDs = append(itemOutcomeIDs, lp.OutcomeIDs...)
-		for _, lm := range lp.Materials {
+		itemOutcomeIDs = append(itemOutcomeIDs, item.LessonPlan.OutcomeIDs...)
+		lessonPlanMap[item.LessonPlan.ID] = item.LessonPlan
+
+		for _, lm := range item.LessonPlan.Materials {
 			itemOutcomeIDs = append(itemOutcomeIDs, lm.OutcomeIDs...)
 		}
 		scheduleIDToOutcomeIDsMap[item.ScheduleID] = itemOutcomeIDs
 		outcomeIDs = append(outcomeIDs, itemOutcomeIDs...)
+
 	}
 	outcomes := make([]*entity.Outcome, 0, len(outcomeIDs))
 	if len(outcomeIDs) > 0 {
@@ -851,11 +870,11 @@ func (m *assessmentBase) prepareBatchAddSuperArgs(ctx context.Context, tx *dbo.D
 	}
 
 	return &entity.BatchAddAssessmentSuperArgs{
-		Raw:                       args,
-		ScheduleIDs:               scheduleIDs,
-		Outcomes:                  outcomes,
-		OutcomeMap:                outcomeMap,
-		LessonPlanMap:             lessonPlanMap,
+		Raw:         args,
+		ScheduleIDs: scheduleIDs,
+		Outcomes:    outcomes,
+		OutcomeMap:  outcomeMap,
+		//LessonPlanMap:             lessonPlanMap,
 		ScheduleIDToOutcomeIDsMap: scheduleIDToOutcomeIDsMap,
 		ScheduleIDToArgsItemMap:   scheduleIDToArgsItemMap,
 	}, nil
@@ -983,21 +1002,6 @@ func (m *assessmentBase) batchAddContents(
 ) error {
 	var assessmentContents []*entity.AssessmentContent
 	assessmentContentKeys := map[[2]string]bool{}
-	lessPlanOldIDs := make([]string, 0, len(newAssessments))
-	deDup := make(map[string]struct{})
-	for _, a := range newAssessments {
-		schedule := args.ScheduleIDToArgsItemMap[a.ScheduleID]
-		if _, ok := deDup[schedule.LessonPlanID]; !ok {
-			lessPlanOldIDs = append(lessPlanOldIDs, schedule.LessonPlanID)
-			deDup[schedule.LessonPlanID] = struct{}{}
-		}
-	}
-
-	lessPlanIDMap, err := GetContentModel().GetLatestContentIDMapByIDList(ctx, dbo.MustGetDB(ctx), lessPlanOldIDs)
-	if err != nil {
-		log.Error(ctx, "get latest content ids error", log.Strings("lessPlanOldIDs", lessPlanOldIDs))
-		return err
-	}
 
 	for _, a := range newAssessments {
 		schedule := args.ScheduleIDToArgsItemMap[a.ScheduleID]
@@ -1005,9 +1009,10 @@ func (m *assessmentBase) batchAddContents(
 			log.Warn(ctx, "schedule not found", log.Any("ScheduleIDToArgsItemMap", args.ScheduleIDToArgsItemMap), log.Any("assessment", a))
 			continue
 		}
-		lp := args.LessonPlanMap[lessPlanIDMap[schedule.LessonPlanID]]
+
+		lp := schedule.LessonPlan
 		if lp == nil {
-			log.Warn(ctx, "lessPlan not found", log.Any("LessonPlanMap", args.LessonPlanMap), log.Any("schedule", schedule))
+			log.Warn(ctx, "lessPlan not found", log.Any("schedule.LessonPlan", schedule.LessonPlan), log.Any("schedule", schedule))
 			continue
 		}
 		assessmentContents = append(assessmentContents, &entity.AssessmentContent{
@@ -1143,7 +1148,7 @@ func (m *assessmentBase) batchAddContentOutcomes(ctx context.Context, tx *dbo.DB
 		if argsItem == nil {
 			continue
 		}
-		lp := args.LessonPlanMap[argsItem.LessonPlanID]
+		lp := argsItem.LessonPlan
 		if lp == nil {
 			continue
 		}
@@ -1186,7 +1191,7 @@ func (m *assessmentBase) batchAddContentOutcomeAttendances(ctx context.Context, 
 		if argsItem == nil {
 			continue
 		}
-		lp := args.LessonPlanMap[argsItem.LessonPlanID]
+		lp := argsItem.LessonPlan
 		if lp == nil {
 			continue
 		}
