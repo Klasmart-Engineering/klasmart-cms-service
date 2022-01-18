@@ -177,14 +177,15 @@ type UpdateAssessmentH5PLessonMaterial struct {
 }
 
 type AddAssessmentArgs struct {
-	Title         string              `json:"title"`
-	ScheduleID    string              `json:"schedule_id"`
-	ScheduleTitle string              `json:"schedule_title"`
-	LessonPlanID  string              `json:"lesson_plan_id"`
-	ClassID       string              `json:"class_id"`
-	ClassLength   int                 `json:"class_length"`
-	ClassEndTime  int64               `json:"class_end_time"`
-	Attendances   []*ScheduleRelation `json:"attendances"`
+	Title         string `json:"title"`
+	ScheduleID    string `json:"schedule_id"`
+	ScheduleTitle string `json:"schedule_title"`
+	//LessonPlanID   string                        `json:"lesson_plan_id"`
+	ClassID      string                        `json:"class_id"`
+	ClassLength  int                           `json:"class_length"`
+	ClassEndTime int64                         `json:"class_end_time"`
+	Attendances  []*ScheduleRelation           `json:"attendances"`
+	LessonPlan   *AssessmentExternalLessonPlan `json:"live_lesson_plan"`
 }
 
 type AssessmentAddInput struct {
@@ -205,11 +206,11 @@ type AssessmentAddInputWhenCreateSchedule struct {
 }
 
 type BatchAddAssessmentSuperArgs struct {
-	Raw                       []*AddAssessmentArgs
-	ScheduleIDs               []string
-	Outcomes                  []*Outcome
-	OutcomeMap                map[string]*Outcome
-	LessonPlanMap             map[string]*AssessmentExternalLessonPlan
+	Raw         []*AddAssessmentArgs
+	ScheduleIDs []string
+	Outcomes    []*Outcome
+	OutcomeMap  map[string]*Outcome
+	//LessonPlanMap             map[string]*AssessmentExternalLessonPlan
 	ScheduleIDToOutcomeIDsMap map[string][]string
 	ScheduleIDToArgsItemMap   map[string]*AddAssessmentArgs
 }

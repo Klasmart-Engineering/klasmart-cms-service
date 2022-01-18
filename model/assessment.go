@@ -54,6 +54,17 @@ type assessmentModel struct {
 }
 
 func (m *assessmentModel) PrepareAddInputWhenCreateSchedule(ctx context.Context, operator *entity.Operator, input []*entity.AssessmentAddInputWhenCreateSchedule) (*entity.BatchAddAssessmentSuperArgs, error) {
+	if len(input) <= 0 {
+		log.Warn(ctx, "input is empty")
+		return nil, constant.ErrInvalidArgs
+	}
+	lessPlanID := input[0].LessonPlanID
+	lessPlanMap, err := m.assessmentBase.batchGetLatestLessonPlanMap(ctx, dbo.MustGetDB(ctx), operator, []string{lessPlanID})
+	if err != nil {
+		return nil, err
+	}
+	lessPlan := lessPlanMap[lessPlanID]
+
 	classIDs := make([]string, 0, len(input))
 	for _, item := range input {
 		classIDs = append(classIDs, item.ClassID)
@@ -86,9 +97,9 @@ func (m *assessmentModel) PrepareAddInputWhenCreateSchedule(ctx context.Context,
 			Title:         title,
 			ScheduleID:    item.ScheduleID,
 			ScheduleTitle: item.ScheduleTitle,
-			LessonPlanID:  item.LessonPlanID,
 			ClassID:       item.ClassID,
 			Attendances:   item.Attendances,
+			LessonPlan:    lessPlan,
 		}
 
 		assessmentArgs = append(assessmentArgs, assessmentArgsItem)
@@ -171,6 +182,23 @@ func (m *assessmentModel) PrepareAddInputWhenScheduleExist(ctx context.Context, 
 		entity.ScheduleRelationTypeClassRosterStudent,
 	})
 
+	contentIDs := make([]string, 0)
+	for _, item := range schedules {
+		if !item.AnyoneAttemptedLive() {
+			log.Warn(ctx, "No one attempted schedule", log.Any("schedule", item))
+			return nil, constant.ErrInvalidArgs
+		}
+		contentIDs = append(contentIDs, item.LiveLessonPlan.LessonPlanID)
+		for _, materialItem := range item.LiveLessonPlan.LessonMaterials {
+			contentIDs = append(contentIDs, materialItem.LessonMaterialID)
+		}
+	}
+
+	contentOutcomeIDsMap, err := m.getContentOutcomeIDsMap(ctx, dbo.MustGetDB(ctx), operator, contentIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	assessmentArgs := make([]*entity.AddAssessmentArgs, 0, len(schedules))
 
 	for _, item := range schedules {
@@ -209,14 +237,30 @@ func (m *assessmentModel) PrepareAddInputWhenScheduleExist(ctx context.Context, 
 		}
 
 		// processing class,live,study type
+
 		assessmentArgsItem := &entity.AddAssessmentArgs{
 			Title:         title,
 			ScheduleID:    item.ID,
 			ScheduleTitle: item.Title,
-			LessonPlanID:  item.LessonPlanID,
 			ClassLength:   inputMapItem.ClassLength,
 			ClassEndTime:  inputMapItem.ClassEndTime,
 		}
+		assessmentArgsItem.LessonPlan = &entity.AssessmentExternalLessonPlan{
+			ID:         item.LiveLessonPlan.LessonPlanID,
+			Name:       item.LiveLessonPlan.LessonPlanName,
+			OutcomeIDs: contentOutcomeIDsMap[item.LiveLessonPlan.LessonPlanID],
+			Materials:  make([]*entity.AssessmentExternalLessonMaterial, len(item.LiveLessonPlan.LessonMaterials)),
+		}
+
+		for i, item := range item.LiveLessonPlan.LessonMaterials {
+			assessmentArgsItem.LessonPlan.Materials[i] = &entity.AssessmentExternalLessonMaterial{
+				ID:   item.LessonMaterialID,
+				Name: item.LessonMaterialName,
+				//Source:     "",
+				OutcomeIDs: contentOutcomeIDsMap[item.LessonMaterialID],
+			}
+		}
+
 		if item.ClassRosterClass != nil {
 			assessmentArgsItem.ClassID = item.ClassRosterClass.ID
 		}
