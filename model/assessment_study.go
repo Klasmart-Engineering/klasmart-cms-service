@@ -37,10 +37,97 @@ type IStudyAssessmentModel interface {
 	BatchCheckAnyoneAttempted(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, roomIDs []string) (map[string]bool, error)
 	Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args *entity.UpdateAssessmentArgs) error
 	Delete(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) error
+
+	Regenerate(ctx context.Context, operator *entity.Operator, schedule *entity.SchedulePlain) error
 }
 
 type studyAssessmentModel struct {
 	assessmentBase
+}
+
+func (m *studyAssessmentModel) Regenerate(ctx context.Context, operator *entity.Operator, schedule *entity.SchedulePlain) error {
+	if schedule.ClassType != entity.ScheduleClassTypeHomework || schedule.IsHomeFun {
+		log.Warn(ctx, "not support this schedule class type", log.Any("schedule", schedule))
+		return nil
+	}
+	assessments, err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{ScheduleIDs: entity.NullStrings{
+		Strings: []string{schedule.ID},
+		Valid:   true,
+	}})
+	if err != nil {
+		return err
+	}
+
+	if len(assessments) <= 0 {
+		log.Warn(ctx, "get assessment by schedule not found", log.Any("schedule", schedule))
+		return constant.ErrRecordNotFound
+	}
+
+	assessment := assessments[0]
+
+	scheduleUserRelationMap, err := GetScheduleRelationModel().GetRelationMap(ctx, operator, []string{schedule.ID}, []entity.ScheduleRelationType{
+		entity.ScheduleRelationTypeParticipantTeacher,
+		entity.ScheduleRelationTypeParticipantStudent,
+		entity.ScheduleRelationTypeClassRosterTeacher,
+		entity.ScheduleRelationTypeClassRosterStudent,
+	})
+
+	contentIDs := make([]string, 0)
+	contentIDs = append(contentIDs, schedule.LiveLessonPlan.LessonPlanID)
+	for _, materialItem := range schedule.LiveLessonPlan.LessonMaterials {
+		contentIDs = append(contentIDs, materialItem.LessonMaterialID)
+	}
+
+	contentOutcomeIDsMap, err := m.getContentOutcomeIDsMap(ctx, dbo.MustGetDB(ctx), operator, contentIDs)
+	if err != nil {
+		return err
+	}
+
+	relations := scheduleUserRelationMap[schedule.ID]
+
+	arg := &entity.AddAssessmentArgs{
+		Title:         assessment.Title,
+		ScheduleID:    schedule.ID,
+		ScheduleTitle: schedule.Title,
+		ClassID:       schedule.ClassID,
+		ClassLength:   0,
+		ClassEndTime:  0,
+		Attendances:   relations,
+		LessonPlan:    nil,
+	}
+
+	arg.LessonPlan = &entity.AssessmentExternalLessonPlan{
+		ID:         schedule.LiveLessonPlan.LessonPlanID,
+		Name:       schedule.LiveLessonPlan.LessonPlanName,
+		OutcomeIDs: contentOutcomeIDsMap[schedule.LiveLessonPlan.LessonPlanID],
+		Materials:  make([]*entity.AssessmentExternalLessonMaterial, len(schedule.LiveLessonPlan.LessonMaterials)),
+	}
+
+	for i, item := range schedule.LiveLessonPlan.LessonMaterials {
+		arg.LessonPlan.Materials[i] = &entity.AssessmentExternalLessonMaterial{
+			ID:         item.LessonMaterialID,
+			Name:       item.LessonMaterialName,
+			OutcomeIDs: contentOutcomeIDsMap[item.LessonMaterialID],
+		}
+	}
+
+	superArgs, err := m.assessmentBase.prepareBatchAddSuperArgs(ctx, dbo.MustGetDB(ctx), operator, []*entity.AddAssessmentArgs{arg})
+	if err != nil {
+		log.Error(ctx, "prepare add assessment args: prepare batch add super args failed",
+			log.Err(err),
+			log.Any("arg", arg),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := GetStudyAssessmentModel().Delete(ctx, tx, operator, superArgs.ScheduleIDs)
+		if err != nil {
+			return err
+		}
+		return GetAssessmentModel().BatchAddTx(ctx, tx, operator, superArgs)
+	})
 }
 
 func (m *studyAssessmentModel) GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.AssessmentDetail, error) {
