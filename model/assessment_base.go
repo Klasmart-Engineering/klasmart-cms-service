@@ -772,7 +772,7 @@ func (m *assessmentBase) existsAssessmentsByScheduleIDs(ctx context.Context, tx 
 	return false, nil
 }
 
-func (m *assessmentBase) prepareBatchAddSuperArgs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args []*entity.AddAssessmentArgs) (*entity.BatchAddAssessmentSuperArgs, error) {
+func (m *assessmentBase) prepareBatchAddSuperArgs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args []*entity.AddAssessmentArgs, checkedExists bool) (*entity.BatchAddAssessmentSuperArgs, error) {
 	for _, item := range args {
 		existsMap := make(map[string]bool, len(item.Attendances))
 		var deletingAttendances []*entity.ScheduleRelation
@@ -806,12 +806,14 @@ func (m *assessmentBase) prepareBatchAddSuperArgs(ctx context.Context, tx *dbo.D
 	scheduleIDs = utils.SliceDeduplicationExcludeEmpty(scheduleIDs)
 
 	// check if assessment already exits
-	ok, err := m.existsAssessmentsByScheduleIDs(ctx, tx, operator, scheduleIDs)
-	if err != nil {
-		return nil, err
-	}
-	if ok {
-		return nil, errors.New("assessment already existed")
+	if checkedExists {
+		ok, err := m.existsAssessmentsByScheduleIDs(ctx, tx, operator, scheduleIDs)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			return nil, errors.New("assessment already existed")
+		}
 	}
 
 	// get contents
@@ -830,6 +832,7 @@ func (m *assessmentBase) prepareBatchAddSuperArgs(ctx context.Context, tx *dbo.D
 
 	// get outcomes
 	var (
+		err                       error
 		outcomeIDs                []string
 		scheduleIDToOutcomeIDsMap = make(map[string][]string, len(args))
 		lessonPlanMap             = make(map[string]*entity.AssessmentExternalLessonPlan)

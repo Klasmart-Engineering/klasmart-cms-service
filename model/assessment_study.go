@@ -111,7 +111,7 @@ func (m *studyAssessmentModel) Regenerate(ctx context.Context, operator *entity.
 		}
 	}
 
-	superArgs, err := m.assessmentBase.prepareBatchAddSuperArgs(ctx, dbo.MustGetDB(ctx), operator, []*entity.AddAssessmentArgs{arg})
+	superArgs, err := m.assessmentBase.prepareBatchAddSuperArgs(ctx, dbo.MustGetDB(ctx), operator, []*entity.AddAssessmentArgs{arg}, false)
 	if err != nil {
 		log.Error(ctx, "prepare add assessment args: prepare batch add super args failed",
 			log.Err(err),
