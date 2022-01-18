@@ -196,7 +196,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 				})
 			}
 			scheduleLiveLessonPlan := &entity.ScheduleLiveLessonPlan{
-				LessonPlanID:    schedule.LessonPlanID,
+				LessonPlanID:    latestLessonPlanID[0],
 				LessonPlanName:  lessonPlanName.Name,
 				LessonMaterials: scheduleLiveLessonMaterials,
 			}
