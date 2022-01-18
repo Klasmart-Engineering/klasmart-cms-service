@@ -300,6 +300,7 @@ func (m *assessmentModel) BatchAdd(ctx context.Context, operator *entity.Operato
 		return m.BatchAddTx(ctx, tx, operator, input)
 	})
 }
+
 func (m *assessmentModel) BatchAddTx(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input *entity.BatchAddAssessmentSuperArgs) error {
 	_, err := m.assessmentBase.batchAdd(ctx, tx, operator, input)
 	if err != nil {
