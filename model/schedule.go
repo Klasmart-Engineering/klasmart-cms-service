@@ -917,12 +917,7 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 				return nil, ErrScheduleAlreadyFeedback
 			}
 		} else {
-			existAssessment, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), op, []string{schedule.ID})
-			if err != nil {
-				log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", schedule.ID))
-				return nil, err
-			}
-			if existAssessment[schedule.ID] {
+			if schedule.AnyoneAttemptedLive() {
 				log.Info(ctx, "The schedule has already been attended", log.Any("scheduleID", schedule.ID))
 				return nil, ErrScheduleStudyAlreadyProgress
 			}
@@ -1452,12 +1447,6 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 		scheduleIDs[i] = item.ID
 	}
 
-	existAssessmentMap, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), op, studyScheduleIDs)
-	if err != nil {
-		log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.Any("scheduleIDs", studyScheduleIDs))
-		return nil, err
-	}
-
 	assessments, err := GetAssessmentModel().Query(ctx, op, &da.QueryAssessmentConditions{
 		ScheduleIDs: entity.NullStrings{
 			Strings: scheduleIDs,
@@ -1542,7 +1531,7 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 			return nil, err
 		}
 		temp.ExistFeedback = existFeedback
-		temp.ExistAssessment = existAssessmentMap[item.ID]
+		temp.ExistAssessment = item.AnyoneAttemptedLive()
 		temp.CompleteAssessment = completeAssessmentMap[item.ID]
 		if temp.ClassType == entity.ScheduleClassTypeHomework && temp.IsHomeFun {
 			temp.CompleteAssessment = completeHomefunStudyAssessmentMap[item.ID]
@@ -3007,7 +2996,6 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 	var scheduleSubjects []*entity.ScheduleShortInfo
 	var scheduleRealTimeStatus *entity.ScheduleRealTimeView
 	var scheduleExistFeedback bool
-	var scheduleExistAssessment bool
 	var scheduleCompleteAssessment bool
 	var userMap map[string]*external.NullableUser
 	var schedulePermissionMap map[external.PermissionName]bool
@@ -3164,22 +3152,6 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 
 		return nil
 	})
-
-	// check if the assessment exists, only not homefun homework
-	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
-		g.Go(func() error {
-			existAssessment, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, []string{schedule.ID})
-			if err != nil {
-				log.Error(ctx, "s.studyAssessmentModel.BatchCheckAnyoneAttempted error",
-					log.Err(err),
-					log.String("scheduleID", schedule.ID))
-				return err
-			}
-			scheduleExistAssessment = existAssessment[schedule.ID]
-
-			return nil
-		})
-	}
 
 	// get user info map
 	userIDs := append(classRoasterTeacherIDs, classRoasterStudentIDs...)
@@ -3356,7 +3328,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 		scheduleDetailsView.RealTimeStatus = *scheduleRealTimeStatus
 	}
 	scheduleDetailsView.ExistFeedback = scheduleExistFeedback
-	scheduleDetailsView.ExistAssessment = scheduleExistAssessment
+	scheduleDetailsView.ExistAssessment = schedule.AnyoneAttemptedLive()
 	scheduleDetailsView.CompleteAssessment = scheduleCompleteAssessment
 
 	// get isClassAccessible
@@ -3558,7 +3530,6 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 	var scheduleLessonPlan *entity.ScheduleLessonPlan
 	var scheduleClass *entity.ScheduleShortInfo
 	var scheduleExistFeedback bool
-	var scheduleExistAssessment bool
 	var scheduleCompleteAssessment bool
 
 	// get lesson plan
@@ -3663,22 +3634,6 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 		return nil
 	})
 
-	// check if the assessment exists, only not homefun homework
-	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
-		g.Go(func() error {
-			existAssessment, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, []string{schedule.ID})
-			if err != nil {
-				log.Error(ctx, "s.studyAssessmentModel.BatchCheckAnyoneAttempted error",
-					log.Err(err),
-					log.String("scheduleID", schedule.ID))
-				return err
-			}
-			scheduleExistAssessment = existAssessment[scheduleViewDetail.ID]
-
-			return nil
-		})
-	}
-
 	// check if the assessment completed, homefun homework
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
 		g.Go(func() error {
@@ -3742,7 +3697,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 	scheduleViewDetail.LessonPlan = scheduleLessonPlan
 	scheduleViewDetail.Class = scheduleClass
 	scheduleViewDetail.ExistFeedback = scheduleExistFeedback
-	scheduleViewDetail.ExistAssessment = scheduleExistAssessment
+	scheduleViewDetail.ExistAssessment = schedule.AnyoneAttemptedLive()
 	scheduleViewDetail.CompleteAssessment = scheduleCompleteAssessment
 
 	for _, teacherID := range teacherIDs {
@@ -3793,26 +3748,9 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 	}
 
 	g := new(errgroup.Group)
-	var scheduleExistAssessmentMap map[string]bool
 	scheduleCompleteAssessmentMap := make(map[string]bool)
 	var scheduleExistFeedbackMap map[string]bool
 	scheduleOperatorRoleTypeMap := make(map[string]entity.ScheduleRoleType)
-
-	// check if the assessment exists, only not homefun homework
-	if len(notHomefunHomeworkIDs) > 0 {
-		g.Go(func() error {
-			existAssessment, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, notHomefunHomeworkIDs)
-			if err != nil {
-				log.Error(ctx, "s.studyAssessmentModel.BatchCheckAnyoneAttempted error",
-					log.Err(err),
-					log.Strings("notHomefunHomeworkIDs", notHomefunHomeworkIDs))
-				return err
-			}
-			scheduleExistAssessmentMap = existAssessment
-
-			return nil
-		})
-	}
 
 	// check if the assessment completed
 	g.Go(func() error {
@@ -3961,7 +3899,7 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 		}
 
 		item.ExistFeedback = scheduleExistFeedbackMap[schedule.ID]
-		item.ExistAssessment = scheduleExistAssessmentMap[schedule.ID]
+		item.ExistAssessment = schedule.AnyoneAttemptedLive()
 		item.CompleteAssessment = scheduleCompleteAssessmentMap[schedule.ID]
 		if scheduleOperatorRoleTypeMap, ok := scheduleOperatorRoleTypeMap[schedule.ID]; ok {
 			item.RoleType = scheduleOperatorRoleTypeMap
