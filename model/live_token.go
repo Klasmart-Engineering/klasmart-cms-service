@@ -122,16 +122,15 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 				return "", err
 			}
 
-			for _, v := range schedule.LiveLessonPlan.LessonMaterials {
-				liveMaterial, err := s.convertToLiveMaterial(ctx, op, scheduleID, tokenType, v)
-				if err != nil {
-					log.Error(ctx, "s.convertToLiveMaterial error",
-						log.Err(err),
-						log.Any("op", op),
-						log.Any("lesson_material", v))
-					return "", err
-				}
-				liveTokenInfo.Materials = append(liveTokenInfo.Materials, liveMaterial)
+			liveTokenInfo.Materials, err = s.convertToLiveMaterial(ctx, op, scheduleID, tokenType, schedule.LiveLessonPlan.LessonMaterials)
+			if err != nil {
+				log.Error(ctx, "s.convertToLiveMaterial error",
+					log.Err(err),
+					log.Any("op", op),
+					log.String("scheduleID", scheduleID),
+					log.Any("tokenType", tokenType),
+					log.Any("liveLessonMaterials", schedule.LiveLessonPlan.LessonMaterials))
+				return "", err
 			}
 		} else {
 			// No one attempted live
@@ -456,73 +455,84 @@ func (s *liveTokenModel) GetMaterials(ctx context.Context, op *entity.Operator, 
 	return materials, nil
 }
 
-func (s *liveTokenModel) convertToLiveMaterial(ctx context.Context, op *entity.Operator, scheduleID string, tokenType entity.LiveTokenType, liveLessonMaterial *entity.ScheduleLiveLessonMaterial) (*entity.LiveMaterial, error) {
-	if liveLessonMaterial == nil {
-		return nil, nil
+func (s *liveTokenModel) convertToLiveMaterial(ctx context.Context, op *entity.Operator, scheduleID string, tokenType entity.LiveTokenType, liveLessonMaterials []*entity.ScheduleLiveLessonMaterial) ([]*entity.LiveMaterial, error) {
+	if len(liveLessonMaterials) == 0 {
+		return []*entity.LiveMaterial{}, nil
 	}
 
-	result := &entity.LiveMaterial{
-		ID:   liveLessonMaterial.LessonMaterialID,
-		Name: liveLessonMaterial.LessonMaterialName,
+	lessonMaterialIDList := make([]string, len(liveLessonMaterials))
+	for i, v := range liveLessonMaterials {
+		lessonMaterialIDList[i] = v.LessonMaterialID
 	}
 
-	// TODO: need performance improvement, only query cms_contents
-	material, err := GetContentModel().GetContentByID(ctx, dbo.MustGetDB(ctx), liveLessonMaterial.LessonMaterialID, op)
+	lessonMaterials, err := GetContentModel().GetRawContentByIDList(ctx, dbo.MustGetDB(ctx), lessonMaterialIDList)
 	if err != nil {
-		log.Error(ctx, "GetContentModel().GetContentByID error",
+		log.Error(ctx, "GetContentModel().GetRawContentByIDList error",
 			log.Err(err),
-			log.Any("materialID", liveLessonMaterial.LessonMaterialID))
+			log.Any("op", op),
+			log.Strings("lessonMaterialIDList", lessonMaterialIDList))
 		return nil, err
 	}
 
-	m := new(MaterialData)
-	err = m.Unmarshal(ctx, material.Data)
-	if err != nil {
-		log.Error(ctx, "m.Unmarshal error",
-			log.Err(err),
-			log.Any("liveLessonMaterial", liveLessonMaterial))
-		return nil, err
-	}
-	result.ContentData = m
+	result := make([]*entity.LiveMaterial, len(lessonMaterials))
 
-	// material type
-	switch m.FileType {
-	case entity.FileTypeImage:
-		result.TypeName = entity.MaterialTypeImage
-	case entity.FileTypeAudio:
-		result.TypeName = entity.MaterialTypeAudio
-	case entity.FileTypeVideo:
-		result.TypeName = entity.MaterialTypeVideo
-	case entity.FileTypeH5p, entity.FileTypeH5pExtend:
-		result.TypeName = entity.MaterialTypeH5P
-	case entity.FileTypeDocument:
-		log.Debug(ctx, "content material doc type", log.Any("liveLessonMaterial", liveLessonMaterial))
-		result.TypeName = entity.MaterialTypeH5P
-	default:
-		log.Warn(ctx, "content material type is invalid", log.Any("liveLessonMaterial", liveLessonMaterial))
-	}
+	for i, material := range lessonMaterials {
+		liveMaterial := &entity.LiveMaterial{
+			ID:   material.ID,
+			Name: material.Name,
+		}
 
-	// material url
-	switch m.FileType {
-	case entity.FileTypeH5pExtend:
-		result.URL = fmt.Sprintf("/h5pextend/index.html?org_id=%s&content_id=%s&schedule_id=%s&type=%s#/live-h5p",
-			op.OrgID, liveLessonMaterial.LessonMaterialID, scheduleID, tokenType)
-	case entity.FileTypeH5p:
-		result.URL = fmt.Sprintf("/h5p/play/%v", m.Source)
-	default:
-		sourcePath, err := m.Source.ConvertToPath(ctx)
+		m := new(MaterialData)
+		err := m.Unmarshal(ctx, material.Data)
 		if err != nil {
-			log.Error(ctx, "m.Source.ConvertToPath error",
-				log.Any("source", m.Source))
-			return nil, constant.ErrInvalidArgs
+			log.Error(ctx, "m.Unmarshal error",
+				log.Err(err),
+				log.Any("material", material))
+			return nil, err
+		}
+		liveMaterial.ContentData = m
+
+		// material type
+		switch m.FileType {
+		case entity.FileTypeImage:
+			liveMaterial.TypeName = entity.MaterialTypeImage
+		case entity.FileTypeAudio:
+			liveMaterial.TypeName = entity.MaterialTypeAudio
+		case entity.FileTypeVideo:
+			liveMaterial.TypeName = entity.MaterialTypeVideo
+		case entity.FileTypeH5p, entity.FileTypeH5pExtend:
+			liveMaterial.TypeName = entity.MaterialTypeH5P
+		case entity.FileTypeDocument:
+			log.Debug(ctx, "content material doc type", log.Any("MaterialData", m))
+			liveMaterial.TypeName = entity.MaterialTypeH5P
+		default:
+			log.Warn(ctx, "content material type is invalid", log.Any("MaterialData", m))
 		}
 
-		// KLS-271: pdf file special handler
-		if m.Source.Ext() == constant.LiveTokenDocumentPDF {
-			result.URL = sourcePath
-		} else {
-			result.URL = config.Get().LiveTokenConfig.AssetsUrlPrefix + sourcePath
+		// material url
+		switch m.FileType {
+		case entity.FileTypeH5pExtend:
+			liveMaterial.URL = fmt.Sprintf("/h5pextend/index.html?org_id=%s&content_id=%s&schedule_id=%s&type=%s#/live-h5p",
+				op.OrgID, material.ID, scheduleID, tokenType)
+		case entity.FileTypeH5p:
+			liveMaterial.URL = fmt.Sprintf("/h5p/play/%v", m.Source)
+		default:
+			sourcePath, err := m.Source.ConvertToPath(ctx)
+			if err != nil {
+				log.Error(ctx, "m.Source.ConvertToPath error",
+					log.Any("source", m.Source))
+				return nil, constant.ErrInvalidArgs
+			}
+
+			// KLS-271: pdf file special handler
+			if m.Source.Ext() == constant.LiveTokenDocumentPDF {
+				liveMaterial.URL = sourcePath
+			} else {
+				liveMaterial.URL = config.Get().LiveTokenConfig.AssetsUrlPrefix + sourcePath
+			}
 		}
+
+		result[i] = liveMaterial
 	}
 
 	return result, nil
