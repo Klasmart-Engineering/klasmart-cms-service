@@ -123,6 +123,7 @@ func (s Server) registeRoute() {
 
 	reports := s.engine.Group("/v1")
 	{
+		reports.GET("/reports/students_achievement_overview", s.mustLogin, s.listStudentsAchievementOverviewReport)
 		reports.GET("/reports/students", s.mustLogin, s.listStudentsAchievementReport)
 		reports.GET("/reports/students/:id", s.mustLogin, s.getStudentAchievementReport)
 		reports.GET("/reports/teachers/:id", s.mustLogin, s.getTeacherReport)

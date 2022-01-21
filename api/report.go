@@ -12,6 +12,22 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
+// @Summary list student report overview
+// @Description list student report overview
+// @Tags reports
+// @ID listStudentsAchievementOverviewReport
+// @Accept json
+// @Produce json
+// @Param time_range query entity.TimeRange true "time_range"
+// @Success 200 {object} entity.StudentsAchievementOverviewReportResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /reports/students_achievement_overview [get]
+func (s *Server) listStudentsAchievementOverviewReport(ctx *gin.Context) {
+
+}
+
 // @Summary list student report
 // @Description list student report
 // @Tags reports
