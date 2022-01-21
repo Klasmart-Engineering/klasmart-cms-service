@@ -79,6 +79,7 @@ type IScheduleModel interface {
 	QueryByConditionInternal(ctx context.Context, condition *da.ScheduleCondition) (int, []*entity.ScheduleSimplified, error)
 
 	UpdateLiveLessonPlan(ctx context.Context, op *entity.Operator, scheduleID string, liveLessonPlan *entity.ScheduleLiveLessonPlan) error
+	GetScheduleLiveLessonPlan(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleLiveLessonPlan, bool, error)
 }
 
 type scheduleModel struct {
@@ -2881,6 +2882,23 @@ func (s *scheduleModel) UpdateLiveLessonPlan(ctx context.Context, op *entity.Ope
 	}
 
 	return nil
+}
+
+func (s *scheduleModel) GetScheduleLiveLessonPlan(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleLiveLessonPlan, bool, error) {
+	var schedule *entity.Schedule
+	err := s.scheduleDA.Get(ctx, scheduleID, &schedule)
+	if err != nil {
+		log.Error(ctx, "s.scheduleDA.Get error",
+			log.Err(err),
+			log.String("scheduleID", scheduleID))
+		return nil, false, err
+	}
+
+	if schedule.AnyoneAttemptedLive() {
+		return schedule.LiveLessonPlan, true, nil
+	}
+
+	return nil, false, nil
 }
 
 // Schedule model interval function
