@@ -473,10 +473,21 @@ func (s *liveTokenModel) convertToLiveMaterial(ctx context.Context, op *entity.O
 			log.Strings("lessonMaterialIDList", lessonMaterialIDList))
 		return nil, err
 	}
+	lessonMaterialsMap := make(map[string]*entity.Content, len(lessonMaterials))
+	for _, v := range lessonMaterials {
+		lessonMaterialsMap[v.ID] = v
+	}
 
-	result := make([]*entity.LiveMaterial, len(lessonMaterials))
+	result := make([]*entity.LiveMaterial, len(liveLessonMaterials))
+	for i, liveMaterial := range liveLessonMaterials {
+		material, ok := lessonMaterialsMap[liveMaterial.LessonMaterialID]
+		if !ok {
+			log.Error(ctx, "lesson material not found",
+				log.Any("op", op),
+				log.String("liveMaterial.LessonMaterialID", liveMaterial.LessonMaterialID))
+			return nil, fmt.Errorf("lesson material not found")
+		}
 
-	for i, material := range lessonMaterials {
 		liveMaterial := &entity.LiveMaterial{
 			ID:   material.ID,
 			Name: material.Name,
