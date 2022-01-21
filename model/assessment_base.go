@@ -558,10 +558,12 @@ func (m *assessmentBase) toViews(ctx context.Context, operator *entity.Operator,
 		}
 		if options.EnableSubjects {
 			for _, subject := range s.Subjects {
-				v.Subjects = append(v.Subjects, &entity.AssessmentSubject{
-					ID:   subject.ID,
-					Name: subject.Name,
-				})
+				if subject != nil {
+					v.Subjects = append(v.Subjects, &entity.AssessmentSubject{
+						ID:   subject.ID,
+						Name: subject.Name,
+					})
+				}
 			}
 		}
 		if options.EnableTeachers {

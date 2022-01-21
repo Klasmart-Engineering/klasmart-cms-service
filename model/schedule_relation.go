@@ -87,8 +87,9 @@ func (s *scheduleRelationModel) GetSubjectsByScheduleIDs(ctx context.Context, op
 		if _, ok := result[item.ScheduleID]; !ok {
 			result[item.ScheduleID] = make([]*entity.ScheduleShortInfo, 0, len(scheduleRelations))
 		}
-
-		result[item.ScheduleID] = append(result[item.ScheduleID], subjectMap[item.RelationID])
+		if subject, ok := subjectMap[item.RelationID]; ok {
+			result[item.ScheduleID] = append(result[item.ScheduleID], subject)
+		}
 	}
 
 	return result, nil
