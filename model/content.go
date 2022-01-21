@@ -1307,15 +1307,9 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 		return NewErrContentAlreadyLocked(ctx, content.LockedBy, user)
 	}
 
-	err := cm.checkDeleteContent(ctx, content)
-	if err != nil {
-		log.Error(ctx, "check delete content failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
-		return err
-	}
-
 	obj := cm.prepareDeleteContentParams(ctx, content, content.PublishStatus, user)
 
-	err = da.GetContentDA().UpdateContent(ctx, tx, content.ID, *obj)
+	err := da.GetContentDA().UpdateContent(ctx, tx, content.ID, *obj)
 	if err != nil {
 		log.Error(ctx, "delete contentdata failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
 		return err

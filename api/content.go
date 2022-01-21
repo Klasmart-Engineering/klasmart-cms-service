@@ -474,8 +474,6 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 		return
 	}
 	switch err {
-	case model.ErrDeleteLessonInSchedule:
-		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
@@ -517,8 +515,6 @@ func (s *Server) deleteContent(c *gin.Context) {
 		return
 	}
 	switch err {
-	case model.ErrDeleteLessonInSchedule:
-		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidVisibilitySetting:
