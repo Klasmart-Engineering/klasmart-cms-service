@@ -5,6 +5,13 @@ import (
 	"strings"
 )
 
+type StudentsAchievementOverviewReportResponse struct {
+	CoveredLearnOutComeCount int `json:"covered_learn_outcome_count"`
+	AchievedAboveCount       int `json:"achieved_above_count"`
+	AchievedMeetCount        int `json:"achieved_meet_count"`
+	AchievedBelowCount       int `json:"achieved_below_count"`
+}
+
 type StudentsAchievementReportResponse struct {
 	Items         []*StudentAchievementReportItem `json:"items"`
 	AssessmentIDs []string                        `json:"assessment_ids"`
@@ -390,9 +397,9 @@ type GetTeachingHoursReportResultItem struct {
 // endregion activities
 
 type ReportListTeachingLoadArgs struct {
-	TeacherIDs []string  `json:"teacher_ids"`
-	ClassIDs   []string  `json:"class_ids"`
-	TimeOffset int       `json:"time_offset"`
+	TeacherIDs []string `json:"teacher_ids"`
+	ClassIDs   []string `json:"class_ids"`
+	TimeOffset int      `json:"time_offset"`
 }
 
 type ReportListTeachingLoadResult struct {
