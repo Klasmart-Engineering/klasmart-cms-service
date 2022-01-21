@@ -108,11 +108,18 @@ const (
 	ApprovePendingLearningOutcome       PermissionName = "approve_pending_learning_outcome_481"
 	RejectPendingLearningOutcome        PermissionName = "reject_pending_learning_outcome_482"
 
-	ReportTeacherReports603             PermissionName = "teacher_reports_603"
-	ReportViewReports610                PermissionName = "view_reports_610"
-	ReportViewMyReports614              PermissionName = "view_my_reports_614"
-	ReportViewMySchoolReports611        PermissionName = "view_my_school_reports_611"
+	ReportTeacherReports603               PermissionName = "teacher_reports_603"
+	ReportViewReports610                  PermissionName = "view_reports_610"
+	ReportLearningOutcomesInCategories616 PermissionName = "report_learning_outcomes_in_categories_616"
+
+	ReportViewMySchoolReports611 PermissionName = "view_my_school_reports_611"
+	ReportSchoolsSkillsTaught641 PermissionName = "report_schools_skills_taught_641"
+
 	ReportViewMyOrganizationsReports612 PermissionName = "view_my_organizations_reports_612"
+	ReportOrganizationsSkillsTaught640  PermissionName = "report_organizations_skills_taught_640"
+
+	ReportViewMyReports614  PermissionName = "view_my_reports_614"
+	ReportMySkillsTaught642 PermissionName = "report_my_skills_taught_642"
 
 	Assessments400                                     PermissionName = "assessments_400"
 	AssessmentPage406                                  PermissionName = "assessments_page_406"
@@ -160,3 +167,10 @@ const (
 	ViewProgram20111  PermissionName = "view_program_20111"
 	ViewSubjects20115 PermissionName = "view_subjects_20115"
 )
+
+type TeacherViewPermissionParams struct {
+	ViewOrgOrSchoolReports PermissionName
+	ViewSchoolReports      PermissionName
+	ViewOrgReports         PermissionName
+	ViewMyReports          PermissionName
+}
