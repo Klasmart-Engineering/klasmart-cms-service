@@ -37,7 +37,7 @@ type IReportModel interface {
 	GetAssignmentCompletion(ctx context.Context, op *entity.Operator, args *entity.AssignmentRequest) (entity.AssignmentResponse, error)
 	GetStudentProgressLearnOutcomeAchievement(ctx context.Context, op *entity.Operator, req *entity.LearnOutcomeAchievementRequest) (res *entity.LearnOutcomeAchievementResponse, err error)
 	ClassAttendanceStatistics(ctx context.Context, op *entity.Operator, request *entity.ClassAttendanceRequest) (response *entity.ClassAttendanceResponse, err error)
-	GetTeacherIDsCanViewReports(ctx context.Context, operator *entity.Operator) (teacherIDs []string, err error)
+	GetTeacherIDsCanViewReports(ctx context.Context, operator *entity.Operator, params external.TeacherViewPermissionParams) (teacherIDs []string, err error)
 	GetLearnerUsageOverview(ctx context.Context, op *entity.Operator, permissions map[external.PermissionName]bool, request *entity.LearnerUsageRequest) (response *entity.LearnerUsageResponse, err error)
 }
 
@@ -457,17 +457,17 @@ func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 
 	return &result, nil
 }
-func (rm *reportModel) GetTeacherIDsCanViewReports(ctx context.Context, operator *entity.Operator) (teacherIDs []string, err error) {
+func (rm *reportModel) GetTeacherIDsCanViewReports(ctx context.Context, operator *entity.Operator, params external.TeacherViewPermissionParams) (teacherIDs []string, err error) {
 	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, []external.PermissionName{
-		external.ReportViewMyReports614,
-		external.ReportViewReports610,
-		external.ReportViewMySchoolReports611,
-		external.ReportViewMyOrganizationsReports612,
+		params.ViewOrgOrSchoolReports,
+		params.ViewSchoolReports,
+		params.ViewOrgReports,
+		params.ViewMyReports,
 	})
 	if err != nil {
 		return
 	}
-	canViewOrg := perms[external.ReportViewReports610] || perms[external.ReportViewMyOrganizationsReports612]
+	canViewOrg := perms[params.ViewOrgOrSchoolReports] || perms[params.ViewOrgReports]
 	if canViewOrg {
 		var teachers []*external.Teacher
 		teachers, err = external.GetTeacherServiceProvider().GetByOrganization(ctx, operator, operator.OrgID)
@@ -479,7 +479,7 @@ func (rm *reportModel) GetTeacherIDsCanViewReports(ctx context.Context, operator
 		}
 	}
 
-	canViewSchool := perms[external.ReportViewReports610] || perms[external.ReportViewMySchoolReports611]
+	canViewSchool := perms[params.ViewOrgOrSchoolReports] || perms[params.ViewSchoolReports]
 	if canViewSchool {
 		var schools []*external.School
 		schools, err = external.GetSchoolServiceProvider().GetByOperator(ctx, operator)
@@ -502,7 +502,7 @@ func (rm *reportModel) GetTeacherIDsCanViewReports(ctx context.Context, operator
 		}
 
 	}
-	if !canViewOrg && !canViewSchool && perms[external.ReportViewMyReports614] {
+	if !canViewOrg && !canViewSchool && perms[params.ViewMyReports] {
 		teacherIDs = append(teacherIDs, operator.UserID)
 	}
 	return

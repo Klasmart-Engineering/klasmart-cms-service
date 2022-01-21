@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"net/http"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -172,7 +174,12 @@ func (s *Server) getTeachersReport(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		}
 	}()
-	teacherIDs, err := model.GetReportModel().GetTeacherIDsCanViewReports(ctx, operator)
+	teacherIDs, err := model.GetReportModel().GetTeacherIDsCanViewReports(ctx, operator, external.TeacherViewPermissionParams{
+		ViewOrgOrSchoolReports: external.ReportLearningOutcomesInCategories616,
+		ViewSchoolReports:      external.ReportSchoolsSkillsTaught641,
+		ViewOrgReports:         external.ReportOrganizationsSkillsTaught640,
+		ViewMyReports:          external.ReportMySkillsTaught642,
+	})
 	if err != nil {
 		return
 	}
