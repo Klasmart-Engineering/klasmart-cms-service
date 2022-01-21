@@ -20,13 +20,45 @@ import (
 // @ID listStudentsAchievementOverviewReport
 // @Accept json
 // @Produce json
-// @Param time_range query entity.TimeRange true "time_range"
+// @Param time_range query string true "time_range"
 // @Success 200 {object} entity.StudentsAchievementOverviewReportResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/students_achievement_overview [get]
-func (s *Server) listStudentsAchievementOverviewReport(ctx *gin.Context) {
+func (s *Server) listStudentsAchievementOverviewReport(c *gin.Context) {
+	ctx := c.Request.Context()
+	operator := s.getOperator(c)
+	var err error
+	var result *entity.TeacherReport
+	defer func() {
+		switch err {
+		case nil:
+			c.JSON(http.StatusOK, result)
+		case constant.ErrInvalidArgs:
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		case constant.ErrRecordNotFound, sql.ErrNoRows:
+			c.JSON(http.StatusNotFound, L(GeneralUnknown))
+		case constant.ErrForbidden:
+			c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
+		default:
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		}
+	}()
+	teacherIDs, err := model.GetReportModel().GetTeacherIDsCanViewReports(ctx, operator, external.TeacherViewPermissionParams{
+		ViewOrgOrSchoolReports: external.ReportLearningOutcomesInCategories616,
+		ViewSchoolReports:      external.ReportSchoolsSkillsTaught641,
+		ViewOrgReports:         external.ReportOrganizationsSkillsTaught640,
+		ViewMyReports:          external.ReportMySkillsTaught642,
+	})
+	if err != nil {
+		return
+	}
+	result, err = model.GetReportModel().GetTeacherReport(ctx, dbo.MustGetDB(ctx), operator, teacherIDs...)
+	if err != nil {
+		return
+	}
+	return
 
 }
 
