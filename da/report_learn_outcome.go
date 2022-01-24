@@ -33,13 +33,13 @@ select t.student_id ,count(1) as total_achieved_outcome_count,sum(t.student_achi
 	select ao.outcome_id , sa.student_id,IF(oa.id is null,0,1) as student_achieved
 	from assessments_outcomes ao
 	left join (
-		{{sbAssessmentStudent}}
+		{{.sbAssessmentStudent}}
 	) sa  on sa.assessment_id=ao.assessment_id 
 	left join outcomes_attendances oa on ao.assessment_id =oa.assessment_id and oa.assessment_id =ao.assessment_id 
 	where ao.skip =0 and oa.id is NULL 
 	and sa.assessment_id is not  null 
 	and sa.schedule_id in(
-		{{sbScheduleID}}
+		{{.sbScheduleID}}
 	)
 ) t 
 group by t.student_id 
