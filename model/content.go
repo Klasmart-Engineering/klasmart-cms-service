@@ -154,6 +154,176 @@ type IContentModel interface {
 	GetSharedContents(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest) ([]*entity.Content, error)
 	CheckContentVisible(ctx context.Context, cid string, operator *entity.Operator) (bool, error)
 	UpdateSharedContentsCount(ctx context.Context, tx *dbo.DBContext, cids []string, operator *entity.Operator) error
+
+	GetSpecifiedLessonPlan(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, planID string, materialIDs []string, withAP bool) (*entity.ContentInfoWithDetails, error)
+}
+
+func (cm *ContentModel) GetSpecifiedLessonPlan(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, planID string, materialIDs []string, withAP bool) (*entity.ContentInfoWithDetails, error) {
+	latestIDs, err := cm.GetLatestContentIDByIDList(ctx, tx, []string{planID})
+	if err != nil {
+		log.Error(ctx, "GetSpecifiedLessonPlan failed", log.Err(err),
+			log.Any("operator", operator),
+			log.String("lesson_plan_id", planID),
+			log.Strings("material_ids", materialIDs))
+		return nil, err
+	}
+	if len(latestIDs) != 1 {
+		log.Error(ctx, "GetSpecifiedLessonPlan failed", log.Err(err),
+			log.Any("operator", operator),
+			log.Strings("latest_ids", latestIDs),
+			log.String("lesson_plan_id", planID),
+			log.Strings("material_ids", materialIDs))
+		return nil, constant.ErrInternalServer
+	}
+	hasPermission, err := GetContentPermissionMySchoolModel().CheckGetContentPermission(ctx, latestIDs[0], operator)
+	if err != nil {
+		log.Error(ctx, "GetSpecifiedLessonPlan has no permission",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Strings("latest_ids", latestIDs),
+			log.String("lesson_plan_id", planID),
+			log.Strings("material_ids", materialIDs))
+		return nil, err
+	}
+	if !hasPermission {
+		log.Debug(ctx, "GetSpecifiedLessonPlan has no permission",
+			log.Any("operator", operator),
+			log.Strings("latest_ids", latestIDs),
+			log.String("lesson_plan_id", planID),
+			log.Strings("material_ids", materialIDs))
+		return nil, constant.ErrForbidden
+	}
+
+	var cids []string
+	cids = append(cids, planID)
+	cids = append(cids, materialIDs...)
+	contents, err := da.GetContentDA().GetContentByIDList(ctx, tx, cids)
+	if err != nil {
+		log.Error(ctx, "GetSpecifiedLessonPlan failed",
+			log.Err(err),
+			log.String("lesson_plan_id", planID),
+			log.Strings("material_ids", materialIDs))
+		return nil, err
+	}
+	var lessonPlan *entity.Content
+	latestKeyContents := make(map[string]*entity.Content)
+	for _, c := range contents {
+		if c.LatestID != "" {
+			latestKeyContents[c.LatestID] = c
+		} else {
+			latestKeyContents[c.ID] = c
+		}
+
+		if c.ID == planID {
+			lessonPlan = c
+		}
+	}
+
+	if lessonPlan == nil {
+		log.Error(ctx, "GetSpecifiedLessonPlan failed",
+			log.String("lesson_plan_id", planID),
+			log.Strings("material_ids", materialIDs))
+		return nil, constant.ErrRecordNotFound
+	}
+
+	lessonPlanData := new(LessonData)
+	err = lessonPlanData.Unmarshal(ctx, lessonPlan.Data)
+	if err != nil {
+		log.Error(ctx, "GetSpecifiedLessonPlan unmarshal lesson plan data failed",
+			log.Err(err),
+			log.Any("lesson_plan", lessonPlan))
+		return nil, constant.ErrRecordNotFound
+	}
+
+	planDataMaterialIDs := lessonPlanData.SubContentIDs(ctx)
+
+	materialContents, err := da.GetContentDA().GetContentByIDList(ctx, tx, planDataMaterialIDs)
+	if err != nil {
+		log.Error(ctx, "GetSpecifiedLessonPlan get material failed",
+			log.Err(err),
+			log.String("lesson_plan_id", planID),
+			log.Strings("material_ids", planDataMaterialIDs))
+		return nil, err
+	}
+	originSpecialMap := make(map[string]string)
+	for _, m := range materialContents {
+		latestID := m.LatestID
+		if latestID == "" {
+			latestID = m.ID
+		}
+		var special string
+		if v, ok := latestKeyContents[latestID]; ok {
+			special = v.ID
+		} else {
+			//special = m.ID
+			log.Error(ctx, "GetSpecifiedLessonPlan map special failed",
+				log.String("lesson_plan_id", planID),
+				log.Strings("material_ids", planDataMaterialIDs),
+				log.Any("db_material", m))
+			return nil, constant.ErrInternalServer
+		}
+		originSpecialMap[m.ID] = special
+	}
+
+	lessonPlanData.LessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
+		l.MaterialId = originSpecialMap[l.MaterialId]
+	})
+	lessonPlan.Data, err = lessonPlanData.Marshal(ctx)
+	if err != nil {
+		log.Error(ctx, "GetSpecifiedLessonPlan map ConvertContentObj failed",
+			log.Err(err),
+			log.String("lesson_plan_id", planID),
+			log.Strings("material_ids", planDataMaterialIDs),
+			log.Any("lesson_plan_data", lessonPlanData),
+			log.Any("lesson_plan", lessonPlan))
+		return nil, err
+	}
+
+	content, err := cm.ConvertContentObj(ctx, tx, lessonPlan, operator)
+	if err != nil {
+		log.Error(ctx, "GetSpecifiedLessonPlan ConvertContentObj failed",
+			log.Err(err),
+			log.String("lesson_plan_id", planID),
+			log.Strings("material_ids", planDataMaterialIDs),
+			log.Any("lesson_plan", lessonPlan))
+		return nil, err
+	}
+	contentData, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
+	if err != nil {
+		log.Error(ctx, "GetSpecifiedLessonPlan CreateContentData failed",
+			log.Err(err),
+			log.String("lesson_plan_id", planID),
+			log.Strings("material_ids", planDataMaterialIDs),
+			log.Any("lesson_plan", lessonPlan))
+		return nil, err
+	}
+
+	err = contentData.PrepareResult(ctx, tx, content, operator, false)
+	if err != nil {
+		log.Error(ctx, "GetSpecifiedLessonPlan can't get content data for details", log.Err(err))
+		return nil, ErrParseContentDataDetailsFailed
+	}
+	filledContentData, err := contentData.Marshal(ctx)
+	if err != nil {
+		log.Error(ctx, "GetSpecifiedLessonPlan can't marshal content data for details", log.Err(err))
+		return nil, ErrParseContentDataDetailsFailed
+	}
+	content.Data = filledContentData
+
+	if withAP {
+		contentWithDetails, err := cm.buildContentWithDetails(ctx, []*entity.ContentInfo{content}, true, operator)
+		if err != nil {
+			log.Error(ctx, "GetSpecifiedLessonPlan can't parse content data", log.Err(err))
+			return nil, ErrReadContentFailed
+		}
+		if len(contentWithDetails) < 1 {
+			return &entity.ContentInfoWithDetails{
+				ContentInfo: *content,
+			}, nil
+		}
+		return contentWithDetails[0], nil
+	}
+	return &entity.ContentInfoWithDetails{ContentInfo: *content}, nil
 }
 
 type ContentModel struct {

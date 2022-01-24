@@ -80,6 +80,7 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules_time_view", s.mustLogin, s.getScheduleTimeView)
 		schedules.GET("/schedules/:id/live/token", s.mustLogin, s.getScheduleLiveToken)
 		schedules.PUT("/schedules/:id/status", s.mustLogin, s.updateScheduleStatus)
+		schedules.GET("/schedules/:id/contents", s.mustLogin, s.getScheduleLiveLessonPlan)
 		schedules.GET("/schedules_lesson_plans", s.mustLogin, s.getLessonPlans)
 		schedules.GET("/schedules_time_view/dates", s.mustLogin, s.getScheduledDates)
 		schedules.PUT("/schedules/:id/show_option", s.mustLogin, s.updateScheduleShowOption)
