@@ -145,19 +145,14 @@ func TestGetRepeatResult(t *testing.T) {
 	}
 }
 
-func TestQueryScheduleTimeView(t *testing.T) {
-	total, schedules, err := GetScheduleModel().QueryScheduleTimeView(context.TODO(),
-		&entity.ScheduleTimeViewListRequest{
-			ViewType: "month",
-			TimeAt:   1632378161,
-		},
-		&entity.Operator{}, time.Now().Location())
+func TestGetScheduleLiveLessonPlan(t *testing.T) {
+	ctx := context.TODO()
+	op := &entity.Operator{}
+	scheduleID := "60a1d40a03b03c3acdb4f946"
+	result, err := GetScheduleModel().GetScheduleLiveLessonPlan(ctx, op, scheduleID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Log(total)
-	for _, v := range schedules {
-		t.Log(v)
-	}
+	t.Log(result)
 }

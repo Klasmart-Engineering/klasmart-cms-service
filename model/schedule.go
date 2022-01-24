@@ -79,7 +79,7 @@ type IScheduleModel interface {
 	QueryByConditionInternal(ctx context.Context, condition *da.ScheduleCondition) (int, []*entity.ScheduleSimplified, error)
 
 	UpdateLiveLessonPlan(ctx context.Context, op *entity.Operator, scheduleID string, liveLessonPlan *entity.ScheduleLiveLessonPlan) error
-	GetScheduleLiveLessonPlan(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleLiveLessonPlan, bool, error)
+	GetScheduleLiveLessonPlan(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ContentInfoWithDetails, error)
 }
 
 type scheduleModel struct {
@@ -2884,21 +2884,47 @@ func (s *scheduleModel) UpdateLiveLessonPlan(ctx context.Context, op *entity.Ope
 	return nil
 }
 
-func (s *scheduleModel) GetScheduleLiveLessonPlan(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleLiveLessonPlan, bool, error) {
+func (s *scheduleModel) GetScheduleLiveLessonPlan(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ContentInfoWithDetails, error) {
 	var schedule *entity.Schedule
 	err := s.scheduleDA.Get(ctx, scheduleID, &schedule)
 	if err != nil {
 		log.Error(ctx, "s.scheduleDA.Get error",
 			log.Err(err),
 			log.String("scheduleID", scheduleID))
-		return nil, false, err
+		return nil, err
 	}
 
 	if schedule.AnyoneAttemptedLive() {
-		return schedule.LiveLessonPlan, true, nil
+		lessonMaterialIDs := make([]string, 0, len(schedule.LiveLessonPlan.LessonMaterials))
+		for _, v := range schedule.LiveLessonPlan.LessonMaterials {
+			lessonMaterialIDs = append(lessonMaterialIDs, v.LessonMaterialID)
+		}
+
+		contentInfo, err := GetContentModel().GetSpecifiedLessonPlan(ctx, dbo.MustGetDB(ctx), op, schedule.LiveLessonPlan.LessonPlanID, lessonMaterialIDs, true)
+		if err != nil {
+			log.Error(ctx, "GetContentModel().GetSpecifiedLessonPlan error",
+				log.Err(err),
+				log.Any("schedule", schedule))
+			return nil, err
+		}
+		return contentInfo, nil
 	}
 
-	return nil, false, nil
+	latestLessonPlanID, err := GetContentModel().GetLatestContentIDByIDList(ctx, dbo.MustGetDB(ctx), []string{schedule.LessonPlanID})
+	if len(latestLessonPlanID) != 1 {
+		log.Error(ctx, "GetContentModel().GetLatestContentIDByIDList error", log.Err(err),
+			log.String("lesson_plan_id", schedule.LessonPlanID))
+		return nil, err
+	}
+
+	contentInfo, err := GetContentModel().GetContentByID(ctx, dbo.MustGetDB(ctx), latestLessonPlanID[0], op)
+	if err != nil {
+		log.Error(ctx, "GetContentModel().GetContentByID error",
+			log.Err(err),
+			log.String("latestLessonPlanID", latestLessonPlanID[0]))
+		return nil, err
+	}
+	return contentInfo, nil
 }
 
 // Schedule model interval function

@@ -1376,6 +1376,33 @@ func (s *Server) getScheduleTimeViewList(c *gin.Context) {
 	}
 }
 
+// @Summary getScheduleLiveLessonPlan
+// @ID getScheduleLiveLessonPlan
+// @Description get schedule live lesson plan by schedule id, if no one attempted live, return latest version content
+// @Accept json
+// @Produce json
+// @Param schedule_id path string true "schedule id"
+// @Tags schedule
+// @Success 200 {object} entity.ScheduleDetailsView
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules/{schedule_id}/contents [get]
+func (s *Server) getScheduleLiveLessonPlan(c *gin.Context) {
+	ctx := c.Request.Context()
+	scheduleID := c.Param("id")
+	operator := s.getOperator(c)
+	result, err := model.GetScheduleModel().GetScheduleLiveLessonPlan(ctx, operator, scheduleID)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case model.ErrInvalidVisibilitySetting:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	default:
+		s.defaultErrorHandler(c, err)
+	}
+}
+
 func (s *Server) buildInternalScheduleCondition(c *gin.Context) (*da.ScheduleCondition, error) {
 	scheduleIDsStr := c.Query("schedule_ids")
 	scheduleIDs := strings.Split(strings.TrimSpace(scheduleIDsStr), constant.StringArraySeparator)
