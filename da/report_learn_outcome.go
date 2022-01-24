@@ -62,12 +62,12 @@ func (r *ReportDA) GetCompleteLearnOutcomeCount(ctx context.Context, tx *dbo.DBC
 		return
 	}
 	sql := `
-select count(distinct relation_id ) as cnt from schedules_relations sr  
+select count(distinct sr.relation_id ) as cnt from schedules_relations sr  
 inner join schedules_relations sr2 
 	on sr2.schedule_id =sr.schedule_id 
 	and sr2.relation_type ='class_roster_teacher'
 	and sr2.relation_id in(?)
-where sr.relation_type ='learning_outcome' and schedule_id in
+where sr.relation_type ='learning_outcome' and sr.schedule_id in
 (
 	select schedule_id from home_fun_studies hfs where hfs.complete_at between ? and  ? 
 	union all 
