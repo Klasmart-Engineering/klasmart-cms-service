@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+type StudentOutcomeAchievedCount struct {
+	StudentID                 string `json:"student_id" gorm:"column:student_id" `
+	AchievedOutcomeCount      int    `json:"achieved_outcome_count" gorm:"column:achieved_outcome_count" `
+	TotalAchievedOutcomeCount int    `json:"total_achieved_outcome_count" gorm:"column:total_achieved_outcome_count" `
+}
 type StudentsAchievementOverviewReportResponse struct {
 	CoveredLearnOutComeCount int `json:"covered_learn_outcome_count"`
 	AchievedAboveCount       int `json:"achieved_above_count"`

@@ -30,7 +30,7 @@ func (s *Server) listStudentsAchievementOverviewReport(c *gin.Context) {
 	ctx := c.Request.Context()
 	operator := s.getOperator(c)
 	var err error
-	var result *entity.TeacherReport
+	var result *entity.StudentsAchievementOverviewReportResponse
 	defer func() {
 		switch err {
 		case nil:
@@ -45,16 +45,20 @@ func (s *Server) listStudentsAchievementOverviewReport(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		}
 	}()
+	tr := entity.TimeRange(c.Query("time_range"))
+	start, end, err := tr.Value(ctx)
+	if err != nil {
+		return
+	}
 	teacherIDs, err := model.GetReportModel().GetTeacherIDsCanViewReports(ctx, operator, external.TeacherViewPermissionParams{
-		ViewOrgOrSchoolReports: external.ReportLearningOutcomesInCategories616,
-		ViewSchoolReports:      external.ReportSchoolsSkillsTaught641,
-		ViewOrgReports:         external.ReportOrganizationsSkillsTaught640,
-		ViewMyReports:          external.ReportMySkillsTaught642,
+		ViewOrgReports:    external.ReportOrganizationsClassAchievements646,
+		ViewSchoolReports: external.ReportSchoolsClassAchievements647,
+		ViewMyReports:     external.ReportMyClassAchievments648,
 	})
 	if err != nil {
 		return
 	}
-	result, err = model.GetReportModel().GetTeacherReport(ctx, dbo.MustGetDB(ctx), operator, teacherIDs...)
+	result, err = model.GetReportModel().GetTeacherReportOverView(ctx, dbo.MustGetDB(ctx), operator, start, end, teacherIDs)
 	if err != nil {
 		return
 	}
@@ -207,10 +211,9 @@ func (s *Server) getTeachersReport(c *gin.Context) {
 		}
 	}()
 	teacherIDs, err := model.GetReportModel().GetTeacherIDsCanViewReports(ctx, operator, external.TeacherViewPermissionParams{
-		ViewOrgOrSchoolReports: external.ReportLearningOutcomesInCategories616,
-		ViewSchoolReports:      external.ReportSchoolsSkillsTaught641,
-		ViewOrgReports:         external.ReportOrganizationsSkillsTaught640,
-		ViewMyReports:          external.ReportMySkillsTaught642,
+		ViewOrgReports:    external.ReportOrganizationsSkillsTaught640,
+		ViewSchoolReports: external.ReportSchoolsSkillsTaught641,
+		ViewMyReports:     external.ReportMySkillsTaught642,
 	})
 	if err != nil {
 		return
