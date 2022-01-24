@@ -11,6 +11,7 @@ type IReportDA interface {
 	IStudentProgressAssignment
 	IStudentProgressLearnOutcomeAchievement
 	IClassAttendance
+	ILearnOutcome
 }
 type ReportDA struct {
 	BaseDA

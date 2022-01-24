@@ -112,14 +112,17 @@ const (
 	ReportViewReports610                  PermissionName = "view_reports_610"
 	ReportLearningOutcomesInCategories616 PermissionName = "report_learning_outcomes_in_categories_616"
 
-	ReportViewMySchoolReports611 PermissionName = "view_my_school_reports_611"
-	ReportSchoolsSkillsTaught641 PermissionName = "report_schools_skills_taught_641"
+	ReportViewMySchoolReports611      PermissionName = "view_my_school_reports_611"
+	ReportSchoolsSkillsTaught641      PermissionName = "report_schools_skills_taught_641"
+	ReportSchoolsClassAchievements647 PermissionName = "report_schools_class_achievements_647"
 
-	ReportViewMyOrganizationsReports612 PermissionName = "view_my_organizations_reports_612"
-	ReportOrganizationsSkillsTaught640  PermissionName = "report_organizations_skills_taught_640"
+	ReportViewMyOrganizationsReports612     PermissionName = "view_my_organizations_reports_612"
+	ReportOrganizationsSkillsTaught640      PermissionName = "report_organizations_skills_taught_640"
+	ReportOrganizationsClassAchievements646 PermissionName = "report_organizations_class_achievements_646"
 
-	ReportViewMyReports614  PermissionName = "view_my_reports_614"
-	ReportMySkillsTaught642 PermissionName = "report_my_skills_taught_642"
+	ReportViewMyReports614      PermissionName = "view_my_reports_614"
+	ReportMySkillsTaught642     PermissionName = "report_my_skills_taught_642"
+	ReportMyClassAchievments648 PermissionName = "report_my_class_achievments_648"
 
 	Assessments400                                     PermissionName = "assessments_400"
 	AssessmentPage406                                  PermissionName = "assessments_page_406"
@@ -169,8 +172,7 @@ const (
 )
 
 type TeacherViewPermissionParams struct {
-	ViewOrgOrSchoolReports PermissionName
-	ViewSchoolReports      PermissionName
-	ViewOrgReports         PermissionName
-	ViewMyReports          PermissionName
+	ViewSchoolReports PermissionName
+	ViewOrgReports    PermissionName
+	ViewMyReports     PermissionName
 }
