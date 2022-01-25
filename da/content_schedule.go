@@ -39,7 +39,8 @@ func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity
 		}
 		if whereIDSql == "" {
 			whereIDSql = `select ccp.content_id from cms_content_properties ccp `
-			whereIDWhere = `where ccp.property_type=? and ccp.property_id in (?)`
+			whereIDWhere = `
+where ccp.property_type=? and ccp.property_id in (?)`
 			whereIDArgs = append(whereIDArgs, typ, IDs)
 		} else {
 			whereIDSql += fmt.Sprintf(`
