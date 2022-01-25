@@ -887,10 +887,9 @@ func (f *FolderModel) checkShareFolders(ctx context.Context, orgIDs []string, sh
 	}
 
 	if len(orgsMap) != len(orgIDs) {
-		log.Debug(ctx, "invalid organization ids",
+		log.Warn(ctx, "organization ids and map mismatch",
 			log.Strings("ids", orgIDs),
 			log.Any("orgMap", orgsMap))
-		return nil, ErrInvalidArguments
 	}
 
 	log.Info(ctx, "check org maps",
