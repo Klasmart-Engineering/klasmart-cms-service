@@ -52,6 +52,8 @@ func (s *Server) getScheduleLiveToken(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMessageEditOverlap))
 	case model.ErrScheduleLessonPlanUnAuthed:
 		c.JSON(http.StatusBadRequest, L(ScheduleMessageLessonPlanInvalid))
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 	default:
 		log.Error(ctx, "make schedule live token error", log.Err(err), log.String("scheduleID", scheduleID))
 		s.defaultErrorHandler(c, err)
