@@ -89,7 +89,7 @@ func (s AmsOrganizationService) QueryByIDs(ctx context.Context, ids []string, op
 
 	req := cl.NewRequest(q, chlorine.ReqToken(operator.Token))
 	req.Var("orgIDs", _ids)
-	payload := make([]*Organization, len(ids))
+	payload := make([]*Organization, 0, len(ids))
 	res := cl.Response{
 		Data: &struct {
 			Organizations []*Organization `json:"organizations"`
@@ -109,6 +109,10 @@ func (s AmsOrganizationService) QueryByIDs(ctx context.Context, ids []string, op
 	// The results of querying user service may be out of order
 	organizations := make(map[string]*Organization, len(payload))
 	for _, organization := range payload {
+		if organization == nil {
+			continue
+		}
+
 		organizations[organization.ID] = organization
 	}
 
