@@ -36,7 +36,7 @@ func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity
 			return
 		}
 		if whereIDExists != "" {
-			whereIDExists = fmt.Sprintf(`select content_id from cms_content_properties where content_id in (%s) property_type=? and property_id in (?)`, whereIDExists)
+			whereIDExists = fmt.Sprintf(`select content_id from cms_content_properties where content_id in (%s) and property_type=? and property_id in (?)`, whereIDExists)
 		} else {
 			whereIDExists = `select content_id from cms_content_properties where property_type=? and property_id in (?)`
 		}
