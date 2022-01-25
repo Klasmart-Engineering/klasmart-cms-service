@@ -16,36 +16,61 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
+type contentCondition struct {
+	Typ entity.ContentPropertyType
+	IDs []string
+}
+
 func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error) {
 	lps = []*entity.LessonPlanForSchedule{}
 	if len(cond.ProgramIDs) == 0 {
 		return
 	}
-	sqlContents := strings.Builder{}
-	sqlContents.WriteString(`select
-	distinct cc.*
-from cms_contents cc
-`)
+
+	sqlContents := `select * from cms_contents cc `
+	var sqlContentsWheres []string
 	var argContents []interface{}
-	innerJoinCPP := func(typ entity.ContentPropertyType, IDs []string) {
+	var whereIDSql string
+	var whereIDWhere string
+	var whereIDArgs []interface{}
+	AddContentWhereCond := func(typ entity.ContentPropertyType, IDs []string) {
 		if len(IDs) == 0 {
 			return
 		}
-		sqlContents.WriteString(fmt.Sprintf("inner join cms_content_properties ccp_%v on ccp_%v.content_id =cc.id  and  ccp_%v.property_type =? and ccp_%v.property_id in (?) ", typ, typ, typ, typ))
-		argContents = append(argContents, typ, IDs)
+		if whereIDSql == "" {
+			whereIDSql = `select ccp.content_id from cms_content_properties ccp `
+			whereIDWhere = `
+where ccp.property_type=? and ccp.property_id in (?)`
+			whereIDArgs = append(whereIDArgs, typ, IDs)
+		} else {
+			whereIDSql += fmt.Sprintf(`
+inner join cms_content_properties ccp_%v on ccp_%v.content_id=ccp.content_id and ccp_%v.property_type=? and ccp_%v.property_id in (?)`, typ, typ, typ, typ)
+			argContents = append(argContents, typ, IDs)
+		}
 	}
-	innerJoinCPP(entity.ContentPropertyTypeProgram, cond.ProgramIDs)
-	innerJoinCPP(entity.ContentPropertyTypeSubject, cond.SubjectIDs)
-	innerJoinCPP(entity.ContentPropertyTypeCategory, cond.CategoryIDs)
-	innerJoinCPP(entity.ContentPropertyTypeSubCategory, cond.SubCategoryIDs)
-	innerJoinCPP(entity.ContentPropertyTypeAge, cond.AgeIDs)
-	innerJoinCPP(entity.ContentPropertyTypeGrade, cond.GradeIDs)
+	AddContentWhereCond(entity.ContentPropertyTypeProgram, cond.ProgramIDs)
+	AddContentWhereCond(entity.ContentPropertyTypeSubject, cond.SubjectIDs)
+	AddContentWhereCond(entity.ContentPropertyTypeCategory, cond.CategoryIDs)
+	AddContentWhereCond(entity.ContentPropertyTypeSubCategory, cond.SubCategoryIDs)
+	AddContentWhereCond(entity.ContentPropertyTypeAge, cond.AgeIDs)
+	AddContentWhereCond(entity.ContentPropertyTypeGrade, cond.GradeIDs)
+	if whereIDSql != "" {
+		whereIDSql += whereIDWhere
+		argContents = append(argContents, whereIDArgs...)
+		sqlContentsWheres = append(sqlContentsWheres, fmt.Sprintf(`EXISTS (
+	%s 
+	and ccp.content_id = cc.id
+)`, whereIDSql))
+	}
 
 	if cond.LessonPlanName != "" {
-		sqlContents.WriteString("where cc.content_name like ?")
+		sqlContentsWheres = append(sqlContentsWheres, "cc.content_name like ?")
 		argContents = append(argContents, "%"+cond.LessonPlanName+"%")
 	}
-	sbContents := NewSqlBuilder(ctx, sqlContents.String(), argContents...)
+	if len(sqlContentsWheres) > 0 {
+		sqlContents += " where " + strings.Join(sqlContentsWheres, " and ")
+	}
+	sbContents := NewSqlBuilder(ctx, sqlContents, argContents...)
 
 	var sqlArr []string
 	var sbOrgContent *sqlBuilder
