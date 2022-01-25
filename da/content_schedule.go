@@ -21,31 +21,37 @@ func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity
 	if len(cond.ProgramIDs) == 0 {
 		return
 	}
-	sqlContents := strings.Builder{}
-	sqlContents.WriteString(`select
-	distinct cc.*
-from cms_contents cc
-`)
+
+	var sqlContentWhereCondArr []string
 	var argContents []interface{}
-	innerJoinCPP := func(typ entity.ContentPropertyType, IDs []string) {
+	AddSqlContentWhereIDCond := func(typ entity.ContentPropertyType, IDs []string) {
 		if len(IDs) == 0 {
 			return
 		}
-		sqlContents.WriteString(fmt.Sprintf("inner join cms_content_properties ccp_%v on ccp_%v.content_id =cc.id  and  ccp_%v.property_type =? and ccp_%v.property_id in (?) ", typ, typ, typ, typ))
+		sqlContentWhereCondArr = append(sqlContentWhereCondArr, "select content_id from cms_content_properties where property_type =? and property_id in (?) ")
 		argContents = append(argContents, typ, IDs)
 	}
-	innerJoinCPP(entity.ContentPropertyTypeProgram, cond.ProgramIDs)
-	innerJoinCPP(entity.ContentPropertyTypeSubject, cond.SubjectIDs)
-	innerJoinCPP(entity.ContentPropertyTypeCategory, cond.CategoryIDs)
-	innerJoinCPP(entity.ContentPropertyTypeSubCategory, cond.SubCategoryIDs)
-	innerJoinCPP(entity.ContentPropertyTypeAge, cond.AgeIDs)
-	innerJoinCPP(entity.ContentPropertyTypeGrade, cond.GradeIDs)
-
+	AddSqlContentWhereIDCond(entity.ContentPropertyTypeProgram, cond.ProgramIDs)
+	AddSqlContentWhereIDCond(entity.ContentPropertyTypeSubject, cond.SubjectIDs)
+	AddSqlContentWhereIDCond(entity.ContentPropertyTypeCategory, cond.CategoryIDs)
+	AddSqlContentWhereIDCond(entity.ContentPropertyTypeSubCategory, cond.SubCategoryIDs)
+	AddSqlContentWhereIDCond(entity.ContentPropertyTypeAge, cond.AgeIDs)
+	AddSqlContentWhereIDCond(entity.ContentPropertyTypeGrade, cond.GradeIDs)
+	sqlContents := `select * from cms_contents cc`
+	var sqlContentsWheres []string
+	if len(sqlContentWhereCondArr) > 0 {
+		sqlContentsWheres = append(sqlContentsWheres, fmt.Sprintf("cc.id in (%s)", strings.Join(sqlContentWhereCondArr, `
+union all
+`)))
+	}
 	if cond.LessonPlanName != "" {
-		sqlContents.WriteString("where cc.content_name like ?")
+		sqlContentsWheres = append(sqlContentsWheres, "cc.content_name like ?")
 		argContents = append(argContents, "%"+cond.LessonPlanName+"%")
 	}
-	sbContents := NewSqlBuilder(ctx, sqlContents.String(), argContents...)
+	if len(sqlContentsWheres) > 0 {
+		sqlContents += "where " + strings.Join(sqlContentsWheres, " and ")
+	}
+	sbContents := NewSqlBuilder(ctx, sqlContents, argContents...)
 
 	var sqlArr []string
 	var sbOrgContent *sqlBuilder
