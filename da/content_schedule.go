@@ -16,38 +16,34 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
+type contentCondition struct {
+	Typ entity.ContentPropertyType
+	IDs []string
+}
+
 func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error) {
 	lps = []*entity.LessonPlanForSchedule{}
 	if len(cond.ProgramIDs) == 0 {
 		return
 	}
 
-	var ccpCondArr []string
+	sqlContents := `select * from cms_contents cc `
+	var sqlContentsWheres []string
 	var argContents []interface{}
-	AddCCPCond := func(typ entity.ContentPropertyType, IDs []string) {
+	AddContentWhereCond := func(typ entity.ContentPropertyType, IDs []string) {
 		if len(IDs) == 0 {
 			return
 		}
-		ccpCondArr = append(ccpCondArr, "(property_type =? and property_id in (?) )")
+		sqlContentsWheres = append(sqlContentsWheres, `EXISTS (select content_id 
+		from cms_content_properties where property_type=? and property_id in(?) and content_id=cc.id)`)
 		argContents = append(argContents, typ, IDs)
 	}
-	AddCCPCond(entity.ContentPropertyTypeProgram, cond.ProgramIDs)
-	AddCCPCond(entity.ContentPropertyTypeSubject, cond.SubjectIDs)
-	AddCCPCond(entity.ContentPropertyTypeCategory, cond.CategoryIDs)
-	AddCCPCond(entity.ContentPropertyTypeSubCategory, cond.SubCategoryIDs)
-	AddCCPCond(entity.ContentPropertyTypeAge, cond.AgeIDs)
-	AddCCPCond(entity.ContentPropertyTypeGrade, cond.GradeIDs)
-	sqlContents := `select * from cms_contents cc `
-	var sqlContentsWheres []string
-	if len(ccpCondArr) > 0 {
-		sqlContentsWheres = append(sqlContentsWheres, fmt.Sprintf(`cc.id in (
-	select
-		content_id
-	from
-		cms_content_properties
-	where %s 
-)`, strings.Join(ccpCondArr, ` or `)))
-	}
+	AddContentWhereCond(entity.ContentPropertyTypeProgram, cond.ProgramIDs)
+	AddContentWhereCond(entity.ContentPropertyTypeSubject, cond.SubjectIDs)
+	AddContentWhereCond(entity.ContentPropertyTypeCategory, cond.CategoryIDs)
+	AddContentWhereCond(entity.ContentPropertyTypeSubCategory, cond.SubCategoryIDs)
+	AddContentWhereCond(entity.ContentPropertyTypeAge, cond.AgeIDs)
+	AddContentWhereCond(entity.ContentPropertyTypeGrade, cond.GradeIDs)
 	if cond.LessonPlanName != "" {
 		sqlContentsWheres = append(sqlContentsWheres, "cc.content_name like ?")
 		argContents = append(argContents, "%"+cond.LessonPlanName+"%")
