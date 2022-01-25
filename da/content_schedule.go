@@ -22,27 +22,31 @@ func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity
 		return
 	}
 
-	var sqlContentWhereCondArr []string
+	var ccpCondArr []string
 	var argContents []interface{}
-	AddSqlContentWhereIDCond := func(typ entity.ContentPropertyType, IDs []string) {
+	AddCCPCond := func(typ entity.ContentPropertyType, IDs []string) {
 		if len(IDs) == 0 {
 			return
 		}
-		sqlContentWhereCondArr = append(sqlContentWhereCondArr, "select content_id from cms_content_properties where property_type =? and property_id in (?) ")
+		ccpCondArr = append(ccpCondArr, "(property_type =? and property_id in (?) )")
 		argContents = append(argContents, typ, IDs)
 	}
-	AddSqlContentWhereIDCond(entity.ContentPropertyTypeProgram, cond.ProgramIDs)
-	AddSqlContentWhereIDCond(entity.ContentPropertyTypeSubject, cond.SubjectIDs)
-	AddSqlContentWhereIDCond(entity.ContentPropertyTypeCategory, cond.CategoryIDs)
-	AddSqlContentWhereIDCond(entity.ContentPropertyTypeSubCategory, cond.SubCategoryIDs)
-	AddSqlContentWhereIDCond(entity.ContentPropertyTypeAge, cond.AgeIDs)
-	AddSqlContentWhereIDCond(entity.ContentPropertyTypeGrade, cond.GradeIDs)
+	AddCCPCond(entity.ContentPropertyTypeProgram, cond.ProgramIDs)
+	AddCCPCond(entity.ContentPropertyTypeSubject, cond.SubjectIDs)
+	AddCCPCond(entity.ContentPropertyTypeCategory, cond.CategoryIDs)
+	AddCCPCond(entity.ContentPropertyTypeSubCategory, cond.SubCategoryIDs)
+	AddCCPCond(entity.ContentPropertyTypeAge, cond.AgeIDs)
+	AddCCPCond(entity.ContentPropertyTypeGrade, cond.GradeIDs)
 	sqlContents := `select * from cms_contents cc `
 	var sqlContentsWheres []string
-	if len(sqlContentWhereCondArr) > 0 {
-		sqlContentsWheres = append(sqlContentsWheres, fmt.Sprintf("cc.id in (%s)", strings.Join(sqlContentWhereCondArr, `
-union all
-`)))
+	if len(ccpCondArr) > 0 {
+		sqlContentsWheres = append(sqlContentsWheres, fmt.Sprintf(`cc.id in (
+	select
+		content_id
+	from
+		cms_content_properties
+	where %s 
+)`, strings.Join(ccpCondArr, ` or `)))
 	}
 	if cond.LessonPlanName != "" {
 		sqlContentsWheres = append(sqlContentsWheres, "cc.content_name like ?")
