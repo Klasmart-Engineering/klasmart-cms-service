@@ -30,17 +30,19 @@ func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity
 	sqlContents := `select * from cms_contents cc `
 	var sqlContentsWheres []string
 	var argContents []interface{}
-	var whereIDExists string
+	var whereIDSql string
+	var whereIDArgs []interface{}
 	AddContentWhereCond := func(typ entity.ContentPropertyType, IDs []string) {
 		if len(IDs) == 0 {
 			return
 		}
-		if whereIDExists != "" {
-			whereIDExists = fmt.Sprintf(`select content_id from cms_content_properties where content_id in (%s) and property_type=? and property_id in (?)`, whereIDExists)
+		if whereIDSql == "" {
+			whereIDSql = `select content_id from cms_content_properties where property_type=? and property_id in (?)`
+			whereIDArgs = append(whereIDArgs, typ, IDs)
 		} else {
-			whereIDExists = `select content_id from cms_content_properties where property_type=? and property_id in (?)`
+			whereIDSql += fmt.Sprintf(`inner join cms_content_properties ccp_%v on ccp_%v.content_id=ccp.content_id and ccp_%v.property_type=? and ccp_%v.property_id in (?)`, typ, typ, typ, typ)
+			argContents = append(argContents, typ, IDs)
 		}
-		argContents = append(argContents, typ, IDs)
 	}
 	AddContentWhereCond(entity.ContentPropertyTypeProgram, cond.ProgramIDs)
 	AddContentWhereCond(entity.ContentPropertyTypeSubject, cond.SubjectIDs)
@@ -48,11 +50,12 @@ func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity
 	AddContentWhereCond(entity.ContentPropertyTypeSubCategory, cond.SubCategoryIDs)
 	AddContentWhereCond(entity.ContentPropertyTypeAge, cond.AgeIDs)
 	AddContentWhereCond(entity.ContentPropertyTypeGrade, cond.GradeIDs)
-	if whereIDExists != "" {
+	if whereIDSql != "" {
+		argContents = append(argContents, whereIDArgs...)
 		sqlContentsWheres = append(sqlContentsWheres, fmt.Sprintf(`EXISTS (
 	%s 
-	and content_id = cc.id
-)`, whereIDExists))
+	and ccp.content_id = cc.id
+)`, whereIDSql))
 	}
 
 	if cond.LessonPlanName != "" {
