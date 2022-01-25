@@ -89,13 +89,16 @@ func (s AmsOrganizationService) QueryByIDs(ctx context.Context, ids []string, op
 
 	req := cl.NewRequest(q, chlorine.ReqToken(operator.Token))
 	req.Var("orgIDs", _ids)
-	payload := make([]*Organization, 0, len(ids))
-	res := cl.Response{
-		Data: &struct {
-			Organizations []*Organization `json:"organizations"`
-		}{Organizations: payload},
+
+	data := struct {
+		Organizations []*Organization `json:"organizations"`
+	}{}
+
+	res := &chlorine.Response{
+		Data: &data,
 	}
-	_, err = GetAmsClient().Run(ctx, req, &res)
+
+	_, err = GetAmsClient().Run(ctx, req, res)
 	if err != nil {
 		log.Error(ctx, "Run error", log.String("q", q), log.Any("res", res), log.Err(err))
 		return nil, err
@@ -107,8 +110,8 @@ func (s AmsOrganizationService) QueryByIDs(ctx context.Context, ids []string, op
 
 	// user service返回的结果会是乱序的，不会按照index顺序
 	// The results of querying user service may be out of order
-	organizations := make(map[string]*Organization, len(payload))
-	for _, organization := range payload {
+	organizations := make(map[string]*Organization, len(data.Organizations))
+	for _, organization := range data.Organizations {
 		if organization == nil {
 			continue
 		}
@@ -140,6 +143,7 @@ func (s AmsOrganizationService) QueryByIDs(ctx context.Context, ids []string, op
 
 	return nullableOrganizations, nil
 }
+
 func (s AmsOrganizationService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableOrganization, error) {
 	organizations, err := s.BatchGet(ctx, operator, ids)
 	if err != nil {
