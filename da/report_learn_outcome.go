@@ -51,7 +51,7 @@ group by t.student_id
 	if err != nil {
 		return
 	}
-	err = r.QueryRawSQL(ctx, &studentOutcomeAchievedCounts, sql, args)
+	err = r.QueryRawSQL(ctx, &studentOutcomeAchievedCounts, sql, args...)
 	if err != nil {
 		return
 	}
