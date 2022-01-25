@@ -31,13 +31,15 @@ func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity
 	var sqlContentsWheres []string
 	var argContents []interface{}
 	var whereIDSql string
+	var whereIDWhere string
 	var whereIDArgs []interface{}
 	AddContentWhereCond := func(typ entity.ContentPropertyType, IDs []string) {
 		if len(IDs) == 0 {
 			return
 		}
 		if whereIDSql == "" {
-			whereIDSql = `select content_id from cms_content_properties where property_type=? and property_id in (?)`
+			whereIDSql = `select ccp.content_id from cms_content_properties ccp`
+			whereIDWhere = `where ccp.property_type=? and ccp.property_id in (?)`
 			whereIDArgs = append(whereIDArgs, typ, IDs)
 		} else {
 			whereIDSql += fmt.Sprintf(`inner join cms_content_properties ccp_%v on ccp_%v.content_id=ccp.content_id and ccp_%v.property_type=? and ccp_%v.property_id in (?)`, typ, typ, typ, typ)
@@ -51,6 +53,7 @@ func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity
 	AddContentWhereCond(entity.ContentPropertyTypeAge, cond.AgeIDs)
 	AddContentWhereCond(entity.ContentPropertyTypeGrade, cond.GradeIDs)
 	if whereIDSql != "" {
+		whereIDSql += whereIDWhere
 		argContents = append(argContents, whereIDArgs...)
 		sqlContentsWheres = append(sqlContentsWheres, fmt.Sprintf(`EXISTS (
 	%s 
