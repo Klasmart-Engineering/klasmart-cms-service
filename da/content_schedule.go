@@ -30,12 +30,22 @@ func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity
 	sqlContents := `select * from cms_contents cc `
 	var sqlContentsWheres []string
 	var argContents []interface{}
+
+	if len(cond.ProgramIDs)+len(cond.SubjectIDs)+len(cond.CategoryIDs)+len(cond.AgeIDs)+len(cond.GradeIDs) > 0 {
+
+	}
+
+	var whereCondContentID string
 	AddContentWhereCond := func(typ entity.ContentPropertyType, IDs []string) {
 		if len(IDs) == 0 {
 			return
 		}
-		sqlContentsWheres = append(sqlContentsWheres, `EXISTS (select content_id 
-		from cms_content_properties where property_type=? and property_id in(?) and content_id=cc.id)`)
+
+		if whereCondContentID != "" {
+			whereCondContentID = fmt.Sprintf(`select content_id from cms_content_properties where content_id in (%s) property_type=? and property_id in (?)`, whereCondContentID)
+		} else {
+			whereCondContentID = `select content_id from cms_content_properties where property_type=? and property_id in (?)`
+		}
 		argContents = append(argContents, typ, IDs)
 	}
 	AddContentWhereCond(entity.ContentPropertyTypeProgram, cond.ProgramIDs)
@@ -44,6 +54,13 @@ func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity
 	AddContentWhereCond(entity.ContentPropertyTypeSubCategory, cond.SubCategoryIDs)
 	AddContentWhereCond(entity.ContentPropertyTypeAge, cond.AgeIDs)
 	AddContentWhereCond(entity.ContentPropertyTypeGrade, cond.GradeIDs)
+	if whereCondContentID != "" {
+		sqlContentsWheres = append(sqlContentsWheres, `EXISTS (
+	%s 
+	and content_id = cc.id
+)`, whereCondContentID)
+	}
+
 	if cond.LessonPlanName != "" {
 		sqlContentsWheres = append(sqlContentsWheres, "cc.content_name like ?")
 		argContents = append(argContents, "%"+cond.LessonPlanName+"%")
