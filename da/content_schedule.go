@@ -45,8 +45,8 @@ func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity
 		content_id
 	from
 		cms_content_properties
-	where %s 
-)`, strings.Join(ccpCondArr, ` or `)))
+	where %s  group by content_id having count(1)=%d
+)`, strings.Join(ccpCondArr, ` or `), len(ccpCondArr)))
 	}
 	if cond.LessonPlanName != "" {
 		sqlContentsWheres = append(sqlContentsWheres, "cc.content_name like ?")
