@@ -37,7 +37,7 @@ func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity
 	AddSqlContentWhereIDCond(entity.ContentPropertyTypeSubCategory, cond.SubCategoryIDs)
 	AddSqlContentWhereIDCond(entity.ContentPropertyTypeAge, cond.AgeIDs)
 	AddSqlContentWhereIDCond(entity.ContentPropertyTypeGrade, cond.GradeIDs)
-	sqlContents := `select * from cms_contents cc`
+	sqlContents := `select * from cms_contents cc `
 	var sqlContentsWheres []string
 	if len(sqlContentWhereCondArr) > 0 {
 		sqlContentsWheres = append(sqlContentsWheres, fmt.Sprintf("cc.id in (%s)", strings.Join(sqlContentWhereCondArr, `
@@ -49,7 +49,7 @@ union all
 		argContents = append(argContents, "%"+cond.LessonPlanName+"%")
 	}
 	if len(sqlContentsWheres) > 0 {
-		sqlContents += "where " + strings.Join(sqlContentsWheres, " and ")
+		sqlContents += " where " + strings.Join(sqlContentsWheres, " and ")
 	}
 	sbContents := NewSqlBuilder(ctx, sqlContents, argContents...)
 
