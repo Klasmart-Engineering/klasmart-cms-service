@@ -38,11 +38,12 @@ func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity
 			return
 		}
 		if whereIDSql == "" {
-			whereIDSql = `select ccp.content_id from cms_content_properties ccp`
+			whereIDSql = `select ccp.content_id from cms_content_properties ccp `
 			whereIDWhere = `where ccp.property_type=? and ccp.property_id in (?)`
 			whereIDArgs = append(whereIDArgs, typ, IDs)
 		} else {
-			whereIDSql += fmt.Sprintf(`inner join cms_content_properties ccp_%v on ccp_%v.content_id=ccp.content_id and ccp_%v.property_type=? and ccp_%v.property_id in (?)`, typ, typ, typ, typ)
+			whereIDSql += fmt.Sprintf(`
+inner join cms_content_properties ccp_%v on ccp_%v.content_id=ccp.content_id and ccp_%v.property_type=? and ccp_%v.property_id in (?)`, typ, typ, typ, typ)
 			argContents = append(argContents, typ, IDs)
 		}
 	}
