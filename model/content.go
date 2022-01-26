@@ -2099,7 +2099,7 @@ func (cm *ContentModel) buildFolderConditionWithShowAll(ctx context.Context, op 
 			log.String("permission", external.ShowAllFolder295))
 		return err
 	}
-	fCondition.ShowEmptyFolder = &has
+	fCondition.ShowEmptyFolder = entity.NullBool{Bool: has, Valid: true}
 	return nil
 }
 

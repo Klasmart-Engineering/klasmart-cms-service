@@ -60,7 +60,7 @@ func (fda *FolderDA) UpdateEmptyField(ctx context.Context, tx *dbo.DBContext, fI
 	}
 	sql := `
 update cms_folder_items set has_descendant = (
-	case when exists (select id from cms_contents where position(cms_folder_items.id in dir_path)>0 and publish_status='published' and delete_at=0) 
+	case when exists (select id from cms_contents where position(cms_folder_items.id in  cms_contents.dir_path)>0 and publish_status='published' and delete_at=0) 
 	then 1 else 0 end
 ) where id in (?);`
 	err := tx.Exec(sql, fIDs).Error
@@ -476,7 +476,7 @@ type FolderCondition struct {
 
 	ExactDirPath string
 
-	ShowEmptyFolder *bool `json:"show_empty_folder"`
+	ShowEmptyFolder entity.NullBool `json:"show_empty_folder"`
 
 	OrderBy FolderOrderBy `json:"order_by"`
 	Pager   utils.Pager
@@ -553,7 +553,7 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.ExactDirPath)
 	}
 
-	if s.ShowEmptyFolder != nil && !*s.ShowEmptyFolder {
+	if s.ShowEmptyFolder.Valid && !s.ShowEmptyFolder.Bool {
 		conditions = append(conditions, "has_descendant = ?")
 		params = append(params, 1)
 	}
