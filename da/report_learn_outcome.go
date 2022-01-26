@@ -61,9 +61,14 @@ select hfs.id as assessment_id,hfs.schedule_id from home_fun_studies hfs where h
 union all
 select a.id  as assessment_id,a.schedule_id from assessments a where a.complete_time>= ? and a.complete_time<?
 ) sa 
-inner join assessments_outcomes ao on ao.assessment_id =sa.assessment_id
-inner  join schedules_relations sr  on sr.relation_type ='class_roster_teacher' and sr.schedule_id =sa.schedule_id
-where sr.relation_id in (?)
+inner join assessments_outcomes ao on ao.assessment_id = sa.assessment_id
+where  EXISTS (
+select sr.id from schedules_relations sr  
+where sr.relation_type ='class_roster_teacher' 
+and sr.schedule_id = sa.schedule_id 
+and sr.relation_id in(?)
+)
+
 `
 	args := []interface{}{
 		from,
