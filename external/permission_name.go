@@ -159,4 +159,6 @@ const (
 
 	ViewProgram20111  PermissionName = "view_program_20111"
 	ViewSubjects20115 PermissionName = "view_subjects_20115"
+
+	ShowAllFolder295 = "show_all_folders_295"
 )

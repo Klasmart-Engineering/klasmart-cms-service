@@ -1103,7 +1103,29 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context,
 		return err
 	}
 
+	needUpdateEmptyFlagFolder := make([]string, 0)
+	for _, f := range folders {
+		if f.DirPath.Parents() != nil {
+			needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, f.DirPath.Parents()...)
+		}
+	}
+	if distFolder.DirPath.Parents() != nil {
+		needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, distFolder.DirPath.Parents()...)
+	}
+	needUpdateEmptyFlagFolder = utils.SliceDeduplicationExcludeEmpty(needUpdateEmptyFlagFolder)
+	err = f.updateEmptyField(ctx, tx, needUpdateEmptyFlagFolder)
+	if err != nil {
+		log.Error(ctx, "handleMoveContentByLink updateEmptyField failed",
+			log.Err(err),
+			log.Strings("content_ids", ids),
+			log.Any("dist_folder", distFolder))
+		return err
+	}
 	return nil
+}
+
+func (f *FolderModel) updateEmptyField(ctx context.Context, tx *dbo.DBContext, folderIDs []string) error {
+	return da.GetFolderDA().UpdateEmptyField(ctx, tx, folderIDs)
 }
 
 func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext,
@@ -1205,6 +1227,23 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext,
 			log.Any("toFolder", distFolder),
 			log.Strings("contentLinkIds", contentIDs),
 			log.Any("folder", folder))
+		return err
+	}
+
+	needUpdateEmptyFlagFolder := make([]string, 0)
+	if originPath.Parents() != nil {
+		needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, originPath.Parents()...)
+	}
+	if distFolder.DirPath.Parents() != nil {
+		needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, distFolder.DirPath.Parents()...)
+	}
+	err = f.updateEmptyField(ctx, tx, needUpdateEmptyFlagFolder)
+	if err != nil {
+		log.Error(ctx, "handleMoveContentByLink updateEmptyField failed",
+			log.Err(err),
+			log.String("fid", fid),
+			log.Any("origin_path", originPath),
+			log.Any("dist_folder", distFolder))
 		return err
 	}
 	return nil
@@ -1840,7 +1879,14 @@ func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, nam
 }
 
 func (f *FolderModel) BatchUpdateFolderItemCount(ctx context.Context, tx *dbo.DBContext, ids []string) error {
-	return f.batchRepairFolderItemsCountByIDs(ctx, tx, ids)
+	err := f.batchRepairFolderItemsCountByIDs(ctx, tx, ids)
+	if err != nil {
+		log.Error(ctx, "BatchUpdateFolderItemCount batchRepairFolderItemsCountByIDs failed",
+			log.Err(err),
+			log.Strings("ids", ids))
+		return err
+	}
+	return f.updateEmptyField(ctx, tx, ids)
 }
 
 func (f *FolderModel) updateMoveFolderItemCount(ctx context.Context, tx *dbo.DBContext, ids []string) error {
