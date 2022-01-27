@@ -29,7 +29,9 @@ select hfs.id as assessment_id,hfs.student_id,hfs.schedule_id from home_fun_stud
 where hfs.complete_at >= ? and hfs.complete_at < ?
 
 ) ass 
-inner join assessments_outcomes ao on ao.assessment_id = ass.assessment_id
+inner join (
+	select distinct assessment_id,outcome_id ,skip from assessments_outcomes
+) ao on ao.assessment_id = ass.assessment_id
 left join outcomes_attendances  oa on oa.assessment_id = ass.assessment_id and oa.attendance_id =ass.student_id and oa.outcome_id  = ao.outcome_id 
 where EXISTS (
 select relation_id from schedules_relations sr where sr.relation_type ='class_roster_teacher' and sr.schedule_id =ass.schedule_id and sr.relation_id  in(?)
