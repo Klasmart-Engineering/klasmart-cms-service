@@ -60,8 +60,8 @@ func (fda *FolderDA) UpdateEmptyField(ctx context.Context, tx *dbo.DBContext, fI
 	}
 	sql := `
 update cms_folder_items set has_descendant = (
-	case when exists (select id from cms_contents where position(cms_folder_items.id in  cms_contents.dir_path)>0 and publish_status='published' and delete_at=0) 
-	then 1 else 0 end
+        case when exists (select id from cms_contents where cms_contents.dir_path like concat(if(cms_folder_items.dir_path='/', '', cms_folder_items.dir_path), '/', cms_folder_items.id, '%')  and publish_status='published' and delete_at=0) 
+        then 1 else 0 end
 ) where id in (?);`
 	err := tx.Exec(sql, fIDs).Error
 	if err != nil {
