@@ -1107,10 +1107,13 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context,
 		if f.DirPath.Parents() != nil {
 			needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, f.DirPath.Parents()...)
 		}
+		needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, f.ID)
 	}
 	if distFolder.DirPath.Parents() != nil {
 		needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, distFolder.DirPath.Parents()...)
 	}
+	needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, distFolder.ID)
+
 	needUpdateEmptyFlagFolder = utils.SliceDeduplicationExcludeEmpty(needUpdateEmptyFlagFolder)
 	err = f.updateEmptyField(ctx, tx, needUpdateEmptyFlagFolder)
 	if err != nil {
@@ -1233,9 +1236,14 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext,
 	if originPath.Parents() != nil {
 		needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, originPath.Parents()...)
 	}
+	needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, originParentID)
+
 	if distFolder.DirPath.Parents() != nil {
 		needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, distFolder.DirPath.Parents()...)
 	}
+	needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, distFolder.ID)
+
+	needUpdateEmptyFlagFolder = utils.SliceDeduplicationExcludeEmpty(needUpdateEmptyFlagFolder)
 	err = f.updateEmptyField(ctx, tx, needUpdateEmptyFlagFolder)
 	if err != nil {
 		log.Error(ctx, "handleMoveContentByLink updateEmptyField failed",
