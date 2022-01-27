@@ -85,6 +85,18 @@ type H5PUserContentScore struct {
 	TeacherScores []*H5PTeacherScore `json:"teacherScores"`
 }
 
+func (rc *H5PContent) GetInternalID() string {
+	if rc.ParentID == "" {
+		return rc.ContentID
+	} else {
+		if rc.SubContentID != "" {
+			return rc.SubContentID
+		} else {
+			return rc.H5PID
+		}
+	}
+}
+
 // type UserScores {
 // 	user: User!
 // 	scores: [UserContentScore!]!

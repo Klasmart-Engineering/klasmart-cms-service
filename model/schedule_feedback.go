@@ -12,6 +12,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
@@ -178,10 +179,10 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 
 	// notify classes assignments to statistic home fun attendance
 	go func(ctx context.Context, op *entity.Operator) {
-		data := &entity.AddClassAndLiveAssessmentArgs{
+		data := &v2.ScheduleEndClassCallBackReq{
 			ScheduleID:    input.ScheduleID,
 			AttendanceIDs: []string{op.UserID},
-			ClassEndTime:  time.Now().Unix(),
+			ClassEndAt:    time.Now().Unix(),
 		}
 		log.Debug(ctx, "feedback notify assignments", log.Any("data", data))
 		err := GetClassesAssignmentsModel().CreateRecord(ctx, op, data)
