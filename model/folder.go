@@ -94,6 +94,7 @@ type IFolderModel interface {
 	GetFolderMayRoot(ctx context.Context, fid string, ownerType entity.OwnerType, partition entity.FolderPartition, operator *entity.Operator) (*entity.FolderItem, error)
 
 	BatchUpdateFolderItemCount(ctx context.Context, tx *dbo.DBContext, ids []string) error
+	BatchUpdateAncestorEmptyField(ctx context.Context, tx *dbo.DBContext, ids []string) error
 }
 
 type FolderModel struct{}
@@ -1887,13 +1888,11 @@ func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, nam
 }
 
 func (f *FolderModel) BatchUpdateFolderItemCount(ctx context.Context, tx *dbo.DBContext, ids []string) error {
-	err := f.batchRepairFolderItemsCountByIDs(ctx, tx, ids)
-	if err != nil {
-		log.Error(ctx, "BatchUpdateFolderItemCount batchRepairFolderItemsCountByIDs failed",
-			log.Err(err),
-			log.Strings("ids", ids))
-		return err
-	}
+	return f.batchRepairFolderItemsCountByIDs(ctx, tx, ids)
+}
+
+func (f *FolderModel) BatchUpdateAncestorEmptyField(ctx context.Context, tx *dbo.DBContext, ids []string) error {
+	ids = utils.SliceDeduplicationExcludeEmpty(ids)
 	return f.updateEmptyField(ctx, tx, ids)
 }
 
