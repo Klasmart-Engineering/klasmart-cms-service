@@ -1307,7 +1307,12 @@ func (f *FolderModel) handleMoveFolders(ctx context.Context, tx *dbo.DBContext,
 	//Update all content in the folder
 	//replace the path of all content in the folder
 	//TODO:Execute one statement per folder, Maybe can Accelerate
+	allAncestorIDs := make([]string, 0)
 	for i := range folders {
+		if folders[i].DirPath.Parents() != nil {
+			allAncestorIDs = append(allAncestorIDs, folders[i].DirPath.Parents()...)
+		}
+
 		originParentIDList[i] = folders[i].ParentID
 		err = f.replaceLinkedContentPath(ctx, tx, &entity.ReplaceLinkedContentPathRequest{
 			FromFolder: folders[i],
@@ -1387,6 +1392,20 @@ func (f *FolderModel) handleMoveFolders(ctx context.Context, tx *dbo.DBContext,
 	if err != nil {
 		return err
 	}
+
+	if distFolder.DirPath.Parents() != nil {
+		allAncestorIDs = append(allAncestorIDs, distFolder.DirPath.Parents()...)
+	}
+	allAncestorIDs = append(allAncestorIDs, distFolder.ID)
+	err = f.updateEmptyField(ctx, tx, allAncestorIDs)
+	if err != nil {
+		log.Error(ctx, "handleMoveFolders updateEmptyField failed",
+			log.Err(err),
+			log.Strings("ancestor", allAncestorIDs),
+			log.Any("toFolder", distFolder))
+		return err
+	}
+
 	return nil
 }
 
