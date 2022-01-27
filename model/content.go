@@ -357,7 +357,7 @@ func (cm *ContentModel) UpdateSharedContentsCount(ctx context.Context, tx *dbo.D
 
 	err = GetFolderModel().BatchUpdateFolderItemCount(ctx, tx, allParentIDs)
 	if err != nil {
-		log.Error(ctx, "AddAuthedContentIfFolderAlreadyShared BatchUpdateFolderItemCount failed",
+		log.Error(ctx, "UpdateSharedContentsCount BatchUpdateFolderItemCount failed",
 			log.Err(err),
 			log.Any("parents", allParentIDs),
 			log.Any("contents", contents))
@@ -2083,6 +2083,20 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 	return count, ret, nil
 }
 
+func (cm *ContentModel) buildFolderConditionWithShowAll(ctx context.Context, op *entity.Operator, fCondition *da.FolderCondition) error {
+	has, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ShowAllFolder295)
+	if err != nil {
+		log.Error(ctx, "buildFolderConditionWithShowAll check permission failed",
+			log.Err(err),
+			log.Any("condition", fCondition),
+			log.Any("op", op),
+			log.String("permission", external.ShowAllFolder295))
+		return err
+	}
+	fCondition.ShowEmptyFolder = entity.NullBool{Bool: has, Valid: true}
+	return nil
+}
+
 func (cm *ContentModel) CountUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, error) {
 	searchUserIDs := cm.getRelatedUserID(ctx, condition.Name, user)
 	err := cm.filterRootPath(ctx, condition, entity.OwnerTypeOrganization, user)
@@ -2200,6 +2214,15 @@ func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBC
 		return 0, nil, err
 	}
 	folderCondition := cm.buildFolderCondition(ctx, condition, searchUserIDs, user)
+	if len(condition.PublishStatus) == 1 && condition.PublishStatus[0] == entity.ContentStatusPublished {
+		err = cm.buildFolderConditionWithShowAll(ctx, user, folderCondition)
+		if err != nil {
+			log.Warn(ctx, "SearchUserFolderContent append show all failed",
+				log.Any("op", user),
+				log.Any("condition", condition))
+			return 0, nil, err
+		}
+	}
 
 	log.Info(ctx, "search folder content", log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
 	count, objs, err := da.GetContentDA().SearchFolderContentUnsafe(ctx, tx, combineCondition, folderCondition)

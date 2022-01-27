@@ -6,6 +6,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -53,6 +56,52 @@ func TestContentModel_CreateContent(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println(content)
+}
+
+func setupConfig() {
+	cfg := config.Get()
+	if cfg == nil {
+		cfg = &config.Config{}
+	}
+	cfg.DBConfig = config.DBConfig{
+		ConnectionString: os.Getenv("connection_string"),
+		MaxOpenConns:     8,
+		MaxIdleConns:     8,
+		ShowLog:          true,
+		ShowSQL:          true,
+	}
+	cfg.RedisConfig = config.RedisConfig{
+		OpenCache: true,
+		Host:      os.Getenv("redis_host"),
+		Port:      16379,
+		Password:  "",
+	}
+	cfg.AMS = config.AMSConfig{
+		EndPoint: os.Getenv("ams_endpoint"),
+	}
+	config.Set(cfg)
+	initCache()
+}
+
+var token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTY0MzE4NTM3NiwiaXNzIjoia2lkc2xvb3AifQ.JTmAeYhLSPP3GgdmbDQF96dy3DPW_JgQyR7x4UD_2Db0biZ3TglFRRpCAaPEFW3b1KhR0KIFNwfnPzlnFdsnrsCbz_ZIP9GIHx8YLZMcS6GlYZp-WnDAchvqfccO3ljxGdzZ1IkYzZN8B5WD8aaWUonVyU8InWZiw2zR3TXD9ep8YGa9K5JZNx3UeDXNJ_cjwskCFizV4jv2q0sxMieb3qQ5lor_zJwkq13eqeOpvZBJaHznLrSJgjY8ASz4oUO2ZCadl1dKVFYDf2qFXNvRTeYURTs0cvPa9c9tb9H6j6vmExVeYnO9aJPr7NEIpRAByGJUTk5Ci-Uqx3rQglpsjA"
+
+func TestContentModel_SearchUserFolderContent(t *testing.T) {
+	setupConfig()
+	ctx := context.Background()
+	tx := dbo.MustGetDB(ctx)
+	op := entity.Operator{
+		UserID: "14494c07-0d4f-5141-9db2-15799993f448",
+		OrgID:  "a44da070-1907-46c4-bc4c-f26ced889439",
+		Token:  token,
+	}
+	condition := entity.ContentConditionRequest{
+		PublishStatus: []string{"published"},
+		ContentType:   []int{1, 2, 10},
+		OrderBy:       "-update_at",
+		Pager:         utils.GetPager("1", "20"),
+	}
+
+	GetContentModel().SearchUserFolderContent(ctx, tx, &condition, &op)
 }
 
 func init2Operator(orgID string, authTo string, authCode string) *entity.Operator {

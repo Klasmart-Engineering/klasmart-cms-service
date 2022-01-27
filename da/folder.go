@@ -45,10 +45,33 @@ type IFolderDA interface {
 	BatchUpdateFolderItemsCount(ctx context.Context, tx *dbo.DBContext, req []*entity.UpdateFolderItemsCountRequest) error
 
 	GetSharedContentParentPath(ctx context.Context, tx *dbo.DBContext, orgIDs []string) ([]string, error)
+
+	UpdateEmptyField(ctx context.Context, tx *dbo.DBContext, fIDs []string) error
 }
 
 type FolderDA struct {
 	s dbo.BaseDA
+}
+
+func (fda *FolderDA) UpdateEmptyField(ctx context.Context, tx *dbo.DBContext, fIDs []string) error {
+	if len(fIDs) <= 0 {
+		log.Info(ctx, "UpdateEmptyField folder id is empty")
+		return nil
+	}
+	sql := `
+update cms_folder_items set has_descendant = (
+        case when exists (select id from cms_contents where cms_contents.dir_path like concat(if(cms_folder_items.dir_path='/', '', cms_folder_items.dir_path), '/', cms_folder_items.id, '%')  and publish_status='published' and delete_at=0) 
+        then 1 else 0 end
+) where id in (?);`
+	err := tx.Exec(sql, fIDs).Error
+	if err != nil {
+		log.Error(ctx, "UpdateEmptyField exec sql failed",
+			log.Err(err),
+			log.String("sql", sql),
+			log.Strings("folder_ids", fIDs))
+		return err
+	}
+	return nil
 }
 
 func (fda *FolderDA) GetSharedContentParentPath(ctx context.Context, tx *dbo.DBContext, orgIDs []string) ([]string, error) {
@@ -453,6 +476,8 @@ type FolderCondition struct {
 
 	ExactDirPath string
 
+	ShowEmptyFolder entity.NullBool `json:"show_empty_folder"`
+
 	OrderBy FolderOrderBy `json:"order_by"`
 	Pager   utils.Pager
 }
@@ -526,6 +551,11 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 	if s.ExactDirPath != "" {
 		conditions = append(conditions, "dir_path = ?")
 		params = append(params, s.ExactDirPath)
+	}
+
+	if s.ShowEmptyFolder.Valid && !s.ShowEmptyFolder.Bool {
+		conditions = append(conditions, "has_descendant = ?")
+		params = append(params, 1)
 	}
 
 	//if len(s.VisibilitySetting) != 0 {

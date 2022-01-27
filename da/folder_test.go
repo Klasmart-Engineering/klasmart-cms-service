@@ -2,6 +2,7 @@ package da
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -128,4 +129,14 @@ func TestGorm2TB(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestFolderDA_UpdateEmptyField(t *testing.T) {
+	ctx := context.Background()
+	tx := dbo.MustGetDB(ctx)
+	err := GetFolderDA().UpdateEmptyField(ctx, tx, []string{"6051ae63b96c4d004bccdafb", "6071665ed41edf4799723253"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("ok")
 }
