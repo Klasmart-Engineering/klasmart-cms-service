@@ -21,10 +21,10 @@ func (r *ReportDA) GetStudentAchievedOutcome(ctx context.Context, tx *dbo.DBCont
 
 	sql := `
 select ass.student_id,count(1) as total_achieved_outcome_count,SUM(IF(oa.id is null,0,1)) as achieved_outcome_count from (
-select a.id as assessment_id,sr.relation_id as student_id,a.schedule_id from assessments a
-inner join schedules_relations sr on sr.relation_type ='class_roster_student' and sr.schedule_id =a.schedule_id
+select a.id as assessment_id,aa.attendance_id as student_id,a.schedule_id from assessments a
+inner join assessments_attendances aa on aa.assessment_id =a.id and aa.role='student'
 where a.complete_time >= ? and a.complete_time < ?
-union
+union all
 select hfs.id as assessment_id,hfs.student_id,hfs.schedule_id from home_fun_studies hfs
 where hfs.complete_at >= ? and hfs.complete_at < ?
 
