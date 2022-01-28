@@ -336,22 +336,18 @@ func (cm *ContentModel) UpdateSharedContentsCount(ctx context.Context, tx *dbo.D
 		return err
 	}
 
-	contentAncestorDirs := make(map[string]map[string]bool)
 	allParentIDs := make([]string, 0)
-	allContentsAncestorDir := make([]string, 0)
+	allAncestorIDs := make([]string, 0)
 	for i := range contents {
 		if contents[i].ContentType == entity.ContentTypeMaterial || contents[i].ContentType == entity.ContentTypePlan {
 			fids := contents[i].DirPath.Parents()
-			ancestorDirs := make(map[string]bool)
-			for j := range fids {
-				ancestorDirs[fids[j]] = true
-			}
-			contentAncestorDirs[contents[i].ID] = ancestorDirs
-			allContentsAncestorDir = append(allContentsAncestorDir, fids...)
 
 			if len(fids) > 0 && fids[len(fids)-1] != constant.FolderRootPath && fids[len(fids)-1] != "" {
 				allParentIDs = append(allParentIDs, fids[len(fids)-1])
 			}
+		}
+		if contents[i].DirPath.Parent() != constant.FolderRootPath && contents[i].DirPath.Parent() != "" {
+			allAncestorIDs = append(allAncestorIDs, contents[i].DirPath.Parents()...)
 		}
 	}
 
@@ -360,6 +356,14 @@ func (cm *ContentModel) UpdateSharedContentsCount(ctx context.Context, tx *dbo.D
 		log.Error(ctx, "UpdateSharedContentsCount BatchUpdateFolderItemCount failed",
 			log.Err(err),
 			log.Any("parents", allParentIDs),
+			log.Any("contents", contents))
+		return err
+	}
+	err = GetFolderModel().BatchUpdateAncestorEmptyField(ctx, tx, allAncestorIDs)
+	if err != nil {
+		log.Error(ctx, "UpdateSharedContentsCount BatchUpdateAncestorEmptyField failed",
+			log.Err(err),
+			log.Any("ancestor", allAncestorIDs),
 			log.Any("contents", contents))
 		return err
 	}
@@ -562,6 +566,14 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 				log.Error(ctx, "BatchUpdateFolderItemCount failed",
 					log.Any("content", content),
 					log.Any("user", user))
+				return err
+			}
+			err = GetFolderModel().BatchUpdateAncestorEmptyField(ctx, tx, content.DirPath.Parents())
+			if err != nil {
+				log.Error(ctx, "doPublishContent: BatchUpdateAncestorEmptyField failed",
+					log.Err(err),
+					log.Any("content", content),
+					log.String("uid", user.UserID))
 				return err
 			}
 		}
@@ -819,6 +831,18 @@ func (cm *ContentModel) CreateContent(ctx context.Context, c entity.CreateConten
 			err = GetFolderModel().BatchUpdateFolderItemCount(ctx, tx, []string{content.DirPath.Parent()})
 			if err != nil {
 				log.Error(ctx, "CreateContent: BatchUpdateFolderItemCount failed",
+					log.Err(err),
+					log.String("uid", operator.UserID),
+					log.String("pid", pid),
+					log.Any("content", content))
+				return "", err
+			}
+		}
+		if content.PublishStatus == entity.NewContentPublishStatus(entity.ContentStatusPublished) &&
+			content.DirPath.Parent() != constant.FolderPathSeparator && content.DirPath.Parent() != "" {
+			err = GetFolderModel().BatchUpdateAncestorEmptyField(ctx, tx, content.DirPath.Parents())
+			if err != nil {
+				log.Error(ctx, "CreateContent: BatchUpdateAncestorEmptyField failed",
 					log.Err(err),
 					log.String("uid", operator.UserID),
 					log.String("pid", pid),
@@ -1335,6 +1359,7 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 	}
 
 	parentIDs := make([]string, 0)
+	ancestorIDs := make([]string, 0)
 	for i := range contents {
 		err = cm.doDeleteContent(ctx, tx, contents[i], user)
 		if err != nil {
@@ -1347,6 +1372,7 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 
 		if contents[i].DirPath.Parent() != constant.FolderRootPath && contents[i].DirPath.Parent() != "" {
 			parentIDs = append(parentIDs, contents[i].DirPath.Parent())
+			ancestorIDs = append(ancestorIDs, contents[i].DirPath.Parents()...)
 		}
 	}
 	err = GetFolderModel().BatchUpdateFolderItemCount(ctx, tx, parentIDs)
@@ -1356,6 +1382,17 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 			log.Strings("parentIDs", parentIDs),
 			log.Strings("ids", ids),
 			log.String("uid", user.UserID))
+		return err
+	}
+
+	err = GetFolderModel().BatchUpdateAncestorEmptyField(ctx, tx, ancestorIDs)
+	if err != nil {
+		log.Error(ctx, "DeleteContentBulk: BatchUpdateAncestorEmptyField",
+			log.Err(err),
+			log.Strings("ancestors", ancestorIDs),
+			log.Strings("ids", ids),
+			log.String("uid", user.UserID))
+		return err
 	}
 	da.GetContentRedis().CleanContentCache(ctx, deletedIDs)
 	return nil
@@ -1497,6 +1534,16 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 				log.Any("content", content),
 				log.String("uid", user.UserID))
 			return err
+		}
+		if content.PublishStatus == entity.ContentStatusPublished {
+			err = GetFolderModel().BatchUpdateAncestorEmptyField(ctx, tx, content.DirPath.Parents())
+			if err != nil {
+				log.Error(ctx, "doDeleteContent: BatchUpdateAncestorEmptyField failed",
+					log.Err(err),
+					log.Any("content", content),
+					log.String("uid", user.UserID))
+				return err
+			}
 		}
 	}
 
