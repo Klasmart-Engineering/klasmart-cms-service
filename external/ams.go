@@ -2,6 +2,7 @@ package external
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"sync"
 
@@ -48,6 +49,12 @@ func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorin
 			"Found access graphql without cookie",
 			log.String(constant.CookieKey, cookie),
 			log.Any("req", req))
+		// using authorized key
+		if amsAuthorizedKey := config.Get().AMS.AuthorizedKey; amsAuthorizedKey != "" {
+			req.SetHeader(constant.AMSAuthorizedHeaderKey, fmt.Sprintf("Bearer %s", amsAuthorizedKey))
+		} else {
+			log.Warn(ctx, "Found access graphql without cookie and user_service_api_key is empty")
+		}
 	}
 	statusCode, err := c.Client.Run(ctx, req, resp)
 	if err != nil {
