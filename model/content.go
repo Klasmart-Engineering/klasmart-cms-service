@@ -336,20 +336,11 @@ func (cm *ContentModel) UpdateSharedContentsCount(ctx context.Context, tx *dbo.D
 		return err
 	}
 
-	//contentAncestorDirs := make(map[string]map[string]bool)
 	allParentIDs := make([]string, 0)
-	//allContentsAncestorDir := make([]string, 0)
-
 	allAncestorIDs := make([]string, 0)
 	for i := range contents {
 		if contents[i].ContentType == entity.ContentTypeMaterial || contents[i].ContentType == entity.ContentTypePlan {
 			fids := contents[i].DirPath.Parents()
-			//ancestorDirs := make(map[string]bool)
-			//for j := range fids {
-			//	ancestorDirs[fids[j]] = true
-			//}
-			//contentAncestorDirs[contents[i].ID] = ancestorDirs
-			//allContentsAncestorDir = append(allContentsAncestorDir, fids...)
 
 			if len(fids) > 0 && fids[len(fids)-1] != constant.FolderRootPath && fids[len(fids)-1] != "" {
 				allParentIDs = append(allParentIDs, fids[len(fids)-1])
