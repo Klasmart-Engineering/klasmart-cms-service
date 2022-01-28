@@ -117,12 +117,12 @@ type AssessmentConfig struct {
 	CacheExpiration      time.Duration `json:"cache_expiration" yaml:"cache_expiration"`
 	AddAssessmentSecret  interface{}   `json:"-"`
 	DefaultRemainingTime time.Duration `json:"default_remaining_time" yaml:"default_remaining_time"`
-	AuthorizedKey        string        `json:"authorized_key"`
 }
 
 type AMSConfig struct {
 	EndPoint       string      `json:"endpoint" yaml:"endpoint"`
 	TokenVerifyKey interface{} `json:"-" yaml:"token_verify_key"`
+	AuthorizedKey  string      `json:"authorized_key"`
 }
 
 type H5PServiceConfig struct {
@@ -434,8 +434,6 @@ func loadAssessmentConfig(ctx context.Context) {
 	} else {
 		config.Assessment.DefaultRemainingTime = defaultRemainingTime
 	}
-
-	config.Assessment.AuthorizedKey = os.Getenv("user_service_api_key")
 }
 
 func loadAMSConfig(ctx context.Context) {
@@ -451,6 +449,7 @@ func loadAMSConfig(ctx context.Context) {
 		log.Panic(ctx, "loadAMSConfig:ParseRSAPublicKeyFromPEM failed", log.Err(err))
 	}
 	config.AMS.TokenVerifyKey = key
+	config.AMS.AuthorizedKey = os.Getenv("user_service_api_key")
 }
 
 func loadH5PServiceConfig(ctx context.Context) {
