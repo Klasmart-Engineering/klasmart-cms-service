@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -1310,40 +1311,47 @@ func (a *assessmentModelV2) endClassCallbackUpdateAssessment(ctx context.Context
 	}
 
 	if assessment.Status == v2.AssessmentStatusNotStarted {
-		detailComponent := NewAssessmentDetailComponent(ctx, op, assessment)
-		err := detailComponent.apc.MatchSchedule()
-		if err != nil {
-			return err
-		}
+		//detailComponent := NewAssessmentDetailComponent(ctx, op, assessment)
+		//err := detailComponent.apc.MatchSchedule()
+		//if err != nil {
+		//	return err
+		//}
 
-		err = detailComponent.apc.MatchClass()
-		if err != nil {
-			return err
-		}
+		//err = detailComponent.apc.MatchClass()
+		//if err != nil {
+		//	return err
+		//}
 
-		schedule, ok := detailComponent.apc.assScheduleMap[assessment.ID]
-		if !ok {
-			return constant.ErrRecordNotFound
-		}
+		//schedule, ok := detailComponent.apc.assScheduleMap[assessment.ID]
+		//if !ok {
+		//	return constant.ErrRecordNotFound
+		//}
 
 		// update assessment
 		if assessment.AssessmentType == v2.AssessmentTypeOfflineClass ||
 			assessment.AssessmentType == v2.AssessmentTypeOnlineClass {
 			// title
-			var className string
-			if classInfo, ok := detailComponent.apc.assClassMap[assessment.ID]; ok {
-				className = classInfo.Name
+			//var className string
+			//if classInfo, ok := detailComponent.apc.assClassMap[assessment.ID]; ok {
+			//	className = classInfo.Name
+			//}
+			//title, err := assessment.AssessmentType.Title(ctx, v2.GenerateAssessmentTitleInput{
+			//	ClassName:    className,
+			//	ScheduleName: schedule.Title,
+			//	ClassEndAt:   req.ClassEndAt,
+			//})
+			//if err != nil {
+			//	return err
+			//}
+			// update assessment title
+			titleSplit := strings.Split(assessment.Title, "-")
+			if len(titleSplit) > 3 {
+				var timeStr string
+				if req.ClassEndAt > 0 {
+					timeStr = time.Unix(req.ClassEndAt, 0).Format("20060102")
+				}
+				assessment.Title = fmt.Sprintf("%s-%s-%s", timeStr, titleSplit[1], titleSplit[2])
 			}
-			title, err := assessment.AssessmentType.Title(ctx, v2.GenerateAssessmentTitleInput{
-				ClassName:    className,
-				ScheduleName: schedule.Title,
-				ClassEndAt:   req.ClassEndAt,
-			})
-			if err != nil {
-				return err
-			}
-
-			assessment.Title = title
 		}
 
 		assessment.Status = v2.AssessmentStatusStarted
