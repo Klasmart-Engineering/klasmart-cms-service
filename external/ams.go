@@ -48,6 +48,8 @@ func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorin
 			"Found access graphql without cookie",
 			log.String(constant.CookieKey, cookie),
 			log.Any("req", req))
+		// using authorized key
+		req.SetHeader(constant.AMSAuthorizedHeaderKey, config.Get().Assessment.AuthorizedKey)
 	}
 	statusCode, err := c.Client.Run(ctx, req, resp)
 	if err != nil {
