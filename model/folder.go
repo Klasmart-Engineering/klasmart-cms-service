@@ -94,6 +94,7 @@ type IFolderModel interface {
 	GetFolderMayRoot(ctx context.Context, fid string, ownerType entity.OwnerType, partition entity.FolderPartition, operator *entity.Operator) (*entity.FolderItem, error)
 
 	BatchUpdateFolderItemCount(ctx context.Context, tx *dbo.DBContext, ids []string) error
+	BatchUpdateAncestorEmptyField(ctx context.Context, tx *dbo.DBContext, ids []string) error
 }
 
 type FolderModel struct{}
@@ -1107,10 +1108,13 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context,
 		if f.DirPath.Parents() != nil {
 			needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, f.DirPath.Parents()...)
 		}
+		needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, f.ID)
 	}
 	if distFolder.DirPath.Parents() != nil {
 		needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, distFolder.DirPath.Parents()...)
 	}
+	needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, distFolder.ID)
+
 	needUpdateEmptyFlagFolder = utils.SliceDeduplicationExcludeEmpty(needUpdateEmptyFlagFolder)
 	err = f.updateEmptyField(ctx, tx, needUpdateEmptyFlagFolder)
 	if err != nil {
@@ -1233,9 +1237,14 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext,
 	if originPath.Parents() != nil {
 		needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, originPath.Parents()...)
 	}
+	needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, originParentID)
+
 	if distFolder.DirPath.Parents() != nil {
 		needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, distFolder.DirPath.Parents()...)
 	}
+	needUpdateEmptyFlagFolder = append(needUpdateEmptyFlagFolder, distFolder.ID)
+
+	needUpdateEmptyFlagFolder = utils.SliceDeduplicationExcludeEmpty(needUpdateEmptyFlagFolder)
 	err = f.updateEmptyField(ctx, tx, needUpdateEmptyFlagFolder)
 	if err != nil {
 		log.Error(ctx, "handleMoveContentByLink updateEmptyField failed",
@@ -1297,7 +1306,12 @@ func (f *FolderModel) handleMoveFolders(ctx context.Context, tx *dbo.DBContext,
 	//Update all content in the folder
 	//replace the path of all content in the folder
 	//TODO:Execute one statement per folder, Maybe can Accelerate
+	allAncestorIDs := make([]string, 0)
 	for i := range folders {
+		if folders[i].DirPath.Parents() != nil {
+			allAncestorIDs = append(allAncestorIDs, folders[i].DirPath.Parents()...)
+		}
+
 		originParentIDList[i] = folders[i].ParentID
 		err = f.replaceLinkedContentPath(ctx, tx, &entity.ReplaceLinkedContentPathRequest{
 			FromFolder: folders[i],
@@ -1377,6 +1391,20 @@ func (f *FolderModel) handleMoveFolders(ctx context.Context, tx *dbo.DBContext,
 	if err != nil {
 		return err
 	}
+
+	if distFolder.DirPath.Parents() != nil {
+		allAncestorIDs = append(allAncestorIDs, distFolder.DirPath.Parents()...)
+	}
+	allAncestorIDs = append(allAncestorIDs, distFolder.ID)
+	err = f.updateEmptyField(ctx, tx, allAncestorIDs)
+	if err != nil {
+		log.Error(ctx, "handleMoveFolders updateEmptyField failed",
+			log.Err(err),
+			log.Strings("ancestor", allAncestorIDs),
+			log.Any("toFolder", distFolder))
+		return err
+	}
+
 	return nil
 }
 
@@ -1878,13 +1906,11 @@ func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, nam
 }
 
 func (f *FolderModel) BatchUpdateFolderItemCount(ctx context.Context, tx *dbo.DBContext, ids []string) error {
-	err := f.batchRepairFolderItemsCountByIDs(ctx, tx, ids)
-	if err != nil {
-		log.Error(ctx, "BatchUpdateFolderItemCount batchRepairFolderItemsCountByIDs failed",
-			log.Err(err),
-			log.Strings("ids", ids))
-		return err
-	}
+	return f.batchRepairFolderItemsCountByIDs(ctx, tx, ids)
+}
+
+func (f *FolderModel) BatchUpdateAncestorEmptyField(ctx context.Context, tx *dbo.DBContext, ids []string) error {
+	ids = utils.SliceDeduplicationExcludeEmpty(ids)
 	return f.updateEmptyField(ctx, tx, ids)
 }
 

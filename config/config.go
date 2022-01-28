@@ -122,6 +122,7 @@ type AssessmentConfig struct {
 type AMSConfig struct {
 	EndPoint       string      `json:"endpoint" yaml:"endpoint"`
 	TokenVerifyKey interface{} `json:"-" yaml:"token_verify_key"`
+	AuthorizedKey  string      `json:"authorized_key"`
 }
 
 type H5PServiceConfig struct {
@@ -448,6 +449,7 @@ func loadAMSConfig(ctx context.Context) {
 		log.Panic(ctx, "loadAMSConfig:ParseRSAPublicKeyFromPEM failed", log.Err(err))
 	}
 	config.AMS.TokenVerifyKey = key
+	config.AMS.AuthorizedKey = os.Getenv("user_service_api_key")
 }
 
 func loadH5PServiceConfig(ctx context.Context) {
