@@ -7,10 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
-
 	"github.com/go-redis/redis"
 	"gitlab.badanamu.com.cn/calmisland/common-cn/common"
+	"gitlab.badanamu.com.cn/calmisland/common-cn/helper"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
@@ -19,6 +18,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
 	"gitlab.badanamu.com.cn/calmisland/ro"
 )
 
@@ -80,6 +80,30 @@ func initCache() {
 	}
 }
 
+func initLogger() {
+	logger := log.New(log.WithDynamicFields(func(ctx context.Context) (fields []log.Field) {
+		badaCtx, ok := helper.GetBadaCtx(ctx)
+		if !ok {
+			return
+		}
+
+		if badaCtx.CurrTid != "" {
+			fields = append(fields, log.String("currTid", badaCtx.CurrTid))
+		}
+
+		if badaCtx.PrevTid != "" {
+			fields = append(fields, log.String("prevTid", badaCtx.PrevTid))
+		}
+
+		if badaCtx.EntryTid != "" {
+			fields = append(fields, log.String("entryTid", badaCtx.EntryTid))
+		}
+
+		return
+	}))
+	log.ReplaceGlobals(logger)
+}
+
 // @title KidsLoop 2.0 REST API
 // @version 1.0.0
 // @description "KidsLoop 2.0 backend rest api
@@ -87,6 +111,9 @@ func initCache() {
 // @host https://kl2-test.kidsloop.net/v1
 func main() {
 	ctx := context.Background()
+
+	initLogger()
+
 	log.Info(ctx, "start kidsloop2 api service")
 	defer func() {
 		if err := recover(); err != nil {
