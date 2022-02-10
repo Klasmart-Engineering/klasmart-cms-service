@@ -33,60 +33,60 @@ func GetAssessmentStatusByReq() map[AssessmentStatusForApiCompliant][]string {
 	}
 }
 
-func (a AssessmentType) Status(req AssessmentStatusForApiCompliant) []string {
-	switch a {
-	case AssessmentTypeOnlineClass,
-		AssessmentTypeOfflineClass:
-		if req == "" {
-			return []string{
-				AssessmentStatusStarted.String(),
-				AssessmentStatusInDraft.String(),
-				AssessmentStatusComplete.String(),
-			}
-		} else if req == AssessmentStatusCompliantNotCompleted {
-			return []string{
-				AssessmentStatusStarted.String(),
-				AssessmentStatusInDraft.String(),
-			}
-		} else {
-			return []string{AssessmentStatusComplete.String()}
-		}
-	case AssessmentTypeOnlineStudy:
-		if req == "" {
-			return []string{
-				AssessmentStatusNotStarted.String(),
-				AssessmentStatusStarted.String(),
-				AssessmentStatusInDraft.String(),
-				AssessmentStatusComplete.String(),
-			}
-		} else if req == AssessmentStatusCompliantNotCompleted {
-			return []string{
-				AssessmentStatusNotStarted.String(),
-				AssessmentStatusStarted.String(),
-				AssessmentStatusInDraft.String(),
-			}
-		} else {
-			return []string{AssessmentStatusComplete.String()}
-		}
-	case AssessmentTypeOfflineStudy:
-		if req == "" {
-			return []string{
-				UserResultProcessStatusStarted.String(),
-				UserResultProcessStatusDraft.String(),
-				UserResultProcessStatusComplete.String(),
-			}
-		} else if req == AssessmentStatusCompliantNotCompleted {
-			return []string{
-				UserResultProcessStatusStarted.String(),
-				UserResultProcessStatusDraft.String(),
-			}
-		} else {
-			return []string{UserResultProcessStatusComplete.String()}
-		}
-	}
-
-	return []string{}
-}
+//func (a AssessmentType) Status(req AssessmentStatusForApiCompliant) []string {
+//	switch a {
+//	case AssessmentTypeOnlineClass,
+//		AssessmentTypeOfflineClass:
+//		if req == "" {
+//			return []string{
+//				AssessmentStatusStarted.String(),
+//				AssessmentStatusInDraft.String(),
+//				AssessmentStatusComplete.String(),
+//			}
+//		} else if req == AssessmentStatusCompliantNotCompleted {
+//			return []string{
+//				AssessmentStatusStarted.String(),
+//				AssessmentStatusInDraft.String(),
+//			}
+//		} else {
+//			return []string{AssessmentStatusComplete.String()}
+//		}
+//	case AssessmentTypeOnlineStudy:
+//		if req == "" {
+//			return []string{
+//				AssessmentStatusNotStarted.String(),
+//				AssessmentStatusStarted.String(),
+//				AssessmentStatusInDraft.String(),
+//				AssessmentStatusComplete.String(),
+//			}
+//		} else if req == AssessmentStatusCompliantNotCompleted {
+//			return []string{
+//				AssessmentStatusNotStarted.String(),
+//				AssessmentStatusStarted.String(),
+//				AssessmentStatusInDraft.String(),
+//			}
+//		} else {
+//			return []string{AssessmentStatusComplete.String()}
+//		}
+//	case AssessmentTypeOfflineStudy:
+//		if req == "" {
+//			return []string{
+//				UserResultProcessStatusStarted.String(),
+//				UserResultProcessStatusDraft.String(),
+//				UserResultProcessStatusComplete.String(),
+//			}
+//		} else if req == AssessmentStatusCompliantNotCompleted {
+//			return []string{
+//				UserResultProcessStatusStarted.String(),
+//				UserResultProcessStatusDraft.String(),
+//			}
+//		} else {
+//			return []string{UserResultProcessStatusComplete.String()}
+//		}
+//	}
+//
+//	return []string{}
+//}
 
 func (a AssessmentType) String() string {
 	return string(a)
@@ -147,37 +147,6 @@ type AssessmentQueryType string
 const (
 	QueryTypeTeacherName AssessmentQueryType = "TeacherName"
 )
-
-type AssessmentOrderBy int
-
-const (
-	AssessmentOrderByClassEndTimeAsc  AssessmentOrderBy = 1
-	AssessmentOrderByClassEndTimeDesc AssessmentOrderBy = 2
-	AssessmentOrderByCompleteTimeAsc  AssessmentOrderBy = 3
-	AssessmentOrderByCompleteTimeDesc AssessmentOrderBy = 4
-	AssessmentOrderBySubmitAtAsc      AssessmentOrderBy = 5
-	AssessmentOrderBySubmitAtDesc     AssessmentOrderBy = 6
-	AssessmentOrderByCreateAtDesc     AssessmentOrderBy = 7
-)
-
-func NewAssessmentOrderBy(orderBy string) AssessmentOrderBy {
-	switch orderBy {
-	case "complete_at":
-		return AssessmentOrderByCompleteTimeAsc
-	case "-complete_at":
-		return AssessmentOrderByCompleteTimeDesc
-	case "class_end_time":
-		return AssessmentOrderByClassEndTimeAsc
-	case "-class_end_time":
-		return AssessmentOrderByClassEndTimeDesc
-	case "submit_at":
-		return AssessmentOrderBySubmitAtAsc
-	case "-submit_at":
-		return AssessmentOrderBySubmitAtDesc
-	default:
-		return AssessmentOrderByCreateAtDesc
-	}
-}
 
 type AssessmentStatus string
 
@@ -331,9 +300,8 @@ type AssessmentContentType string
 const (
 	AssessmentContentTypeUnknown AssessmentContentType = "Unknown"
 
-	AssessmentContentTypeLessonPlan         AssessmentContentType = "LessonPlan"
-	AssessmentContentTypeLessonMaterial     AssessmentContentType = "LessonMaterial"
-	AssessmentContentTypeScheduleAttachment AssessmentContentType = "ScheduleAttachment"
+	AssessmentContentTypeLessonPlan     AssessmentContentType = "LessonPlan"
+	AssessmentContentTypeLessonMaterial AssessmentContentType = "LessonMaterial"
 )
 
 func (a AssessmentContentType) String() string {
