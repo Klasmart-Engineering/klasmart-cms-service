@@ -240,11 +240,11 @@ func TestAssessmentModel_Draft(t *testing.T) {
 	//GetAssessmentModelV2().Draft(ctx, op)
 }
 
-func TestMain(m *testing.M) {
-	setup()
-	exitVal := m.Run()
-	os.Exit(exitVal)
-}
+//func TestMain(m *testing.M) {
+//	setup()
+//	exitVal := m.Run()
+//	os.Exit(exitVal)
+//}
 
 func setup() {
 	os.Setenv("connection_string", "root:Passw0rd@tcp(192.168.1.136:3306)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local")

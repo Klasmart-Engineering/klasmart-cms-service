@@ -242,7 +242,7 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 
 	return 0, nil, nil
 }
-func (m *assessmentModelV2) querySchedulesMap(ctx context.Context, scheduleIDs []string) (map[string]*entity.Schedule, error) {
+func (a *assessmentModelV2) querySchedulesMap(ctx context.Context, scheduleIDs []string) (map[string]*entity.Schedule, error) {
 	schedules, err := GetScheduleModel().QueryUnsafe(ctx, &entity.ScheduleQueryCondition{IDs: entity.NullStrings{
 		Strings: scheduleIDs,
 		Valid:   true,
@@ -261,7 +261,7 @@ func (m *assessmentModelV2) querySchedulesMap(ctx context.Context, scheduleIDs [
 	return schedulesMap, nil
 }
 
-func (m *assessmentModelV2) queryFeedbackInfo(ctx context.Context, operator *entity.Operator, feedbackIDs []string) (map[string][]*entity.FeedbackAssignmentView, error) {
+func (a *assessmentModelV2) queryFeedbackInfo(ctx context.Context, operator *entity.Operator, feedbackIDs []string) (map[string][]*entity.FeedbackAssignmentView, error) {
 	//query feedbacks
 	var err error
 	feedbackMap := make(map[string][]*entity.FeedbackAssignmentView)
@@ -309,72 +309,6 @@ func (a *assessmentModelV2) StatisticsCount(ctx context.Context, op *entity.Oper
 	}
 
 	return r, nil
-}
-
-// key: content latestID
-func (a *assessmentModelV2) getLatestContentFromContentRepo(ctx context.Context, op *entity.Operator, lessPlanID string) ([]*v2.AssessmentContentView, error) {
-	latestLessPlanIDs, err := GetContentModel().GetLatestContentIDByIDList(ctx, dbo.MustGetDB(ctx), []string{lessPlanID})
-	if err != nil {
-		return nil, err
-	}
-	if len(latestLessPlanIDs) <= 0 {
-		log.Error(ctx, "get latest lessPlan not found", log.String("lessPlanID", lessPlanID))
-		return nil, constant.ErrRecordNotFound
-	}
-
-	latestLessPlanID := latestLessPlanIDs[0]
-	latestLessPlanInfo, err := GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), latestLessPlanID)
-	if err != nil {
-		return nil, err
-	}
-
-	subContent, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), latestLessPlanID, op, true)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]*v2.AssessmentContentView, 0, len(subContent)+1)
-	result = append(result, &v2.AssessmentContentView{
-		ID:          latestLessPlanInfo.ID,
-		Name:        latestLessPlanInfo.Name,
-		ContentType: v2.AssessmentContentTypeLessonPlan,
-		OutcomeIDs:  latestLessPlanInfo.OutcomeIDs,
-	})
-
-	resultDeDup := make(map[string]struct{})
-	for _, item := range subContent {
-		if _, ok := resultDeDup[item.ID]; !ok {
-			result = append(result, &v2.AssessmentContentView{
-				ID:          item.ID,
-				Name:        item.Name,
-				ContentType: v2.AssessmentContentTypeLessonMaterial,
-				OutcomeIDs:  item.OutcomeIDs,
-			})
-			resultDeDup[item.ID] = struct{}{}
-		}
-	}
-
-	log.Debug(ctx, "getLatestContentFromContentRepo", log.Any("result", result))
-	return result, nil
-}
-
-// key: content latestID
-func (a *assessmentModelV2) getLatestContentFromRequest(ctx context.Context, contentsReqMap map[string]*v2.AssessmentUpdateContentReq) (map[string]*v2.AssessmentUpdateContentReq, error) {
-	contentIDs := make([]string, 0, len(contentsReqMap))
-	for _, item := range contentsReqMap {
-		contentIDs = append(contentIDs, item.ContentID)
-	}
-
-	contents, err := GetContentModel().GetContentNameByIDList(ctx, dbo.MustGetDB(ctx), contentIDs)
-	if err != nil {
-		return nil, err
-	}
-
-	contentMap := make(map[string]*v2.AssessmentUpdateContentReq, len(contents))
-	for _, item := range contents {
-		contentMap[item.LatestID] = contentsReqMap[item.ID]
-	}
-
-	return contentMap, nil
 }
 
 func (a *assessmentModelV2) getConditionByPermission(ctx context.Context, op *entity.Operator) (*assessmentV2.AssessmentCondition, error) {
@@ -605,58 +539,6 @@ func (a *assessmentModelV2) Draft(ctx context.Context, op *entity.Operator, req 
 func (a *assessmentModelV2) Complete(ctx context.Context, op *entity.Operator, req *v2.AssessmentUpdateReq) error {
 	return a.Update(ctx, op, v2.AssessmentStatusComplete, req)
 }
-
-//func (a *assessmentModelV2) prepareAssessmentUser(ctx context.Context, assessment *v2.Assessment, req *v2.AssessmentUpdateReq) (*v2.UpdateAssessmentUserOutput, error) {
-//	userIDsRequest := make([]string, len(req.Students))
-//	userRequestMap := make(map[string]*v2.AssessmentStudentUpdateReq)
-//	for i, item := range req.Students {
-//		userIDsRequest[i] = item.StudentID
-//		userRequestMap[item.StudentID] = item
-//	}
-//	userIDsRequest = utils.SliceDeduplicationExcludeEmpty(userIDsRequest)
-//
-//	var assessmentUsers []*v2.AssessmentUser
-//	userCondition := &assessmentV2.AssessmentUserCondition{
-//		AssessmentID: sql.NullString{
-//			String: assessment.ID,
-//			Valid:  true,
-//		},
-//	}
-//	err := assessmentV2.GetAssessmentUserDA().Query(ctx, userCondition, &assessmentUsers)
-//	if err != nil {
-//		log.Error(ctx, "query assessment user error", log.Err(err), log.Any("userCondition", userCondition))
-//		return nil, err
-//	}
-//
-//	assessmentUserMap := make(map[string]*v2.AssessmentUser, len(assessmentUsers))
-//	assessmentUserPKs := make([]string, len(assessmentUsers))
-//	for i, item := range assessmentUsers {
-//		assessmentUserMap[item.UserID] = item
-//		assessmentUserPKs[i] = item.ID
-//	}
-//
-//	waitUpdatedUsers := make([]*v2.AssessmentUser, 0)
-//	for _, item := range req.Students {
-//		existItem, ok := assessmentUserMap[item.StudentID]
-//		if !ok {
-//			log.Warn(ctx, "student not exist", log.Any("assessmentUserMap", assessmentUserMap), log.Any("reqItem", item))
-//			return nil, constant.ErrInvalidArgs
-//		}
-//		if !item.Status.Valid() {
-//			log.Warn(ctx, "student status invalid", log.Any("assessmentUserMap", assessmentUserMap), log.Any("reqItem", item))
-//			return nil, constant.ErrInvalidArgs
-//		}
-//		existItem.StatusByUser = item.Status
-//		waitUpdatedUsers = append(waitUpdatedUsers, existItem)
-//	}
-//
-//	result := new(v2.UpdateAssessmentUserOutput)
-//	result.AssessmentUserMap = assessmentUserMap
-//	result.WaitUpdatedUsers = waitUpdatedUsers
-//	result.AssessmentUserPKs = assessmentUserPKs
-//
-//	return result, nil
-//}
 
 func (a *assessmentModelV2) Update(ctx context.Context, op *entity.Operator, status v2.AssessmentStatus, req *v2.AssessmentUpdateReq) error {
 	if len(req.Students) <= 0 {
