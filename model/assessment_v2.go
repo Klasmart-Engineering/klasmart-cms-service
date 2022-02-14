@@ -937,9 +937,7 @@ func (a *assessmentModelV2) AddWhenCreateSchedules(ctx context.Context, tx *dbo.
 		if req.AssessmentType == v2.AssessmentTypeOfflineStudy {
 			assessmentItem.Status = v2.AssessmentStatusNotApplicable
 		}
-		//if req.AssessmentType == v2.AssessmentTypeOnlineStudy {
-		//	assessmentItem.Status = v2.AssessmentStatusStarted
-		//}
+
 		assessments[i] = assessmentItem
 
 		// assessment user
@@ -960,7 +958,7 @@ func (a *assessmentModelV2) AddWhenCreateSchedules(ctx context.Context, tx *dbo.
 			users = append(users, attendance)
 		}
 	}
-	log.Debug(ctx, "assessment data", log.Any("assessments", assessments), log.Any("users", users))
+
 	_, err = assessmentV2.GetAssessmentDA().InsertInBatchesTx(ctx, tx, assessments, constant.AssessmentBatchPageSize)
 	if err != nil {
 		return err
@@ -972,10 +970,6 @@ func (a *assessmentModelV2) AddWhenCreateSchedules(ctx context.Context, tx *dbo.
 	}
 
 	return nil
-}
-
-func (a *assessmentModelV2) getKey(value []string) string {
-	return strings.Join(value, "_")
 }
 
 func (a *assessmentModelV2) prepareAssessmentContents(ctx context.Context, op *entity.Operator, assessment *v2.Assessment) ([]*v2.AssessmentContent, error) {
@@ -1000,61 +994,6 @@ func (a *assessmentModelV2) prepareAssessmentContents(ctx context.Context, op *e
 	}
 
 	return contents, nil
-	//if schedule.AnyoneAttemptedLive() {
-	//	contents := make([]*v2.AssessmentContent, 0, len(schedule.LiveLessonPlan.LessonMaterials)+1)
-	//
-	//	contents = append(contents, &v2.AssessmentContent{
-	//		ID:           utils.NewID(),
-	//		AssessmentID: assessment.ID,
-	//		ContentID:    schedule.LiveLessonPlan.LessonPlanID,
-	//		ContentType:  v2.AssessmentContentTypeLessonPlan,
-	//		Status:       v2.AssessmentContentStatusCovered,
-	//		CreateAt:     now,
-	//	})
-	//
-	//	for _, item := range schedule.LiveLessonPlan.LessonMaterials {
-	//		contents = append(contents, &v2.AssessmentContent{
-	//			ID:           utils.NewID(),
-	//			AssessmentID: assessment.ID,
-	//			ContentID:    item.LessonMaterialID,
-	//			ContentType:  v2.AssessmentContentTypeLessonMaterial,
-	//			Status:       v2.AssessmentContentStatusCovered,
-	//			CreateAt:     now,
-	//		})
-	//	}
-	//
-	//	return contents, nil
-	//} else {
-	//	// TODO: Waiting interface open
-	//	detailComponent := NewAssessmentDetailComponent(ctx, op, assessment)
-	//	scheduleLessPlan, err := new(scheduleModel).getLessonPlanWithMaterial(ctx, op, schedule.LessonPlanID)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	contents := make([]*v2.AssessmentContent, 0, len(scheduleLessPlan.Materials)+1)
-	//
-	//	contents = append(contents, &v2.AssessmentContent{
-	//		ID:           utils.NewID(),
-	//		AssessmentID: assessmentID,
-	//		ContentID:    schedule.LiveLessonPlan.LessonPlanID,
-	//		ContentType:  v2.AssessmentContentTypeLessonPlan,
-	//		Status:       v2.AssessmentContentStatusCovered,
-	//		CreateAt:     now,
-	//	})
-	//
-	//	for _, item := range schedule.LiveLessonPlan.LessonMaterials {
-	//		contents = append(contents, &v2.AssessmentContent{
-	//			ID:           utils.NewID(),
-	//			AssessmentID: assessmentID,
-	//			ContentID:    item.LessonMaterialID,
-	//			ContentType:  v2.AssessmentContentTypeLessonMaterial,
-	//			Status:       v2.AssessmentContentStatusCovered,
-	//			CreateAt:     now,
-	//		})
-	//	}
-	//
-	//	return contents, nil
-	//}
 }
 
 func (a *assessmentModelV2) LockAssessmentContentAndOutcome(ctx context.Context, op *entity.Operator, schedule *entity.Schedule) error {
@@ -1193,38 +1132,9 @@ func (a *assessmentModelV2) endClassCallbackUpdateAssessment(ctx context.Context
 	}
 
 	if assessment.Status == v2.AssessmentStatusNotStarted {
-		//detailComponent := NewAssessmentDetailComponent(ctx, op, assessment)
-		//err := detailComponent.apc.MatchSchedule()
-		//if err != nil {
-		//	return err
-		//}
-
-		//err = detailComponent.apc.MatchClass()
-		//if err != nil {
-		//	return err
-		//}
-
-		//schedule, ok := detailComponent.apc.assScheduleMap[assessment.ID]
-		//if !ok {
-		//	return constant.ErrRecordNotFound
-		//}
-
 		// update assessment
 		if assessment.AssessmentType == v2.AssessmentTypeOfflineClass ||
 			assessment.AssessmentType == v2.AssessmentTypeOnlineClass {
-			// title
-			//var className string
-			//if classInfo, ok := detailComponent.apc.assClassMap[assessment.ID]; ok {
-			//	className = classInfo.Name
-			//}
-			//title, err := assessment.AssessmentType.Title(ctx, v2.GenerateAssessmentTitleInput{
-			//	ClassName:    className,
-			//	ScheduleName: schedule.Title,
-			//	ClassEndAt:   req.ClassEndAt,
-			//})
-			//if err != nil {
-			//	return err
-			//}
 			// update assessment title
 			titleSplit := strings.Split(assessment.Title, "-")
 			if len(titleSplit) > 3 {

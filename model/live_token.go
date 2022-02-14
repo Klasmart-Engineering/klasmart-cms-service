@@ -200,13 +200,12 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 				LessonMaterials: scheduleLiveLessonMaterials,
 			}
 			schedule.LiveLessonPlan = scheduleLiveLessonPlan
-			if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
-				err = GetStudyAssessmentModel().Regenerate(ctx, op, schedule)
-				if err != nil {
-					log.Error(ctx, "regenerate study assessment error", log.Any("schedule", schedule))
-					return "", err
-				}
+
+			if err := GetAssessmentModelV2().LockAssessmentContentAndOutcome(ctx, op, schedule.Schedule); err != nil {
+				log.Error(ctx, "assessment lock content version error", log.Any("schedule", schedule), log.Err(err))
+				return "", err
 			}
+
 			err = GetScheduleModel().UpdateLiveLessonPlan(ctx, op, scheduleID, scheduleLiveLessonPlan)
 			if err != nil {
 				log.Error(ctx, "GetScheduleModel().UpdateLiveMaterials error",

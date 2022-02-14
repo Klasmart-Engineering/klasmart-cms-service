@@ -7,6 +7,7 @@ alter table home_fun_studies rename to home_fun_studies_backup;
 alter table outcomes_attendances rename to outcomes_attendances_backup;
 alter table contents_outcomes_attendances rename to contents_outcomes_attendances_backup;
 
+-- assessments view
 create or replace view assessments as
 select id,schedule_id,title,class_end_at class_end_time,class_length,complete_at complete_time,
        if(status ='Complete','complete','in_progress') status,
@@ -18,6 +19,7 @@ where delete_at=0 and
             (assessment_type = 'OnlineStudy')
         );
 
+-- assessments_attendances view
 create or replace view assessments_attendances as
 select id,assessment_id,
        user_id attendance_id,
@@ -27,6 +29,7 @@ select id,assessment_id,
 from assessments_users_v2
 where delete_at = 0;
 
+-- assessments_contents view
 create or replace view assessments_contents as
 select
     id,
@@ -39,6 +42,7 @@ select
 from assessments_contents_v2
 where delete_at = 0;
 
+-- assessments_outcomes view
 create or replace view assessments_outcomes as
 select
     assessments_users_outcomes_v2.id,
@@ -52,6 +56,7 @@ from assessments_users_v2 inner join assessments_users_outcomes_v2
 where assessments_users_outcomes_v2.delete_at=0
 group by assessments_users_v2.assessment_id,assessments_users_outcomes_v2.outcome_id;
 
+-- outcomes_attendances view
 create or replace view outcomes_attendances as
 select
     assessments_users_outcomes_v2.id id,
@@ -63,6 +68,7 @@ from assessments_users_outcomes_v2 inner join assessments_users_v2
 where assessments_users_outcomes_v2.status = 'Achieved' and assessments_users_outcomes_v2.delete_at=0
 group by assessments_users_v2.assessment_id,assessments_users_outcomes_v2.outcome_id,assessments_users_v2.user_id;
 
+-- assessments_contents_outcomes view
 create or replace view assessments_contents_outcomes as
 select
     assessments_users_outcomes_v2.id id,
@@ -75,6 +81,7 @@ from assessments_users_outcomes_v2 inner join assessments_contents_v2
 where assessments_users_outcomes_v2.delete_at=0
 group by assessments_contents_v2.assessment_id,assessments_users_outcomes_v2.outcome_id,assessments_contents_v2.content_id;
 
+-- contents_outcomes_attendances view
 create or replace view contents_outcomes_attendances as
 select
     assessments_users_outcomes_v2.id id,
@@ -89,6 +96,7 @@ from assessments_users_outcomes_v2
                     on assessments_users_outcomes_v2.assessment_content_id = assessments_contents_v2.id
 where assessments_users_outcomes_v2.status='Achieved' and assessments_users_outcomes_v2.delete_at=0;
 
+-- home_fun_studies view
 create or replace view home_fun_studies as
 select
     assessments_reviewer_feedback_v2.id,

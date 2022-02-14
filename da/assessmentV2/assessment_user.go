@@ -85,12 +85,13 @@ func (a *assessmentUserDA) UpdateSystemStatusTx(ctx context.Context, tx *dbo.DBC
 	}
 
 	err := tx.Model(v2.AssessmentUser{}).
-		Where(strings.Join(wheres, " and "), params).
+		Where(strings.Join(wheres, " and "), params...).
 		UpdateColumn("status_by_system", status).
 		UpdateColumn("update_at", time.Now().Unix()).
 		Error
 
 	if err != nil {
+		log.Error(ctx, "update assessment user status error", log.Err(err))
 		return err
 	}
 
