@@ -1006,7 +1006,6 @@ func (a *assessmentModelV2) LockAssessmentContentAndOutcome(ctx context.Context,
 	}
 	assessment, err := a.getAssessmentByScheduleID(ctx, schedule.ID)
 	if err != nil {
-		log.Error(ctx, "no one attempted,don't need to lock", log.Any("schedule", schedule))
 		return err
 	}
 
