@@ -908,8 +908,8 @@ func (a *assessmentModelV2) AddWhenCreateSchedules(ctx context.Context, tx *dbo.
 		return constant.ErrInvalidArgs
 	}
 
-	assessments := make([]*v2.Assessment, len(req.RepeatScheduleIDs))
 	now := time.Now().Unix()
+	assessments := make([]*v2.Assessment, len(req.RepeatScheduleIDs))
 
 	// title
 	title, err := req.AssessmentType.Title(ctx, v2.GenerateAssessmentTitleInput{
