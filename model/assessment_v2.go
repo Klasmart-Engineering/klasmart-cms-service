@@ -948,11 +948,14 @@ func (a *assessmentModelV2) AddWhenCreateSchedules(ctx context.Context, tx *dbo.
 				UserID:         userItem.UserID,
 				UserType:       userItem.UserType,
 				StatusBySystem: v2.AssessmentUserStatusNotParticipate,
-				StatusByUser:   v2.AssessmentUserStatusNotParticipate,
+				StatusByUser:   v2.AssessmentUserStatusParticipate,
 				CreateAt:       now,
 			}
-			if req.AssessmentType != v2.AssessmentTypeOnlineClass {
-				attendance.StatusByUser = v2.AssessmentUserStatusParticipate
+			if req.AssessmentType == v2.AssessmentTypeOnlineClass {
+				attendance.StatusByUser = v2.AssessmentUserStatusNotParticipate
+			}
+			if req.AssessmentType == v2.AssessmentTypeOfflineClass {
+				attendance.StatusBySystem = v2.AssessmentUserStatusParticipate
 			}
 
 			users = append(users, attendance)
