@@ -80,6 +80,8 @@ type IScheduleModel interface {
 
 	UpdateLiveLessonPlan(ctx context.Context, op *entity.Operator, scheduleID string, liveLessonPlan *entity.ScheduleLiveLessonPlan) error
 	GetScheduleLiveLessonPlan(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ContentInfoWithDetails, error)
+
+	GetScheduleRelationIDs(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleRelationIDs, error)
 }
 
 type scheduleModel struct {
@@ -2842,6 +2844,59 @@ func (s *scheduleModel) GetScheduleLiveLessonPlan(ctx context.Context, op *entit
 		return nil, err
 	}
 	return contentInfo, nil
+}
+
+func (s *scheduleModel) GetScheduleRelationIDs(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleRelationIDs, error) {
+	var schedule *entity.Schedule
+	err := s.scheduleDA.Get(ctx, scheduleID, &schedule)
+	if err != nil {
+		log.Error(ctx, "s.scheduleDA.Get error",
+			log.Err(err),
+			log.String("scheduleID", scheduleID))
+		return nil, err
+	}
+
+	var scheduleRelationIDs []*entity.ScheduleRelation
+	err = s.scheduleRelationDA.Query(ctx, &da.ScheduleRelationCondition{
+		ScheduleID: sql.NullString{
+			String: scheduleID,
+			Valid:  true,
+		},
+	}, &scheduleRelationIDs)
+	if err != nil {
+		log.Error(ctx, "s.scheduleRelationDA.Query error",
+			log.Err(err),
+			log.String("scheduleID", scheduleID))
+		return nil, err
+	}
+
+	result := &entity.ScheduleRelationIDs{
+		OrgID:                 schedule.OrgID,
+		ClassRosterClassID:    schedule.ClassID,
+		ClassRosterTeacherIDs: []string{},
+		ClassRosterStudentIDs: []string{},
+		ParticipantTeacherIDs: []string{},
+		ParticipantStudentIDs: []string{},
+	}
+
+	for _, v := range scheduleRelationIDs {
+		switch v.RelationType {
+		case entity.ScheduleRelationTypeOrg:
+			result.OrgID = v.RelationID
+		case entity.ScheduleRelationTypeClassRosterClass:
+			result.ClassRosterClassID = v.RelationID
+		case entity.ScheduleRelationTypeClassRosterTeacher:
+			result.ClassRosterTeacherIDs = append(result.ClassRosterTeacherIDs, v.RelationID)
+		case entity.ScheduleRelationTypeClassRosterStudent:
+			result.ClassRosterStudentIDs = append(result.ClassRosterStudentIDs, v.RelationID)
+		case entity.ScheduleRelationTypeParticipantTeacher:
+			result.ParticipantTeacherIDs = append(result.ParticipantTeacherIDs, v.RelationID)
+		case entity.ScheduleRelationTypeParticipantStudent:
+			result.ParticipantStudentIDs = append(result.ParticipantStudentIDs, v.RelationID)
+		}
+	}
+
+	return result, nil
 }
 
 // Schedule model interval function

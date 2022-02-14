@@ -618,6 +618,29 @@ func (s *Server) queryScheduleInternal(c *gin.Context) {
 	}
 }
 
+// @Summary queryScheduleRelationIDInternal
+// @ID queryScheduleRelationIDInternal
+// @Description query schedule relation ids internal
+// @Produce json
+// @Tags schedule
+// @Success 200 {object} entity.ScheduleRelationIDs
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /internal/schedules/{schedule_id}/relation_ids [get]
+func (s *Server) queryScheduleRelationIDsInternal(c *gin.Context) {
+	ctx := c.Request.Context()
+	scheduleID := c.Param("id")
+	operator := s.getOperator(c)
+
+	result, err := model.GetScheduleModel().GetScheduleRelationIDs(ctx, operator, scheduleID)
+	if err == nil {
+		c.JSON(http.StatusOK, result)
+		return
+	}
+	s.defaultErrorHandler(c, err)
+}
+
 // @Summary querySchedule
 // @ID querySchedule
 // @Description query schedule

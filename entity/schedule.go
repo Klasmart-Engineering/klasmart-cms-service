@@ -962,3 +962,12 @@ type ScheduleUserInfo struct {
 	Name     string           `json:"name"`
 	RoleType ScheduleRoleType `json:"role_type"`
 }
+
+type ScheduleRelationIDs struct {
+	OrgID                 string   `json:"org_id"`
+	ClassRosterClassID    string   `json:"class_roster_class_id"`
+	ClassRosterTeacherIDs []string `json:"class_roster_teacher_ids"`
+	ClassRosterStudentIDs []string `json:"class_roster_student_ids"`
+	ParticipantTeacherIDs []string `json:"participant_teacher_ids"`
+	ParticipantStudentIDs []string `json:"participant_student_ids"`
+}

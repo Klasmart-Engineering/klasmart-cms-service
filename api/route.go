@@ -319,6 +319,7 @@ func (s Server) registeRoute() {
 	{
 		internal.GET("/contents", s.mustLoginWithoutOrgID, s.queryContentInternal)
 		internal.GET("/schedules", s.mustLoginWithoutOrgID, s.queryScheduleInternal)
+		internal.GET("/schedules/:id/relation_ids", s.mustLoginWithoutOrgID, s.queryScheduleRelationIDsInternal)
 	}
 }
 
