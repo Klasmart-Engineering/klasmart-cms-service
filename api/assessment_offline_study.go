@@ -126,6 +126,8 @@ func (s *Server) updateUserOfflineStudy(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case constant.ErrRecordNotFound, sql.ErrNoRows:

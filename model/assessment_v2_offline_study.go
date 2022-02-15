@@ -354,7 +354,7 @@ func (a *assessmentOfflineStudyModel) GetByID(ctx context.Context, op *entity.Op
 			Status:      v2.AssessmentUserOutcomeStatusUnknown,
 		}
 
-		if userOutcomeItem, ok := userOutcomeMap[item.ID]; ok {
+		if userOutcomeItem, ok := userOutcomeMap[item.ID]; ok && userOutcomeItem.Status != "" {
 			userOutcomeReplyItem.Status = userOutcomeItem.Status
 		} else if item.Assumed {
 			userOutcomeReplyItem.Status = v2.AssessmentUserOutcomeStatusAchieved
