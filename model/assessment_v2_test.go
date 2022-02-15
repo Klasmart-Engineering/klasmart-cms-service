@@ -84,7 +84,7 @@ func TestAssessmentModel_DeleteByScheduleIDs(t *testing.T) {
 		UserID: "17a28338-3b88-4bac-ab15-cce3887af357", //"c57ef68d-a635-451d-b997-aebc3c29b99a",
 		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 	}
-	err := GetAssessmentModelV2().DeleteByScheduleIDs(ctx, op, []string{"6099c496e05f6e940027387c"})
+	err := GetAssessmentModelV2().DeleteByScheduleIDsTx(ctx, op, dbo.MustGetDB(ctx), []string{"6099c496e05f6e940027387c"})
 	if err != nil {
 		t.Fatal(err)
 	}

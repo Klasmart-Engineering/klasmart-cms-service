@@ -42,7 +42,7 @@ type IAssessmentModelV2 interface {
 	AddWhenCreateSchedules(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, req *v2.AssessmentAddWhenCreateSchedulesReq) error
 	Draft(ctx context.Context, op *entity.Operator, req *v2.AssessmentUpdateReq) error
 	Complete(ctx context.Context, op *entity.Operator, req *v2.AssessmentUpdateReq) error
-	DeleteByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) error
+	DeleteByScheduleIDsTx(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, scheduleIDs []string) error
 
 	Page(ctx context.Context, op *entity.Operator, input *v2.AssessmentQueryReq) (*v2.AssessmentPageReply, error)
 	GetByID(ctx context.Context, op *entity.Operator, id string) (*v2.AssessmentDetailReply, error)
@@ -485,7 +485,7 @@ func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *
 	}, nil
 }
 
-func (a *assessmentModelV2) DeleteByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) error {
+func (a *assessmentModelV2) DeleteByScheduleIDsTx(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, scheduleIDs []string) error {
 	var assessments []*v2.Assessment
 	err := assessmentV2.GetAssessmentDA().Query(ctx, &assessmentV2.AssessmentCondition{
 		ScheduleIDs: entity.NullStrings{
@@ -506,28 +506,24 @@ func (a *assessmentModelV2) DeleteByScheduleIDs(ctx context.Context, op *entity.
 		assessmentIDs[i] = item.ID
 	}
 
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		// delete assessment
-		err := assessmentV2.GetAssessmentDA().DeleteByScheduleIDsTx(ctx, tx, scheduleIDs)
-		if err != nil {
-			log.Error(ctx, "del assessment by schedule ids error", log.Err(err), log.Strings("ScheduleIDs", scheduleIDs))
-			return err
-		}
-		// delete assessment user
-		err = assessmentV2.GetAssessmentUserDA().DeleteByAssessmentIDsTx(ctx, tx, assessmentIDs)
-		if err != nil {
-			log.Error(ctx, "del assessment user by assessment ids error", log.Err(err), log.Strings("assessmentIDs", assessmentIDs))
-			return err
-		}
-		// delete assessment content
-		err = assessmentV2.GetAssessmentContentDA().DeleteByAssessmentIDsTx(ctx, tx, assessmentIDs)
-		if err != nil {
-			log.Error(ctx, "del assessment content by assessment ids error", log.Err(err), log.Strings("assessmentIDs", assessmentIDs))
-			return err
-		}
-
-		return nil
-	})
+	// delete assessment
+	err = assessmentV2.GetAssessmentDA().DeleteByScheduleIDsTx(ctx, tx, scheduleIDs)
+	if err != nil {
+		log.Error(ctx, "del assessment by schedule ids error", log.Err(err), log.Strings("ScheduleIDs", scheduleIDs))
+		return err
+	}
+	// delete assessment user
+	err = assessmentV2.GetAssessmentUserDA().DeleteByAssessmentIDsTx(ctx, tx, assessmentIDs)
+	if err != nil {
+		log.Error(ctx, "del assessment user by assessment ids error", log.Err(err), log.Strings("assessmentIDs", assessmentIDs))
+		return err
+	}
+	// delete assessment content
+	err = assessmentV2.GetAssessmentContentDA().DeleteByAssessmentIDsTx(ctx, tx, assessmentIDs)
+	if err != nil {
+		log.Error(ctx, "del assessment content by assessment ids error", log.Err(err), log.Strings("assessmentIDs", assessmentIDs))
+		return err
+	}
 
 	return err
 }
@@ -1067,7 +1063,10 @@ func (a *assessmentModelV2) LockAssessmentContentAndOutcome(ctx context.Context,
 		waitAddContents = append(waitAddContents, item)
 	}
 
+	assessmentUserIDs := make([]string, 0, len(assessmentUsers))
 	for _, userItem := range assessmentUsers {
+		assessmentUserIDs = append(assessmentUserIDs, userItem.ID)
+
 		for _, contentItem := range contentInfos {
 			if assessmentContent, ok := assessmentContentMap[contentItem.ID]; ok {
 				for _, outcomeID := range contentItem.OutcomeIDs {
@@ -1094,7 +1093,17 @@ func (a *assessmentModelV2) LockAssessmentContentAndOutcome(ctx context.Context,
 	}
 
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		_, err := assessmentV2.GetAssessmentContentDA().InsertTx(ctx, tx, waitAddContents)
+		err := assessmentV2.GetAssessmentContentDA().DeleteByAssessmentIDsTx(ctx, tx, []string{assessment.ID})
+		if err != nil {
+			return err
+		}
+
+		err = assessmentV2.GetAssessmentUserOutcomeDA().DeleteByAssessmentUserIDsTx(ctx, tx, assessmentUserIDs)
+		if err != nil {
+			return err
+		}
+
+		_, err = assessmentV2.GetAssessmentContentDA().InsertTx(ctx, tx, waitAddContents)
 		if err != nil {
 			return err
 		}
