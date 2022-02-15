@@ -149,7 +149,7 @@ func (s *Server) updateAssessmentV2(c *gin.Context) {
 // @ID getAssessmentsSummary
 // @Accept json
 // @Produce json
-// @Param status query string false "search status , separated by commas"
+// @Param status query string false "search status, multiple states are separated by commas,optional value is NotStarted,Started,Draft,Complete"
 // @Success 200 {object} v2.AssessmentsSummary
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -183,7 +183,7 @@ func (s *Server) getAssessmentsSummary(c *gin.Context) {
 // @Param order_by query string false "order by"
 // @Param teacher_id query string false "teacher id search"
 // @Param assessment_id query string false "assessment id search"
-// @Param schedule_ids query string false "scheduls ids search"
+// @Param schedule_ids query string false "schedule ids search"
 // @Param create_at_ge query string false "create_at greater search"
 // @Param create_at_le query string false "create_at less search"
 // @Param update_at_le query string false "update_at greater search"
