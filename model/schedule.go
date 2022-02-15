@@ -4094,6 +4094,7 @@ func (s *scheduleModel) transformToScheduleTimeView(ctx context.Context, operato
 		schedule := scheduleList[i]
 
 		v.ExistFeedback = scheduleExistFeedbackMap[schedule.ID]
+		v.AssessmentStatus = assessmentStatusMap[schedule.ID]
 		if scheduleOperatorRoleTypeMap, ok := scheduleOperatorRoleTypeMap[schedule.ID]; ok {
 			v.RoleType = scheduleOperatorRoleTypeMap
 		}
