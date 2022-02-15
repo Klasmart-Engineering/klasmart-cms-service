@@ -187,59 +187,6 @@ func TestLiveRoomEventBus_PubEndClass(t *testing.T) {
 	}
 }
 
-func TestAssessmentModel_Draft(t *testing.T) {
-	//ctx := context.Background()
-	//op := &entity.Operator{
-	//	UserID: "17a28338-3b88-4bac-ab15-cce3887af357", //"c57ef68d-a635-451d-b997-aebc3c29b99a",
-	//	OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
-	//}
-	//op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0MDA3OTQ2OSwiaXNzIjoia2lkc2xvb3AifQ.dRe0xdDBeoBzdbOzwzOTB6KNRAj-bS1Jd5MMxsEH5ZCK0ss9cLQpgHuf6nwKS1X2Qf-metgEzzdmjSVyWyudWC5J8Ick4MC4pYcc28_4_c8cy9vcQnMUczIDEw4aZal5o7gbOMJmAb9v-lR9Oa8gRTrojI132spEr-5vZ7MwUMbpsGP0Eqocah0ZiMzCpkQDX3xzi2m3_G511OkUgnaKYrA0OW0BQM67iRASDR32gUuvQuqPUX-loDkDACsuDTT99u1fPqpVVzc3i9JdOvSJYu90cn8eXWTtOznvmb48f5lnJ68Zxg_9duGmsuBTKZ8gbait7OBilhZ43QJucD2DBg"
-	//
-	//assessment, err := GetAssessmentModelV2().GetByID(ctx, op, "")
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//
-	//contentMap := make(map[string]*v2.AssessmentContentReply)
-	//for _, item := range assessment.Contents {
-	//	contentMap[item.ContentID] = item
-	//}
-	//
-	//req := &v2.AssessmentUpdateReq{
-	//	ID:       assessment.ID,
-	//	Action:   v2.AssessmentActionDraft,
-	//	Students: nil,
-	//	Contents: nil,
-	//}
-	//for _, item := range assessment.Students {
-	//	stuItem := &v2.AssessmentStudentUpdateReq{
-	//		StudentID:       item.StudentID,
-	//		Status:          v2.AssessmentUserStatusNotParticipate,
-	//		ReviewerComment: "1231121212",
-	//		Results:         nil,
-	//	}
-	//	for _, resultItem := range item.Results {
-	//		resultReqItem := &v2.AssessmentStudentResultReq{
-	//			ParentID:  "",
-	//			ContentID: resultItem.ContentID,
-	//			Score:     resultItem.Score,
-	//		}
-	//
-	//		for _, outcomeItem := range resultItem.Outcomes {
-	//			resultReqItem.Outcomes = append(resultReqItem.Outcomes, &v2.AssessmentStudentResultOutcomeReq{
-	//				OutcomeID: outcomeItem.OutcomeID,
-	//				Status:    v2.AssessmentUserOutcomeStatusAchieved,
-	//			})
-	//		}
-	//		stuItem.Results = append(stuItem.Results, resultReqItem)
-	//	}
-	//
-	//	req.Students = append(req.Students, stuItem)
-	//}
-	//
-	//GetAssessmentModelV2().Draft(ctx, op)
-}
-
 //func TestMain(m *testing.M) {
 //	setup()
 //	exitVal := m.Run()

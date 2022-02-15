@@ -608,22 +608,24 @@ func (a *assessmentModelV2) Update(ctx context.Context, op *entity.Operator, sta
 
 	waitUpdateContents := make([]*v2.AssessmentContent, 0, len(assessmentContentMap))
 	for _, item := range req.Contents {
-		if !item.Status.Valid() {
-			log.Warn(ctx, "content status is invalid", log.Any("item", item), log.Any("req.Contents", req.Contents))
-			return constant.ErrInvalidArgs
-		}
-
 		if contentItem, ok := assessmentContentMap[item.ContentID]; ok {
+			if !item.Status.Valid() {
+				log.Warn(ctx, "content status is invalid", log.Any("item", item), log.Any("req.Contents", req.Contents))
+				return constant.ErrInvalidArgs
+			}
 			contentItem.Status = item.Status
 			contentItem.ReviewerComment = item.ReviewerComment
 			contentItem.UpdateAt = now
 			waitUpdateContents = append(waitUpdateContents, contentItem)
-		} else if waitAddContentItem, ok := waitAddContentMap[item.ContentID]; ok {
-			waitAddContentItem.ReviewerComment = item.ReviewerComment
-			waitAddContentItem.Status = item.Status
 		} else {
-			log.Warn(ctx, "content is invalid", log.Any("assessmentContentMap", assessmentContentMap), log.Any("req.Contents", req.Contents))
-			return constant.ErrInvalidArgs
+			if waitAddContentItem, ok := waitAddContentMap[item.ContentID]; ok {
+				if !item.Status.Valid() {
+					log.Warn(ctx, "content status is invalid", log.Any("item", item), log.Any("req.Contents", req.Contents))
+					return constant.ErrInvalidArgs
+				}
+				waitAddContentItem.ReviewerComment = item.ReviewerComment
+				waitAddContentItem.Status = item.Status
+			}
 		}
 	}
 
