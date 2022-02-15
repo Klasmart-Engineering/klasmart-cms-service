@@ -951,11 +951,15 @@ func (a *assessmentModelV2) AddWhenCreateSchedules(ctx context.Context, tx *dbo.
 				StatusByUser:   v2.AssessmentUserStatusParticipate,
 				CreateAt:       now,
 			}
+
 			if req.AssessmentType == v2.AssessmentTypeOnlineClass {
 				attendance.StatusByUser = v2.AssessmentUserStatusNotParticipate
 			}
+
 			if req.AssessmentType == v2.AssessmentTypeOfflineClass {
-				attendance.StatusBySystem = v2.AssessmentUserStatusParticipate
+				if userItem.UserType == v2.AssessmentUserTypeTeacher {
+					attendance.StatusByUser = v2.AssessmentUserStatusNotParticipate
+				}
 			}
 
 			users = append(users, attendance)
@@ -1138,13 +1142,14 @@ func (a *assessmentModelV2) endClassCallbackUpdateAssessment(ctx context.Context
 		if assessment.AssessmentType == v2.AssessmentTypeOfflineClass ||
 			assessment.AssessmentType == v2.AssessmentTypeOnlineClass {
 			// update assessment title
-			titleSplit := strings.Split(assessment.Title, "-")
-			if len(titleSplit) > 3 {
+
+			titleSplit := strings.SplitN(assessment.Title, "-", 2)
+			if len(titleSplit) == 2 {
 				var timeStr string
 				if req.ClassEndAt > 0 {
 					timeStr = time.Unix(req.ClassEndAt, 0).Format("20060102")
+					assessment.Title = fmt.Sprintf("%s-%s", timeStr, titleSplit[1])
 				}
-				assessment.Title = fmt.Sprintf("%s-%s-%s", timeStr, titleSplit[1], titleSplit[2])
 			}
 		}
 
@@ -1161,7 +1166,7 @@ func (a *assessmentModelV2) endClassCallbackUpdateAssessment(ctx context.Context
 
 			if assessment.AssessmentType == v2.AssessmentTypeOnlineClass ||
 				assessment.AssessmentType == v2.AssessmentTypeOnlineStudy {
-				err := assessmentV2.GetAssessmentUserDA().UpdateSystemStatusTx(ctx, dbo.MustGetDB(ctx), attendanceCondition, v2.AssessmentUserStatusParticipate)
+				err := assessmentV2.GetAssessmentUserDA().UpdateStatusTx(ctx, dbo.MustGetDB(ctx), attendanceCondition, v2.AssessmentUserStatusParticipate)
 				if err != nil {
 					return err
 				}
@@ -1170,12 +1175,9 @@ func (a *assessmentModelV2) endClassCallbackUpdateAssessment(ctx context.Context
 			return nil
 		})
 	} else if assessment.Status == v2.AssessmentStatusStarted {
-		if assessment.AssessmentType == v2.AssessmentTypeOnlineClass ||
-			assessment.AssessmentType == v2.AssessmentTypeOnlineStudy {
-			err := assessmentV2.GetAssessmentUserDA().UpdateStatusTx(ctx, dbo.MustGetDB(ctx), attendanceCondition, v2.AssessmentUserStatusParticipate)
-			if err != nil {
-				return err
-			}
+		err := assessmentV2.GetAssessmentUserDA().UpdateStatusTx(ctx, dbo.MustGetDB(ctx), attendanceCondition, v2.AssessmentUserStatusParticipate)
+		if err != nil {
+			return err
 		}
 	} else {
 		err := assessmentV2.GetAssessmentUserDA().UpdateSystemStatusTx(ctx, dbo.MustGetDB(ctx), attendanceCondition, v2.AssessmentUserStatusParticipate)

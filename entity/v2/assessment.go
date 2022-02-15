@@ -129,18 +129,19 @@ type AssessmentStudentResultOutcomeReply struct {
 }
 
 type AssessmentContentReply struct {
-	Number          string                  `json:"number"`
-	ParentID        string                  `json:"parent_id"`
-	ContentID       string                  `json:"content_id"`
-	H5PID           string                  `json:"h5p_id"`
-	ContentName     string                  `json:"content_name"`
-	ReviewerComment string                  `json:"reviewer_comment"`
-	Status          AssessmentContentStatus `json:"status"   enums:"Covered,NotCovered"`
-	OutcomeIDs      []string                `json:"outcome_ids"`
-	ContentType     AssessmentContentType   `json:"content_type" enums:"LessonPlan,LessonMaterial,Unknown"`
-	ContentSubtype  string                  `json:"content_subtype"`
-	FileType        AssessmentFileArchived  `json:"file_type"  enums:"Unknown,HasChildContainer,NotChildContainer,SupportScoreStandAlone,NotSupportScoreStandAlone"`
-	MaxScore        float64                 `json:"max_score"`
+	Number               string                  `json:"number"`
+	ParentID             string                  `json:"parent_id"`
+	ContentID            string                  `json:"content_id"`
+	H5PID                string                  `json:"h5p_id"`
+	ContentName          string                  `json:"content_name"`
+	ReviewerComment      string                  `json:"reviewer_comment"`
+	Status               AssessmentContentStatus `json:"status"   enums:"Covered,NotCovered"`
+	OutcomeIDs           []string                `json:"outcome_ids"`
+	ContentType          AssessmentContentType   `json:"content_type" enums:"LessonPlan,LessonMaterial,Unknown"`
+	ContentSubtype       string                  `json:"content_subtype"`
+	FileType             AssessmentFileArchived  `json:"file_type"  enums:"Unknown,HasChildContainer,NotChildContainer,SupportScoreStandAlone,NotSupportScoreStandAlone"`
+	MaxScore             float64                 `json:"max_score"`
+	RoomProvideContentID string                  `json:"-"`
 
 	//LatestID string `json:"latest_id"`
 }

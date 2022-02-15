@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/go-playground/assert/v2"
@@ -90,4 +91,9 @@ func TestExcludeStrings(t *testing.T) {
 	targets := []string{"2", "3", "4", "c"}
 	result := ExcludeStrings(source, targets)
 	fmt.Println(result)
+}
+
+func TestSplit(t *testing.T) {
+	str := "122-1"
+	fmt.Println(strings.SplitN(str, "-", 2))
 }
