@@ -3973,6 +3973,8 @@ func (s *scheduleModel) transformToScheduleTimeView(ctx context.Context, operato
 		} else {
 			notHomefunHomeworkIDs = append(notHomefunHomeworkIDs, v.ID)
 		}
+
+		scheduleIDs = append(scheduleIDs, v.ID)
 	}
 
 	g := new(errgroup.Group)
