@@ -449,7 +449,7 @@ func loadAMSConfig(ctx context.Context) {
 		log.Panic(ctx, "loadAMSConfig:ParseRSAPublicKeyFromPEM failed", log.Err(err))
 	}
 	config.AMS.TokenVerifyKey = key
-	config.AMS.AuthorizedKey = os.Getenv("USER_SERVICE_API_KEY")
+	config.AMS.AuthorizedKey = os.Getenv("user_service_api_key")
 }
 
 func loadH5PServiceConfig(ctx context.Context) {
