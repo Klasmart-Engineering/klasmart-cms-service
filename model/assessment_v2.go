@@ -977,30 +977,6 @@ func (a *assessmentModelV2) AddWhenCreateSchedules(ctx context.Context, tx *dbo.
 	return nil
 }
 
-func (a *assessmentModelV2) prepareAssessmentContents(ctx context.Context, op *entity.Operator, assessment *v2.Assessment) ([]*v2.AssessmentContent, error) {
-	now := time.Now().Unix()
-
-	detailComponent := NewAssessmentDetailComponent(ctx, op, assessment)
-	contentsFromSchedule, err := detailComponent.GetContentsFromSchedule()
-	if err != nil {
-		return nil, err
-	}
-
-	contents := make([]*v2.AssessmentContent, 0, len(contentsFromSchedule))
-	for _, item := range contentsFromSchedule {
-		contents = append(contents, &v2.AssessmentContent{
-			ID:           utils.NewID(),
-			AssessmentID: assessment.ID,
-			ContentID:    item.ID,
-			ContentType:  item.ContentType,
-			Status:       v2.AssessmentContentStatusCovered,
-			CreateAt:     now,
-		})
-	}
-
-	return contents, nil
-}
-
 func (a *assessmentModelV2) LockAssessmentContentAndOutcome(ctx context.Context, op *entity.Operator, schedule *entity.Schedule) error {
 	if !schedule.AnyoneAttemptedLive() {
 		log.Warn(ctx, "no one attempted,don't need to lock", log.Any("schedule", schedule))
@@ -1011,39 +987,48 @@ func (a *assessmentModelV2) LockAssessmentContentAndOutcome(ctx context.Context,
 		return err
 	}
 
-	assessmentUserCondition := &assessmentV2.AssessmentUserCondition{
-		AssessmentID: sql.NullString{
-			String: assessment.ID,
-			Valid:  true,
-		}}
-	var assessmentUsers []*v2.AssessmentUser
-	err = assessmentV2.GetAssessmentUserDA().Query(ctx, assessmentUserCondition, &assessmentUsers)
-	if err != nil {
-		return err
-	}
-	// lock assessment content version
-	contents, err := a.prepareAssessmentContents(ctx, op, assessment)
+	now := time.Now().Unix()
+
+	detailComponent := NewAssessmentDetailComponent(ctx, op, assessment)
+	contentsFromSchedule, err := detailComponent.GetContentsFromSchedule()
 	if err != nil {
 		return err
 	}
 
-	// lock assessment user outcome
-	contentIDs := make([]string, len(contents))
+	assessmentUserMap, err := detailComponent.apc.GetAssessmentUserMap()
+	if err != nil {
+		return err
+	}
+	assessmentUsers, ok := assessmentUserMap[assessment.ID]
+	if !ok {
+		log.Error(ctx, "can not found assessment users", log.String("assessmentID", assessment.ID), log.Any("assessmentUserMap", assessmentUserMap))
+		return constant.ErrRecordNotFound
+	}
+
+	// contents
+	waitAddContents := make([]*v2.AssessmentContent, 0)
 	assessmentContentMap := make(map[string]*v2.AssessmentContent)
-	for i, item := range contents {
-		contentIDs[i] = item.ContentID
-		assessmentContentMap[item.ContentID] = item
+	for _, item := range contentsFromSchedule {
+		if _, ok := assessmentContentMap[item.ID]; !ok {
+			contentNewItem := &v2.AssessmentContent{
+				ID:           utils.NewID(),
+				AssessmentID: assessment.ID,
+				ContentID:    item.ID,
+				ContentType:  item.ContentType,
+				Status:       v2.AssessmentContentStatusCovered,
+				CreateAt:     now,
+			}
+			waitAddContents = append(waitAddContents, contentNewItem)
+			assessmentContentMap[item.ID] = contentNewItem
+		}
 	}
 
-	contentInfos, err := GetContentModel().GetContentNameByIDList(ctx, dbo.MustGetDB(ctx), contentIDs)
-	if err != nil {
-		return err
-	}
-
+	// outcomes
 	outcomeIDs := make([]string, 0)
-	for _, item := range contentInfos {
+	for _, item := range contentsFromSchedule {
 		outcomeIDs = append(outcomeIDs, item.OutcomeIDs...)
 	}
+
 	outcomeIDs = utils.SliceDeduplicationExcludeEmpty(outcomeIDs)
 	outcomes, err := GetOutcomeModel().GetByIDs(ctx, op, dbo.MustGetDB(ctx), outcomeIDs)
 	if err != nil {
@@ -1055,19 +1040,12 @@ func (a *assessmentModelV2) LockAssessmentContentAndOutcome(ctx context.Context,
 		outcomeMap[item.ID] = item
 	}
 
-	now := time.Now().Unix()
-	waitAddContents := make([]*v2.AssessmentContent, 0)
 	waitAddUserOutcomes := make([]*v2.AssessmentUserOutcome, 0)
-
-	for _, item := range assessmentContentMap {
-		waitAddContents = append(waitAddContents, item)
-	}
-
 	assessmentUserIDs := make([]string, 0, len(assessmentUsers))
 	for _, userItem := range assessmentUsers {
 		assessmentUserIDs = append(assessmentUserIDs, userItem.ID)
 
-		for _, contentItem := range contentInfos {
+		for _, contentItem := range contentsFromSchedule {
 			if assessmentContent, ok := assessmentContentMap[contentItem.ID]; ok {
 				for _, outcomeID := range contentItem.OutcomeIDs {
 					if outcomeItem, ok := outcomeMap[outcomeID]; ok {
