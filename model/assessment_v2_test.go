@@ -257,3 +257,7 @@ func initDataSource() {
 	engine.AddDataSource(ctx, external.GetCategoryServiceProvider())
 	engine.AddDataSource(ctx, external.GetAgeServiceProvider())
 }
+
+func TestEnv(t *testing.T) {
+	t.Log(os.Getenv("live_token_private_key_path"))
+}

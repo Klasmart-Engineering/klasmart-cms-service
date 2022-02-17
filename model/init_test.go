@@ -3,18 +3,14 @@ package model
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-redis/redis"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/ro"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
-	"gitlab.badanamu.com.cn/calmisland/ro"
-	"os"
-	"testing"
-
-	"github.com/sirupsen/logrus"
-	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/test/utils"
 )
 
 func initCache() {
@@ -35,11 +31,12 @@ func initCache() {
 		log.Panic(ctx, "kl2cache.Init failed", log.Err(err))
 	}
 }
-func TestMain(m *testing.M) {
-	ctx := context.Background()
-	logger.SetLevel(logrus.DebugLevel)
-	utils.InitConfig(ctx)
-	utils.InitDB(ctx)
-	exitVal := m.Run()
-	os.Exit(exitVal)
-}
+
+//func TestMain(m *testing.M) {
+//	ctx := context.Background()
+//	logger.SetLevel(logrus.DebugLevel)
+//	utils.InitConfig(ctx)
+//	utils.InitDB(ctx)
+//	exitVal := m.Run()
+//	os.Exit(exitVal)
+//}

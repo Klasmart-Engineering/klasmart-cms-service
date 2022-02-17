@@ -164,8 +164,10 @@ func (apc *AssessmentPageComponent) GetAssessmentUserMap() (map[string][]*v2.Ass
 	ctx := apc.ctx
 
 	assessmentIDs := make([]string, len(apc.assessments))
+	assessmentMap := make(map[string]*v2.Assessment, len(apc.assessments))
 	for i, item := range apc.assessments {
 		assessmentIDs[i] = item.ID
+		assessmentMap[item.ID] = item
 	}
 
 	var assessmentUsers []*v2.AssessmentUser
@@ -180,7 +182,12 @@ func (apc *AssessmentPageComponent) GetAssessmentUserMap() (map[string][]*v2.Ass
 	}
 
 	for _, item := range assessmentUsers {
-		apc.assessmentUserMap[item.AssessmentID] = append(apc.assessmentUserMap[item.AssessmentID], item)
+		if assessmentItem, ok := assessmentMap[item.AssessmentID]; ok {
+			if assessmentItem.AssessmentType == v2.AssessmentTypeOnlineClass && item.StatusBySystem == v2.AssessmentUserStatusNotParticipate {
+				continue
+			}
+			apc.assessmentUserMap[item.AssessmentID] = append(apc.assessmentUserMap[item.AssessmentID], item)
+		}
 	}
 
 	apc.assessmentUserMap[constant.AssessmentInitializedKey] = nil

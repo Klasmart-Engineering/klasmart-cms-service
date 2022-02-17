@@ -355,6 +355,7 @@ func (a *assessmentModelV2) GetAssessmentDetailConfig(adc *AssessmentDetailCompo
 			adc.apc.MatchProgram,
 			adc.apc.MatchSubject,
 			adc.apc.MatchTeacher,
+			adc.apc.MatchClass,
 
 			adc.MatchOutcome,
 			adc.MatchContentsContainsRoomInfo,
@@ -367,6 +368,7 @@ func (a *assessmentModelV2) GetAssessmentDetailConfig(adc *AssessmentDetailCompo
 			adc.apc.MatchProgram,
 			adc.apc.MatchSubject,
 			adc.apc.MatchTeacher,
+			adc.apc.MatchClass,
 
 			adc.MatchOutcome,
 			adc.MatchContentsNotContainsRoomInfo,
