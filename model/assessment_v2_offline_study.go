@@ -249,6 +249,11 @@ func (a *assessmentOfflineStudyModel) GetByID(ctx context.Context, op *entity.Op
 		return nil, constant.ErrRecordNotFound
 	}
 
+	score := v2.AssessmentUserAssessAverage
+	if userResult.AssessScore > 0 {
+		score = userResult.AssessScore
+	}
+
 	result := &v2.GetOfflineStudyUserResultDetailReply{
 		ID:            userResult.ID,
 		ScheduleID:    schedule.ID,
@@ -256,28 +261,13 @@ func (a *assessmentOfflineStudyModel) GetByID(ctx context.Context, op *entity.Op
 		DueAt:         schedule.DueAt,
 		CompleteAt:    userResult.CompleteAt,
 		FeedbackID:    userResult.StudentFeedbackID,
-		AssessScore:   userResult.AssessScore,
+		AssessScore:   score,
 		AssessComment: userResult.ReviewerComment,
-		Title:         "",
+		Title:         assessment.Title,
 		Teachers:      nil,
 		Student:       nil,
 		Outcomes:      nil,
 	}
-
-	// title
-	var className string
-	if schedule.ClassRosterClass != nil {
-		className = schedule.ClassRosterClass.Name
-	}
-	titleInput := v2.GenerateAssessmentTitleInput{
-		ClassName:    className,
-		ScheduleName: schedule.Title,
-	}
-	title, err := v2.AssessmentTypeOfflineStudy.Title(ctx, titleInput)
-	if err != nil {
-		return nil, err
-	}
-	result.Title = title
 
 	// teachers
 	teacherCondition := &assessmentV2.AssessmentUserCondition{
