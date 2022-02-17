@@ -184,7 +184,7 @@ func (m *assessmentModel) PrepareAddInputWhenScheduleExist(ctx context.Context, 
 
 	contentIDs := make([]string, 0)
 	for _, item := range schedules {
-		if !item.AnyoneAttemptedLive() {
+		if !item.IsLockedLessonPlan() {
 			log.Warn(ctx, "No one attempted schedule", log.Any("schedule", item))
 			return nil, constant.ErrInvalidArgs
 		}

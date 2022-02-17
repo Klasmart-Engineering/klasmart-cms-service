@@ -83,6 +83,8 @@ type IScheduleModel interface {
 
 	UpdateLiveLessonPlan(ctx context.Context, op *entity.Operator, scheduleID string, liveLessonPlan *entity.ScheduleLiveLessonPlan) error
 	GetScheduleLiveLessonPlan(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ContentInfoWithDetails, error)
+
+	GetScheduleRelationIDs(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleRelationIDs, error)
 }
 
 type scheduleModel struct {
@@ -911,7 +913,7 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 				return nil, ErrScheduleAlreadyFeedback
 			}
 		} else {
-			if schedule.AnyoneAttemptedLive() {
+			if schedule.IsLockedLessonPlan() {
 				log.Info(ctx, "The schedule has already been attended", log.Any("scheduleID", schedule.ID))
 				return nil, ErrScheduleStudyAlreadyProgress
 			}
@@ -1297,7 +1299,7 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 
 		classIDs = append(classIDs, schedule.ClassID)
 		programIDs = append(programIDs, schedule.ProgramID)
-		if !schedule.AnyoneAttemptedLive() {
+		if !schedule.IsLockedLessonPlan() {
 			lessonPlanIDs = append(lessonPlanIDs, schedule.LessonPlanID)
 		}
 	}
@@ -1419,7 +1421,7 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 			}
 		}
 
-		if schedule.AnyoneAttemptedLive() {
+		if schedule.IsLockedLessonPlan() {
 			resultMap[schedule.ID].LessonPlan = &entity.ScheduleShortInfo{
 				ID:   schedule.LiveLessonPlan.LessonPlanID,
 				Name: schedule.LiveLessonPlan.LessonPlanName,
@@ -1543,7 +1545,7 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 		}
 		temp.ExistFeedback = existFeedback
 		if attemptedItem, ok := assessmentAttemptedMap[item.ID]; ok {
-			temp.ExistAssessment = item.AnyoneAttemptedLive()
+			temp.ExistAssessment = item.IsLockedLessonPlan()
 			temp.CompleteAssessment = attemptedItem.AssessmentStatus == v2.AssessmentStatusComplete
 		}
 		if temp.ClassType == entity.ScheduleClassTypeHomework && temp.IsHomeFun {
@@ -2808,7 +2810,7 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 			CreatedAt:    v.CreatedAt,
 		}
 
-		if v.AnyoneAttemptedLive() {
+		if v.IsLockedLessonPlan() {
 			result[i].LessonPlanID = v.LiveLessonPlan.LessonPlanID
 		}
 
@@ -2853,6 +2855,13 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 				log.Err(err),
 				log.Strings("homefunStudyScheduleIDs", homefunStudyScheduleIDs),
 				log.String("studentID", op.UserID))
+			return 0, nil, err
+		}
+		result, err := s.transformToScheduleTimeView(ctx, op, scheduleList, loc)
+		if err != nil {
+			log.Error(ctx, "s.transformToScheduleTimeView error",
+				log.Err(err),
+				log.Any("scheduleList", scheduleList))
 			return 0, nil, err
 		}
 
@@ -2900,7 +2909,7 @@ func (s *scheduleModel) GetScheduleLiveLessonPlan(ctx context.Context, op *entit
 		return nil, err
 	}
 
-	if schedule.AnyoneAttemptedLive() {
+	if schedule.IsLockedLessonPlan() {
 		lessonMaterialIDs := make([]string, 0, len(schedule.LiveLessonPlan.LessonMaterials))
 		for _, v := range schedule.LiveLessonPlan.LessonMaterials {
 			lessonMaterialIDs = append(lessonMaterialIDs, v.LessonMaterialID)
@@ -2931,6 +2940,59 @@ func (s *scheduleModel) GetScheduleLiveLessonPlan(ctx context.Context, op *entit
 		return nil, err
 	}
 	return contentInfo, nil
+}
+
+func (s *scheduleModel) GetScheduleRelationIDs(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleRelationIDs, error) {
+	var schedule *entity.Schedule
+	err := s.scheduleDA.Get(ctx, scheduleID, &schedule)
+	if err != nil {
+		log.Error(ctx, "s.scheduleDA.Get error",
+			log.Err(err),
+			log.String("scheduleID", scheduleID))
+		return nil, err
+	}
+
+	var scheduleRelationIDs []*entity.ScheduleRelation
+	err = s.scheduleRelationDA.Query(ctx, &da.ScheduleRelationCondition{
+		ScheduleID: sql.NullString{
+			String: scheduleID,
+			Valid:  true,
+		},
+	}, &scheduleRelationIDs)
+	if err != nil {
+		log.Error(ctx, "s.scheduleRelationDA.Query error",
+			log.Err(err),
+			log.String("scheduleID", scheduleID))
+		return nil, err
+	}
+
+	result := &entity.ScheduleRelationIDs{
+		OrgID:                 schedule.OrgID,
+		ClassRosterClassID:    schedule.ClassID,
+		ClassRosterTeacherIDs: []string{},
+		ClassRosterStudentIDs: []string{},
+		ParticipantTeacherIDs: []string{},
+		ParticipantStudentIDs: []string{},
+	}
+
+	for _, v := range scheduleRelationIDs {
+		switch v.RelationType {
+		case entity.ScheduleRelationTypeOrg:
+			result.OrgID = v.RelationID
+		case entity.ScheduleRelationTypeClassRosterClass:
+			result.ClassRosterClassID = v.RelationID
+		case entity.ScheduleRelationTypeClassRosterTeacher:
+			result.ClassRosterTeacherIDs = append(result.ClassRosterTeacherIDs, v.RelationID)
+		case entity.ScheduleRelationTypeClassRosterStudent:
+			result.ClassRosterStudentIDs = append(result.ClassRosterStudentIDs, v.RelationID)
+		case entity.ScheduleRelationTypeParticipantTeacher:
+			result.ParticipantTeacherIDs = append(result.ParticipantTeacherIDs, v.RelationID)
+		case entity.ScheduleRelationTypeParticipantStudent:
+			result.ParticipantStudentIDs = append(result.ParticipantStudentIDs, v.RelationID)
+		}
+	}
+
+	return result, nil
 }
 
 // Schedule model interval function
@@ -3059,7 +3121,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 
 	// get lesson plan
 	if schedule.LessonPlanID != "" {
-		if schedule.AnyoneAttemptedLive() {
+		if schedule.IsLockedLessonPlan() {
 			g.Go(func() error {
 				isAuth, err := s.VerifyLessonPlanAuthed(ctx, operator, schedule.LiveLessonPlan.LessonPlanID)
 				if err != nil && err != ErrScheduleLessonPlanUnAuthed {
@@ -3368,7 +3430,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 		scheduleDetailsView.RealTimeStatus = *scheduleRealTimeStatus
 	}
 	scheduleDetailsView.ExistFeedback = scheduleExistFeedback
-	scheduleDetailsView.ExistAssessment = schedule.AnyoneAttemptedLive()
+	scheduleDetailsView.ExistAssessment = schedule.IsLockedLessonPlan()
 	scheduleDetailsView.CompleteAssessment = scheduleCompleteAssessment
 
 	// get isClassAccessible
@@ -3508,7 +3570,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 		Students:   []*entity.ScheduleShortInfo{},
 	}
 
-	if schedule.AnyoneAttemptedLive() {
+	if schedule.IsLockedLessonPlan() {
 		scheduleViewDetail.LessonPlanID = schedule.LiveLessonPlan.LessonPlanID
 	}
 
@@ -3577,7 +3639,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 
 	// get lesson plan
 	if schedule.LessonPlanID != "" {
-		if schedule.AnyoneAttemptedLive() {
+		if schedule.IsLockedLessonPlan() {
 			g.Go(func() error {
 				isAuth, err := s.VerifyLessonPlanAuthed(ctx, operator, schedule.LiveLessonPlan.LessonPlanID)
 				if err != nil && err != ErrScheduleLessonPlanUnAuthed {
@@ -3728,7 +3790,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 	scheduleViewDetail.LessonPlan = scheduleLessonPlan
 	scheduleViewDetail.Class = scheduleClass
 	scheduleViewDetail.ExistFeedback = scheduleExistFeedback
-	scheduleViewDetail.ExistAssessment = schedule.AnyoneAttemptedLive()
+	scheduleViewDetail.ExistAssessment = schedule.IsLockedLessonPlan()
 	scheduleViewDetail.CompleteAssessment = scheduleCompleteAssessment
 
 	for _, teacherID := range teacherIDs {
@@ -3903,7 +3965,7 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 			RoleType: entity.ScheduleRoleTypeUnknown,
 		}
 
-		if schedule.AnyoneAttemptedLive() {
+		if schedule.IsLockedLessonPlan() {
 			item.LessonPlanID = schedule.LiveLessonPlan.LessonPlanID
 		}
 
@@ -3914,7 +3976,7 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 		}
 
 		item.ExistFeedback = scheduleExistFeedbackMap[schedule.ID]
-		item.ExistAssessment = schedule.AnyoneAttemptedLive()
+		item.ExistAssessment = schedule.IsLockedLessonPlan()
 		item.CompleteAssessment = scheduleCompleteAssessmentMap[schedule.ID]
 		if scheduleOperatorRoleTypeMap, ok := scheduleOperatorRoleTypeMap[schedule.ID]; ok {
 			item.RoleType = scheduleOperatorRoleTypeMap
@@ -3924,6 +3986,185 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 	}
 
 	return scheduleListView, nil
+}
+
+func (s *scheduleModel) transformToScheduleTimeView(ctx context.Context, operator *entity.Operator, scheduleList []*entity.Schedule, loc *time.Location) ([]*entity.ScheduleTimeView, error) {
+	result := make([]*entity.ScheduleTimeView, len(scheduleList))
+	var scheduleIDs []string
+	var homefunHomeworkIDs []string
+	var notHomefunHomeworkIDs []string
+	for i, v := range scheduleList {
+		result[i] = &entity.ScheduleTimeView{
+			ID:                 v.ID,
+			Title:              v.Title,
+			StartAt:            v.StartAt,
+			EndAt:              v.EndAt,
+			DueAt:              v.DueAt,
+			ClassType:          v.ClassType,
+			Status:             v.Status,
+			ClassID:            v.ClassID,
+			IsHomeFun:          v.IsHomeFun,
+			IsRepeat:           v.RepeatID != "",
+			IsHidden:           v.IsHidden,
+			LessonPlanID:       v.LessonPlanID,
+			IsLockedLessonPlan: v.IsLockedLessonPlan(),
+			RoleType:           entity.ScheduleRoleTypeUnknown,
+			CreatedAt:          v.CreatedAt,
+		}
+
+		if v.IsLockedLessonPlan() {
+			result[i].LessonPlanID = v.LiveLessonPlan.LessonPlanID
+		}
+
+		// handle schedule status
+		result[i].Status = v.Status.GetScheduleStatus(entity.ScheduleStatusInput{
+			EndAt:     v.EndAt,
+			DueAt:     v.DueAt,
+			ClassType: v.ClassType,
+		})
+
+		// handle homework schedule start and end time
+		if v.ClassType == entity.ScheduleClassTypeHomework && v.DueAt != 0 {
+			result[i].StartAt = utils.TodayZeroByTimeStamp(v.DueAt, loc).Unix()
+			result[i].EndAt = utils.TodayEndByTimeStamp(v.DueAt, loc).Unix()
+		}
+
+		if v.ClassType == entity.ScheduleClassTypeHomework && v.IsHomeFun {
+			homefunHomeworkIDs = append(homefunHomeworkIDs, v.ID)
+		} else {
+			notHomefunHomeworkIDs = append(notHomefunHomeworkIDs, v.ID)
+		}
+
+		scheduleIDs = append(scheduleIDs, v.ID)
+	}
+
+	g := new(errgroup.Group)
+	var scheduleExistFeedbackMap map[string]bool
+	scheduleOperatorRoleTypeMap := make(map[string]entity.ScheduleRoleType)
+	assessmentStatusMap := make(map[string]entity.AssessmentStatus)
+
+	g.Go(func() error {
+		if len(notHomefunHomeworkIDs) > 0 {
+			assessments, err := GetAssessmentModel().Query(ctx, operator, &da.QueryAssessmentConditions{
+				ScheduleIDs: entity.NullStrings{
+					Strings: notHomefunHomeworkIDs,
+					Valid:   true,
+				},
+			})
+			if err != nil {
+				log.Error(ctx, "GetAssessmentModel().Query error",
+					log.Err(err),
+					log.Any("notHomefunHomeworkIDs", notHomefunHomeworkIDs))
+				return err
+			}
+
+			for _, assessment := range assessments {
+				assessmentStatusMap[assessment.ScheduleID] = assessment.Status
+			}
+		}
+
+		if len(homefunHomeworkIDs) > 0 {
+			var homefunHomeworkAssessments []*entity.HomeFunStudy
+			err := GetHomeFunStudyModel().Query(ctx, operator, &da.QueryHomeFunStudyCondition{
+				ScheduleIDs: entity.NullStrings{
+					Strings: homefunHomeworkIDs,
+					Valid:   true,
+				},
+				StudentIDs: entity.NullStrings{
+					Strings: []string{operator.UserID},
+					Valid:   true,
+				},
+			}, &homefunHomeworkAssessments)
+			if err != nil {
+				log.Error(ctx, "GetHomeFunStudyModel().Query error",
+					log.Err(err),
+					log.Strings("homefunHomeworkIDs", homefunHomeworkIDs),
+					log.String("studentID", operator.UserID))
+				return err
+			}
+
+			for _, homefunStudyAssessment := range homefunHomeworkAssessments {
+				assessmentStatusMap[homefunStudyAssessment.ScheduleID] = homefunStudyAssessment.Status
+			}
+		}
+
+		return nil
+	})
+
+	// check if the schedule feedback exists
+	g.Go(func() error {
+		existFeedback, err := GetScheduleFeedbackModel().ExistByScheduleIDs(ctx, operator, scheduleIDs)
+		if err != nil {
+			log.Error(ctx, "s.scheduleFeedbackModel.ExistByScheduleIDs error",
+				log.Err(err),
+				log.Any("op", operator),
+				log.Strings("scheduleIDs", scheduleIDs))
+			return err
+		}
+		scheduleExistFeedbackMap = existFeedback
+
+		return nil
+	})
+
+	// get operator role type in the schedule
+	g.Go(func() error {
+		var scheduleRelations []*entity.ScheduleRelation
+		err := s.scheduleRelationDA.Query(ctx, &da.ScheduleRelationCondition{
+			ScheduleIDs: entity.NullStrings{
+				Strings: scheduleIDs,
+				Valid:   true,
+			},
+			RelationID: sql.NullString{
+				String: operator.UserID,
+				Valid:  true,
+			},
+			RelationTypes: entity.NullStrings{
+				Strings: []string{
+					string(entity.ScheduleRelationTypeParticipantTeacher),
+					string(entity.ScheduleRelationTypeParticipantStudent),
+					string(entity.ScheduleRelationTypeClassRosterTeacher),
+					string(entity.ScheduleRelationTypeClassRosterStudent),
+				},
+				Valid: true,
+			},
+		}, &scheduleRelations)
+		if err != nil {
+			log.Error(ctx, "s.scheduleRelationDA.Query error",
+				log.Err(err),
+				log.Strings("ScheduleIDs", scheduleIDs))
+			return err
+		}
+
+		for _, scheduleRealtion := range scheduleRelations {
+			switch scheduleRealtion.RelationType {
+			case entity.ScheduleRelationTypeParticipantTeacher, entity.ScheduleRelationTypeClassRosterTeacher:
+				scheduleOperatorRoleTypeMap[scheduleRealtion.ScheduleID] = entity.ScheduleRoleTypeTeacher
+			case entity.ScheduleRelationTypeParticipantStudent, entity.ScheduleRelationTypeClassRosterStudent:
+				scheduleOperatorRoleTypeMap[scheduleRealtion.ScheduleID] = entity.ScheduleRoleTypeStudent
+			}
+		}
+
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		log.Error(ctx, "transformToScheduleTimeView error",
+			log.Err(err))
+		return nil, err
+	}
+
+	for i, v := range result {
+		schedule := scheduleList[i]
+
+		v.ExistFeedback = scheduleExistFeedbackMap[schedule.ID]
+		v.AssessmentStatus = assessmentStatusMap[schedule.ID]
+		if scheduleOperatorRoleTypeMap, ok := scheduleOperatorRoleTypeMap[schedule.ID]; ok {
+			v.RoleType = scheduleOperatorRoleTypeMap
+		}
+
+	}
+
+	return result, nil
 }
 
 // model package interval function

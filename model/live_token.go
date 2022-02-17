@@ -111,7 +111,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		liveTokenInfo.Materials = make([]*entity.LiveMaterial, 0)
 	} else {
 		// anyone has attempted live
-		if schedule.AnyoneAttemptedLive() {
+		if schedule.IsLockedLessonPlan() {
 			// check lesson plan authed (unless lesson material)
 			_, err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LiveLessonPlan.LessonPlanID)
 			if err != nil {

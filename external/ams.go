@@ -52,6 +52,10 @@ func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorin
 		// using authorized key
 		if amsAuthorizedKey := config.Get().AMS.AuthorizedKey; amsAuthorizedKey != "" {
 			req.SetHeader(constant.AMSAuthorizedHeaderKey, fmt.Sprintf("Bearer %s", amsAuthorizedKey))
+			log.Debug(ctx, "using ams authorizedKey", log.String("header key", constant.AMSAuthorizedHeaderKey))
+			if len(config.Get().AMS.AuthorizedKey) > 5 {
+				log.Debug(ctx, "using ams authorizedKey", log.String("header value", config.Get().AMS.AuthorizedKey[0:5]))
+			}
 		} else {
 			log.Warn(ctx, "Found access graphql without cookie and user_service_api_key is empty")
 		}

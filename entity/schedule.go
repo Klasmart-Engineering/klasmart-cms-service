@@ -314,8 +314,8 @@ type Schedule struct {
 	DeleteAt        int64             `gorm:"column:delete_at;type:bigint" json:"delete_at"`
 }
 
-// Check if anyone has attempted live
-func (s *Schedule) AnyoneAttemptedLive() bool {
+// Check if the version of lesson plan is locked
+func (s *Schedule) IsLockedLessonPlan() bool {
 	return s.LessonPlanID != "" && s.LiveLessonPlan != nil && s.LiveLessonPlan.LessonPlanID != ""
 }
 
@@ -326,7 +326,7 @@ func (s *Schedule) ToScheduleSimplified() *ScheduleSimplified {
 		OrgID:        s.OrgID,
 	}
 
-	if s.AnyoneAttemptedLive() {
+	if s.IsLockedLessonPlan() {
 		scheduleSimplified.LessonPlanID = s.LiveLessonPlan.LessonPlanID
 	}
 
@@ -901,18 +901,22 @@ type ScheduleQueryCondition struct {
 }
 
 type ScheduleTimeView struct {
-	ID           string            `json:"id"`
-	Title        string            `json:"title"`
-	StartAt      int64             `json:"start_at"`
-	EndAt        int64             `json:"end_at"`
-	DueAt        int64             `json:"due_at"`
-	ClassType    ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
-	Status       ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
-	ClassID      string            `json:"class_id"`
-	IsHomeFun    bool              `json:"is_home_fun"`
-	IsRepeat     bool              `json:"is_repeat"`
-	LessonPlanID string            `json:"lesson_plan_id"`
-	// Accurate for Home Fun Study only, in_progress: submitted, complete: completed, empty string: never submitted
+	ID                 string            `json:"id"`
+	Title              string            `json:"title"`
+	StartAt            int64             `json:"start_at"`
+	EndAt              int64             `json:"end_at"`
+	DueAt              int64             `json:"due_at"`
+	ClassType          ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
+	Status             ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
+	ClassID            string            `json:"class_id"`
+	IsHomeFun          bool              `json:"is_home_fun"`
+	IsRepeat           bool              `json:"is_repeat"`
+	IsHidden           bool              `json:"is_hidden"`
+	LessonPlanID       string            `json:"lesson_plan_id"`
+	RoleType           ScheduleRoleType  `json:"role_type" enums:"Student,Teacher,Unknown"`
+	ExistFeedback      bool              `json:"exist_feedback"`
+	IsLockedLessonPlan bool              `json:"is_locked_lesson_plan"`
+	// Accurate for Home Fun Study and student user only, in_progress: submitted, complete: completed, empty string: never submitted
 	AssessmentStatus AssessmentStatus `json:"assessment_status" enums:"in_progress,complete"`
 	CreatedAt        int64            `json:"created_at"`
 }
@@ -957,4 +961,13 @@ type ScheduleUserInfo struct {
 	ID       string           `json:"id"`
 	Name     string           `json:"name"`
 	RoleType ScheduleRoleType `json:"role_type"`
+}
+
+type ScheduleRelationIDs struct {
+	OrgID                 string   `json:"org_id"`
+	ClassRosterClassID    string   `json:"class_roster_class_id"`
+	ClassRosterTeacherIDs []string `json:"class_roster_teacher_ids"`
+	ClassRosterStudentIDs []string `json:"class_roster_student_ids"`
+	ParticipantTeacherIDs []string `json:"participant_teacher_ids"`
+	ParticipantStudentIDs []string `json:"participant_student_ids"`
 }

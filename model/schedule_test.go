@@ -156,3 +156,20 @@ func TestGetScheduleLiveLessonPlan(t *testing.T) {
 
 	t.Log(result)
 }
+
+func TestGetScheduleRelationIDs(t *testing.T) {
+	ctx := context.TODO()
+	op := &entity.Operator{}
+	scheduleID := "60b452aa0b409a6320720f3e"
+	result, err := GetScheduleModel().GetScheduleRelationIDs(ctx, op, scheduleID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(result.OrgID)
+	t.Log(result.ClassRosterClassID)
+	t.Log(result.ClassRosterTeacherIDs)
+	t.Log(result.ClassRosterStudentIDs)
+	t.Log(result.ParticipantTeacherIDs)
+	t.Log(result.ParticipantStudentIDs)
+}

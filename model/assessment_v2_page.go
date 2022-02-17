@@ -255,7 +255,7 @@ func (apc *AssessmentPageComponent) GetLessPlanMap() (map[string]*v2.AssessmentC
 	attemptedLessPlanIDs := make([]string, 0)
 	notAttemptedLessPlanIDs := make([]string, 0)
 	for _, item := range scheduleMap {
-		if item.AnyoneAttemptedLive() {
+		if item.IsLockedLessonPlan() {
 			attemptedLessPlanIDs = append(attemptedLessPlanIDs, item.LiveLessonPlan.LessonPlanID)
 		} else {
 			notAttemptedLessPlanIDs = append(notAttemptedLessPlanIDs, item.LessonPlanID)
@@ -293,7 +293,7 @@ func (apc *AssessmentPageComponent) GetLessPlanMap() (map[string]*v2.AssessmentC
 
 	// update schedule lessPlan ID
 	for _, item := range scheduleMap {
-		if item.AnyoneAttemptedLive() {
+		if item.IsLockedLessonPlan() {
 			item.LessonPlanID = item.LiveLessonPlan.LessonPlanID
 		} else {
 			item.LessonPlanID = latestLassPlanIDMap[item.LessonPlanID]

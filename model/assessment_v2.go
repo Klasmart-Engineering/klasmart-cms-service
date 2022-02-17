@@ -978,7 +978,7 @@ func (a *assessmentModelV2) AddWhenCreateSchedules(ctx context.Context, tx *dbo.
 }
 
 func (a *assessmentModelV2) LockAssessmentContentAndOutcome(ctx context.Context, op *entity.Operator, schedule *entity.Schedule) error {
-	if !schedule.AnyoneAttemptedLive() {
+	if !schedule.IsLockedLessonPlan() {
 		log.Warn(ctx, "no one attempted,don't need to lock", log.Any("schedule", schedule))
 		return nil
 	}

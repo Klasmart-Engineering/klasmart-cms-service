@@ -82,7 +82,7 @@ func (adc *AssessmentDetailComponent) isNeedConvertLatestContent() (bool, error)
 		return false, constant.ErrRecordNotFound
 	}
 
-	if adc.assessment.MigrateFlag == constant.AssessmentHistoryFlag || !schedule.AnyoneAttemptedLive() {
+	if adc.assessment.MigrateFlag == constant.AssessmentHistoryFlag || !schedule.IsLockedLessonPlan() {
 		return true, nil
 	}
 
