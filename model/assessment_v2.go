@@ -995,7 +995,7 @@ func (a *assessmentModelV2) LockAssessmentContentAndOutcome(ctx context.Context,
 	now := time.Now().Unix()
 
 	detailComponent := NewAssessmentDetailComponent(ctx, op, assessment)
-	contentsFromSchedule, err := detailComponent.GetContentsFromSchedule()
+	contentsFromSchedule, err := detailComponent.GetScheduleLockedContents(schedule)
 	if err != nil {
 		return err
 	}

@@ -130,7 +130,7 @@ func (adc *AssessmentDetailComponent) getContentOutcomeIDsMap(contentIDs []strin
 	return result, nil
 }
 
-func (adc *AssessmentDetailComponent) getLockedContents(schedule *entity.Schedule) error {
+func (adc *AssessmentDetailComponent) getScheduleLockedContents(schedule *entity.Schedule) error {
 	contentIDs := make([]string, 0)
 	contentIDs = append(contentIDs, schedule.LiveLessonPlan.LessonPlanID)
 	for _, materialItem := range schedule.LiveLessonPlan.LessonMaterials {
@@ -170,6 +170,18 @@ func (adc *AssessmentDetailComponent) getLockedContents(schedule *entity.Schedul
 	}
 
 	return nil
+}
+
+func (adc *AssessmentDetailComponent) GetScheduleLockedContents(schedule *entity.Schedule) ([]*v2.AssessmentContentView, error) {
+	if !schedule.IsLockedLessonPlan() {
+		return nil, constant.ErrInvalidArgs
+	}
+	err := adc.getScheduleLockedContents(schedule)
+	if err != nil {
+		return nil, err
+	}
+
+	return adc.contentsFromSchedule, nil
 }
 
 func (adc *AssessmentDetailComponent) getLatestContents(schedule *entity.Schedule) error {
@@ -269,7 +281,7 @@ func (adc *AssessmentDetailComponent) GetContentsFromSchedule() ([]*v2.Assessmen
 			return nil, err
 		}
 	} else {
-		if err := adc.getLockedContents(schedule); err != nil {
+		if err := adc.getScheduleLockedContents(schedule); err != nil {
 			return nil, err
 		}
 	}
