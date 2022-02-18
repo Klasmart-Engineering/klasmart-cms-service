@@ -95,15 +95,25 @@ func (adc *AssessmentDetailComponent) GetRoomData() (*RoomInfo, error) {
 	}
 
 	ctx := adc.ctx
-	op := adc.op
+	//op := adc.op
 	adc.roomData.Initialized = true
 
-	roomData, err := getAssessmentLiveRoom().getRoomResultInfo(ctx, op, adc.assessment.ScheduleID)
+	roomDataMap, err := adc.apc.GetRoomData()
+	if err != nil {
+		return nil, err
+	}
+	roomData, ok := roomDataMap[adc.assessment.ScheduleID]
+	if !ok {
+		log.Warn(ctx, "not found room data", log.Any("roomDataMap", roomDataMap), log.Any("adc.assessment", adc.assessment))
+		return adc.roomData, nil
+	}
+
+	roomResultInfo, err := getAssessmentLiveRoom().getRoomResultInfo(ctx, roomData)
 	if err != nil {
 		return nil, err
 	}
 
-	adc.roomData = roomData
+	adc.roomData = roomResultInfo
 
 	return adc.roomData, nil
 }
@@ -971,16 +981,17 @@ func (adc *AssessmentDetailComponent) ConvertDetailReply(configs []AssessmentCon
 	}
 
 	result := &v2.AssessmentDetailReply{
-		ID:          adc.assessment.ID,
-		Title:       adc.assessment.Title,
-		Status:      adc.assessment.Status,
-		RoomID:      adc.assessment.ScheduleID,
-		ClassEndAt:  adc.assessment.ClassEndAt,
-		ClassLength: adc.assessment.ClassLength,
-		CompleteAt:  adc.assessment.CompleteAt,
-		Outcomes:    nil,
-		Contents:    nil,
-		Students:    nil,
+		ID:           adc.assessment.ID,
+		Title:        adc.assessment.Title,
+		Status:       adc.assessment.Status,
+		RoomID:       adc.assessment.ScheduleID,
+		ClassEndAt:   adc.assessment.ClassEndAt,
+		ClassLength:  adc.assessment.ClassLength,
+		CompleteAt:   adc.assessment.CompleteAt,
+		CompleteRate: 0,
+		Outcomes:     nil,
+		Contents:     nil,
+		Students:     nil,
 	}
 
 	schedule, ok := adc.apc.allScheduleMap[adc.assessment.ScheduleID]
@@ -998,6 +1009,7 @@ func (adc *AssessmentDetailComponent) ConvertDetailReply(configs []AssessmentCon
 	result.Outcomes = adc.outcomes
 	result.Contents = adc.contents
 	result.Students = adc.students
+	result.CompleteRate = adc.apc.assCompleteRateMap[adc.assessment.ID]
 
 	return result, nil
 }

@@ -94,20 +94,14 @@ func (m *assessmentLiveRoom) Deconstruct(contents []*RoomContent) []*RoomContent
 	return result
 }
 
-func (m *assessmentLiveRoom) getRoomResultInfo(ctx context.Context, operator *entity.Operator, roomID string) (*RoomInfo, error) {
+func (m *assessmentLiveRoom) getRoomResultInfo(ctx context.Context, roomData []*external.H5PUserScores) (*RoomInfo, error) {
 	result := &RoomInfo{
 		Contents:     make([]*RoomContent, 0),
 		UserRoomInfo: make([]*RoomUserInfo, 0),
 	}
-	// batch get room score map
-	roomData, err := external.GetH5PRoomScoreServiceProvider().Get(ctx, operator, roomID)
-	if err != nil {
-		log.Warn(ctx, "get room score service error", log.Err(err), log.String("roomID", roomID))
-		return result, nil
-	}
 
 	if roomData == nil {
-		log.Warn(ctx, "room data is null", log.Err(err), log.String("roomID", roomID))
+		log.Warn(ctx, "room data is null")
 		return result, nil
 	}
 
@@ -115,12 +109,12 @@ func (m *assessmentLiveRoom) getRoomResultInfo(ctx context.Context, operator *en
 
 	for _, item := range roomData {
 		if item.User == nil {
-			log.Warn(ctx, "room user data is null", log.Err(err), log.Any("roomDataItem", item))
+			log.Warn(ctx, "room user data is null", log.Any("roomDataItem", item))
 			continue
 		}
 
 		if len(item.Scores) <= 0 {
-			log.Warn(ctx, "room user scores data is null", log.Err(err), log.Any("roomDataItem", item))
+			log.Warn(ctx, "room user scores data is null", log.Any("roomDataItem", item))
 			continue
 		}
 		userItem := &RoomUserInfo{
@@ -130,7 +124,7 @@ func (m *assessmentLiveRoom) getRoomResultInfo(ctx context.Context, operator *en
 
 		for _, scoreItem := range item.Scores {
 			if scoreItem.Content == nil {
-				log.Warn(ctx, "room user scores about content data is null", log.Err(err), log.Any("roomDataItem", item))
+				log.Warn(ctx, "room user scores about content data is null", log.Any("roomDataItem", item))
 				continue
 			}
 			contentKey := scoreItem.Content.GetInternalID()

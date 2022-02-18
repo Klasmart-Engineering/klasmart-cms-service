@@ -381,6 +381,7 @@ func (a *assessmentModelV2) GetAssessmentDetailConfig(adc *AssessmentDetailCompo
 			adc.apc.MatchTeacher,
 			adc.apc.MatchClass,
 			adc.apc.MatchRemainingTime,
+			adc.apc.MatchCompleteRate,
 
 			adc.MatchOutcome,
 			adc.MatchContentsContainsRoomInfo,

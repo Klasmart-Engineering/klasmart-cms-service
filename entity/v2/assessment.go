@@ -101,6 +101,7 @@ type AssessmentDetailReply struct {
 	CompleteAt    int64            `json:"complete_at"`
 	ScheduleTitle string           `json:"schedule_title"`
 	ScheduleDueAt int64            `json:"schedule_due_at"`
+	CompleteRate  float64          `json:"complete_rate"`
 
 	Outcomes []*AssessmentOutcomeReply `json:"outcomes"`
 	Contents []*AssessmentContentReply `json:"contents"`
