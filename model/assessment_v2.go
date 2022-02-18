@@ -778,6 +778,9 @@ func (a *assessmentModelV2) Update(ctx context.Context, op *entity.Operator, sta
 
 	waitUpdatedAssessment.UpdateAt = now
 	waitUpdatedAssessment.Status = status
+	if status == v2.AssessmentStatusComplete {
+		waitUpdatedAssessment.CompleteAt = now
+	}
 
 	waitAddAssessmentOutcomes := make([]*v2.AssessmentUserOutcome, 0, len(waitAddAssessmentOutcomeMap))
 	for _, item := range waitAddAssessmentOutcomeMap {

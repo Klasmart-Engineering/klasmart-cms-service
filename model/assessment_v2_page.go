@@ -164,10 +164,8 @@ func (apc *AssessmentPageComponent) GetAssessmentUserMap() (map[string][]*v2.Ass
 	ctx := apc.ctx
 
 	assessmentIDs := make([]string, len(apc.assessments))
-	assessmentMap := make(map[string]*v2.Assessment, len(apc.assessments))
 	for i, item := range apc.assessments {
 		assessmentIDs[i] = item.ID
-		assessmentMap[item.ID] = item
 	}
 
 	var assessmentUsers []*v2.AssessmentUser
@@ -182,12 +180,7 @@ func (apc *AssessmentPageComponent) GetAssessmentUserMap() (map[string][]*v2.Ass
 	}
 
 	for _, item := range assessmentUsers {
-		if assessmentItem, ok := assessmentMap[item.AssessmentID]; ok {
-			if assessmentItem.AssessmentType == v2.AssessmentTypeOnlineClass && item.StatusBySystem == v2.AssessmentUserStatusNotParticipate {
-				continue
-			}
-			apc.assessmentUserMap[item.AssessmentID] = append(apc.assessmentUserMap[item.AssessmentID], item)
-		}
+		apc.assessmentUserMap[item.AssessmentID] = append(apc.assessmentUserMap[item.AssessmentID], item)
 	}
 
 	apc.assessmentUserMap[constant.AssessmentInitializedKey] = nil
@@ -647,7 +640,7 @@ func (apc *AssessmentPageComponent) MatchTeacher() error {
 		return nil
 	}
 
-	relationMap, err := apc.GetScheduleRelationMap()
+	assessmentUserMap, err := apc.GetAssessmentUserMap()
 	if err != nil {
 		return err
 	}
@@ -659,14 +652,16 @@ func (apc *AssessmentPageComponent) MatchTeacher() error {
 
 	apc.assTeacherMap = make(map[string][]*entity.IDName, len(apc.assessments))
 	for _, item := range apc.assessments {
-		if srItems, ok := relationMap[item.ScheduleID]; ok {
-			for _, srItem := range srItems {
-				if srItem.RelationType != entity.ScheduleRelationTypeClassRosterTeacher &&
-					srItem.RelationType != entity.ScheduleRelationTypeParticipantTeacher {
+		if assUserItems, ok := assessmentUserMap[item.ID]; ok {
+			for _, assUserItem := range assUserItems {
+				if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
+					continue
+				}
+				if item.AssessmentType == v2.AssessmentTypeOnlineClass && assUserItem.StatusByUser == v2.AssessmentUserStatusNotParticipate {
 					continue
 				}
 
-				if userItem, ok := userMap[srItem.RelationID]; ok && userItem != nil {
+				if userItem, ok := userMap[assUserItem.UserID]; ok && userItem != nil {
 					apc.assTeacherMap[item.ID] = append(apc.assTeacherMap[item.ID], userItem)
 				}
 			}

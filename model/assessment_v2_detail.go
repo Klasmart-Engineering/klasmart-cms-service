@@ -729,6 +729,10 @@ func (adc *AssessmentDetailComponent) MatchStudentNotContainsRoomInfo() error {
 			continue
 		}
 
+		if adc.assessment.AssessmentType == v2.AssessmentTypeOnlineClass && item.StatusByUser == v2.AssessmentUserStatusNotParticipate {
+			continue
+		}
+
 		studentReply := &v2.AssessmentStudentReply{
 			StudentID:   item.UserID,
 			StudentName: studentInfo.Name,
@@ -809,6 +813,11 @@ func (adc *AssessmentDetailComponent) MatchStudentContainsRoomInfo() error {
 		return err
 	}
 
+	userMap, err := adc.apc.GetUserMap()
+	if err != nil {
+		return err
+	}
+
 	roomUserResultMap := make(map[string]*RoomUserResults)
 	for _, item := range userMapFromRoomMap {
 		for _, resultItem := range item.Results {
@@ -825,7 +834,7 @@ func (adc *AssessmentDetailComponent) MatchStudentContainsRoomInfo() error {
 			continue
 		}
 
-		studentInfo, ok := adc.apc.allUserMap[item.UserID]
+		studentInfo, ok := userMap[item.UserID]
 		if !ok {
 			continue
 		}
