@@ -130,7 +130,6 @@ func (s *Server) updateAssessmentV2(c *gin.Context) {
 		return
 	}
 
-	log.Error(ctx, "request error", log.Err(err))
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))

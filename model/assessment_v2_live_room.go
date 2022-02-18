@@ -246,9 +246,6 @@ func (m *assessmentLiveRoom) batchGetRoomCommentMap(ctx context.Context, operato
 	for roomID, users := range commentMap {
 		result[roomID] = make(map[string]string, len(users))
 		for _, u := range users {
-			if u.User == nil {
-				continue
-			}
 			if len(u.TeacherComments) <= 0 {
 				continue
 			}
