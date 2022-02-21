@@ -72,6 +72,8 @@ func (adc *AssessmentDetailComponent) getKey(value []string) string {
 }
 
 func (adc *AssessmentDetailComponent) isNeedConvertLatestContent() (bool, error) {
+	ctx := adc.ctx
+
 	scheduleMap, err := adc.apc.GetScheduleMap()
 	if err != nil {
 		return false, err
@@ -79,10 +81,12 @@ func (adc *AssessmentDetailComponent) isNeedConvertLatestContent() (bool, error)
 
 	schedule, ok := scheduleMap[adc.assessment.ScheduleID]
 	if !ok {
+		log.Warn(ctx, "not found schedule", log.Any("assessment", adc.assessment))
 		return false, constant.ErrRecordNotFound
 	}
 
 	if adc.assessment.MigrateFlag == constant.AssessmentHistoryFlag || !schedule.IsLockedLessonPlan() {
+		log.Info(ctx, "assessment belongs to the migration or schedule can not locked lessPlan", log.Any("assessment", adc.assessment))
 		return true, nil
 	}
 
@@ -240,36 +244,6 @@ func (adc *AssessmentDetailComponent) getLatestContents(schedule *entity.Schedul
 
 	return nil
 }
-
-//func (adc *SingleAssessmentComponent) GetContentMapFromSchedule() (map[string]*v2.AssessmentContentView, error) {
-//	if _, ok := adc.contentMapFromSchedule[constant.AssessmentInitializedKey]; ok {
-//		return adc.contentMapFromSchedule, nil
-//	}
-//
-//	scheduleMap, err := adc.apc.GetScheduleMap()
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	schedule, ok := scheduleMap[adc.assessment.ScheduleID]
-//	if !ok {
-//		return nil, constant.ErrRecordNotFound
-//	}
-//
-//	if schedule.AnyoneAttemptedLive() {
-//		if _, err := adc.getLockContents(schedule); err != nil {
-//			return nil, err
-//		}
-//	} else {
-//		if _, err := adc.getUnlockContents(schedule); err != nil {
-//			return nil, err
-//		}
-//	}
-//
-//	adc.contentMapFromSchedule[constant.AssessmentInitializedKey] = new(v2.AssessmentContentView)
-//
-//	return adc.contentMapFromSchedule, nil
-//}
 
 func (adc *AssessmentDetailComponent) GetContentsFromSchedule() ([]*v2.AssessmentContentView, error) {
 	if adc.contentsFromSchedule != nil {

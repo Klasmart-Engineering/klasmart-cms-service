@@ -2,22 +2,13 @@ package model
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"testing"
 	"time"
 
-	"github.com/go-redis/redis"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
-	"gitlab.badanamu.com.cn/calmisland/ro"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
 
 func TestAssessmentModel_GetByID(t *testing.T) {
@@ -27,8 +18,7 @@ func TestAssessmentModel_GetByID(t *testing.T) {
 		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 		Token:  "",
 	}
-	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0NDg5NTk5MiwiaXNzIjoia2lkc2xvb3AifQ.Bt8yDsmDr3b9Wjob9V61GfNpi8LNvXsYVVWn3ECnW10g60uE_fhIaGvVDpYTRkD11v4DA4BIBPXO5uOIV46hFC204DLckO6U_9shQO6ukNdZbnvNDNnBxOMs1cSPr8AAQlF9CzEUZZT-aFfB343FCvMewVjx3NntY8vI6P4MtIJ0RW1mQwxnAavs41jRGwqH_tSbciLts07ZwqHZmD0JG0AbJ-VCcMh3FDgUOo__0XkvO4W9BLfciSmOAvHcaHgdMdYOZ2Sn6T8f-fJrNFGSyGEP0R13M_Aac1HgyLraDRemVMhx4jUzRB5Z6e6ZN-O4LmguwnUnI_tCBWG3MMfi8A"
-	t.Log(op)
+	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0NTQzNzYzMiwiaXNzIjoia2lkc2xvb3AifQ.j7UGDogT1KYeOU--OnB37PsakQ44gcYBDt5D3fBSyBz9ipIzGvtP4wm5Jnv05SJv5ZF8dbmK7WKmGRBtFqCPlO_HHmrdooE562I4Y4IBVwolKsWzET7N3j_fcJUNvUhC6qzBcI3acrbmJBwaYR3DGjeODziR9ENu-Afhz8boSQvgNmiETjhPlxVg5c1N1nHFbjiO6qDRXFG469_jYZZNZBGGYxeOhAJH4NyTCvOwDiyW7SwAk3GZJj0S73ImOmhtiqz4bLFtvnaRR3uukFw6EqoWAPSGsw6RI1eu3kgTJXMQsYitOP72vZA23RGFQTJ68eDWDU9Lr5NFEIl2-ingUA"
 	result, err := GetAssessmentModelV2().GetByID(ctx, op, "6114e9c1c83d392dc61e14ad")
 	if err != nil {
 		t.Fatal(err)
@@ -185,79 +175,4 @@ func TestLiveRoomEventBus_PubEndClass(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-}
-
-//func TestMain(m *testing.M) {
-//	setup()
-//	exitVal := m.Run()
-//	os.Exit(exitVal)
-//}
-
-func setup() {
-	os.Setenv("connection_string", "root:Passw0rd@tcp(192.168.1.136:3306)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local")
-	os.Setenv("ams_endpoint", "https://api.alpha.kidsloop.net/user/")
-
-	config.Set(&config.Config{
-		DBConfig: config.DBConfig{
-			ConnectionString: os.Getenv("connection_string"),
-			MaxOpenConns:     8,
-			MaxIdleConns:     8,
-			ShowLog:          true,
-			ShowSQL:          true,
-		},
-		RedisConfig: config.RedisConfig{
-			OpenCache: false,
-			Host:      os.Getenv("redis_host"),
-			Port:      6379,
-			Password:  "",
-		},
-		AMS: config.AMSConfig{
-			EndPoint: os.Getenv("ams_endpoint"),
-		},
-		H5P: config.H5PServiceConfig{EndPoint: "https://api.alpha.kidsloop.net/assessment/graphql"},
-	})
-	dboHandler, err := dbo.NewWithConfig(func(c *dbo.Config) {
-		dbConf := config.Get().DBConfig
-		c.ShowLog = dbConf.ShowLog
-		c.ShowSQL = dbConf.ShowSQL
-		c.MaxIdleConns = dbConf.MaxIdleConns
-		c.MaxOpenConns = dbConf.MaxOpenConns
-		c.ConnectionString = dbConf.ConnectionString
-	})
-	if err != nil {
-		log.Error(context.TODO(), "create dbo failed", log.Err(err))
-		panic(err)
-	}
-	dbo.ReplaceGlobal(dboHandler)
-	ro.SetConfig(&redis.Options{
-		Addr:     fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
-		Password: config.Get().RedisConfig.Password,
-	})
-	initDataSource()
-}
-
-func initDataSource() {
-	//init querier
-	ctx := context.Background()
-	engine := cache.GetCacheEngine()
-	engine.SetExpire(ctx, constant.MaxCacheExpire)
-	engine.OpenCache(ctx, config.Get().RedisConfig.OpenCache)
-	cache.GetPassiveCacheRefresher().SetUpdateFrequency(constant.MaxCacheExpire, constant.MinCacheExpire)
-
-	engine.AddDataSource(ctx, external.GetUserServiceProvider())
-	engine.AddDataSource(ctx, external.GetTeacherServiceProvider())
-	engine.AddDataSource(ctx, external.GetSubjectServiceProvider())
-	engine.AddDataSource(ctx, external.GetSubCategoryServiceProvider())
-	engine.AddDataSource(ctx, external.GetStudentServiceProvider())
-	engine.AddDataSource(ctx, external.GetSchoolServiceProvider())
-	engine.AddDataSource(ctx, external.GetProgramServiceProvider())
-	engine.AddDataSource(ctx, external.GetOrganizationServiceProvider())
-	engine.AddDataSource(ctx, external.GetGradeServiceProvider())
-	engine.AddDataSource(ctx, external.GetClassServiceProvider())
-	engine.AddDataSource(ctx, external.GetCategoryServiceProvider())
-	engine.AddDataSource(ctx, external.GetAgeServiceProvider())
-}
-
-func TestEnv(t *testing.T) {
-	t.Log(os.Getenv("live_token_private_key_path"))
 }
