@@ -26,6 +26,7 @@ func initDB() {
 	ctx := context.Background()
 	dboHandler, err := dbo.NewWithConfig(func(c *dbo.Config) {
 		dbConf := config.Get().DBConfig
+		c.DBType = dbo.NewRelicMySQL
 		c.ShowLog = dbConf.ShowLog
 		c.ShowSQL = dbConf.ShowSQL
 		c.MaxIdleConns = dbConf.MaxIdleConns
