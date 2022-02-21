@@ -2791,96 +2791,12 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 		return 0, nil, err
 	}
 
-	result := make([]*entity.ScheduleTimeView, len(scheduleList))
-	var homefunStudyScheduleIDs []string
-	var notHomefunStudyScheduleIDs []string
-	for i, v := range scheduleList {
-		result[i] = &entity.ScheduleTimeView{
-			ID:           v.ID,
-			Title:        v.Title,
-			StartAt:      v.StartAt,
-			EndAt:        v.EndAt,
-			DueAt:        v.DueAt,
-			ClassType:    v.ClassType,
-			Status:       v.Status,
-			ClassID:      v.ClassID,
-			IsHomeFun:    v.IsHomeFun,
-			IsRepeat:     v.RepeatID != "",
-			LessonPlanID: v.LessonPlanID,
-			CreatedAt:    v.CreatedAt,
-		}
-
-		if v.IsLockedLessonPlan() {
-			result[i].LessonPlanID = v.LiveLessonPlan.LessonPlanID
-		}
-
-		// handle schedule status
-		result[i].Status = v.Status.GetScheduleStatus(entity.ScheduleStatusInput{
-			EndAt:     v.EndAt,
-			DueAt:     v.DueAt,
-			ClassType: v.ClassType,
-		})
-
-		// handle homework schedule start and end time
-		if v.ClassType == entity.ScheduleClassTypeHomework && v.DueAt != 0 {
-			result[i].StartAt = utils.TodayZeroByTimeStamp(v.DueAt, loc).Unix()
-			result[i].EndAt = utils.TodayEndByTimeStamp(v.DueAt, loc).Unix()
-		}
-
-		if v.ClassType == entity.ScheduleClassTypeHomework && v.IsHomeFun {
-			homefunStudyScheduleIDs = append(homefunStudyScheduleIDs, v.ID)
-		} else {
-			notHomefunStudyScheduleIDs = append(notHomefunStudyScheduleIDs, v.ID)
-		}
-	}
-
-	// query assessment_status, only for student user
-	if query.WithAssessmentStatus {
-		assessments, err := GetAssessmentModelV2().QueryInternal(ctx, op, &assessmentV2.AssessmentCondition{
-			ScheduleIDs: entity.NullStrings{
-				Strings: notHomefunStudyScheduleIDs,
-				Valid:   true,
-			},
-		})
-		if err != nil {
-			log.Error(ctx, "GetAssessmentModelV2().Query error",
-				log.Err(err),
-				log.Any("notHomefunStudyScheduleIDs", notHomefunStudyScheduleIDs))
-			return 0, nil, err
-		}
-
-		offlineStudyResult, err := GetAssessmentOfflineStudyModel().GetUserResult(ctx, op, homefunStudyScheduleIDs, []string{op.UserID})
-		if err != nil {
-			log.Error(ctx, "GetHomeFunStudyModel().Query error",
-				log.Err(err),
-				log.Strings("homefunStudyScheduleIDs", homefunStudyScheduleIDs),
-				log.String("studentID", op.UserID))
-			return 0, nil, err
-		}
-		result, err := s.transformToScheduleTimeView(ctx, op, scheduleList, loc)
-		if err != nil {
-			log.Error(ctx, "s.transformToScheduleTimeView error",
-				log.Err(err),
-				log.Any("scheduleList", scheduleList))
-			return 0, nil, err
-		}
-
-		assessmentStatusMap := make(map[string]v2.AssessmentStatus)
-		for _, assessment := range assessments {
-			assessmentStatusMap[assessment.ScheduleID] = assessment.Status
-		}
-
-		for key, homefunStudyAssessment := range offlineStudyResult {
-			if len(homefunStudyAssessment) > 0 {
-				assessmentStatusMap[key] = v2.AssessmentStatusComplete
-			} else {
-				assessmentStatusMap[key] = v2.AssessmentStatusNotStarted
-			}
-		}
-
-		for _, r := range result {
-			r.AssessmentStatus = entity.AssessmentStatus(assessmentStatusMap[r.ID].ToReply())
-		}
+	result, err := s.transformToScheduleTimeView(ctx, op, scheduleList, loc)
+	if err != nil {
+		log.Error(ctx, "s.transformToScheduleTimeView error",
+			log.Err(err),
+			log.Any("scheduleList", scheduleList))
+		return 0, nil, err
 	}
 
 	return total, result, nil
