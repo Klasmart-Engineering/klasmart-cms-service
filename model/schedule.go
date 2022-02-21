@@ -3961,46 +3961,49 @@ func (s *scheduleModel) transformToScheduleTimeView(ctx context.Context, operato
 
 	g.Go(func() error {
 		if len(notHomefunHomeworkIDs) > 0 {
-			assessments, err := GetAssessmentModel().Query(ctx, operator, &da.QueryAssessmentConditions{
+			assessments, err := GetAssessmentModelV2().QueryInternal(ctx, operator, &assessmentV2.AssessmentCondition{
 				ScheduleIDs: entity.NullStrings{
 					Strings: notHomefunHomeworkIDs,
 					Valid:   true,
 				},
 			})
 			if err != nil {
-				log.Error(ctx, "GetAssessmentModel().Query error",
+				log.Error(ctx, "GetAssessmentModelV2().QueryInternal error",
 					log.Err(err),
 					log.Any("notHomefunHomeworkIDs", notHomefunHomeworkIDs))
 				return err
 			}
 
 			for _, assessment := range assessments {
-				assessmentStatusMap[assessment.ScheduleID] = assessment.Status
+				// Compatible with older version assessment
+				switch assessment.Status {
+				case v2.AssessmentStatusComplete:
+					assessmentStatusMap[assessment.ScheduleID] = entity.AssessmentStatusComplete
+				case v2.AssessmentStatusInDraft, v2.AssessmentStatusStarted:
+					assessmentStatusMap[assessment.ScheduleID] = entity.AssessmentStatusInProgress
+				}
 			}
 		}
 
 		if len(homefunHomeworkIDs) > 0 {
-			var homefunHomeworkAssessments []*entity.HomeFunStudy
-			err := GetHomeFunStudyModel().Query(ctx, operator, &da.QueryHomeFunStudyCondition{
-				ScheduleIDs: entity.NullStrings{
-					Strings: homefunHomeworkIDs,
-					Valid:   true,
-				},
-				StudentIDs: entity.NullStrings{
-					Strings: []string{operator.UserID},
-					Valid:   true,
-				},
-			}, &homefunHomeworkAssessments)
+			offlineStudyResult, err := GetAssessmentOfflineStudyModel().GetUserResult(ctx, operator, homefunHomeworkIDs, []string{operator.UserID})
 			if err != nil {
-				log.Error(ctx, "GetHomeFunStudyModel().Query error",
+				log.Error(ctx, "GetAssessmentOfflineStudyModel().GetUserResult error",
 					log.Err(err),
 					log.Strings("homefunHomeworkIDs", homefunHomeworkIDs),
 					log.String("studentID", operator.UserID))
 				return err
 			}
 
-			for _, homefunStudyAssessment := range homefunHomeworkAssessments {
-				assessmentStatusMap[homefunStudyAssessment.ScheduleID] = homefunStudyAssessment.Status
+			for scheduleID, homefunStudyAssessment := range offlineStudyResult {
+				if len(homefunStudyAssessment) > 0 {
+					switch homefunStudyAssessment[0].Status {
+					case v2.UserResultProcessStatusComplete:
+						assessmentStatusMap[scheduleID] = entity.AssessmentStatusComplete
+					case v2.UserResultProcessStatusStarted, v2.UserResultProcessStatusDraft:
+						assessmentStatusMap[scheduleID] = entity.AssessmentStatusInProgress
+					}
+				}
 			}
 		}
 
