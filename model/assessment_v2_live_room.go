@@ -250,7 +250,9 @@ func (m *assessmentLiveRoom) batchGetRoomCommentMap(ctx context.Context, operato
 				continue
 			}
 
-			result[roomID][u.User.UserID] = u.TeacherComments[len(u.TeacherComments)-1].Comment
+			latestComment := u.TeacherComments[len(u.TeacherComments)-1]
+
+			result[roomID][latestComment.Student.UserID] = latestComment.Comment
 		}
 	}
 	log.Debug(ctx, "batch get room comment map",
