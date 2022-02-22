@@ -781,7 +781,7 @@ func (apc *AssessmentPageComponent) ConvertPageReply(configs []AssessmentConfigF
 			log.Warn(ctx, "not found assessment schedule", log.Any("assScheduleMap", apc.assScheduleMap), log.Any("assessmentItem", item))
 			continue
 		}
-		if lessPlanItem, ok := apc.assLessPlanMap[item.ID]; ok {
+		if lessPlanItem, ok := apc.assLessPlanMap[item.ID]; ok && lessPlanItem != nil {
 			replyItem.LessonPlan = &entity.IDName{
 				ID:   lessPlanItem.ID,
 				Name: lessPlanItem.Name,
