@@ -152,3 +152,8 @@ const (
 const (
 	UserDefaultCacheExpiration = 4 * time.Hour
 )
+
+const (
+	DBDefaultConnMaxLifetime = 4 * time.Hour
+	DBDefaultSlowThreshold   = 200 * time.Millisecond
+)
