@@ -960,12 +960,6 @@ func (a *assessmentModelV2) AddWhenCreateSchedules(ctx context.Context, tx *dbo.
 				attendance.StatusByUser = v2.AssessmentUserStatusNotParticipate
 			}
 
-			if req.AssessmentType == v2.AssessmentTypeOfflineClass {
-				if userItem.UserType == v2.AssessmentUserTypeTeacher {
-					attendance.StatusByUser = v2.AssessmentUserStatusNotParticipate
-				}
-			}
-
 			users = append(users, attendance)
 		}
 	}
