@@ -933,7 +933,7 @@ func (adc *AssessmentDetailComponent) appendContent(roomContent *RoomContent, ma
 	}
 
 	if roomContent.FileType == external.FileTypeH5P {
-		if canScoringMap[roomContent.SubContentType] {
+		if canScoringMap[roomContent.SubContentType] || roomContent.MaxScore > 0 {
 			replyItem.FileType = v2.AssessmentFileTypeSupportScoreStandAlone
 		} else {
 			replyItem.FileType = v2.AssessmentFileTypeNotSupportScoreStandAlone
