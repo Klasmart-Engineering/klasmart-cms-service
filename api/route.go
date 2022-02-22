@@ -101,25 +101,22 @@ func (s Server) registeRoute() {
 
 	assessments := s.engine.Group("/v1")
 	{
-		assessments.GET("/assessments", s.mustLogin, s.listAssessments)
+		// onlineStudy, onlineClass, offlineClass
+		assessments.GET("/assessments_v2", s.mustLogin, s.queryAssessmentV2)
+		assessments.GET("/assessments_v2/:id", s.mustLogin, s.getAssessmentDetailV2)
+		assessments.PUT("/assessments_v2/:id", s.mustLogin, s.updateAssessmentV2)
+
+		// live room callback
 		assessments.POST("/assessments", s.addAssessment)
-		assessments.POST("/assessments_for_test", s.mustLogin, s.addAssessmentForTest)
-		assessments.GET("/assessments/:id", s.mustLogin, s.getAssessmentDetail)
-		assessments.PUT("/assessments/:id", s.mustLogin, s.updateAssessment)
+
+		// offlineStudy
+		assessments.GET("/user_offline_study", s.mustLogin, s.queryUserOfflineStudy)
+		assessments.GET("/user_offline_study/:id", s.mustLogin, s.getUserOfflineStudyByID)
+		assessments.PUT("/user_offline_study/:id", s.mustLogin, s.updateUserOfflineStudy)
+
+		// home page
 		assessments.GET("/assessments_summary", s.mustLogin, s.getAssessmentsSummary)
-
-		assessments.GET("/study_assessments", s.mustLogin, s.listStudyAssessments)
-		assessments.GET("/study_assessments/:id", s.mustLogin, s.getStudyAssessmentDetail)
-		assessments.PUT("/study_assessments/:id", s.mustLogin, s.updateStudyAssessment)
-
 		assessments.GET("/assessments_for_student", s.mustLogin, s.getStudentAssessments)
-	}
-
-	homeFunStudies := s.engine.Group("/v1")
-	{
-		homeFunStudies.GET("/home_fun_studies", s.mustLogin, s.listHomeFunStudies)
-		homeFunStudies.GET("/home_fun_studies/:id", s.mustLogin, s.getHomeFunStudy)
-		homeFunStudies.PUT("/home_fun_studies/:id/assess", s.mustLogin, s.assessHomeFunStudy)
 	}
 
 	reports := s.engine.Group("/v1")

@@ -81,9 +81,10 @@ func NewErrContentAlreadyLocked(ctx context.Context, lockedBy string, operator *
 }
 
 type SubContentsWithName struct {
-	ID   string      `json:"id"`
-	Name string      `json:"name"`
-	Data ContentData `json:"data"`
+	ID         string      `json:"id"`
+	Name       string      `json:"name"`
+	Data       ContentData `json:"data"`
+	OutcomeIDs []string    `json:"outcome_i_ds"`
 }
 
 type IContentModel interface {
@@ -1725,9 +1726,10 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 						return
 					}
 					ret = append(ret, &SubContentsWithName{
-						ID:   l.Material.ID,
-						Name: l.Material.Name,
-						Data: cd0,
+						ID:         l.Material.ID,
+						Name:       l.Material.Name,
+						Data:       cd0,
+						OutcomeIDs: l.Material.Outcomes,
 					})
 				}
 			})
@@ -1737,9 +1739,10 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 			//if sub contents is not exists, return current content
 			ret := []*SubContentsWithName{
 				{
-					ID:   obj.ID,
-					Name: obj.Name,
-					Data: v,
+					ID:         obj.ID,
+					Name:       obj.Name,
+					Data:       v,
+					OutcomeIDs: cm.parseContentOutcomes(ctx, obj),
 				},
 			}
 			contentInfoMap[obj.ID] = ret
@@ -1748,9 +1751,10 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 			//if sub contents is not exists, return current content
 			ret := []*SubContentsWithName{
 				{
-					ID:   obj.ID,
-					Name: obj.Name,
-					Data: v,
+					ID:         obj.ID,
+					Name:       obj.Name,
+					Data:       v,
+					OutcomeIDs: cm.parseContentOutcomes(ctx, obj),
 				},
 			}
 			contentInfoMap[obj.ID] = ret
@@ -1813,9 +1817,10 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 					return
 				}
 				ret = append(ret, &SubContentsWithName{
-					ID:   l.Material.ID,
-					Name: l.Material.Name,
-					Data: cd0,
+					ID:         l.Material.ID,
+					Name:       l.Material.Name,
+					Data:       cd0,
+					OutcomeIDs: l.Material.Outcomes,
 				})
 			}
 		})
@@ -1825,9 +1830,10 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		//if sub contents is not exists, return current content
 		ret := []*SubContentsWithName{
 			{
-				ID:   cid,
-				Name: obj.Name,
-				Data: v,
+				ID:         cid,
+				Name:       obj.Name,
+				Data:       v,
+				OutcomeIDs: cm.parseContentOutcomes(ctx, obj),
 			},
 		}
 		return ret, nil
@@ -1836,9 +1842,10 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		//if sub contents is not exists, return current content
 		ret := []*SubContentsWithName{
 			{
-				ID:   cid,
-				Name: obj.Name,
-				Data: v,
+				ID:         cid,
+				Name:       obj.Name,
+				Data:       v,
+				OutcomeIDs: cm.parseContentOutcomes(ctx, obj),
 			},
 		}
 		return ret, nil
@@ -1854,6 +1861,8 @@ func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContex
 			ID:          cid,
 			Name:        cachedContent.Name,
 			ContentType: cachedContent.ContentType,
+			OutcomeIDs:  cachedContent.Outcomes,
+			LatestID:    cachedContent.LatestID,
 		}, nil
 	}
 	obj, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
@@ -1861,10 +1870,16 @@ func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContex
 		log.Error(ctx, "can't read content", log.Err(err), log.String("cid", cid))
 		return nil, err
 	}
+	latestID := obj.LatestID
+	if latestID == "" {
+		latestID = obj.ID
+	}
 	return &entity.ContentName{
 		ID:          cid,
 		Name:        obj.Name,
 		ContentType: obj.ContentType,
+		OutcomeIDs:  cm.parseContentOutcomes(ctx, obj),
+		LatestID:    latestID,
 	}, nil
 }
 func (cm *ContentModel) GetRawContentByIDListWithVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentWithVisibilitySettings, error) {
@@ -1973,6 +1988,8 @@ func (cm *ContentModel) GetContentNameByIDList(ctx context.Context, tx *dbo.DBCo
 			ID:          cachedContent[i].ID,
 			Name:        cachedContent[i].Name,
 			ContentType: cachedContent[i].ContentType,
+			LatestID:    cachedContent[i].LatestID,
+			OutcomeIDs:  cachedContent[i].Outcomes,
 		})
 	}
 	if len(nid) < 1 {
@@ -1985,10 +2002,16 @@ func (cm *ContentModel) GetContentNameByIDList(ctx context.Context, tx *dbo.DBCo
 		return nil, ErrReadContentFailed
 	}
 	for i := range data {
+		var latestID = data[i].LatestID
+		if data[i].LatestID == "" {
+			latestID = data[i].ID
+		}
 		resp = append(resp, &entity.ContentName{
 			ID:          data[i].ID,
 			Name:        data[i].Name,
 			ContentType: data[i].ContentType,
+			LatestID:    latestID,
+			OutcomeIDs:  cm.parseContentOutcomes(ctx, data[i]),
 		})
 	}
 	return resp, nil

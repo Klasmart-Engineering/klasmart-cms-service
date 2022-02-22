@@ -12,6 +12,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
@@ -80,7 +81,7 @@ func (s *scheduleFeedbackModel) GetNewest(ctx context.Context, op *entity.Operat
 	}
 	result.Assignments = assignments
 
-	homeFun, err := GetHomeFunStudyModel().GetByScheduleIDAndStudentID(ctx, op, scheduleID, userID)
+	offlineStudyResultMap, err := GetAssessmentOfflineStudyModel().GetUserResult(ctx, op, []string{scheduleID}, []string{userID})
 	if err == constant.ErrRecordNotFound {
 		log.Error(ctx, "not found home fun", log.Err(err), log.Any("op", op), log.Any("feedback", feedback))
 		return nil, ErrFeedbackNotGenerateAssessment
@@ -89,7 +90,10 @@ func (s *scheduleFeedbackModel) GetNewest(ctx context.Context, op *entity.Operat
 		log.Error(ctx, "get home fun study  error", log.Err(err), log.Any("op", op), log.Any("feedback", feedback))
 		return nil, err
 	}
-	result.IsAllowSubmit = homeFun.Status != entity.AssessmentStatusComplete
+	if offlineStudyResultItem, ok := offlineStudyResultMap[scheduleID]; ok && len(offlineStudyResultItem) > 0 {
+		result.IsAllowSubmit = offlineStudyResultItem[0].Status != v2.UserResultProcessStatusComplete
+	}
+
 	return result, nil
 }
 
@@ -178,10 +182,10 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 
 	// notify classes assignments to statistic home fun attendance
 	go func(ctx context.Context, op *entity.Operator) {
-		data := &entity.AddClassAndLiveAssessmentArgs{
+		data := &v2.ScheduleEndClassCallBackReq{
 			ScheduleID:    input.ScheduleID,
 			AttendanceIDs: []string{op.UserID},
-			ClassEndTime:  time.Now().Unix(),
+			ClassEndAt:    time.Now().Unix(),
 		}
 		log.Debug(ctx, "feedback notify assignments", log.Any("data", data))
 		err := GetClassesAssignmentsModel().CreateRecord(ctx, op, data)
@@ -234,31 +238,13 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 		}
 
 		// insert homeFunStudy
-		teacherIDs, err := GetScheduleRelationModel().GetTeacherIDs(ctx, op, input.ScheduleID)
-		if err != nil {
-			return "", err
+		offlineStudyAddReq := &v2.OfflineStudyUserResultAddReq{
+			ScheduleID: input.ScheduleID,
+			UserID:     op.UserID,
+			FeedbackID: feedback.ID,
 		}
-		scheduleInfo, err := GetScheduleModel().GetPlainByID(ctx, input.ScheduleID)
+		err = GetAssessmentOfflineStudyModel().UserSubmitOfflineStudy(ctx, op, offlineStudyAddReq)
 		if err != nil {
-			return "", err
-		}
-		classID, err := GetScheduleRelationModel().GetClassRosterID(ctx, op, input.ScheduleID)
-		if err != nil {
-			return "", err
-		}
-		homeFun := entity.SaveHomeFunStudyArgs{
-			ScheduleID:       input.ScheduleID,
-			ClassID:          classID,
-			LessonName:       scheduleInfo.Title,
-			TeacherIDs:       teacherIDs,
-			StudentID:        op.UserID,
-			DueAt:            scheduleInfo.DueAt,
-			LatestFeedbackID: feedback.ID,
-			LatestFeedbackAt: feedback.CreateAt,
-		}
-		err = GetHomeFunStudyModel().Save(ctx, tx, op, homeFun)
-		if err != nil {
-			log.Error(ctx, "insert homeFunStudy error", log.Err(err), log.Any("op", op), log.Any("homeFun", homeFun), log.Any("input", input))
 			return "", err
 		}
 		return feedback.ID, nil

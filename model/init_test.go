@@ -3,18 +3,21 @@ package model
 import (
 	"context"
 	"fmt"
-	"github.com/go-redis/redis"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
-	"gitlab.badanamu.com.cn/calmisland/ro"
 	"os"
 	"testing"
 
+	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
 	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+	"gitlab.badanamu.com.cn/calmisland/ro"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/test/utils"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
 )
 
 func initCache() {
@@ -35,11 +38,35 @@ func initCache() {
 		log.Panic(ctx, "kl2cache.Init failed", log.Err(err))
 	}
 }
+
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 	logger.SetLevel(logrus.DebugLevel)
 	utils.InitConfig(ctx)
 	utils.InitDB(ctx)
+	initDataSource()
 	exitVal := m.Run()
 	os.Exit(exitVal)
+}
+
+func initDataSource() {
+	//init querier
+	ctx := context.Background()
+	engine := cache.GetCacheEngine()
+	engine.SetExpire(ctx, constant.MaxCacheExpire)
+	engine.OpenCache(ctx, config.Get().RedisConfig.OpenCache)
+	cache.GetPassiveCacheRefresher().SetUpdateFrequency(constant.MaxCacheExpire, constant.MinCacheExpire)
+
+	engine.AddDataSource(ctx, external.GetUserServiceProvider())
+	engine.AddDataSource(ctx, external.GetTeacherServiceProvider())
+	engine.AddDataSource(ctx, external.GetSubjectServiceProvider())
+	engine.AddDataSource(ctx, external.GetSubCategoryServiceProvider())
+	engine.AddDataSource(ctx, external.GetStudentServiceProvider())
+	engine.AddDataSource(ctx, external.GetSchoolServiceProvider())
+	engine.AddDataSource(ctx, external.GetProgramServiceProvider())
+	engine.AddDataSource(ctx, external.GetOrganizationServiceProvider())
+	engine.AddDataSource(ctx, external.GetGradeServiceProvider())
+	engine.AddDataSource(ctx, external.GetClassServiceProvider())
+	engine.AddDataSource(ctx, external.GetCategoryServiceProvider())
+	engine.AddDataSource(ctx, external.GetAgeServiceProvider())
 }

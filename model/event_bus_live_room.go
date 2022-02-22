@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
@@ -13,11 +14,11 @@ const (
 	BusTopicLiveRoomEndClass utils.BusTopic = "LiveRoomEndClass"
 )
 
-type BusTopicLiveRoomEndClassFunc func(ctx context.Context, op *entity.Operator, event *entity.AddClassAndLiveAssessmentArgs) error
+type BusTopicLiveRoomEndClassFunc func(ctx context.Context, op *entity.Operator, event *v2.ScheduleEndClassCallBackReq) error
 
 type ILiveRoomEventBus interface {
 	SubEndClass(handler BusTopicLiveRoomEndClassFunc) error
-	PubEndClass(ctx context.Context, op *entity.Operator, event *entity.AddClassAndLiveAssessmentArgs) error
+	PubEndClass(ctx context.Context, op *entity.Operator, event *v2.ScheduleEndClassCallBackReq) error
 }
 
 type liveRoomEventBus struct {
@@ -28,7 +29,7 @@ func (b *liveRoomEventBus) SubEndClass(handler BusTopicLiveRoomEndClassFunc) err
 	return b.bus.Sub(BusTopicLiveRoomEndClass, handler)
 }
 
-func (b *liveRoomEventBus) PubEndClass(ctx context.Context, op *entity.Operator, event *entity.AddClassAndLiveAssessmentArgs) error {
+func (b *liveRoomEventBus) PubEndClass(ctx context.Context, op *entity.Operator, event *v2.ScheduleEndClassCallBackReq) error {
 	return b.bus.Pub(BusTopicLiveRoomEndClass, ctx, op, event)
 }
 
@@ -43,7 +44,7 @@ func GetLiveRoomEventBusModel() ILiveRoomEventBus {
 			bus: utils.NewAsyncEventBus(),
 		}
 
-		bus.SubEndClass(GetAssessmentModel().ScheduleEndClassCallback)
+		bus.SubEndClass(GetAssessmentModelV2().ScheduleEndClassCallback)
 		bus.SubEndClass(GetClassesAssignmentsModel().CreateRecord)
 
 		_liveRoomBusModel = bus
