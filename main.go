@@ -31,12 +31,16 @@ func initDB() {
 		c.ShowSQL = dbConf.ShowSQL
 		c.MaxIdleConns = dbConf.MaxIdleConns
 		c.MaxOpenConns = dbConf.MaxOpenConns
+		c.ConnMaxIdleTime = dbConf.ConnMaxIdleTime
+		c.ConnMaxLifetime = dbConf.ConnMaxLifetime
 		c.ConnectionString = dbConf.ConnectionString
 		c.LogLevel = dbo.Info
+		c.SlowThreshold = dbConf.SlowThreshold
 	})
 	if err != nil {
 		log.Error(ctx, "create dbo failed", log.Err(err))
 		panic(err)
+
 	}
 	dbo.ReplaceGlobal(dboHandler)
 }

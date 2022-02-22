@@ -1256,11 +1256,12 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 	for i, schedule := range scheduleList {
 		scheduleIDs[i] = schedule.ID
 		result[i] = &entity.ScheduleSearchView{
-			ID:      schedule.ID,
-			StartAt: schedule.StartAt,
-			EndAt:   schedule.EndAt,
-			DueAt:   schedule.DueAt,
-			Title:   schedule.Title,
+			ID:        schedule.ID,
+			StartAt:   schedule.StartAt,
+			EndAt:     schedule.EndAt,
+			DueAt:     schedule.DueAt,
+			Title:     schedule.Title,
+			ClassType: schedule.ClassType,
 		}
 
 		resultMap[schedule.ID] = result[i]

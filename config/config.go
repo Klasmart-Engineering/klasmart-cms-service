@@ -72,11 +72,14 @@ type RedisConfig struct {
 type DBConfig struct {
 	DBMode string `yaml:"db_mode"`
 
-	ConnectionString string `yaml:"connection_string" json:"-"`
-	MaxOpenConns     int    `yaml:"max_open_conns"`
-	MaxIdleConns     int    `yaml:"max_idle_conns"`
-	ShowLog          bool   `yaml:"show_log"`
-	ShowSQL          bool   `yaml:"show_sql"`
+	ConnectionString string        `yaml:"connection_string" json:"-"`
+	MaxOpenConns     int           `yaml:"max_open_conns"`
+	MaxIdleConns     int           `yaml:"max_idle_conns"`
+	ConnMaxLifetime  time.Duration `yaml:"conn_max_life_time"`
+	ConnMaxIdleTime  time.Duration `yaml:"conn_max_idle_time"`
+	ShowLog          bool          `yaml:"show_log"`
+	ShowSQL          bool          `yaml:"show_sql"`
+	SlowThreshold    time.Duration `yaml:"slow_threshold"`
 
 	DynamoEndPoint string `yaml:"dynamo_end_point"`
 	DynamoRegion   string `yaml:"dynamo_region"`
@@ -352,6 +355,9 @@ func loadDBEnvConfig(ctx context.Context) {
 	maxIdleConnsStr := assertGetEnv("max_idle_conns")
 	showLogStr := assertGetEnv("show_log")
 	showSQLStr := assertGetEnv("show_sql")
+	connMaxLifetimeStr := os.Getenv("conn_max_life_time")
+	connMaxIdleTimeStr := os.Getenv("conn_max_idle_time")
+	slowThresholdStr := os.Getenv("slow_threshold")
 
 	maxOpenConns, err := strconv.Atoi(maxOpenConnsStr)
 	if err != nil {
@@ -381,6 +387,34 @@ func loadDBEnvConfig(ctx context.Context) {
 	}
 	config.DBConfig.ShowSQL = showSQL
 
+	connMaxLifetime, err := time.ParseDuration(connMaxLifetimeStr)
+	if err != nil {
+		log.Warn(ctx, "invalid conn_max_life_time",
+			log.String("conn_max_life_time", connMaxLifetimeStr),
+			log.Err(err))
+		config.DBConfig.ConnMaxLifetime = constant.DBDefaultConnMaxLifetime
+	} else {
+		config.DBConfig.ConnMaxLifetime = connMaxLifetime
+	}
+
+	connMaxIdleTime, err := time.ParseDuration(connMaxIdleTimeStr)
+	if err != nil {
+		log.Warn(ctx, "invalid conn_max_idle_time",
+			log.String("conn_max_idle_time", connMaxIdleTimeStr),
+			log.Err(err))
+	} else {
+		config.DBConfig.ConnMaxIdleTime = connMaxIdleTime
+	}
+
+	slowThreshold, err := time.ParseDuration(slowThresholdStr)
+	if err != nil {
+		log.Warn(ctx, "invalid slow_threshold",
+			log.String("slow_threshold", slowThresholdStr),
+			log.Err(err))
+		config.DBConfig.SlowThreshold = constant.DBDefaultSlowThreshold
+	} else {
+		config.DBConfig.SlowThreshold = slowThreshold
+	}
 }
 
 func loadLiveTokenEnvConfig(ctx context.Context) {
