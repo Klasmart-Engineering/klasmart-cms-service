@@ -8,6 +8,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
@@ -38,7 +39,11 @@ func InitOperator(ctx context.Context, tokenString, orgID string) *entity.Operat
 
 func InitConfig(ctx context.Context) {
 	config.Set(&config.Config{})
+
 	loadDBEnvConfig(ctx)
+	loadAMSConfig()
+	loadAssessmentServiceConfig()
+
 	log.Debug(ctx, "load config success",
 		log.Any("config", config.Get()))
 }
@@ -62,10 +67,10 @@ func InitDB(ctx context.Context) {
 func loadDBEnvConfig(ctx context.Context) {
 	cfg := config.Get()
 	cfg.DBConfig.ConnectionString = assertGetEnv("connection_string")
-	maxOpenConnsStr := assertGetEnv("max_open_conns")
-	maxIdleConnsStr := assertGetEnv("max_idle_conns")
-	showLogStr := assertGetEnv("show_log")
-	showSQLStr := assertGetEnv("show_sql")
+	maxOpenConnsStr := os.Getenv("max_open_conns")
+	maxIdleConnsStr := os.Getenv("max_idle_conns")
+	showLogStr := os.Getenv("show_log")
+	showSQLStr := os.Getenv("show_sql")
 
 	maxOpenConns, err := strconv.Atoi(maxOpenConnsStr)
 	if err != nil {
@@ -103,4 +108,14 @@ func assertGetEnv(key string) string {
 		log.Panic(context.TODO(), "Environment is nil", log.String("key", key))
 	}
 	return value
+}
+
+func loadAMSConfig() {
+	cfg := config.Get()
+	cfg.AMS.EndPoint = os.Getenv("ams_endpoint")
+}
+
+func loadAssessmentServiceConfig() {
+	cfg := config.Get()
+	cfg.H5P.EndPoint = os.Getenv("h5p_endpoint")
 }

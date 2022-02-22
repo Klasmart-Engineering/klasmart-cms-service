@@ -4,14 +4,12 @@ import (
 	"database/sql"
 	"net/http"
 
-	"github.com/dgrijalva/jwt-go"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -184,74 +182,6 @@ func (s *Server) updateAssessment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		log.Info(ctx, "update assessment: update failed")
-		s.defaultErrorHandler(c, err)
-	}
-}
-
-// @Summary add assessments
-// @Description add assessments
-// @Tags assessments
-// @ID addAssessment
-// @Accept json
-// @Produce json
-// @Param assessment body entity.AddClassAndLiveAssessmentArgs true "add assessment command"
-// @Success 200 {object} entity.AddAssessmentResult
-// @Failure 400 {object} BadRequestResponse
-// @Failure 500 {object} InternalServerErrorResponse
-// @Router /assessments [post]
-func (s *Server) addAssessment(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	log.Debug(ctx, "add assessment jwt: call")
-	body := struct {
-		Token string `json:"token"`
-	}{}
-	if err := c.ShouldBind(&body); err != nil {
-		log.Info(ctx, "add assessment jwt: bind failed",
-			log.Err(err),
-		)
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
-
-	log.Info(ctx, "add assessment call back info",
-		log.String("log type", "report"),
-		log.String("token", body.Token),
-		log.String("step", "REPORT step1"))
-
-	args := entity.AddClassAndLiveAssessmentArgs{}
-	if _, err := jwt.ParseWithClaims(body.Token, &args, func(token *jwt.Token) (interface{}, error) {
-		return config.Get().Assessment.AddAssessmentSecret, nil
-	}); err != nil {
-		log.Error(ctx, "add assessment jwt: parse with claims failed",
-			log.Err(err),
-			log.Any("token", body.Token),
-		)
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
-
-	log.Debug(ctx, "add assessment jwt: fill args", log.Any("args", args), log.String("token", body.Token))
-
-	operator := s.getOperator(c)
-	err := model.GetLiveRoomEventBusModel().PubEndClass(ctx, operator, &args)
-	switch err {
-	case nil:
-		log.Debug(ctx, "add assessment jwt: add success",
-			log.Any("args", args),
-		)
-		c.JSON(http.StatusOK, nil)
-	case constant.ErrInvalidArgs:
-		log.Error(ctx, "add assessment jwt: add failed",
-			log.Err(err),
-			log.Any("args", args),
-		)
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	default:
-		log.Error(ctx, "add assessment jwt: add failed",
-			log.Err(err),
-			log.Any("args", args),
-		)
 		s.defaultErrorHandler(c, err)
 	}
 }

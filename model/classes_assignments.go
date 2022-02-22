@@ -10,11 +10,12 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type IClassesAssignments interface {
-	CreateRecord(ctx context.Context, op *entity.Operator, args *entity.AddClassAndLiveAssessmentArgs) error
+	CreateRecord(ctx context.Context, op *entity.Operator, data *v2.ScheduleEndClassCallBackReq) error
 	GetOverview(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentOverViewRequest) ([]*entity.ClassesAssignmentOverView, error)
 	GetStatistic(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentsViewRequest) ([]*entity.ClassesAssignmentsView, error)
 	GetUnattended(ctx context.Context, op *entity.Operator, request *entity.ClassesAssignmentsUnattendedViewRequest) ([]*entity.ClassesAssignmentsUnattendedStudentsView, error)
@@ -28,7 +29,7 @@ var (
 type ClassesAssignmentsModel struct {
 }
 
-func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Operator, data *entity.AddClassAndLiveAssessmentArgs) error {
+func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Operator, data *v2.ScheduleEndClassCallBackReq) error {
 	schedule, err := GetScheduleModel().GetPlainByID(ctx, data.ScheduleID)
 	if err != nil {
 		log.Error(ctx, "CreateRecord: GetPlainByID failed", log.Err(err), log.Any("data", data))
@@ -82,7 +83,7 @@ func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Op
 				ScheduleType:    entity.NewScheduleInReportType(schedule.ClassType, schedule.IsHomeFun),
 				ScheduleStartAt: schedule.StartAt,
 				CreateAt:        time.Now().Unix(),
-				LastEndAt:       data.ClassEndTime,
+				LastEndAt:       data.ClassEndAt,
 			}
 			if schedule.ClassType == entity.ScheduleClassTypeHomework {
 				insert.ScheduleStartAt = schedule.CreatedAt
@@ -101,7 +102,7 @@ func (c ClassesAssignmentsModel) CreateRecord(ctx context.Context, op *entity.Op
 			return err
 		}
 
-		err = da.GetClassesAssignmentsDA().BatchUpdateFinishAndEnd(ctx, tx, schedule.ID, data.AttendanceIDs, data.ClassEndTime)
+		err = da.GetClassesAssignmentsDA().BatchUpdateFinishAndEnd(ctx, tx, schedule.ID, data.AttendanceIDs, data.ClassEndAt)
 		if err != nil {
 			log.Error(ctx, "CreateRecord: BatchUpdateFinish failed",
 				log.Err(err),

@@ -7,15 +7,16 @@ import (
 	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 )
 
 func TestClassesAssignmentsModel_CreateRecord(t *testing.T) {
 	ctx := context.Background()
 	op := initOperator()
-	args := &entity.AddClassAndLiveAssessmentArgs{
+	args := &v2.ScheduleEndClassCallBackReq{
 		ScheduleID:    "612f95c1249ae63b75456a04",
 		AttendanceIDs: []string{"3235698f-3d5b-4a44-b79c-c6df48b3dc29", "be9dbfbe-8437-405d-8e6b-3e18dbb6a349"},
-		ClassEndTime:  time.Now().Unix(),
+		ClassEndAt:    time.Now().Unix(),
 	}
 
 	err := GetClassesAssignmentsModel().CreateRecord(ctx, op, args)
