@@ -606,11 +606,12 @@ type ScheduleUserInput struct {
 }
 
 type ScheduleSearchView struct {
-	ID      string `json:"id"`
-	StartAt int64  `json:"start_at"`
-	EndAt   int64  `json:"end_at"`
-	DueAt   int64  `json:"due_at"`
-	Title   string `json:"title"`
+	ID        string            `json:"id"`
+	StartAt   int64             `json:"start_at"`
+	EndAt     int64             `json:"end_at"`
+	DueAt     int64             `json:"due_at"`
+	Title     string            `json:"title"`
+	ClassType ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
 	ScheduleBasic
 }
 
