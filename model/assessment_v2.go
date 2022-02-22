@@ -545,9 +545,16 @@ func (a *assessmentModelV2) Update(ctx context.Context, op *entity.Operator, sta
 		return constant.ErrInvalidArgs
 	}
 
+	permission := new(AssessmentPermission)
+
+	err := permission.IsAllowEdit(ctx, op)
+	if err != nil {
+		return err
+	}
+
 	now := time.Now().Unix()
 	waitUpdatedAssessment := new(v2.Assessment)
-	err := assessmentV2.GetAssessmentDA().Get(ctx, req.ID, waitUpdatedAssessment)
+	err = assessmentV2.GetAssessmentDA().Get(ctx, req.ID, waitUpdatedAssessment)
 	if err == dbo.ErrRecordNotFound {
 		return constant.ErrRecordNotFound
 	}

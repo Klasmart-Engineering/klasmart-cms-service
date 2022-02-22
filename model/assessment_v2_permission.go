@@ -134,3 +134,20 @@ func (c *AssessmentPermission) SearchAllPermissions(ctx context.Context, op *ent
 
 	return nil
 }
+
+func (c *AssessmentPermission) IsAllowEdit(ctx context.Context, op *entity.Operator) error {
+	isAllow, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.AssessmentEditInProgressAssessment439)
+	if err != nil {
+		log.Error(ctx, "HasP439: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 439 failed",
+			log.Err(err),
+			log.Any("operator", op),
+		)
+		return err
+	}
+	if !isAllow {
+		log.Warn(ctx, "user not has edit permission", log.Any("operator", op), log.String("permission", external.AssessmentEditInProgressAssessment439.String()))
+		return constant.ErrForbidden
+	}
+
+	return nil
+}

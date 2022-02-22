@@ -96,8 +96,15 @@ func (a *assessmentOfflineStudyModel) Complete(ctx context.Context, op *entity.O
 }
 
 func (a *assessmentOfflineStudyModel) update(ctx context.Context, op *entity.Operator, status v2.UserResultProcessStatus, req *v2.OfflineStudyUserResultUpdateReq) error {
+	permission := new(AssessmentPermission)
+
+	err := permission.IsAllowEdit(ctx, op)
+	if err != nil {
+		return err
+	}
+
 	userResult := new(v2.AssessmentReviewerFeedback)
-	err := assessmentV2.GetAssessmentUserResultDA().Get(ctx, req.ID, userResult)
+	err = assessmentV2.GetAssessmentUserResultDA().Get(ctx, req.ID, userResult)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "get assessment user result by id not found", log.Err(err), log.Any("req", req), log.Any("op", op))
 		return constant.ErrRecordNotFound
