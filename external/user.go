@@ -2,6 +2,7 @@ package external
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -32,6 +33,7 @@ type UserServiceProvider interface {
 	NewUser(ctx context.Context, operator *entity.Operator, email string) (string, error)
 	FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error)
 	GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Operator, orgID string) ([]*User, error)
+	GetUserCount(ctx context.Context, op *entity.Operator, cond entity.GetUserCountCondition) (count int, err error)
 }
 
 type User struct {
@@ -70,6 +72,100 @@ func GetUserServiceProvider() UserServiceProvider {
 }
 
 type AmsUserService struct{}
+
+func (s AmsUserService) GetUserCount(ctx context.Context, op *entity.Operator, cond entity.GetUserCountCondition) (count int, err error) {
+	m := map[string]interface{}{}
+	var condFilters []interface{}
+	if cond.OrgID.Valid {
+		condFilters = append(condFilters, map[string]interface{}{
+			"organizationId": map[string]interface{}{
+				"operator": "eq",
+				"value":    cond.OrgID.String,
+			},
+		})
+	}
+	if cond.RoleID.Valid {
+		condFilters = append(condFilters, map[string]interface{}{
+			"roleId": map[string]interface{}{
+				"operator": "eq",
+				"value":    cond.RoleID.String,
+			},
+		})
+	}
+	if cond.SchoolIDs.Valid {
+		var condIDs []interface{}
+		for _, schoolID := range cond.SchoolIDs.Strings {
+			condIDs = append(condIDs, map[string]interface{}{
+				"schoolId": map[string]interface{}{
+					"operator": "eq",
+					"value":    schoolID,
+				},
+			})
+		}
+		condFilters = append(condFilters, map[string]interface{}{
+			"OR": condIDs,
+		})
+	}
+	if cond.ClassIDs.Valid {
+		var condIDs []interface{}
+		for _, id := range cond.ClassIDs.Strings {
+			condIDs = append(condIDs, map[string]interface{}{
+				"classID": map[string]interface{}{
+					"operator": "eq",
+					"value":    id,
+				},
+			})
+		}
+		condFilters = append(condFilters, map[string]interface{}{
+			"OR": condIDs,
+		})
+	}
+
+	m["AND"] = condFilters
+	buf, err := json.Marshal(m)
+	if err != nil {
+		log.Error(ctx, "marshal filter failed", log.Any("filter", m))
+		return
+	}
+	filter := string(buf)
+	log.Info(ctx, "GetUserCount", log.Any("filter", filter))
+	q := `
+query users($filter:UserFilter) {
+  usersConnection(
+    filter:$filter
+    direction:FORWARD
+  ){
+    totalCount    
+  }  
+}
+`
+	request := chlorine.NewRequest(q, chlorine.ReqToken(op.Token))
+	request.Var("filter", filter)
+	data := &struct {
+		UsersConnection struct {
+			TotalCount int `json:"totalCount"`
+		} `json:"usersConnection"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err = GetAmsClient().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "GetRole failed",
+			log.Err(err),
+			log.Any("operator", op),
+			log.Any("filter", filter))
+		err = &entity.ExternalError{
+			Err:  errors.New("response data contains err"),
+			Type: constant.InternalErrorTypeAms,
+		}
+		return
+	}
+	count = data.UsersConnection.TotalCount
+	return
+}
 
 func (s AmsUserService) Get(ctx context.Context, operator *entity.Operator, id string) (*User, error) {
 	users, err := s.BatchGet(ctx, operator, []string{id})
