@@ -68,7 +68,7 @@ and EXISTS (
 select
 user_id as student_id,
 'online_class' as typ,
-sum(if(status_by_system='Participate',1,0))/count(1) as rate 
+{{.sbSelectRate}}
 from assessments_users_v2 
 where assessment_id in({{.sbAssessmentOnlineClass}})
 and user_type ='Student'
@@ -79,7 +79,7 @@ union all
 select
 user_id as student_id,
 'study' as typ,
-sum(if(status_by_system='Participate',1,0))/count(1) as rate 
+{{.sbSelectRate}}
 from assessments_users_v2 
 where assessment_id in({{.sbAssessmentStudy}})
 and user_type ='Student'
