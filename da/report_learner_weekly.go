@@ -71,7 +71,7 @@ user_id as student_id,
 {{.sbSelectRate}}
 from assessments_users_v2 
 where assessment_id in({{.sbAssessmentOnlineClass}})
-and user_type ='Student'
+{{.sbWhereUserType}}
 group by user_id 
 
 union all 
@@ -82,14 +82,16 @@ user_id as student_id,
 {{.sbSelectRate}}
 from assessments_users_v2 
 where assessment_id in({{.sbAssessmentStudy}})
-and user_type ='Student'
+{{.sbWhereUserType}}
 group by user_id 
 `
+	sbWhereUserType := NewSqlBuilder(ctx, "and user_type =?", v2.AssessmentUserTypeStudent)
 	sbSelectRate := NewSqlBuilder(ctx, "sum(if(status_by_system=?,1,0))/count(1) as rate ", v2.AssessmentUserStatusParticipate)
 	sb := NewSqlBuilder(ctx, sql).
 		Replace(ctx, "sbAssessmentOnlineClass", sbAssessmentOnlineClass).
 		Replace(ctx, "sbAssessmentStudy", sbAssessmentStudy).
-		Replace(ctx, "sbSelectRate", sbSelectRate)
+		Replace(ctx, "sbSelectRate", sbSelectRate).
+		Replace(ctx, "sbWhereUserType", sbWhereUserType)
 	sql, args, err := sb.Build(ctx)
 	if err != nil {
 		return
