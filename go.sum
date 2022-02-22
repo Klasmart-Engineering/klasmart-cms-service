@@ -12,8 +12,6 @@ github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578/go.mod h1:uGdko
 github.com/QcloudApi/qcloud_sign_golang v0.0.0-20141224014652-e4130a326409/go.mod h1:1pk82RBxDY/JZnPQrtqHlUFfCctgdorsd9M06fMynOM=
 github.com/Shopify/sarama v1.24.1/go.mod h1:fGP8eQ6PugKEI0iUETYYtnP6d1pH/bdDMTel1X5ajsU=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
-github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 h1:JYp7IbQjafoB+tBA3gMyHYHrpOtNuDiK/uB5uXxq5wM=
-github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/andybalholm/cascadia v1.1.0/go.mod h1:GsXiBklL0woXo1j/WYWtSYYC4ouU9PqHO0sqidkEA4Y=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/aws/aws-lambda-go v1.18.0 h1:13AfxzFoPlFjOzXHbRnKuTbteCzHbu4YQgKONNhWcmo=
@@ -353,8 +351,9 @@ gitlab.badanamu.com.cn/calmisland/common-log v0.1.6/go.mod h1:X3wMC6OgVJ+ZmO4FH+
 gitlab.badanamu.com.cn/calmisland/common-log v0.2.0/go.mod h1:X3wMC6OgVJ+ZmO4FH+nSzubBTkYuWlCeVVwVgu3rLP4=
 gitlab.badanamu.com.cn/calmisland/common-log v0.2.1 h1:VjEgOLO8Do2+ZGlYoLa3i8BZB6OoZTfmDcjnlIAGpFY=
 gitlab.badanamu.com.cn/calmisland/common-log v0.2.1/go.mod h1:DI9dILGSoq7sXGUtF2lnn4NU3CV7cPW2xMCFJCOQv70=
-gitlab.badanamu.com.cn/calmisland/dbo v0.3.3 h1:ef449wE5voUrEQRFN4dEkgRh4sb2Dy7EFLcG6BLLBfA=
 gitlab.badanamu.com.cn/calmisland/dbo v0.3.3/go.mod h1:GZD2cV1ls+kKRDvRld5FweJ2QJ8zN9OjCPsmDYqiY7I=
+gitlab.badanamu.com.cn/calmisland/dbo v0.4.0 h1:SfSQ3eaH93nVrTMa4pnhX1cKocvZuAq9ri9BnFDZdkQ=
+gitlab.badanamu.com.cn/calmisland/dbo v0.4.0/go.mod h1:GZD2cV1ls+kKRDvRld5FweJ2QJ8zN9OjCPsmDYqiY7I=
 gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13 h1:HpobiNbKIrm2oPaHPnUzMIP9kcbXTFxnWkJPA3etIDo=
 gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13/go.mod h1:F55wOSQZy1MNmhVZJsHRlnIDkqDtireSDdgbhXwC0Lw=
 gitlab.badanamu.com.cn/calmisland/imq v0.2.18 h1:QqF9DBu+SLFN6jGRtrir1eb6ky8oiAhuTqMGV1cXX7U=

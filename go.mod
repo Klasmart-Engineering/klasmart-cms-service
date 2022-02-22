@@ -3,7 +3,6 @@ module gitlab.badanamu.com.cn/calmisland/kidsloop2
 go 1.17
 
 require (
-	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/aws/aws-sdk-go v1.35.23
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-contrib/cors v1.3.1
@@ -25,7 +24,7 @@ require (
 	gitlab.badanamu.com.cn/calmisland/chlorine v0.2.0
 	gitlab.badanamu.com.cn/calmisland/common-cn v0.17.0
 	gitlab.badanamu.com.cn/calmisland/common-log v0.2.1
-	gitlab.badanamu.com.cn/calmisland/dbo v0.3.3
+	gitlab.badanamu.com.cn/calmisland/dbo v0.4.0
 	gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13
 	gitlab.badanamu.com.cn/calmisland/imq v0.2.18
 	gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.15
