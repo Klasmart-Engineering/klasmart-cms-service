@@ -568,7 +568,9 @@ func (apc *AssessmentPageComponent) MatchLessPlan() error {
 	apc.assLessPlanMap = make(map[string]*v2.AssessmentContentView, len(apc.assessments))
 	for _, item := range apc.assessments {
 		if schedule, ok := scheduleMap[item.ScheduleID]; ok {
-			apc.assLessPlanMap[item.ID] = lessPlanMap[schedule.LessonPlanID]
+			if lessPlanItem, ok := lessPlanMap[schedule.LessonPlanID]; ok && lessPlanItem != nil {
+				apc.assLessPlanMap[item.ID] = lessPlanItem
+			}
 		}
 	}
 
