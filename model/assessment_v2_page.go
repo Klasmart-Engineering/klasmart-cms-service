@@ -286,7 +286,7 @@ func (apc *AssessmentPageComponent) GetLessPlanMap() (map[string]*v2.AssessmentC
 
 	lessPlanIDs := utils.SliceDeduplicationExcludeEmpty(attemptedLessPlanIDs)
 
-	lessPlans, err := GetContentModel().GetContentNameByIDList(ctx, tx, lessPlanIDs)
+	lessPlans, err := GetContentModel().GetContentNameByIDListInternal(ctx, tx, lessPlanIDs)
 	if err != nil {
 		log.Error(ctx, "get content by ids error", log.Err(err), log.Strings("lessPlanIDs", lessPlanIDs))
 		return nil, err
