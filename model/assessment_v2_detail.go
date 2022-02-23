@@ -207,6 +207,7 @@ func (adc *AssessmentDetailComponent) getLatestContents(schedule *entity.Schedul
 		return err
 	}
 	if len(latestLessPlanIDs) <= 0 {
+
 		return constant.ErrRecordNotFound
 	}
 
@@ -372,6 +373,7 @@ func (adc *AssessmentDetailComponent) GetOutcomeMap() (map[string]*v2.Assessment
 	adc.outcomeMapFromContent = make(map[string]*v2.AssessmentOutcomeReply, len(outcomes))
 
 	for _, item := range outcomes {
+
 		adc.outcomeMapFromContent[item.ID] = &v2.AssessmentOutcomeReply{
 			OutcomeID:          item.ID,
 			OutcomeName:        item.Name,

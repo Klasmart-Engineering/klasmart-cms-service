@@ -2048,17 +2048,17 @@ func (cm *ContentModel) GetLatestContentIDByIDList(ctx context.Context, tx *dbo.
 	if len(cids) < 1 {
 		return nil, nil
 	}
-	resp := make([]string, len(cids))
+	resp := make([]string, 0, len(cids))
 	data, err := da.GetContentDA().GetContentByIDList(ctx, tx, cids)
 	if err != nil {
 		log.Error(ctx, "can't search content", log.Err(err), log.Strings("cids", cids))
 		return nil, ErrReadContentFailed
 	}
-	for i := range data {
-		if data[i].LatestID != "" {
-			resp[i] = data[i].LatestID
+	for _, item := range data {
+		if item.LatestID != "" {
+			resp = append(resp, item.LatestID)
 		} else {
-			resp[i] = data[i].ID
+			resp = append(resp, item.ID)
 		}
 	}
 	return resp, nil
