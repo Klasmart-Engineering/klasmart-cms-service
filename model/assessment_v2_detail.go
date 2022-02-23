@@ -124,11 +124,11 @@ func (adc *AssessmentDetailComponent) GetRoomData() (*RoomInfo, error) {
 
 func (adc *AssessmentDetailComponent) getContentOutcomeIDsMap(contentIDs []string) (map[string][]string, error) {
 	ctx := adc.ctx
-	op := adc.op
+	//op := adc.op
 
 	contentIDs = utils.SliceDeduplication(contentIDs)
 
-	contents, err := GetContentModel().GetContentByIDList(ctx, dbo.MustGetDB(ctx), contentIDs, op)
+	contents, err := GetContentModel().GetContentNameByIDListInternal(ctx, dbo.MustGetDB(ctx), contentIDs)
 	if err != nil {
 		log.Error(ctx, "toViews: GetContentModel().GetContentByIDList: get failed",
 			log.Err(err),
@@ -138,7 +138,7 @@ func (adc *AssessmentDetailComponent) getContentOutcomeIDsMap(contentIDs []strin
 	}
 	result := make(map[string][]string, len(contents))
 	for _, item := range contents {
-		result[item.ID] = item.Outcomes
+		result[item.ID] = item.OutcomeIDs
 	}
 
 	return result, nil
@@ -202,7 +202,7 @@ func (adc *AssessmentDetailComponent) getLatestContents(schedule *entity.Schedul
 	ctx := adc.ctx
 	op := adc.op
 
-	latestLessPlanIDs, err := GetContentModel().GetLatestContentIDByIDList(ctx, dbo.MustGetDB(ctx), []string{schedule.LessonPlanID})
+	latestLessPlanIDs, err := GetContentModel().GetLatestContentIDByIDListInternal(ctx, dbo.MustGetDB(ctx), []string{schedule.LessonPlanID})
 	if err != nil {
 		return err
 	}
@@ -210,15 +210,21 @@ func (adc *AssessmentDetailComponent) getLatestContents(schedule *entity.Schedul
 		return constant.ErrRecordNotFound
 	}
 
-	latestLessPlan, err := GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), latestLessPlanIDs[0])
+	latestLessPlans, err := GetContentModel().GetContentNameByIDListInternal(ctx, dbo.MustGetDB(ctx), latestLessPlanIDs)
+	if err != nil {
+		return err
+	}
+	if len(latestLessPlans) <= 0 {
+		return constant.ErrRecordNotFound
+	}
+
+	subContentsMap, err := GetContentModel().GetContentsSubContentsMapByIDListInternal(ctx, dbo.MustGetDB(ctx), latestLessPlanIDs, op)
 	if err != nil {
 		return err
 	}
 
-	subContents, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), latestLessPlan.ID, op, true)
-	if err != nil {
-		return err
-	}
+	latestLessPlan := latestLessPlans[0]
+	subContents := subContentsMap[latestLessPlan.ID]
 
 	lessPlan := &v2.AssessmentContentView{
 		ID:          latestLessPlan.ID,
@@ -372,6 +378,7 @@ func (adc *AssessmentDetailComponent) GetOutcomeMap() (map[string]*v2.Assessment
 	adc.outcomeMapFromContent = make(map[string]*v2.AssessmentOutcomeReply, len(outcomes))
 
 	for _, item := range outcomes {
+
 		adc.outcomeMapFromContent[item.ID] = &v2.AssessmentOutcomeReply{
 			OutcomeID:          item.ID,
 			OutcomeName:        item.Name,

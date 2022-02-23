@@ -164,8 +164,10 @@ func (apc *AssessmentPageComponent) GetAssessmentUserMap() (map[string][]*v2.Ass
 	ctx := apc.ctx
 
 	assessmentIDs := make([]string, len(apc.assessments))
+	assessmentMap := make(map[string]*v2.Assessment)
 	for i, item := range apc.assessments {
 		assessmentIDs[i] = item.ID
+		assessmentMap[item.ID] = item
 	}
 
 	var assessmentUsers []*v2.AssessmentUser
@@ -180,6 +182,17 @@ func (apc *AssessmentPageComponent) GetAssessmentUserMap() (map[string][]*v2.Ass
 	}
 
 	for _, item := range assessmentUsers {
+		assessmentItem, ok := assessmentMap[item.AssessmentID]
+		if !ok {
+			log.Warn(ctx, "assessment not found", log.Any("assessmentUsers", item), log.Any("assessmentMap", assessmentMap))
+			continue
+		}
+
+		if assessmentItem.AssessmentType == v2.AssessmentTypeOnlineClass &&
+			item.UserType == v2.AssessmentUserTypeStudent &&
+			item.StatusBySystem == v2.AssessmentUserStatusNotParticipate {
+			continue
+		}
 		apc.assessmentUserMap[item.AssessmentID] = append(apc.assessmentUserMap[item.AssessmentID], item)
 	}
 
@@ -273,7 +286,7 @@ func (apc *AssessmentPageComponent) GetLessPlanMap() (map[string]*v2.AssessmentC
 
 	lessPlanIDs := utils.SliceDeduplicationExcludeEmpty(attemptedLessPlanIDs)
 
-	lessPlans, err := GetContentModel().GetContentNameByIDList(ctx, tx, lessPlanIDs)
+	lessPlans, err := GetContentModel().GetContentNameByIDListInternal(ctx, tx, lessPlanIDs)
 	if err != nil {
 		log.Error(ctx, "get content by ids error", log.Err(err), log.Strings("lessPlanIDs", lessPlanIDs))
 		return nil, err
