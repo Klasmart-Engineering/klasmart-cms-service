@@ -20,7 +20,7 @@ import (
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/learner_weekly_overview [post]
+// @Router /reports/learner_weekly_overview [get]
 func (s *Server) getLearnerWeeklyReportOverview(c *gin.Context) {
 	ctx := c.Request.Context()
 	var err error
