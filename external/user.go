@@ -2,7 +2,6 @@ package external
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -74,7 +73,7 @@ func GetUserServiceProvider() UserServiceProvider {
 type AmsUserService struct{}
 
 func (s AmsUserService) GetUserCount(ctx context.Context, op *entity.Operator, cond entity.GetUserCountCondition) (count int, err error) {
-	m := map[string]interface{}{}
+	mFilter := map[string]interface{}{}
 	var condFilters []interface{}
 	if cond.OrgID.Valid {
 		condFilters = append(condFilters, map[string]interface{}{
@@ -121,14 +120,8 @@ func (s AmsUserService) GetUserCount(ctx context.Context, op *entity.Operator, c
 		})
 	}
 
-	m["AND"] = condFilters
-	buf, err := json.Marshal(m)
-	if err != nil {
-		log.Error(ctx, "marshal filter failed", log.Any("filter", m))
-		return
-	}
-	filter := string(buf)
-	log.Info(ctx, "GetUserCount", log.Any("filter", filter))
+	mFilter["AND"] = condFilters
+	log.Info(ctx, "GetUserCount", log.Any("filter", mFilter))
 	q := `
 query users($filter:UserFilter) {
   usersConnection(
@@ -140,7 +133,7 @@ query users($filter:UserFilter) {
 }
 `
 	request := chlorine.NewRequest(q, chlorine.ReqToken(op.Token))
-	request.Var("filter", filter)
+	request.Var("filter", mFilter)
 	data := &struct {
 		UsersConnection struct {
 			TotalCount int `json:"totalCount"`
@@ -156,7 +149,7 @@ query users($filter:UserFilter) {
 		log.Error(ctx, "GetRole failed",
 			log.Err(err),
 			log.Any("operator", op),
-			log.Any("filter", filter))
+			log.Any("filter", mFilter))
 		err = &entity.ExternalError{
 			Err:  errors.New("response data contains err"),
 			Type: constant.InternalErrorTypeAms,
