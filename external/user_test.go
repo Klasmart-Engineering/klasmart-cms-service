@@ -2,24 +2,34 @@ package external
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
-func TestAmsUserService_FilterByPermission(t *testing.T) {
-	ids := []string{"f2626a21-3e98-517d-ac4a-ed6f33231869", "0a6091d7-1014-595d-abbf-dad456692d15"}
-	want := []string{"f2626a21-3e98-517d-ac4a-ed6f33231869"}
-	filtered, err := GetUserServiceProvider().FilterByPermission(context.TODO(), testOperator, ids, CreateContentPage201)
+func TestAmsUserService_QueryByIDs(t *testing.T) {
+	ids := []string{
+		"fda18438-a998-48d2-b3fa-7be85707716f",
+		"fe225a37-ee64-4ed2-969e-8846dad568e7",
+		"f82b4f73-44de-4b16-9abc-be11d0fed30c",
+		"cdc2cac4-10c4-4989-b39b-7c7867abee5d",
+		"cccccccc-cccc-cccc-cccc-cccccccccccc"}
+	users, err := GetUserServiceProvider().QueryByIDs(context.TODO(), ids, testOperator)
 	if err != nil {
-		t.Errorf("GetUserServiceProvider().FilterByPermission() error = %v", err)
+		t.Errorf("GetUserServiceProvider().QueryByIDs() error = %v", err)
 		return
 	}
 
-	if !reflect.DeepEqual(filtered, want) {
-		t.Errorf("GetUserServiceProvider().FilterByPermission() want %+v results got %+v", want, filtered)
+	if len(users) != len(ids) {
+		t.Errorf("GetUserServiceProvider().QueryByIDs() want %d results got %d", len(ids), len(users))
 		return
+	}
+
+	for _, subject := range users {
+		if subject == nil {
+			t.Error("GetUserServiceProvider().QueryByIDs() get null")
+			return
+		}
 	}
 }
 

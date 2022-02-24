@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
-
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -81,7 +80,7 @@ func (s AmsProgramService) QueryByIDs(ctx context.Context, ids []string, options
 
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$program_id_", ": ID!", len(_ids)))
 	for index := range _ids {
-		fmt.Fprintf(sb, "q%d: program(id: $program_id_%d) {id name status system}\n", index, index)
+		fmt.Fprintf(sb, "q%d: programNode(id: $program_id_%d) {id name status system}\n", index, index)
 	}
 	sb.WriteString("}")
 
@@ -159,6 +158,7 @@ func (s AmsProgramService) BatchGetNameMap(ctx context.Context, operator *entity
 func (s AmsProgramService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Program, error) {
 	condition := NewCondition(options...)
 
+	// TODO: replace by programConnection
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {
