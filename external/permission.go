@@ -3,7 +3,9 @@ package external
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"text/template"
@@ -13,6 +15,11 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"gitlab.badanamu.com.cn/calmisland/ro"
+)
+
+const (
+	RedisKeyPrefixOrgPermission = "org_permission"
 )
 
 type PermissionServiceProvider interface {
@@ -43,6 +50,32 @@ type AmsPermissionService struct {
 }
 
 func (s AmsPermissionService) HasOrganizationPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) (bool, error) {
+	// get permission from cache
+	cacheExist, permissionMap, err := s.getOrganizationPermissionCache(ctx, operator.UserID, operator.OrgID, []PermissionName{permissionName})
+	if err == nil && cacheExist {
+		log.Debug(ctx, "permission cache hit",
+			log.Any("operator", operator),
+			log.Any("permissionName", permissionName))
+		return permissionMap[permissionName], nil
+	} else if err == nil && !cacheExist {
+		permissionMap, err := s.hasOrganizationPermissions(ctx, operator, AllPermissionNames)
+		if err != nil {
+			log.Error(ctx, "s.hasOrganizationPermissions error",
+				log.Any("operator", operator),
+				log.Any("permissionName", permissionName),
+				log.Any("allPermissionNames", AllPermissionNames))
+		} else {
+			err := s.setOrganizationPermissionCache(ctx, operator.UserID, operator.OrgID, permissionMap)
+			log.Debug(ctx, "s.setOrganizationPermissionCache result", log.Err(err))
+			return permissionMap[permissionName], nil
+		}
+	} else {
+		log.Error(ctx, "s.getOrganizationPermissionCache error",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("permissionName", permissionName))
+	}
+
 	request := chlorine.NewRequest(`
 	query(
 		$user_id: ID! 
@@ -71,7 +104,7 @@ func (s AmsPermissionService) HasOrganizationPermission(ctx context.Context, ope
 		Data: data,
 	}
 
-	_, err := GetAmsClient().Run(ctx, request, response)
+	_, err = GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "check user org permission failed",
 			log.Err(err),
@@ -138,6 +171,32 @@ func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, operator 
 
 //TODO:No Test Program
 func (s AmsPermissionService) HasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissionNames []PermissionName) (map[PermissionName]bool, error) {
+	// get permission from cache
+	cacheExist, permissionMap, err := s.getOrganizationPermissionCache(ctx, operator.UserID, operator.OrgID, permissionNames)
+	if err == nil && cacheExist {
+		log.Debug(ctx, "permission cache hit",
+			log.Any("operator", operator),
+			log.Any("permissionNames", permissionNames))
+		return permissionMap, nil
+	} else if err == nil && !cacheExist {
+		permissionMap, err := s.hasOrganizationPermissions(ctx, operator, AllPermissionNames)
+		if err != nil {
+			log.Error(ctx, "s.hasOrganizationPermissions error",
+				log.Any("operator", operator),
+				log.Any("permissionNames", permissionNames),
+				log.Any("allPermissionNames", AllPermissionNames))
+		} else {
+			err := s.setOrganizationPermissionCache(ctx, operator.UserID, operator.OrgID, permissionMap)
+			log.Debug(ctx, "s.setOrganizationPermissionCache result", log.Err(err))
+			return permissionMap, nil
+		}
+	} else {
+		log.Error(ctx, "s.getOrganizationPermissionCache error",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("permissionNames", permissionNames))
+	}
+
 	if len(permissionNames) == 0 {
 		return map[PermissionName]bool{}, nil
 	}
@@ -176,7 +235,7 @@ func (s AmsPermissionService) HasOrganizationPermissions(ctx context.Context, op
 		}{Membership: data}},
 	}
 
-	_, err := GetAmsClient().Run(ctx, request, response)
+	_, err = GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "check org permissions success failed", log.Err(err), log.Any("permissionNames", permissionNames))
 		return nil, err
@@ -324,4 +383,144 @@ query($user_id: ID!, $permission: ID!) {
 		}
 	}
 	return false, nil
+}
+
+func (s AmsPermissionService) hasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissionNames []PermissionName) (map[PermissionName]bool, error) {
+	if len(permissionNames) == 0 {
+		return map[PermissionName]bool{}, nil
+	}
+
+	pns := make([]string, len(permissionNames))
+	for index, permissionName := range permissionNames {
+		pns[index] = permissionName.String()
+	}
+
+	_permissionNames, indexMapping := utils.SliceDeduplicationMap(pns)
+
+	sb := new(strings.Builder)
+	fmt.Fprintf(sb, "query($user_id: ID! $organization_id: ID! %s) {user(user_id: $user_id) {membership(organization_id: $organization_id) {",
+		utils.StringCountRange(ctx, "$permission_name_", ": ID!", len(_permissionNames)))
+
+	for index := range _permissionNames {
+		fmt.Fprintf(sb, "q%d: checkAllowed(permission_name: $permission_name_%d)\n", index, index)
+	}
+	sb.WriteString("}}}")
+
+	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+	request.Var("user_id", operator.UserID)
+	request.Var("organization_id", operator.OrgID)
+	for index, id := range _permissionNames {
+		request.Var(fmt.Sprintf("permission_name_%d", index), id)
+	}
+
+	data := make(map[PermissionName]bool, len(permissionNames))
+	response := &chlorine.Response{
+		Data: &struct {
+			User struct {
+				Membership map[PermissionName]bool `json:"membership"`
+			} `json:"user"`
+		}{struct {
+			Membership map[PermissionName]bool `json:"membership"`
+		}{Membership: data}},
+	}
+
+	_, err := GetAmsClient().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "check org permissions success failed", log.Err(err), log.Any("permissionNames", permissionNames))
+		return nil, err
+	}
+
+	permissions := make(map[PermissionName]bool, len(data))
+	for index, permissionName := range permissionNames {
+		permissions[permissionName] = data[PermissionName(fmt.Sprintf("q%d", indexMapping[index]))]
+	}
+
+	log.Info(ctx, "check org permissions success",
+		log.Any("operator", operator),
+		log.Any("permissionNames", permissionNames),
+		log.Any("permissions", permissions))
+
+	return permissions, nil
+}
+
+func (s AmsPermissionService) getOrganizationPermissionCache(ctx context.Context, userID, orgID string, permissionNames []PermissionName) (bool, map[PermissionName]bool, error) {
+	if !config.Get().RedisConfig.OpenCache {
+		log.Error(ctx, "redis cache is not open")
+		return false, nil, errors.New("redis cache is not open")
+	}
+
+	key := fmt.Sprintf("%s:%s:%s", RedisKeyPrefixOrgPermission, orgID, userID)
+	fields := make([]string, len(permissionNames))
+	for i, permissionName := range permissionNames {
+		fields[i] = string(permissionName)
+	}
+
+	redisClient := ro.MustGetRedis(ctx)
+	pipe := redisClient.TxPipeline()
+	exist := pipe.Exists(key)
+	r := pipe.HMGet(key, fields...)
+	_, err := pipe.Exec()
+	if err != nil {
+		log.Error(ctx, "failed to exec redis pipeline",
+			log.Err(err),
+			log.String("key", key),
+			log.Strings("fields", fields),
+		)
+		return false, nil, err
+	}
+
+	// key not exist
+	if exist.Val() == int64(0) {
+		return false, nil, nil
+	}
+
+	result := make(map[PermissionName]bool, len(permissionNames))
+	res := r.Val()
+	for i, v := range res {
+		resStr, ok := v.(string)
+		if !ok {
+			log.Warn(ctx, "invalid data from cache", log.Any("res", res), log.Any("permissionNames", permissionNames))
+		}
+
+		allowed, err := strconv.ParseBool(resStr)
+		if err != nil {
+			log.Warn(ctx, "strconv.ParseBool error",
+				log.Err(err),
+				log.String("resStr", resStr))
+		}
+
+		result[permissionNames[i]] = allowed
+	}
+
+	return true, result, nil
+}
+
+func (s AmsPermissionService) setOrganizationPermissionCache(ctx context.Context, userID, orgID string, permissionMap map[PermissionName]bool) error {
+	if !config.Get().RedisConfig.OpenCache {
+		log.Error(ctx, "redis cache is not open")
+		return errors.New("redis cache is not open")
+	}
+
+	key := fmt.Sprintf("%s:%s:%s", RedisKeyPrefixOrgPermission, orgID, userID)
+	fields := make(map[string]interface{}, len(permissionMap))
+	for k, v := range permissionMap {
+		fields[string(k)] = v
+	}
+
+	redisClient := ro.MustGetRedis(ctx)
+	pipe := redisClient.TxPipeline()
+
+	pipe.HMSet(key, fields)
+	pipe.Expire(key, config.Get().User.PermissionCacheExpiration)
+	_, err := pipe.Exec()
+	if err != nil {
+		log.Error(ctx, "failed to exec redis pipeline",
+			log.Err(err),
+			log.String("key", key),
+			log.Any("fields", fields),
+			log.Duration("expiration", config.Get().User.PermissionCacheExpiration))
+		return err
+	}
+
+	return nil
 }

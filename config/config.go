@@ -157,7 +157,8 @@ type TencentSmsConfig struct {
 }
 
 type UserConfig struct {
-	CacheExpiration time.Duration `json:"cache_expiration" yaml:"cache_expiration"`
+	CacheExpiration           time.Duration `json:"cache_expiration" yaml:"cache_expiration"`
+	PermissionCacheExpiration time.Duration `json:"permission_cache_expiration" yaml:"permission_cache_expiration"`
 }
 
 type ReportConfig struct {
@@ -505,6 +506,13 @@ func loadUserConfig(ctx context.Context) {
 		config.User.CacheExpiration = constant.UserDefaultCacheExpiration
 	} else {
 		config.User.CacheExpiration = cacheExpiration
+	}
+
+	permissionCacheExpiration, err := time.ParseDuration(os.Getenv("user_permission_cache_expiration"))
+	if err != nil {
+		config.User.PermissionCacheExpiration = constant.UserPermissionDefaultCacheExpiration
+	} else {
+		config.User.PermissionCacheExpiration = permissionCacheExpiration
 	}
 }
 

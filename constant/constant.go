@@ -150,7 +150,8 @@ const (
 )
 
 const (
-	UserDefaultCacheExpiration = 4 * time.Hour
+	UserDefaultCacheExpiration           = 4 * time.Hour
+	UserPermissionDefaultCacheExpiration = 15 * time.Minute
 )
 
 const (
