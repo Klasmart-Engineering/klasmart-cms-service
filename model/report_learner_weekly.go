@@ -85,8 +85,8 @@ queryAttendance:
 	if err != nil {
 		return
 	}
-	res.BelowExpectation = r.BelowExpectation
-	res.MeetExpectation = r.MeetExpectation
+	res.NumBelow = r.NumBelow
+	res.NumMeet = r.NumMeet
 	res.NumAbove = r.NumAbove
 	return
 }
