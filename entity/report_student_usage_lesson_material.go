@@ -176,3 +176,14 @@ func (cus ContentUsageSlice) FillZeroItems(trs []TimeRange, contentTypeList []st
 	}
 	return cus
 }
+
+type LearnerWeeklyReportOverview struct {
+	Attendees int `json:"attendees"`
+	// num of above student
+	NumAbove int `json:"num_above"`
+	// num of meet student
+	NumMeet int `json:"num_meet"`
+	// num of below student
+	NumBelow int                                        `json:"num_below"`
+	Status   constant.LearnerWeeklyReportOverviewStatus `json:"status"`
+}

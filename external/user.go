@@ -30,6 +30,7 @@ type UserServiceProvider interface {
 	GetByOrganization(ctx context.Context, operator *entity.Operator, organizationID string) ([]*User, error)
 	NewUser(ctx context.Context, operator *entity.Operator, email string) (string, error)
 	GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Operator, orgID string) ([]*User, error)
+	GetUserCount(ctx context.Context, op *entity.Operator, cond entity.GetUserCountCondition) (count int, err error)
 }
 
 type User struct {
@@ -67,6 +68,94 @@ func GetUserServiceProvider() UserServiceProvider {
 }
 
 type AmsUserService struct{}
+
+func (s AmsUserService) GetUserCount(ctx context.Context, op *entity.Operator, cond entity.GetUserCountCondition) (count int, err error) {
+	mFilter := map[string]interface{}{}
+	var condFilters []interface{}
+	if cond.OrgID.Valid {
+		condFilters = append(condFilters, map[string]interface{}{
+			"organizationId": map[string]interface{}{
+				"operator": "eq",
+				"value":    cond.OrgID.String,
+			},
+		})
+	}
+	if cond.RoleID.Valid {
+		condFilters = append(condFilters, map[string]interface{}{
+			"roleId": map[string]interface{}{
+				"operator": "eq",
+				"value":    cond.RoleID.String,
+			},
+		})
+	}
+	if cond.SchoolIDs.Valid {
+		var condIDs []interface{}
+		for _, schoolID := range cond.SchoolIDs.Strings {
+			condIDs = append(condIDs, map[string]interface{}{
+				"schoolId": map[string]interface{}{
+					"operator": "eq",
+					"value":    schoolID,
+				},
+			})
+		}
+		condFilters = append(condFilters, map[string]interface{}{
+			"OR": condIDs,
+		})
+	}
+	if cond.ClassIDs.Valid {
+		var condIDs []interface{}
+		for _, id := range cond.ClassIDs.Strings {
+			condIDs = append(condIDs, map[string]interface{}{
+				"classId": map[string]interface{}{
+					"operator": "eq",
+					"value":    id,
+				},
+			})
+		}
+		condFilters = append(condFilters, map[string]interface{}{
+			"OR": condIDs,
+		})
+	}
+
+	mFilter["AND"] = condFilters
+	log.Info(ctx, "GetUserCount", log.Any("filter", mFilter))
+	q := `
+query users($filter:UserFilter) {
+  usersConnection(
+    filter:$filter
+    direction:FORWARD
+  ){
+    totalCount    
+  }  
+}
+`
+	request := chlorine.NewRequest(q, chlorine.ReqToken(op.Token))
+	request.Var("filter", mFilter)
+	data := &struct {
+		UsersConnection struct {
+			TotalCount int `json:"totalCount"`
+		} `json:"usersConnection"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err = GetAmsClient().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "GetRole failed",
+			log.Err(err),
+			log.Any("operator", op),
+			log.Any("filter", mFilter))
+		err = &entity.ExternalError{
+			Err:  errors.New("response data contains err"),
+			Type: constant.InternalErrorTypeAms,
+		}
+		return
+	}
+	count = data.UsersConnection.TotalCount
+	return
+}
 
 func (s AmsUserService) Get(ctx context.Context, operator *entity.Operator, id string) (*User, error) {
 	users, err := s.BatchGet(ctx, operator, []string{id})

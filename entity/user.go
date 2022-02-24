@@ -30,3 +30,11 @@ func (User) TableName() string {
 func (user User) GetID() interface{} {
 	return user.UserID
 }
+
+type GetUserCountCondition struct {
+	OrgID     NullString
+	RoleID    NullString
+	SchoolIDs NullStrings
+	ClassIDs  NullStrings
+	StudentID NullString
+}

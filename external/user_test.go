@@ -3,6 +3,8 @@ package external
 import (
 	"context"
 	"testing"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 func TestAmsUserService_QueryByIDs(t *testing.T) {
@@ -29,4 +31,19 @@ func TestAmsUserService_QueryByIDs(t *testing.T) {
 			return
 		}
 	}
+}
+
+func TestAmsUserService_GetUserCount(t *testing.T) {
+	ctx := context.Background()
+	GetUserServiceProvider().GetUserCount(ctx, testOperator, entity.GetUserCountCondition{
+		OrgID: entity.NullString{
+			String: "60c064cc-bbd8-4724-b3f6-b886dce4774f",
+			Valid:  true,
+		},
+		RoleID: entity.NullString{
+			String: "913995b6-d4a9-4797-a1f0-1b4035da2a4b",
+			Valid:  true,
+		},
+	})
+
 }
