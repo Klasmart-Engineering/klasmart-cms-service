@@ -87,6 +87,6 @@ queryAttendance:
 	}
 	res.BelowExpectation = r.BelowExpectation
 	res.MeetExpectation = r.MeetExpectation
-	res.AboveExpectation = r.AboveExpectation
+	res.NumAbove = r.NumAbove
 	return
 }

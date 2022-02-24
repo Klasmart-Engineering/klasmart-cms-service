@@ -131,9 +131,6 @@ group by user_id
 		m[item.StudentID] = append(m[item.StudentID], item.Rate)
 	}
 
-	var numAbove float64
-	var numBelow float64
-	var numMeet float64
 	for _, rates := range m {
 		var rate0 float64
 		var rate1 float64
@@ -148,15 +145,12 @@ group by user_id
 		}
 
 		if rate0 >= 0.8 && rate1 >= 0.8 {
-			numAbove++
+			res.NumAbove++
 		} else if rate0 < 0.49 && rate1 < 0.49 {
-			numBelow++
+			res.NumBelow++
 		} else {
-			numMeet++
+			res.NumMeet++
 		}
 	}
-	res.AboveExpectation = numAbove / (numAbove + numBelow + numMeet)
-	res.BelowExpectation = numBelow / (numAbove + numBelow + numMeet)
-	res.MeetExpectation = numMeet / (numAbove + numBelow + numMeet)
 	return
 }
