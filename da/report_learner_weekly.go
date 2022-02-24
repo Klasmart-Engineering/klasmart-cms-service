@@ -39,6 +39,7 @@ and EXISTS (
 	select * from schedules_relations sr 
 	where sr.relation_type = ? 
 	and sr.relation_id in (?)	
+	and sr.schedule_id = s.id 
 )`)
 		argsSchedule = append(argsSchedule, entity.ScheduleRelationTypeSchool, cond.SchoolIDs.Strings)
 	}
@@ -48,6 +49,7 @@ and EXISTS (
 	select * from schedules_relations sr 
 	where sr.relation_type = ? 
 	and sr.relation_id in (?)	
+	and sr.schedule_id = s.id 
 )`)
 		argsSchedule = append(argsSchedule, entity.ScheduleRelationTypeClassRosterClass, cond.ClassIDs.Strings)
 	}
@@ -57,6 +59,7 @@ and EXISTS (
 	select * from schedules_relations sr 
 	where sr.relation_type = ? 
 	and sr.relation_id in (?)	
+	and sr.schedule_id = s.id
 )`)
 		argsSchedule = append(argsSchedule, entity.ScheduleRelationTypeClassRosterStudent, cond.StudentID.String)
 	}
