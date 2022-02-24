@@ -81,6 +81,7 @@ user_id as student_id,
 from assessments_users_v2 
 where assessment_id in({{.sbAssessmentOnlineClass}})
 {{.sbWhereUserType}}
+{{.sbWhereUserID}}
 group by user_id 
 
 union all 
@@ -92,15 +93,21 @@ user_id as student_id,
 from assessments_users_v2 
 where assessment_id in({{.sbAssessmentStudy}})
 {{.sbWhereUserType}}
+{{.sbWhereUserID}}
 group by user_id 
 `
 	sbWhereUserType := NewSqlBuilder(ctx, "and user_type =?", v2.AssessmentUserTypeStudent)
+	sbWhereUserID := NewSqlBuilder(ctx, "")
+	if cond.StudentID.Valid {
+		sbWhereUserID = NewSqlBuilder(ctx, "and user_id =?", cond.StudentID.String)
+	}
 	sbSelectRate := NewSqlBuilder(ctx, "sum(if(status_by_system=?,1,0))/count(1) as rate ", v2.AssessmentUserStatusParticipate)
 	sb := NewSqlBuilder(ctx, sql).
 		Replace(ctx, "sbAssessmentOnlineClass", sbAssessmentOnlineClass).
 		Replace(ctx, "sbAssessmentStudy", sbAssessmentStudy).
 		Replace(ctx, "sbSelectRate", sbSelectRate).
-		Replace(ctx, "sbWhereUserType", sbWhereUserType)
+		Replace(ctx, "sbWhereUserType", sbWhereUserType).
+		Replace(ctx, "sbWhereUserID", sbWhereUserID)
 	sql, args, err := sb.Build(ctx)
 	if err != nil {
 		return
@@ -120,6 +127,7 @@ group by user_id
 	}
 	m := map[string][]float64{}
 	for _, item := range *ret {
+
 		m[item.StudentID] = append(m[item.StudentID], item.Rate)
 	}
 
