@@ -8,3 +8,9 @@ var (
 	ReportClassTypeStudy   ReportClassType = "study"
 	ReportClassTypeHomeFun ReportClassType = "home_fun"
 )
+
+type LearnerWeeklyReportOverviewStatus string
+
+const (
+	LearnerWeeklyReportOverviewStatusNoData LearnerWeeklyReportOverviewStatus = "NoData"
+)

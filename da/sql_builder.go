@@ -30,6 +30,14 @@ func (sb *sqlBuilder) Build(ctx context.Context) (sql string, args []interface{}
 
 	reg := regexp.MustCompile(`\{\{\.([A-Za-z0-9_]+)\}\}`)
 	plKeys := reg.FindAllStringSubmatch(sb.Sql, -1)
+	if len(plKeys) > 0 && len(sb.Args) > 0 {
+		log.Error(ctx, "plKeys and Args cannot have items in the same time",
+			log.Any("plKeys", plKeys),
+			log.Any("Args", sb.Args),
+			log.Any("sql", sb.Sql),
+		)
+		err = constant.ErrSqlBuilderFailed
+	}
 	for _, subPlKeys := range plKeys {
 		if len(subPlKeys) < 2 {
 			continue

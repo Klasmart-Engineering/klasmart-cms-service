@@ -12,6 +12,7 @@ type IReportDA interface {
 	IStudentProgressLearnOutcomeAchievement
 	IClassAttendance
 	ILearnOutcome
+	ILearnerWeekly
 }
 type ReportDA struct {
 	BaseDA

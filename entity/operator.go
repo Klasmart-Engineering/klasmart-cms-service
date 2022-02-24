@@ -27,3 +27,15 @@ type ExternalNameMap struct {
 	GradeIDMap   map[string]string
 	AgeIDMap     map[string]string
 }
+
+type RoleName string
+
+const (
+	RoleStudent RoleName = "Student"
+)
+
+type Role struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Status string `json:"status"`
+}

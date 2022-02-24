@@ -40,6 +40,7 @@ type IReportModel interface {
 	ClassAttendanceStatistics(ctx context.Context, op *entity.Operator, request *entity.ClassAttendanceRequest) (response *entity.ClassAttendanceResponse, err error)
 	GetTeacherIDsCanViewReports(ctx context.Context, operator *entity.Operator, params external.TeacherViewPermissionParams) (teacherIDs []string, err error)
 	GetLearnerUsageOverview(ctx context.Context, op *entity.Operator, permissions map[external.PermissionName]bool, request *entity.LearnerUsageRequest) (response *entity.LearnerUsageResponse, err error)
+	GetLearnerWeeklyReportOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange) (res entity.LearnerWeeklyReportOverview, err error)
 }
 
 var (

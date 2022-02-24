@@ -139,6 +139,7 @@ func (s Server) registeRoute() {
 		reports.GET("/reports/learning_summary/time_filter", s.mustLogin, s.queryLearningSummaryTimeFilter)
 		reports.GET("/reports/learning_summary/live_classes", s.mustLogin, s.queryLiveClassesSummary)
 		reports.GET("/reports/learning_summary/assignments", s.mustLogin, s.queryAssignmentsSummary)
+		reports.GET("/reports/learner_weekly_overview", s.mustLogin, s.getLearnerWeeklyReportOverview)
 
 		reports.GET("/reports/student_usage/organization_registration", s.mustLogin, s.getStudentUsageOrganizationRegistration)
 		reports.POST("/reports/student_usage/class_registration", s.mustLogin, s.getStudentUsageClassRegistration)
