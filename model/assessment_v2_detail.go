@@ -858,7 +858,11 @@ func (adc *AssessmentDetailComponent) MatchStudentContainsRoomInfo() error {
 			userOutcomeReply := make([]*v2.AssessmentStudentResultOutcomeReply, 0)
 			for _, outcomeID := range content.OutcomeIDs {
 				var userOutcome *v2.AssessmentUserOutcome
-				if assessmentContent, ok := adc.contentMapFromAssessment[content.ContentID]; ok {
+				contentID := content.ContentID
+				if content.ContentType == v2.AssessmentContentTypeUnknown {
+					contentID = content.ParentID
+				}
+				if assessmentContent, ok := adc.contentMapFromAssessment[contentID]; ok {
 					key := adc.getKey([]string{
 						item.ID,
 						assessmentContent.ID,
@@ -882,20 +886,6 @@ func (adc *AssessmentDetailComponent) MatchStudentContainsRoomInfo() error {
 				userOutcomeReply = append(userOutcomeReply, userOutcomeReplyItem)
 			}
 			resultReply.Outcomes = userOutcomeReply
-
-			//if roomContent, ok := adc.contentMapFromLiveRoom[content.ContentID]; ok {
-			//	roomKey := adc.getKey([]string{
-			//		item.UserID,
-			//		roomContent.ID,
-			//	})
-			//	if roomResultItem, ok := roomUserResultMap[roomKey]; ok {
-			//		resultReply.Answer = roomResultItem.Answer
-			//		resultReply.Score = roomResultItem.Score
-			//		resultReply.Attempted = roomResultItem.Seen
-			//	}
-			//} else {
-			//
-			//}
 
 			roomKey := adc.getKey([]string{
 				item.UserID,
