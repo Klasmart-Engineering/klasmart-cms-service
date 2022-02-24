@@ -354,8 +354,6 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	}
 
 	scheduleList, err := model.GetScheduleModel().Update(ctx, operator, &scheduleUpdateView)
-	response := IDResponse{ID: scheduleList[0].ID}
-
 	switch err {
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -378,7 +376,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	case model.ErrScheduleStudyAlreadyProgress:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgCannotEditStudy))
 	case nil:
-		c.JSON(http.StatusOK, D(response))
+		c.JSON(http.StatusOK, D(IDResponse{ID: scheduleList[0].ID}))
 	default:
 		s.defaultErrorHandler(c, err)
 	}
