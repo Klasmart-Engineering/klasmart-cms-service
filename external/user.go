@@ -229,6 +229,14 @@ func (s AmsUserService) QueryByIDs(ctx context.Context, ids []string, options ..
 	users := make([]cache.Object, 0, len(data))
 	for index := range ids {
 		user := data[fmt.Sprintf("q%d", indexMapping[index])]
+
+		// user service no longer provides username. So we need to construct
+		// the username based on the given name and family name, so that no other
+		// places need to be modified
+		if user.Name == "" && user.FamilyName != "" && user.GivenName != "" {
+			user.Name = user.GivenName + " " + user.FamilyName
+		}
+
 		users = append(users, &NullableUser{
 			Valid: user != nil,
 			User:  user,
