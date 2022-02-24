@@ -109,7 +109,7 @@ func (s AmsUserService) GetUserCount(ctx context.Context, op *entity.Operator, c
 		var condIDs []interface{}
 		for _, id := range cond.ClassIDs.Strings {
 			condIDs = append(condIDs, map[string]interface{}{
-				"classID": map[string]interface{}{
+				"classId": map[string]interface{}{
 					"operator": "eq",
 					"value":    id,
 				},
