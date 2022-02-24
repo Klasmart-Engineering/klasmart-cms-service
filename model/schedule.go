@@ -164,28 +164,18 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 		}
 		className = classInfos[schedule.ClassID]
 	}
-	assessmentType, err := v2.GetAssessmentTypeByScheduleType(ctx, viewData.ClassType, viewData.IsHomeFun)
-	if err != nil {
-		return nil, err
-	}
-	assessmentAddReq := &v2.AssessmentAddWhenCreateSchedulesReq{
-		RepeatScheduleIDs:    make([]string, len(scheduleList)),
-		Users:                make([]*v2.AssessmentUserReq, 0, len(allRelations)),
-		AssessmentType:       assessmentType,
-		LessPlanID:           viewData.LessonPlanID,
-		ClassRosterClassName: className,
-		ScheduleTitle:        viewData.Title,
-	}
-	for i, item := range scheduleList {
-		assessmentAddReq.RepeatScheduleIDs[i] = item.ID
-	}
-	for _, item := range allRelations {
-		userType := v2.GetUserTypeByScheduleRelationType(item.RelationType)
-		if userType != "" {
-			assessmentAddReq.Users = append(assessmentAddReq.Users, &v2.AssessmentUserReq{
-				UserID:   item.RelationID,
-				UserType: userType,
-			})
+
+	var assessmentAddReq *v2.AssessmentAddWhenCreateSchedulesReq
+	if viewData.ClassType != entity.ScheduleClassTypeTask {
+		assessmentAddReq, err = s.getAssessmentAddWhenCreateSchedulesReq(ctx, op, schedule, scheduleList, relations, className)
+		if err != nil {
+			log.Error(ctx, "s.getAssessmentAddWhenCreateSchedulesReq error",
+				log.Err(err),
+				log.Any("schedule", schedule),
+				log.Any("scheduleList", scheduleList),
+				log.Any("relations", relations),
+				log.String("className", className))
+			return nil, err
 		}
 	}
 
@@ -199,12 +189,19 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 			)
 			return nil, err
 		}
-		log.Debug(ctx, "start add assessment", log.Any("assessmentAddReq", assessmentAddReq))
-		err = GetAssessmentModelV2().AddWhenCreateSchedules(ctx, tx, op, assessmentAddReq)
-		if err != nil {
-			return nil, err
+
+		if schedule.ClassType != entity.ScheduleClassTypeTask {
+			log.Debug(ctx, "start add assessment", log.Any("assessmentAddReq", assessmentAddReq))
+			err = GetAssessmentModelV2().AddWhenCreateSchedules(ctx, tx, op, assessmentAddReq)
+			if err != nil {
+				log.Error(ctx, "GetAssessmentModelV2().AddWhenCreateSchedules error",
+					log.Err(err),
+					log.Any("assessmentAddReq", assessmentAddReq))
+				return nil, err
+			}
+			log.Debug(ctx, "end add assessment", log.Any("result", result))
 		}
-		log.Debug(ctx, "end add assessment", log.Any("result", result))
+
 		return result, nil
 	})
 	if err != nil {
@@ -1032,28 +1029,18 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		}
 		className = classInfos[updateSchedule.ClassID]
 	}
-	assessmentType, err := v2.GetAssessmentTypeByScheduleType(ctx, updateSchedule.ClassType, updateSchedule.IsHomeFun)
-	if err != nil {
-		return nil, err
-	}
-	assessmentAddReq := &v2.AssessmentAddWhenCreateSchedulesReq{
-		RepeatScheduleIDs:    make([]string, len(scheduleList)),
-		Users:                make([]*v2.AssessmentUserReq, 0, len(allRelations)),
-		AssessmentType:       assessmentType,
-		LessPlanID:           updateSchedule.LessonPlanID,
-		ClassRosterClassName: className,
-		ScheduleTitle:        updateSchedule.Title,
-	}
-	for i, item := range scheduleList {
-		assessmentAddReq.RepeatScheduleIDs[i] = item.ID
-	}
-	for _, item := range allRelations {
-		userType := v2.GetUserTypeByScheduleRelationType(item.RelationType)
-		if userType != "" {
-			assessmentAddReq.Users = append(assessmentAddReq.Users, &v2.AssessmentUserReq{
-				UserID:   item.RelationID,
-				UserType: userType,
-			})
+
+	var assessmentAddReq *v2.AssessmentAddWhenCreateSchedulesReq
+	if viewData.ClassType != entity.ScheduleClassTypeTask {
+		assessmentAddReq, err = s.getAssessmentAddWhenCreateSchedulesReq(ctx, operator, schedule, scheduleList, relations, className)
+		if err != nil {
+			log.Error(ctx, "s.getAssessmentAddWhenCreateSchedulesReq error",
+				log.Err(err),
+				log.Any("schedule", schedule),
+				log.Any("scheduleList", scheduleList),
+				log.Any("relations", relations),
+				log.String("className", className))
+			return nil, err
 		}
 	}
 
@@ -1090,9 +1077,16 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 			return err
 		}
 
-		err = GetAssessmentModelV2().AddWhenCreateSchedules(ctx, tx, operator, assessmentAddReq)
-		if err != nil {
-			return err
+		if schedule.ClassType != entity.ScheduleClassTypeTask {
+			log.Debug(ctx, "start add assessment", log.Any("assessmentAddReq", assessmentAddReq))
+			err = GetAssessmentModelV2().AddWhenCreateSchedules(ctx, tx, operator, assessmentAddReq)
+			if err != nil {
+				log.Error(ctx, "GetAssessmentModelV2().AddWhenCreateSchedules error",
+					log.Err(err),
+					log.Any("assessmentAddReq", assessmentAddReq))
+				return err
+			}
+			log.Debug(ctx, "end add assessment", log.Any("result", result))
 		}
 
 		return nil
@@ -4085,6 +4079,41 @@ func (s *scheduleModel) transformToScheduleTimeView(ctx context.Context, operato
 	}
 
 	return result, nil
+}
+
+func (s *scheduleModel) getAssessmentAddWhenCreateSchedulesReq(ctx context.Context, operator *entity.Operator, schedule *entity.Schedule, repeatScheduleList []*entity.Schedule, scheduleRelations []*entity.ScheduleRelation, className string) (*v2.AssessmentAddWhenCreateSchedulesReq, error) {
+	assessmentType, err := v2.GetAssessmentTypeByScheduleType(ctx, schedule.ClassType, schedule.IsHomeFun)
+	if err != nil {
+		log.Error(ctx, "v2.GetAssessmentTypeByScheduleType error",
+			log.Err(err),
+			log.Any("schedule", schedule))
+		return nil, err
+	}
+
+	assessmentAddReq := &v2.AssessmentAddWhenCreateSchedulesReq{
+		RepeatScheduleIDs:    make([]string, len(repeatScheduleList)),
+		Users:                make([]*v2.AssessmentUserReq, 0, len(scheduleRelations)),
+		AssessmentType:       assessmentType,
+		LessPlanID:           schedule.LessonPlanID,
+		ClassRosterClassName: className,
+		ScheduleTitle:        schedule.Title,
+	}
+
+	for i, item := range repeatScheduleList {
+		assessmentAddReq.RepeatScheduleIDs[i] = item.ID
+	}
+
+	for _, item := range scheduleRelations {
+		userType := v2.GetUserTypeByScheduleRelationType(item.RelationType)
+		if userType != "" {
+			assessmentAddReq.Users = append(assessmentAddReq.Users, &v2.AssessmentUserReq{
+				UserID:   item.RelationID,
+				UserType: userType,
+			})
+		}
+	}
+
+	return assessmentAddReq, nil
 }
 
 // model package interval function
