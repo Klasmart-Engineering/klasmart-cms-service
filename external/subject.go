@@ -55,7 +55,7 @@ func (s AmsSubjectService) QueryByIDs(ctx context.Context, ids []string, options
 	sb := new(strings.Builder)
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$subject_id_", ": ID!", len(_ids)))
 	for index := range _ids {
-		fmt.Fprintf(sb, "q%d: subject(id: $subject_id_%d) {id name status system}\n", index, index)
+		fmt.Fprintf(sb, "q%d: subjectNode(id: $subject_id_%d) {id name status system}\n", index, index)
 	}
 	sb.WriteString("}")
 
@@ -156,6 +156,7 @@ func (s AmsSubjectService) BatchGetNameMap(ctx context.Context, operator *entity
 func (s AmsSubjectService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Subject, error) {
 	condition := NewCondition(options...)
 
+	// TODO: replace by subjectConnection
 	request := chlorine.NewRequest(`
 	query($program_id: ID!) {
 		program(id: $program_id) {
@@ -227,6 +228,7 @@ func (s AmsSubjectService) GetByProgram(ctx context.Context, operator *entity.Op
 func (s AmsSubjectService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Subject, error) {
 	condition := NewCondition(options...)
 
+	// TODO: replace by subjectConnection
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {

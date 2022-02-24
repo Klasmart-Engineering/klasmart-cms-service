@@ -6,10 +6,9 @@ import (
 	"strings"
 	"sync"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
-
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -24,7 +23,6 @@ type StudentServiceProvider interface {
 	GetByClassID(ctx context.Context, operator *entity.Operator, classID string) ([]*Student, error)
 	GetByClassIDs(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*Student, error)
 	Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*Student, error)
-	FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error)
 }
 
 type Student struct {
@@ -150,6 +148,7 @@ func (s AmsStudentService) BatchGetNameMap(ctx context.Context, operator *entity
 }
 
 func (s AmsStudentService) GetByClassID(ctx context.Context, operator *entity.Operator, classID string) ([]*Student, error) {
+	// TODO: replace by studentsConnection
 	q := `query ($classID: ID!){
 	class(class_id: $classID){
 		students{
@@ -195,6 +194,7 @@ func (s AmsStudentService) GetByClassIDs(ctx context.Context, operator *entity.O
 
 	sb := new(strings.Builder)
 
+	// TODO: replace by studentsConnection
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$class_id_", ": ID!", len(classIDs)))
 	for index := range classIDs {
 		fmt.Fprintf(sb, "q%d: class(class_id: $class_id_%d) {students{id:user_id name:user_name}}\n", index, index)
@@ -254,9 +254,6 @@ func (s AmsStudentService) Query(ctx context.Context, operator *entity.Operator,
 	return students, nil
 }
 
-func (s AmsStudentService) FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error) {
-	return GetUserServiceProvider().FilterByPermission(ctx, operator, userIDs, permissionName)
-}
 func (s AmsStudentService) Name() string {
 	return "ams_student_service"
 }

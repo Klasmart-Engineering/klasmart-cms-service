@@ -76,3 +76,23 @@ func TestAmsClassService_GetBySchoolIDs(t *testing.T) {
 		}
 	}
 }
+
+func TestAmsClassService_BatchGet(t *testing.T) {
+	classes, err := GetClassServiceProvider().BatchGet(context.TODO(), testOperator, []string{"8860789c-d66e-47ff-892c-8577d09ed86d", "9a83bacc-1941-47d9-8161-fda3df039735", "a5e488fd-0b53-4e3a-bdb7-f14641cdba9f"})
+	if err != nil {
+		t.Errorf("GetClassServiceProvider().BatchGet() error = %v", err)
+		return
+	}
+
+	if len(classes) == 0 {
+		t.Error("GetClassServiceProvider().BatchGet() get empty slice")
+		return
+	}
+
+	for _, class := range classes {
+		if class == nil || !class.Valid {
+			t.Error("GetClassServiceProvider().BatchGet() get null")
+			return
+		}
+	}
+}
