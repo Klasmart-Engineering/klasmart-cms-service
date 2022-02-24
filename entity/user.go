@@ -36,4 +36,5 @@ type GetUserCountCondition struct {
 	RoleID    NullString
 	SchoolIDs NullStrings
 	ClassIDs  NullStrings
+	StudentID NullString
 }

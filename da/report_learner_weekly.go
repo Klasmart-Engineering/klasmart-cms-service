@@ -51,6 +51,15 @@ and EXISTS (
 )`)
 		argsSchedule = append(argsSchedule, entity.ScheduleRelationTypeClassRosterClass, cond.ClassIDs.Strings)
 	}
+	if cond.StudentID.Valid {
+		sqlSchedule.WriteString(`
+and EXISTS (
+	select * from schedules_relations sr 
+	where sr.relation_type = ? 
+	and sr.relation_id in (?)	
+)`)
+		argsSchedule = append(argsSchedule, entity.ScheduleRelationTypeClassRosterStudent, cond.StudentID.String)
+	}
 
 	sbSchedule := NewSqlBuilder(ctx, sqlSchedule.String(), argsSchedule...)
 	sbAssessmentTypeOnlineClass := NewSqlBuilder(ctx, `av.assessment_type=?`, v2.AssessmentTypeOnlineClass)

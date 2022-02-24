@@ -64,12 +64,23 @@ func (m *reportModel) GetLearnerWeeklyReportOverview(ctx context.Context, op *en
 		goto queryUserCount
 	}
 
+	if perms[external.ReportLearningSummaryStudent] {
+		// parent and student use the same user_id
+		res.Attendees = 1
+		cond.StudentID = entity.NullString{
+			String: op.UserID,
+			Valid:  true,
+		}
+		goto queryAttendance
+	}
+
 queryUserCount:
 	res.Attendees, err = external.GetUserServiceProvider().GetUserCount(ctx, op, cond)
 	if err != nil {
 		return
 	}
 
+queryAttendance:
 	r, err := da.GetReportDA().GetLearnerWeeklyReportOverview(ctx, op, tr, cond)
 	if err != nil {
 		return
