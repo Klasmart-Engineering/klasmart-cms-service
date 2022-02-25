@@ -117,6 +117,7 @@ func (s Server) registeRoute() {
 		// home page
 		assessments.GET("/assessments_summary", s.mustLogin, s.getAssessmentsSummary)
 		assessments.GET("/assessments_for_student", s.mustLogin, s.getStudentAssessments)
+		assessments.GET("/assessments", s.mustLogin, s.queryAssessments)
 	}
 
 	reports := s.engine.Group("/v1")

@@ -23,9 +23,24 @@ const (
 	AssessmentStatusCompliantCompleted    AssessmentStatusForApiCompliant = "complete"
 )
 
+func (a AssessmentStatusForApiCompliant) String() string {
+	return string(a)
+}
+
 type AssessmentPageReply struct {
 	Total       int                     `json:"total"`
 	Assessments []*AssessmentQueryReply `json:"assessments"`
+}
+
+type ListAssessmentsResultForHomePage struct {
+	Total int                          `json:"total"`
+	Items []*AssessmentItemForHomePage `json:"items"`
+}
+type AssessmentItemForHomePage struct {
+	ID       string                          `json:"id"`
+	Title    string                          `json:"title"`
+	Teachers []*entity.IDName                `json:"teachers"`
+	Status   AssessmentStatusForApiCompliant `json:"status"`
 }
 
 type AssessmentQueryReply struct {

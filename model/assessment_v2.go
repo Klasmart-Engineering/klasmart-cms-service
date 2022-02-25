@@ -49,6 +49,7 @@ type IAssessmentModelV2 interface {
 	// home page
 	StatisticsCount(ctx context.Context, op *entity.Operator, req *v2.StatisticsCountReq) (*v2.AssessmentsSummary, error)
 	QueryTeacherFeedback(ctx context.Context, op *entity.Operator, condition *v2.StudentQueryAssessmentConditions) (int64, []*v2.StudentAssessment, error)
+	PageForHomePage(ctx context.Context, op *entity.Operator, req *v2.AssessmentQueryReq) (*v2.ListAssessmentsResultForHomePage, error)
 
 	AnyoneAttemptedByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]*v2.AssessmentAnyoneAttemptedReply, error)
 	QueryInternal(ctx context.Context, op *entity.Operator, condition *assessmentV2.AssessmentCondition) ([]*v2.Assessment, error)
@@ -306,6 +307,10 @@ func (a *assessmentModelV2) StatisticsCount(ctx context.Context, op *entity.Oper
 		case v2.AssessmentStatusComplete:
 			r.Complete++
 		}
+
+		//if a.AssessmentType == v2.AssessmentTypeOnlineStudy && a.Status == v2.AssessmentStatusNotStarted {
+		//	r.InProgress++
+		//}
 	}
 
 	return r, nil
@@ -1183,4 +1188,27 @@ func (a *assessmentModelV2) endClassCallbackUpdateAssessment(ctx context.Context
 	}
 
 	return nil
+}
+
+func (a *assessmentModelV2) PageForHomePage(ctx context.Context, op *entity.Operator, req *v2.AssessmentQueryReq) (*v2.ListAssessmentsResultForHomePage, error) {
+	pageResult, err := a.Page(ctx, op, req)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &v2.ListAssessmentsResultForHomePage{
+		Total: pageResult.Total,
+		Items: make([]*v2.AssessmentItemForHomePage, 0, len(pageResult.Assessments)),
+	}
+
+	for _, item := range pageResult.Assessments {
+		result.Items = append(result.Items, &v2.AssessmentItemForHomePage{
+			ID:       item.ID,
+			Title:    item.Title,
+			Teachers: item.Teachers,
+			Status:   item.Status.ToReply(),
+		})
+	}
+
+	return result, nil
 }
