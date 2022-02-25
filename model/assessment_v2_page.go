@@ -791,6 +791,8 @@ func (apc *AssessmentPageComponent) ConvertPageReply(configs []AssessmentConfigF
 		}
 		result[i] = replyItem
 
+		replyItem.Teachers = apc.assTeacherMap[item.ID]
+
 		schedule, ok := apc.assScheduleMap[item.ID]
 		if !ok {
 			log.Warn(ctx, "not found assessment schedule", log.Any("assScheduleMap", apc.assScheduleMap), log.Any("assessmentItem", item))
@@ -805,7 +807,6 @@ func (apc *AssessmentPageComponent) ConvertPageReply(configs []AssessmentConfigF
 
 		replyItem.Program = apc.assProgramMap[item.ID]
 		replyItem.Subjects = apc.assSubjectMap[item.ID]
-		replyItem.Teachers = apc.assTeacherMap[item.ID]
 		replyItem.DueAt = schedule.DueAt
 		replyItem.ClassInfo = apc.assClassMap[item.ID]
 		replyItem.RemainingTime = apc.assRemainingTimeMap[item.ID]
