@@ -19,7 +19,8 @@ import (
 )
 
 const (
-	RedisKeyPrefixOrgPermission = "org_permission"
+	RedisKeyPrefixOrgPermission      = "org_permission"
+	RedisKeyPrefixOrgPermissionMutex = "org_permission:lock"
 )
 
 type PermissionServiceProvider interface {
@@ -51,30 +52,17 @@ type AmsPermissionService struct {
 
 func (s AmsPermissionService) HasOrganizationPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) (bool, error) {
 	// get permission from cache
-	cacheExist, permissionMap, err := s.getOrganizationPermissionCache(ctx, operator.UserID, operator.OrgID, []PermissionName{permissionName})
-	if err == nil && cacheExist {
+	permissionMap, err := s.getOrganizationPermission(ctx, operator, []PermissionName{permissionName})
+	if err == nil {
 		log.Debug(ctx, "permission cache hit",
 			log.Any("operator", operator),
 			log.Any("permissionName", permissionName))
 		return permissionMap[permissionName], nil
-	} else if err == nil && !cacheExist {
-		permissionMap, err := s.hasOrganizationPermissions(ctx, operator, AllPermissionNames)
-		if err != nil {
-			log.Error(ctx, "s.hasOrganizationPermissions error",
-				log.Any("operator", operator),
-				log.Any("permissionName", permissionName),
-				log.Any("allPermissionNames", AllPermissionNames))
-		} else {
-			err := s.setOrganizationPermissionCache(ctx, operator.UserID, operator.OrgID, permissionMap)
-			log.Debug(ctx, "s.setOrganizationPermissionCache result", log.Err(err))
-			return permissionMap[permissionName], nil
-		}
-	} else {
-		log.Error(ctx, "s.getOrganizationPermissionCache error",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("permissionName", permissionName))
 	}
+	log.Warn(ctx, "s.getOrganizationPermission error",
+		log.Err(err),
+		log.Any("operator", operator),
+		log.Any("permissionName", permissionName))
 
 	request := chlorine.NewRequest(`
 	query(
@@ -171,35 +159,22 @@ func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, operator 
 
 //TODO:No Test Program
 func (s AmsPermissionService) HasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissionNames []PermissionName) (map[PermissionName]bool, error) {
+	if len(permissionNames) == 0 {
+		return map[PermissionName]bool{}, nil
+	}
+
 	// get permission from cache
-	cacheExist, permissionMap, err := s.getOrganizationPermissionCache(ctx, operator.UserID, operator.OrgID, permissionNames)
-	if err == nil && cacheExist {
+	permissionMap, err := s.getOrganizationPermission(ctx, operator, permissionNames)
+	if err == nil {
 		log.Debug(ctx, "permission cache hit",
 			log.Any("operator", operator),
 			log.Any("permissionNames", permissionNames))
 		return permissionMap, nil
-	} else if err == nil && !cacheExist {
-		permissionMap, err := s.hasOrganizationPermissions(ctx, operator, AllPermissionNames)
-		if err != nil {
-			log.Error(ctx, "s.hasOrganizationPermissions error",
-				log.Any("operator", operator),
-				log.Any("permissionNames", permissionNames),
-				log.Any("allPermissionNames", AllPermissionNames))
-		} else {
-			err := s.setOrganizationPermissionCache(ctx, operator.UserID, operator.OrgID, permissionMap)
-			log.Debug(ctx, "s.setOrganizationPermissionCache result", log.Err(err))
-			return permissionMap, nil
-		}
-	} else {
-		log.Error(ctx, "s.getOrganizationPermissionCache error",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("permissionNames", permissionNames))
 	}
-
-	if len(permissionNames) == 0 {
-		return map[PermissionName]bool{}, nil
-	}
+	log.Warn(ctx, "s.getOrganizationPermission error",
+		log.Err(err),
+		log.Any("operator", operator),
+		log.Any("permissionNames", permissionNames))
 
 	pns := make([]string, len(permissionNames))
 	for index, permissionName := range permissionNames {
@@ -443,10 +418,46 @@ func (s AmsPermissionService) hasOrganizationPermissions(ctx context.Context, op
 	return permissions, nil
 }
 
-func (s AmsPermissionService) getOrganizationPermissionCache(ctx context.Context, userID, orgID string, permissionNames []PermissionName) (bool, map[PermissionName]bool, error) {
+func (s AmsPermissionService) getOrganizationPermission(ctx context.Context, operator *entity.Operator, permissionNames []PermissionName) (map[PermissionName]bool, error) {
+	// get permission from cache
+	permissionMap, err := s.getOrganizationPermissionCache(ctx, operator.UserID, operator.OrgID, permissionNames)
+	if err == nil {
+		log.Debug(ctx, "permission cache hit",
+			log.Any("operator", operator),
+			log.Any("permissionNames", permissionNames))
+		return permissionMap, nil
+	}
+
+	if err == ro.ErrKeyNotExist {
+		// TODO maybe cache breakdown
+		// query user all permissions
+		permissionMap, err := s.hasOrganizationPermissions(ctx, operator, AllPermissionNames)
+		if err != nil {
+			log.Error(ctx, "s.hasOrganizationPermissions error",
+				log.Any("operator", operator),
+				log.Any("permissionNames", permissionNames),
+				log.Any("allPermissionNames", AllPermissionNames))
+			return nil, errors.New("query all permissions failed")
+		}
+
+		// save to redis cache
+		err = s.setOrganizationPermissionCache(ctx, operator.UserID, operator.OrgID, permissionMap)
+		log.Debug(ctx, "s.setOrganizationPermissionCache result", log.Err(err))
+		return permissionMap, nil
+	}
+
+	log.Error(ctx, "s.getOrganizationPermissionCache error",
+		log.Err(err),
+		log.Any("operator", operator),
+		log.Any("permissionNames", permissionNames))
+
+	return nil, err
+}
+
+func (s AmsPermissionService) getOrganizationPermissionCache(ctx context.Context, userID, orgID string, permissionNames []PermissionName) (map[PermissionName]bool, error) {
 	if !config.Get().RedisConfig.OpenCache {
 		log.Error(ctx, "redis cache is not open")
-		return false, nil, errors.New("redis cache is not open")
+		return nil, errors.New("redis cache is not open")
 	}
 
 	key := fmt.Sprintf("%s:%s:%s", RedisKeyPrefixOrgPermission, orgID, userID)
@@ -466,12 +477,12 @@ func (s AmsPermissionService) getOrganizationPermissionCache(ctx context.Context
 			log.String("key", key),
 			log.Strings("fields", fields),
 		)
-		return false, nil, err
+		return nil, err
 	}
 
 	// key not exist
 	if exist.Val() == int64(0) {
-		return false, nil, nil
+		return nil, ro.ErrKeyNotExist
 	}
 
 	result := make(map[PermissionName]bool, len(permissionNames))
@@ -492,7 +503,7 @@ func (s AmsPermissionService) getOrganizationPermissionCache(ctx context.Context
 		result[permissionNames[i]] = allowed
 	}
 
-	return true, result, nil
+	return result, nil
 }
 
 func (s AmsPermissionService) setOrganizationPermissionCache(ctx context.Context, userID, orgID string, permissionMap map[PermissionName]bool) error {
