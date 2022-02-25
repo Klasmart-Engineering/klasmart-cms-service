@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
-
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -80,7 +79,7 @@ func (s AmsCategoryService) QueryByIDs(ctx context.Context, ids []string, option
 
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$category_id_", ": ID!", len(_ids)))
 	for index := range _ids {
-		fmt.Fprintf(sb, "q%d: category(id: $category_id_%d) {id name status system}\n", index, index)
+		fmt.Fprintf(sb, "q%d: categoryNode(id: $category_id_%d) {id name status system}\n", index, index)
 	}
 	sb.WriteString("}")
 
@@ -158,6 +157,7 @@ func (s AmsCategoryService) BatchGetNameMap(ctx context.Context, operator *entit
 func (s AmsCategoryService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Category, error) {
 	condition := NewCondition(options...)
 
+	// TODO: replace by categoryConnection
 	request := chlorine.NewRequest(`
 	query($program_id: ID!) {
 		program(id: $program_id) {
@@ -238,6 +238,7 @@ func (s AmsCategoryService) GetByProgram(ctx context.Context, operator *entity.O
 func (s AmsCategoryService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Category, error) {
 	condition := NewCondition(options...)
 
+	// TODO: replace by categoryConnection
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {
@@ -317,6 +318,7 @@ func (s AmsCategoryService) GetBySubjects(ctx context.Context, operator *entity.
 
 	sb := new(strings.Builder)
 
+	// TODO: replace by categoryConnection
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$subject_id_", ": ID!", len(_ids)))
 	for index := range _ids {
 		fmt.Fprintf(sb, "q%d: subject(id: $subject_id_%d) {categories {id name status system}}\n", index, index)

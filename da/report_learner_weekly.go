@@ -39,6 +39,7 @@ and EXISTS (
 	select * from schedules_relations sr 
 	where sr.relation_type = ? 
 	and sr.relation_id in (?)	
+	and sr.schedule_id = s.id 
 )`)
 		argsSchedule = append(argsSchedule, entity.ScheduleRelationTypeSchool, cond.SchoolIDs.Strings)
 	}
@@ -48,6 +49,7 @@ and EXISTS (
 	select * from schedules_relations sr 
 	where sr.relation_type = ? 
 	and sr.relation_id in (?)	
+	and sr.schedule_id = s.id 
 )`)
 		argsSchedule = append(argsSchedule, entity.ScheduleRelationTypeClassRosterClass, cond.ClassIDs.Strings)
 	}
@@ -57,6 +59,7 @@ and EXISTS (
 	select * from schedules_relations sr 
 	where sr.relation_type = ? 
 	and sr.relation_id in (?)	
+	and sr.schedule_id = s.id
 )`)
 		argsSchedule = append(argsSchedule, entity.ScheduleRelationTypeClassRosterStudent, cond.StudentID.String)
 	}
@@ -81,6 +84,7 @@ user_id as student_id,
 from assessments_users_v2 
 where assessment_id in({{.sbAssessmentOnlineClass}})
 {{.sbWhereUserType}}
+{{.sbWhereUserID}}
 group by user_id 
 
 union all 
@@ -92,15 +96,21 @@ user_id as student_id,
 from assessments_users_v2 
 where assessment_id in({{.sbAssessmentStudy}})
 {{.sbWhereUserType}}
+{{.sbWhereUserID}}
 group by user_id 
 `
 	sbWhereUserType := NewSqlBuilder(ctx, "and user_type =?", v2.AssessmentUserTypeStudent)
+	sbWhereUserID := NewSqlBuilder(ctx, "")
+	if cond.StudentID.Valid {
+		sbWhereUserID = NewSqlBuilder(ctx, "and user_id =?", cond.StudentID.String)
+	}
 	sbSelectRate := NewSqlBuilder(ctx, "sum(if(status_by_system=?,1,0))/count(1) as rate ", v2.AssessmentUserStatusParticipate)
 	sb := NewSqlBuilder(ctx, sql).
 		Replace(ctx, "sbAssessmentOnlineClass", sbAssessmentOnlineClass).
 		Replace(ctx, "sbAssessmentStudy", sbAssessmentStudy).
 		Replace(ctx, "sbSelectRate", sbSelectRate).
-		Replace(ctx, "sbWhereUserType", sbWhereUserType)
+		Replace(ctx, "sbWhereUserType", sbWhereUserType).
+		Replace(ctx, "sbWhereUserID", sbWhereUserID)
 	sql, args, err := sb.Build(ctx)
 	if err != nil {
 		return
@@ -120,12 +130,10 @@ group by user_id
 	}
 	m := map[string][]float64{}
 	for _, item := range *ret {
+
 		m[item.StudentID] = append(m[item.StudentID], item.Rate)
 	}
 
-	var numAbove float64
-	var numBelow float64
-	var numMeet float64
 	for _, rates := range m {
 		var rate0 float64
 		var rate1 float64
@@ -140,15 +148,12 @@ group by user_id
 		}
 
 		if rate0 >= 0.8 && rate1 >= 0.8 {
-			numAbove++
+			res.NumAbove++
 		} else if rate0 < 0.49 && rate1 < 0.49 {
-			numBelow++
+			res.NumBelow++
 		} else {
-			numMeet++
+			res.NumMeet++
 		}
 	}
-	res.AboveExpectation = numAbove / (numAbove + numBelow + numMeet)
-	res.BelowExpectation = numBelow / (numAbove + numBelow + numMeet)
-	res.MeetExpectation = numMeet / (numAbove + numBelow + numMeet)
 	return
 }

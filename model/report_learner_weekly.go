@@ -74,6 +74,7 @@ func (m *reportModel) GetLearnerWeeklyReportOverview(ctx context.Context, op *en
 		goto queryAttendance
 	}
 
+	return
 queryUserCount:
 	res.Attendees, err = external.GetUserServiceProvider().GetUserCount(ctx, op, cond)
 	if err != nil {
@@ -85,8 +86,8 @@ queryAttendance:
 	if err != nil {
 		return
 	}
-	res.BelowExpectation = r.BelowExpectation
-	res.MeetExpectation = r.MeetExpectation
-	res.AboveExpectation = r.AboveExpectation
+	res.NumBelow = r.NumBelow
+	res.NumMeet = r.NumMeet
+	res.NumAbove = r.NumAbove
 	return
 }

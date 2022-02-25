@@ -29,7 +29,7 @@ func TestOrganizationService_BatchGet(t *testing.T) {
 }
 
 func TestAmsOrganizationService_GetNameByOrganizationOrSchool(t *testing.T) {
-	ids := []string{"92db7ddd-1f23-4f64-bd47-94f6d34a50c0", "92db7ddd-1f23-4f64-bd47-94f6d34a50c0"}
+	ids := []string{"6300b3c5-8936-497e-ba1f-d67164b59c65", "0adee5ec-9454-44a9-b894-05ca1768b01e", "0adee5ec-9454-44a9-b894-05ca1768b011"}
 	names, err := GetOrganizationServiceProvider().GetNameByOrganizationOrSchool(context.TODO(), testOperator, ids)
 	if err != nil {
 		t.Errorf("GetOrganizationServiceProvider().GetNameByOrganizationOrSchool() error = %v", err)
@@ -68,37 +68,9 @@ func TestAmsOrganizationService_GetByPermission(t *testing.T) {
 	}
 }
 
-func TestAmsOrganizationService_GetByUserID(t *testing.T) {
-	orgs, err := GetOrganizationServiceProvider().GetByUserID(context.TODO(),
-		testOperator,
-		"335e0577-99cb-5d88-b5e1-dfdb14d5d4c2",
-		WithStatus(Active))
-	if err != nil {
-		t.Errorf("GetOrganizationServiceProvider().GetByUserID() error = %v", err)
-		return
-	}
-
-	if len(orgs) == 0 {
-		t.Error("GetOrganizationServiceProvider().GetByUserID() get empty slice")
-		return
-	}
-
-	for _, org := range orgs {
-		if org == nil {
-			t.Error("GetOrganizationServiceProvider().GetByUserID() get null")
-			return
-		}
-	}
-}
-
 func TestOrganizationService_QueryByIDs(t *testing.T) {
 	orgs, err := GetOrganizationServiceProvider().QueryByIDs(context.TODO(),
-		[]string{
-			"ad26d555-e9ad-4582-8fd6-c5e180847844",
-			"00a91b89-02f2-4c36-8afd-5e3cdcfd1c86",
-			"16ab82c3-355a-4002-883f-eb37b78b10a7",
-			"f27efd10-000e-4542-bef2-0ccda39b93d3",
-			"0ee01c37-c014-4c22-bb81-84d4f2a53b36"},
+		[]string{"6300b3c5-8936-497e-ba1f-d67164b59c65", "6300b3c5-8936-497e-ba1f-d67164b59c66"},
 		testOperator)
 	if err != nil {
 		t.Errorf("GetOrganizationServiceProvider().QueryByIDs() error = %v", err)
