@@ -233,7 +233,7 @@ func (s AmsUserService) QueryByIDs(ctx context.Context, ids []string, options ..
 		// user service no longer provides username. So we need to construct
 		// the username based on the given name and family name, so that no other
 		// places need to be modified
-		if user.Name == "" && user.FamilyName != "" && user.GivenName != "" {
+		if user != nil && user.Name == "" && user.FamilyName != "" && user.GivenName != "" {
 			user.Name = user.GivenName + " " + user.FamilyName
 		}
 
