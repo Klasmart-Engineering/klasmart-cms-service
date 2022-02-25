@@ -149,7 +149,7 @@ func (s *Server) updateAssessmentV2(c *gin.Context) {
 // @ID getAssessmentsSummary
 // @Accept json
 // @Produce json
-// @Param status query string false "search status, multiple states are separated by commas,optional value is NotStarted,Started,Draft,Complete"
+// @Param status query string false "search status, multiple states are separated by commas,optional value is Started,Draft,Complete"
 // @Success 200 {object} v2.AssessmentsSummary
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
