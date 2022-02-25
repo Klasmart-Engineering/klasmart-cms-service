@@ -324,7 +324,7 @@ func (s *Server) queryAssessments(c *gin.Context) {
 
 	if req.Status == v2.AssessmentStatusCompliantCompleted.String() {
 		req.Status = v2.AssessmentStatusComplete.String()
-	} else {
+	} else if req.Status == v2.AssessmentStatusCompliantNotCompleted.String() {
 		req.Status = fmt.Sprintf("%s,%s", v2.AssessmentStatusStarted.String(), v2.AssessmentStatusInDraft.String())
 	}
 
