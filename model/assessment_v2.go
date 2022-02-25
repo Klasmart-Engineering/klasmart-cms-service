@@ -290,8 +290,10 @@ func (a *assessmentModelV2) StatisticsCount(ctx context.Context, op *entity.Oper
 		return nil, err
 	}
 
-	condition.Status.Strings = strings.Split(req.Status, ",")
-	condition.Status.Valid = len(condition.Status.Strings) > 0
+	if req.Status != "" {
+		condition.Status.Strings = strings.Split(req.Status, ",")
+		condition.Status.Valid = len(condition.Status.Strings) > 0
+	}
 
 	var assessments []*v2.Assessment
 	err = assessmentV2.GetAssessmentDA().Query(ctx, condition, &assessments)
@@ -437,6 +439,10 @@ func (a *assessmentModelV2) GetAssessmentPageConfig(ac *AssessmentPageComponent,
 			ac.MatchClass,
 			ac.MatchCompleteRate,
 			ac.MatchRemainingTime,
+		}
+	default:
+		return []AssessmentConfigFunc{
+			ac.MatchTeacher,
 		}
 	}
 
@@ -1191,17 +1197,39 @@ func (a *assessmentModelV2) endClassCallbackUpdateAssessment(ctx context.Context
 }
 
 func (a *assessmentModelV2) PageForHomePage(ctx context.Context, op *entity.Operator, req *v2.AssessmentQueryReq) (*v2.ListAssessmentsResultForHomePage, error) {
-	pageResult, err := a.Page(ctx, op, req)
+	condition, err := a.getConditionByPermission(ctx, op)
 	if err != nil {
 		return nil, err
 	}
 
-	result := &v2.ListAssessmentsResultForHomePage{
-		Total: pageResult.Total,
-		Items: make([]*v2.AssessmentItemForHomePage, 0, len(pageResult.Assessments)),
+	condition.Status.Strings = strings.Split(req.Status, ",")
+	condition.Status.Valid = len(condition.Status.Strings) > 0
+	condition.OrderBy = assessmentV2.NewAssessmentOrderBy(req.OrderBy)
+	condition.Pager = dbo.Pager{
+		Page:     req.PageIndex,
+		PageSize: req.PageSize,
 	}
 
-	for _, item := range pageResult.Assessments {
+	var assessments []*v2.Assessment
+	total, err := assessmentV2.GetAssessmentDA().Page(ctx, condition, &assessments)
+	if err != nil {
+		log.Error(ctx, "page assessment error", log.Err(err), log.Any("condition", condition))
+		return nil, err
+	}
+
+	assessmentComponent := NewPageComponent(ctx, op, assessments)
+	pageResult, err := assessmentComponent.ConvertPageReply(a.GetAssessmentPageConfig(assessmentComponent, req.AssessmentType))
+	if err != nil {
+		log.Error(ctx, "ConvertPageReply error", log.Err(err))
+		return nil, err
+	}
+
+	result := &v2.ListAssessmentsResultForHomePage{
+		Total: total,
+		Items: make([]*v2.AssessmentItemForHomePage, 0, len(pageResult)),
+	}
+
+	for _, item := range pageResult {
 		result.Items = append(result.Items, &v2.AssessmentItemForHomePage{
 			ID:       item.ID,
 			Title:    item.Title,
