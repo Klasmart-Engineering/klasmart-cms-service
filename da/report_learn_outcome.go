@@ -3,6 +3,8 @@ package da
 import (
 	"context"
 
+	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -20,31 +22,30 @@ func (r *ReportDA) GetStudentAchievedOutcome(ctx context.Context, tx *dbo.DBCont
 	}
 
 	sql := `
-select ass.student_id,count(1) as total_achieved_outcome_count,SUM(IF(oa.id is null,0,1)) as achieved_outcome_count from (
-select a.id as assessment_id,aa.attendance_id as student_id,a.schedule_id from assessments a
-inner join assessments_attendances aa on aa.assessment_id =a.id and aa.role='student'
-where a.complete_time >= ? and a.complete_time < ?
-union all
-select hfs.id as assessment_id,hfs.student_id,hfs.schedule_id from home_fun_studies hfs
-where hfs.complete_at >= ? and hfs.complete_at < ?
-
-) ass 
-inner join (
-	select distinct assessment_id,outcome_id ,skip from assessments_outcomes
-) ao on ao.assessment_id = ass.assessment_id
-left join outcomes_attendances  oa on oa.assessment_id = ass.assessment_id and oa.attendance_id =ass.student_id and oa.outcome_id  = ao.outcome_id 
+select 
+	ass.student_id,
+	count(1) as total_achieved_outcome_count,
+	SUM(IF(auov.status='Achieved',1,0)) as achieved_outcome_count 
+from (
+	select auv.assessment_id , auv.user_id as student_id ,a.schedule_id ,auv.id as assessment_user_id
+	from assessments_users_v2 auv
+	left  join assessments_v2 a on auv.assessment_id = a.id 
+	where 
+	auv.user_type = ? 
+	and a.complete_at >= ?
+	and a.complete_at < ? 
+) ass
+inner JOIN assessments_users_outcomes_v2 auov on auov.assessment_user_id =ass.assessment_user_id
 where EXISTS (
-select relation_id from schedules_relations sr where sr.relation_type ='class_roster_teacher' and sr.schedule_id =ass.schedule_id and sr.relation_id  in(?)
+select relation_id from schedules_relations sr where sr.relation_type =? and sr.schedule_id =ass.schedule_id and sr.relation_id in(?)
 )
-and ao.skip=0
-
 group by ass.student_id
 `
 	args := []interface{}{
+		v2.AssessmentUserTypeStudent,
 		from,
 		to,
-		from,
-		to,
+		entity.ScheduleRelationTypeClassRosterTeacher,
 		teacherIDs,
 	}
 	err = r.QueryRawSQL(ctx, &studentOutcomeAchievedCounts, sql, args...)
