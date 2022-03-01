@@ -26,8 +26,7 @@ func (r *ReportDA) GetLearnerWeeklyReportOverview(ctx context.Context, op *entit
 	if err != nil {
 		return
 	}
-	var argsSchedule []interface{}
-	argsSchedule = append(argsSchedule, []interface{}{
+	argsSchedule := []interface{}{
 		entity.ScheduleClassTypeOnlineClass,
 		start,
 		end,
@@ -35,7 +34,7 @@ func (r *ReportDA) GetLearnerWeeklyReportOverview(ctx context.Context, op *entit
 		start,
 		end,
 		op.OrgID,
-	})
+	}
 
 	if cond.SchoolIDs.Valid {
 		sqlSchedule.WriteString(`
