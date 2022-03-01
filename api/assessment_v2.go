@@ -168,7 +168,6 @@ func (s *Server) getAssessmentsSummary(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	default:
 		s.defaultErrorHandler(c, err)
-		return
 	}
 }
 
@@ -225,10 +224,19 @@ func (s *Server) getStudentAssessments(c *gin.Context) {
 
 	total, result, err := model.GetAssessmentModelV2().QueryTeacherFeedback(ctx, op, conditions)
 
-	c.JSON(http.StatusOK, &v2.SearchStudentAssessmentsResponse{
-		List:  result,
-		Total: total,
-	})
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, &v2.SearchStudentAssessmentsResponse{
+			List:  result,
+			Total: total,
+		})
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	default:
+		s.defaultErrorHandler(c, err)
+	}
 }
 
 // @Summary add assessments
