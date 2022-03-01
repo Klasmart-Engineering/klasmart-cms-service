@@ -144,6 +144,10 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 
 	if assessmentType == v2.AssessmentTypeOfflineStudy {
 		total, userResults, err := assessmentV2.GetAssessmentUserResultDA().GetAssessmentUserResultDBView(ctx, &assessmentV2.AssessmentUserResultDBViewCondition{
+			OrgID: sql.NullString{
+				String: condition.OrgID,
+				Valid:  true,
+			},
 			UserIDs: entity.NullStrings{
 				Strings: []string{condition.StudentID},
 				Valid:   true,

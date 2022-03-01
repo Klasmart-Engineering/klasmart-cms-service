@@ -26,6 +26,7 @@ type AssessmentUserResultDA struct {
 }
 
 type AssessmentUserResultDBViewCondition struct {
+	OrgID       sql.NullString
 	ScheduleIDs entity.NullStrings
 	UserIDs     entity.NullStrings
 
@@ -37,8 +38,7 @@ func (a *AssessmentUserResultDA) GetAssessmentUserResultDBView(ctx context.Conte
 	tx := dbo.MustGetDB(ctx)
 	tx.ResetCondition()
 
-	sql := fmt.Sprintf(`
-select t1.*,t2.user_id,t3.id assessment_id,t3.schedule_id,t3.title  
+	commonSql := fmt.Sprintf(` 
 from %s t1 
 inner join %s t2 
 on t1.assessment_user_id = t2.id 
@@ -55,6 +55,9 @@ where
 	wheres = append(wheres, "t3.assessment_type = ?")
 	params = append(params, v2.AssessmentTypeOfflineStudy.String())
 
+	wheres = append(wheres, "t3.org_id = ?")
+	params = append(params, condition.OrgID.String)
+
 	if condition.UserIDs.Valid {
 		wheres = append(wheres, "t2.user_id in (?)")
 		params = append(params, condition.UserIDs.Strings)
@@ -64,14 +67,16 @@ where
 		params = append(params, condition.ScheduleIDs.Strings)
 	}
 
-	sql += strings.Join(wheres, " and ")
+	commonSql += strings.Join(wheres, " and ")
+
+	countSql := fmt.Sprintf("%s %s", "select count(*)", commonSql)
+	dataSql := fmt.Sprintf("%s %s", "select t1.*,t2.user_id,t3.id assessment_id,t3.schedule_id,t3.title", commonSql)
 
 	var result []*v2.AssessmentUserResultDBView
 	var err error
 	var total int64
 	if condition.Pager.Enable() {
-		var total int64
-		err := tx.Raw(sql, params...).Count(&total).Error
+		err := tx.Raw(countSql, params...).Scan(&total).Error
 		if err != nil {
 			return 0, nil, err
 		}
@@ -80,18 +85,18 @@ where
 		}
 
 		offset, limit := condition.Pager.Offset()
-		sql += fmt.Sprintf(" order by %s LIMIT %d OFFSET %d ", condition.OrderBy.ToSQL(), limit, offset)
+		dataSql += fmt.Sprintf(" order by %s LIMIT %d OFFSET %d ", condition.OrderBy.ToSQL(), limit, offset)
 
-		err = tx.Raw(sql, params...).Scan(&result).Error
+		err = tx.Raw(dataSql, params...).Scan(&result).Error
 		if err != nil {
 			return 0, nil, err
 		}
 	} else {
-		err = tx.Raw(sql, params...).Scan(&result).Error
+		err = tx.Raw(dataSql, params...).Scan(&result).Error
 	}
 
 	if err != nil {
-		log.Error(ctx, "GetAssessmentUserResultDBView error", log.Err(err), log.String("sql", sql), log.Any("params", params))
+		log.Error(ctx, "GetAssessmentUserResultDBView error", log.Err(err), log.String("sql", dataSql), log.Any("params", params))
 		return 0, nil, err
 	}
 
