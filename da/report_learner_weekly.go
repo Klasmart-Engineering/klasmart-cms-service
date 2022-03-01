@@ -19,7 +19,7 @@ func (r *ReportDA) GetLearnerWeeklyReportOverview(ctx context.Context, op *entit
 	sqlSchedule := strings.Builder{}
 	sqlSchedule.WriteString(`
 	select id from schedules s 
-	where ((s.class_type=? and s.end_at >= ? and s.end_at <?) or (s.class_type=? and s.due_at >= ? and s.due_at <?))
+	where ((s.class_type=? and s.end_at >= ? and s.end_at <?) or (s.class_type=? and s.created_at >= ? and s.created_at <?))
 	and s.org_id = ?
 `)
 	start, end, err := tr.Value(ctx)
