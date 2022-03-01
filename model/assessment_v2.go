@@ -173,7 +173,7 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 			if _, ok := dedupMap[item.StudentFeedbackID]; !ok {
 				feedbackIDs = append(feedbackIDs, item.StudentFeedbackID)
 			}
-			if _, ok := dedupMap[item.ReviewerID]; !ok {
+			if _, ok := dedupMap[item.ReviewerID]; !ok && item.ReviewerID != "" {
 				teacherIDs = append(teacherIDs, item.ReviewerID)
 			}
 
@@ -201,7 +201,7 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 				ID:                  item.ID,
 				Title:               item.Title,
 				Score:               int(item.AssessScore),
-				Status:              string(item.Status),
+				Status:              item.Status.Compliant(ctx),
 				CreateAt:            item.CreateAt,
 				UpdateAt:            item.UpdateAt,
 				CompleteAt:          item.CompleteAt,

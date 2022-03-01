@@ -200,6 +200,18 @@ func (a UserResultProcessStatus) Valid() bool {
 	return false
 }
 
+func (a UserResultProcessStatus) Compliant(ctx context.Context) string {
+	switch a {
+	case UserResultProcessStatusStarted, UserResultProcessStatusDraft:
+		return "in_progress"
+	case UserResultProcessStatusComplete:
+		return "complete"
+	default:
+		log.Warn(ctx, "status is invalid", log.Any("UserResultProcessStatus", a))
+		return ""
+	}
+}
+
 type AssessmentUserType string
 
 const (
