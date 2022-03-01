@@ -18,21 +18,25 @@ type ILearnerWeekly interface {
 func (r *ReportDA) GetLearnerWeeklyReportOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, cond entity.GetUserCountCondition) (res entity.LearnerWeeklyReportOverview, err error) {
 	sqlSchedule := strings.Builder{}
 	sqlSchedule.WriteString(`
-select id from schedules s 
-where s.class_type in (?) 
-and s.end_at >= ? and s.end_at <?
-and s.org_id = ?
+	select id from schedules s 
+	where ((s.class_type=? and s.end_at >= ? and s.end_at <?) or (s.class_type=? and s.due_at >= ? and s.due_at <?))
+	and s.org_id = ?
 `)
-	var argsSchedule []interface{}
-	argsSchedule = append(argsSchedule, []interface{}{
-		entity.ScheduleClassTypeOnlineClass,
-		entity.ScheduleClassTypeHomework,
-	})
 	start, end, err := tr.Value(ctx)
 	if err != nil {
 		return
 	}
-	argsSchedule = append(argsSchedule, start, end, op.OrgID)
+	var argsSchedule []interface{}
+	argsSchedule = append(argsSchedule, []interface{}{
+		entity.ScheduleClassTypeOnlineClass,
+		start,
+		end,
+		entity.ScheduleClassTypeHomework,
+		start,
+		end,
+		op.OrgID,
+	})
+
 	if cond.SchoolIDs.Valid {
 		sqlSchedule.WriteString(`
 and EXISTS (
