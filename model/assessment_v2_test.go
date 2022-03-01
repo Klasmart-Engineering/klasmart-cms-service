@@ -202,3 +202,29 @@ func TestPageForHomePage(t *testing.T) {
 
 	t.Log(result)
 }
+
+func TestQueryTeacherFeedback(t *testing.T) {
+	ctx := context.Background()
+	op := &entity.Operator{
+		UserID: "afdfc0d9-ada9-4e66-b225-20f956d1a399",
+		OrgID:  "60c064cc-bbd8-4724-b3f6-b886dce4774f",
+		Token:  "",
+	}
+	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFlYTBlNDk0LWU1NmYtNDE3ZS05OWE3LTgxNzc0Yzg3OWJmOCIsImVtYWlsIjoic3R1MDJfMDAxQHlvcG1haWwuY29tIiwiZXhwIjoxNjQ2MTIxNDQ2LCJpc3MiOiJraWRzbG9vcCJ9.IMXxYAIB-eH1es1dS4xD5WOTLG6lkhcJGo6Kp3qEYaeO6ivcHOjNiq7bZwnK-QuU-kv2qeWUwZ0uQHFTnJ7CupL8KGB-fye2nn1I1sPZ4VL_eSWiyYG8rV4zXEukTEm3EmIGMN_TvCIkloRYFqq9_PWfYxc1pu8wBRPHbzU0hZwtDcUweuLLvkCev4LAJoaHI0DlvfrJ6NK0GVGI-p2ROf2219kPuHwd-1RVR91jHNwzRejFi1Y3eft-olU04aPg5mwEvGk3E-2SC8zzuXi9EE_FrcAzPpU5kuhTXMZh1LHdFGlI2Ws9slX-LOKga-rt5-Qsk-xUaE9vj2eQBTWtqA"
+
+	total, result, err := GetAssessmentModelV2().QueryTeacherFeedback(ctx, op, &v2.StudentQueryAssessmentConditions{
+		OrgID:     "f27efd10-000e-4542-bef2-0ccda39b93d3",
+		StudentID: "aea0e494-e56f-417e-99a7-81774c879bf8",
+		ClassType: "home_fun_study",
+		OrderBy:   "-complete_at",
+		Page:      1,
+		PageSize:  5,
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(total)
+	t.Log(result)
+}
