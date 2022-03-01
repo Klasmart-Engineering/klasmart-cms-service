@@ -291,8 +291,8 @@ type StudentQueryAssessmentConditions struct {
 	ClassType AssessmentTypeCompliant `form:"type"`
 
 	OrderBy  string `form:"order_by"`
-	Page     string `form:"page"`
-	PageSize string `form:"page_size"`
+	Page     int    `form:"page"`
+	PageSize int    `form:"page_size"`
 }
 
 type AssessmentTypeCompliant string

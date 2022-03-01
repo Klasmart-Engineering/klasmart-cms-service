@@ -137,11 +137,20 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 		return 0, nil, constant.ErrInvalidArgs
 	}
 
+	if condition.Page < 0 || condition.PageSize < 0 {
+		log.Warn(ctx, "condition page or pageSize invalid", log.Any("condition", condition))
+		return 0, nil, constant.ErrInvalidArgs
+	}
+
 	if assessmentType == v2.AssessmentTypeOfflineStudy {
 		total, userResults, err := assessmentV2.GetAssessmentUserResultDA().GetAssessmentUserResultDBView(ctx, &assessmentV2.AssessmentUserResultDBViewCondition{
 			UserIDs: entity.NullStrings{
 				Strings: []string{condition.StudentID},
 				Valid:   true,
+			},
+			Pager: dbo.Pager{
+				Page:     condition.Page,
+				PageSize: condition.PageSize,
 			},
 		})
 		if err != nil {

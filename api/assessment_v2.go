@@ -221,6 +221,8 @@ func (s *Server) getStudentAssessments(c *gin.Context) {
 	conditions.OrgID = op.OrgID
 	conditions.StudentID = op.UserID
 
+	log.Debug(ctx, "request params", log.Any("conditions", conditions))
+
 	total, result, err := model.GetAssessmentModelV2().QueryTeacherFeedback(ctx, op, conditions)
 
 	c.JSON(http.StatusOK, &v2.SearchStudentAssessmentsResponse{
