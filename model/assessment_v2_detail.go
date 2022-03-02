@@ -145,6 +145,8 @@ func (adc *AssessmentDetailComponent) getContentOutcomeIDsMap(contentIDs []strin
 }
 
 func (adc *AssessmentDetailComponent) getScheduleLockedContents(schedule *entity.Schedule) error {
+	ctx := adc.ctx
+
 	contentIDs := make([]string, 0)
 	contentIDs = append(contentIDs, schedule.LiveLessonPlan.LessonPlanID)
 	for _, materialItem := range schedule.LiveLessonPlan.LessonMaterials {
@@ -156,7 +158,10 @@ func (adc *AssessmentDetailComponent) getScheduleLockedContents(schedule *entity
 		return err
 	}
 
-	latestContentIDMap, err := adc.apc.GetLatestContentIDMapByIDList(contentIDs)
+	latestContentIDMap, err := GetContentModel().GetLatestContentIDMapByIDListInternal(ctx, dbo.MustGetDB(ctx), contentIDs)
+	if err != nil {
+		return err
+	}
 
 	liveLessonPlan := schedule.LiveLessonPlan
 
@@ -202,15 +207,17 @@ func (adc *AssessmentDetailComponent) getLatestContents(schedule *entity.Schedul
 	ctx := adc.ctx
 	op := adc.op
 
-	latestLessPlanIDs, err := GetContentModel().GetLatestContentIDByIDListInternal(ctx, dbo.MustGetDB(ctx), []string{schedule.LessonPlanID})
+	latestLessPlanIDMap, err := GetContentModel().GetLatestContentIDMapByIDListInternal(ctx, dbo.MustGetDB(ctx), []string{schedule.LessonPlanID})
 	if err != nil {
 		return err
 	}
-	if len(latestLessPlanIDs) <= 0 {
+	latestLessPlanID, ok := latestLessPlanIDMap[schedule.LessonPlanID]
+	if !ok {
+		log.Error(ctx, "lessPlan not found", log.Any("schedule", schedule), log.Any("latestLessPlanIDMap", latestLessPlanIDMap))
 		return constant.ErrRecordNotFound
 	}
 
-	latestLessPlans, err := GetContentModel().GetContentNameByIDListInternal(ctx, dbo.MustGetDB(ctx), latestLessPlanIDs)
+	latestLessPlans, err := GetContentModel().GetContentNameByIDListInternal(ctx, dbo.MustGetDB(ctx), []string{latestLessPlanID})
 	if err != nil {
 		return err
 	}
@@ -218,7 +225,7 @@ func (adc *AssessmentDetailComponent) getLatestContents(schedule *entity.Schedul
 		return constant.ErrRecordNotFound
 	}
 
-	subContentsMap, err := GetContentModel().GetContentsSubContentsMapByIDListInternal(ctx, dbo.MustGetDB(ctx), latestLessPlanIDs, op)
+	subContentsMap, err := GetContentModel().GetContentsSubContentsMapByIDListInternal(ctx, dbo.MustGetDB(ctx), []string{latestLessPlanID}, op)
 	if err != nil {
 		return err
 	}
@@ -300,7 +307,7 @@ func (adc *AssessmentDetailComponent) GetContentMapFromLiveRoom() (map[string]*R
 			oldContentMap[item.MaterialID] = item
 		}
 
-		latestContentIDMap, err := adc.apc.GetLatestContentIDMapByIDList(oldContentIDs)
+		latestContentIDMap, err := GetContentModel().GetLatestContentIDMapByIDListInternal(ctx, dbo.MustGetDB(ctx), oldContentIDs)
 		if err != nil {
 			log.Error(ctx, "GetLatestContentIDMapByIDList error", log.Err(err), log.Strings("oldContentIDs", oldContentIDs))
 			return nil, err
@@ -497,7 +504,7 @@ func (adc *AssessmentDetailComponent) GetAssessmentContentMap() (map[string]*v2.
 			assessmentContentMap[item.ContentID] = item
 		}
 
-		latestContentIDMap, err := adc.apc.GetLatestContentIDMapByIDList(oldContentIDs)
+		latestContentIDMap, err := GetContentModel().GetLatestContentIDMapByIDListInternal(ctx, dbo.MustGetDB(ctx), oldContentIDs)
 		if err != nil {
 			log.Error(ctx, "GetLatestContentIDMapByIDList error", log.Err(err), log.Strings("oldContentIDs", oldContentIDs))
 			return nil, err

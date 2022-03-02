@@ -160,7 +160,7 @@ type IContentModel interface {
 
 	GetContentNameByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
 	GetContentsSubContentsMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*SubContentsWithName, error)
-	GetLatestContentIDByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error)
+	GetLatestContentIDMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) (map[string]string, error)
 }
 
 func (cm *ContentModel) GetSpecifiedLessonPlan(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, planID string, materialIDs []string, withAP bool) (*entity.ContentInfoWithDetails, error) {
@@ -3729,11 +3729,11 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDListInternal(ctx context.Co
 	return contentInfoMap, nil
 }
 
-func (cm *ContentModel) GetLatestContentIDByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error) {
+func (cm *ContentModel) GetLatestContentIDMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) (map[string]string, error) {
 	if len(cids) < 1 {
 		return nil, nil
 	}
-	resp := make([]string, 0, len(cids))
+	resp := make(map[string]string)
 	data, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
 		IncludeDeleted: true,
 		IDS: entity.NullStrings{
@@ -3745,13 +3745,14 @@ func (cm *ContentModel) GetLatestContentIDByIDListInternal(ctx context.Context, 
 		log.Error(ctx, "can't search content", log.Err(err), log.Strings("cids", cids))
 		return nil, ErrReadContentFailed
 	}
-	for _, item := range data {
-		if item.LatestID != "" {
-			resp = append(resp, item.LatestID)
-		} else {
-			resp = append(resp, item.ID)
+	for i := range data {
+		latestID := data[i].LatestID
+		if data[i].LatestID == "" {
+			latestID = data[i].ID
 		}
+		resp[data[i].ID] = latestID
 	}
+
 	return resp, nil
 }
 
