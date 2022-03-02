@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
@@ -14,42 +16,43 @@ type IStudentProgressLearnOutcomeAchievement interface {
 
 func (r *ReportDA) GetStudentProgressLearnOutcomeCountByStudentAndSubject(ctx context.Context, req *entity.LearnOutcomeAchievementRequest) (res []*entity.StudentProgressLearnOutcomeCount, err error) {
 	res = []*entity.StudentProgressLearnOutcomeCount{}
-
 	sbStudentAchieveOutcome := NewSqlBuilder(ctx, `
-select
-    t1.assessment_id,
-    t1.outcome_id,
-    t2.student_id,
-    vss.class_id ,
-    a.complete_time ,
-    vss.subject_id ,    
-    if(oa.id is null,0,1) as is_student_achieved
+select  
+	auv.assessment_id ,
+	auov.outcome_id,	
+	auv.user_id as student_id,
+	srClass.relation_id as class_id,
+	av.complete_at as complete_time,
+	if(srSubject.relation_id is null,'',srSubject.relation_id) as subject_id,	
+	IF(auov.status=?,1,0) as is_student_achieved
+	
 from (
-        SELECT
-            DISTINCT assessment_id,
-                     outcome_id
-        FROM
-            assessments_outcomes
-) t1
-INNER JOIN (
-        SELECT
-            assessment_id,
-            attendance_id AS student_id
-        FROM
-            assessments_attendances
-        WHERE
-                checked = 1
-          AND origin = 'class_roaster'
-          AND role = 'student'          
-) t2  ON	t1.assessment_id = t2.assessment_id
-left join outcomes_attendances oa
-	on t1.assessment_id = oa.assessment_id
-    and t1.outcome_id = oa.outcome_id
-    and t2.student_id = oa.attendance_id 
-inner join assessments a on
-            a.id = t1.assessment_id and a.status ='complete'  
-left join v_schedules_subjects vss on vss.schedule_id =a.schedule_id 
-where vss.class_id =?`, req.ClassID)
+	select 
+		DISTINCT assessment_user_id ,
+		outcome_id,
+		status,
+		delete_at 
+	from assessments_users_outcomes_v2
+) auov 
+inner join assessments_users_v2 auv on auov.assessment_user_id =auv.id  and auv.user_type =?
+inner join assessments_v2 av on auv.assessment_id =av.id 
+left join schedules_relations srSubject on srSubject.schedule_id =av.schedule_id and srSubject.relation_type =?
+inner join schedules_relations srClass on srClass.schedule_id =av.schedule_id and srClass.relation_type=?
+
+where 
+	av.status = ?
+ 	and srClass.relation_id = ?	
+	and EXISTS (
+		select 1 from schedules_relations sr where sr.schedule_id =av.schedule_id and sr.relation_id =auv.user_id and sr.relation_type=?
+	)`,
+		v2.AssessmentUserOutcomeStatusAchieved,
+		v2.AssessmentUserTypeStudent,
+		entity.ScheduleRelationTypeSubject,
+		entity.ScheduleRelationTypeClassRosterClass,
+		v2.AssessmentStatusComplete,
+		req.ClassID,
+		entity.ScheduleRelationTypeClassRosterStudent,
+	)
 	sbStudentFirstAchieveOutcome := NewSqlBuilder(ctx, `
 select 
 	t0.assessment_id,
