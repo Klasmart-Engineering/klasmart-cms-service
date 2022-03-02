@@ -40,7 +40,12 @@ left join schedules_relations srSubject on srSubject.schedule_id =av.schedule_id
 inner join schedules_relations srClass on srClass.schedule_id =av.schedule_id and srClass.relation_type=?
 
 where 
-	av.status = ?
+	auov.delete_at=0
+	and auv.delete_at =0
+	and av.delete_at =0
+
+	and av.status = ?
+	and auv.status_by_system= ?
  	and srClass.relation_id = ?	
 	and EXISTS (
 		select 1 from schedules_relations sr where sr.schedule_id =av.schedule_id and sr.relation_id =auv.user_id and sr.relation_type=?
@@ -50,6 +55,7 @@ where
 		entity.ScheduleRelationTypeSubject,
 		entity.ScheduleRelationTypeClassRosterClass,
 		v2.AssessmentStatusComplete,
+		v2.AssessmentUserStatusParticipate,
 		req.ClassID,
 		entity.ScheduleRelationTypeClassRosterStudent,
 	)
