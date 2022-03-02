@@ -41,7 +41,7 @@ type ClassFilter struct {
 	ID             *UUIDFilter   `json:"id,omitempty"`
 	Name           *StringFilter `json:"name,omitempty"`
 	Status         *StringFilter `json:"status,omitempty"`
-	OrganizationId *UUIDFilter   `json:"organizationId,omitempty"`
+	OrganizationID *UUIDFilter   `json:"organizationId,omitempty"`
 	TeacherID      *UUIDFilter   `json:"teacherId,omitempty"`
 }
 
