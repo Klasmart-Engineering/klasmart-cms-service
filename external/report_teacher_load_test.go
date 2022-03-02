@@ -2,16 +2,25 @@ package external
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 )
 
 func TestAmsTeacherLoadService_BatchGetClassWithStudent(t *testing.T) {
 	ctx := context.Background()
-	result, err := GetTeacherLoadServiceProvider().BatchGetActiveClassWithStudent(ctx, testOperator, []string{"fd589031-6b98-4336-8da6-a35dc52a15b3", "0d3686a6-bf6a-4777-a716-31ce4aa0f516"})
+	result, err := GetTeacherLoadServiceProvider().BatchGetActiveClassWithStudent(ctx, testOperator, []string{"fd589031-6b98-4336-8da6-a35dc52a15b3", "0d3686a6-bf6a-4777-a716-31ce4aa0f519"})
 	if err != nil {
 		t.Errorf("GetTeacherLoadServiceProvider().BatchGetActiveClassWithStudent() error = %v", err)
 		return
 	}
 	fmt.Printf("%#v", result)
+}
+
+func TestMarshal(t *testing.T) {
+	cf := ClassFilter{
+		TeacherID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID("adfafasdfasdsdf")},
+	}
+	result, _ := json.Marshal(cf)
+	fmt.Printf(string(result))
 }
