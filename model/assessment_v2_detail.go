@@ -709,6 +709,8 @@ func (adc *AssessmentDetailComponent) MatchOutcome() error {
 }
 
 func (adc *AssessmentDetailComponent) MatchStudentNotContainsRoomInfo() error {
+	ctx := adc.ctx
+
 	userMap, err := adc.apc.GetUserMap()
 	if err != nil {
 		return err
@@ -751,7 +753,11 @@ func (adc *AssessmentDetailComponent) MatchStudentNotContainsRoomInfo() error {
 
 		studentInfo, ok := userMap[item.UserID]
 		if !ok {
-			continue
+			log.Warn(ctx, "not found user info from user service", log.Any("item", item), log.Any("userMap", userMap))
+			studentInfo = &entity.IDName{
+				ID:   item.UserID,
+				Name: "",
+			}
 		}
 
 		if adc.assessment.AssessmentType == v2.AssessmentTypeOnlineClass && item.StatusByUser == v2.AssessmentUserStatusNotParticipate {
@@ -808,6 +814,8 @@ func (adc *AssessmentDetailComponent) MatchStudentNotContainsRoomInfo() error {
 }
 
 func (adc *AssessmentDetailComponent) MatchStudentContainsRoomInfo() error {
+	ctx := adc.ctx
+
 	assessmentUserMap, err := adc.apc.GetAssessmentUserMap()
 	if err != nil {
 		return err
@@ -861,7 +869,11 @@ func (adc *AssessmentDetailComponent) MatchStudentContainsRoomInfo() error {
 
 		studentInfo, ok := userMap[item.UserID]
 		if !ok {
-			continue
+			log.Warn(ctx, "not found user info from user service", log.Any("item", item), log.Any("userMap", userMap))
+			studentInfo = &entity.IDName{
+				ID:   item.UserID,
+				Name: "",
+			}
 		}
 
 		studentReply := &v2.AssessmentStudentReply{
