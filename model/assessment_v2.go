@@ -209,18 +209,22 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 				Schedule:            nil,
 				FeedbackAttachments: nil,
 			}
+			teacherComment := &v2.StudentAssessmentTeacher{
+				Teacher: &v2.StudentAssessmentTeacherInfo{
+					ID:         item.ReviewerID,
+					GivenName:  "",
+					FamilyName: "",
+					Avatar:     "",
+				},
+				Comment: item.ReviewerComment,
+			}
 
 			if teacherInfo, ok := teacherMap[item.ReviewerID]; ok {
-				resultItem.TeacherComments = append(resultItem.TeacherComments, &v2.StudentAssessmentTeacher{
-					Teacher: &v2.StudentAssessmentTeacherInfo{
-						ID:         teacherInfo.ID,
-						GivenName:  teacherInfo.GivenName,
-						FamilyName: teacherInfo.FamilyName,
-						Avatar:     teacherInfo.Avatar,
-					},
-					Comment: item.ReviewerComment,
-				})
+				teacherComment.Teacher.GivenName = teacherInfo.GivenName
+				teacherComment.Teacher.FamilyName = teacherInfo.FamilyName
+				teacherComment.Teacher.Avatar = teacherInfo.Avatar
 			}
+			resultItem.TeacherComments = append(resultItem.TeacherComments, teacherComment)
 
 			if scheduleInfo, ok := scheduleMap[item.ScheduleID]; ok {
 				scheduleAttachment := new(v2.StudentAssessmentAttachment)
