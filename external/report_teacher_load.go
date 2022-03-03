@@ -242,17 +242,22 @@ func (t *AmsTeacherLoadService) BatchGetActiveClassWithStudent(ctx context.Conte
 
 			tIterator := &(class.Node.TeachersConnection)
 			teachersQuery := `
-				query ($classFilter:ClassFilter!,$classPageDirection: ConnectionDirection!, $studentPageDirection: ConnectionDirection!, $studentPageCursor: String){
+				query ($classFilter:ClassFilter!, $userOr:[UserFilter!], $classPageDirection: ConnectionDirection! $teacherPageDirection:ConnectionDirection!, $teacherPageCursor: String){
 					classesConnection(direction: $classPageDirection, filter: $classFilter) {
 					totalCount
+					pageInfo {
+					  hasNextPage
+					  hasPreviousPage
+					  startCursor
+					  endCursor
+					}
 					edges{
 					  node{
 						id
 						name
 						status
-						studentsConnection(direction: $studentPageDirection, cursor:$studentPageCursor, filter:{userStatus: {operator:eq, value:"active"}}){
-									totalCount
-						  pageInfo {
+						teachersConnection(direction:$teacherPageDirection, cursor: $teacherPageCursor,filter:{OR: $userOr}){
+						   pageInfo {
 							hasNextPage
 							hasPreviousPage
 							startCursor
@@ -263,7 +268,7 @@ func (t *AmsTeacherLoadService) BatchGetActiveClassWithStudent(ctx context.Conte
 							  id
 							  givenName
 							  familyName
-							  status
+ 							  status
 							}
 						  }
 						}
@@ -277,6 +282,7 @@ func (t *AmsTeacherLoadService) BatchGetActiveClassWithStudent(ctx context.Conte
 			teacherVariables["classFilter"] = ClassFilter{ID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(class.Node.ID)}}
 			teacherVariables["classPageDirection"] = Forward
 			teacherVariables["teacherPageDirection"] = Forward
+			teacherVariables["userOr"] = userOr
 
 			var teacherEdges []UserConnectionEdge
 			teacherEdges = append(teacherEdges, tIterator.Edges...)
