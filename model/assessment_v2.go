@@ -362,8 +362,9 @@ func (a *assessmentModelV2) getConditionByPermission(ctx context.Context, op *en
 		if permission.MyPermission.Status.Valid {
 			condition.TeacherIDs.Strings = append(condition.TeacherIDs.Strings, permission.MyPermission.UserID)
 		}
+
+		condition.TeacherIDs.Valid = true
 	}
-	condition.TeacherIDs.Valid = len(condition.TeacherIDs.Strings) > 0
 
 	log.Debug(ctx, "permission info", log.Any("permission", permission), log.Any("condition", condition))
 

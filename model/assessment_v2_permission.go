@@ -85,7 +85,7 @@ func (c *AssessmentPermission) SearchAllPermissions(ctx context.Context, op *ent
 	var teacherMap = make(map[string]struct{})
 	for _, teachers := range schoolID2TeachersMap {
 		for _, teacher := range teachers {
-			if _, ok := teacherMap[teacher.ID]; !ok {
+			if _, ok := teacherMap[teacher.ID]; ok {
 				continue
 			}
 			c.SchoolPermission.UserIDs = append(c.SchoolPermission.UserIDs, teacher.ID)
