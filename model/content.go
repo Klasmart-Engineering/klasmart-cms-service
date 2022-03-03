@@ -1713,7 +1713,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 				log.Error(ctx, "can't prepare version for sub contents", log.Err(err), log.Any("content", content))
 				return nil, err
 			}
-			err = v.PrepareResult(ctx, tx, content, user, true)
+			err = v.PrepareResult(ctx, tx, content, user, false)
 			if err != nil {
 				log.Error(ctx, "can't get sub contents", log.Err(err), log.Any("content", content))
 				return nil, err
@@ -1730,9 +1730,10 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 						return
 					}
 					ret = append(ret, &SubContentsWithName{
-						ID:   l.Material.ID,
-						Name: l.Material.Name,
-						Data: cd0,
+						ID:         l.Material.ID,
+						Name:       l.Material.Name,
+						Data:       cd0,
+						OutcomeIDs: l.Material.Outcomes,
 					})
 				}
 			})
@@ -1742,9 +1743,10 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 			//if sub contents is not exists, return current content
 			ret := []*SubContentsWithName{
 				{
-					ID:   obj.ID,
-					Name: obj.Name,
-					Data: v,
+					ID:         obj.ID,
+					Name:       obj.Name,
+					Data:       v,
+					OutcomeIDs: cm.parseContentOutcomes(ctx, obj),
 				},
 			}
 			contentInfoMap[obj.ID] = ret
@@ -1753,9 +1755,10 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 			//if sub contents is not exists, return current content
 			ret := []*SubContentsWithName{
 				{
-					ID:   obj.ID,
-					Name: obj.Name,
-					Data: v,
+					ID:         obj.ID,
+					Name:       obj.Name,
+					Data:       v,
+					OutcomeIDs: cm.parseContentOutcomes(ctx, obj),
 				},
 			}
 			contentInfoMap[obj.ID] = ret
