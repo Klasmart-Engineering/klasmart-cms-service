@@ -580,6 +580,15 @@ type ContentName struct {
 	OutcomeIDs  []string    `json:"outcome_ids"`
 }
 
+type ContentInfoInternal struct {
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	ContentType ContentType `json:"content_type"`
+	LatestID    string      `json:"latest_id"`
+	OutcomeIDs  []string    `json:"outcome_ids"`
+	FileType    FileType    `json:"file_type"`
+}
+
 //Content in folder
 type FolderContent struct {
 	ID              string      `json:"id"`

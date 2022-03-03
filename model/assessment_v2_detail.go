@@ -85,7 +85,7 @@ func (adc *AssessmentDetailComponent) isNeedConvertLatestContent() (bool, error)
 		return false, constant.ErrRecordNotFound
 	}
 
-	if adc.assessment.MigrateFlag == constant.AssessmentHistoryFlag || !schedule.IsLockedLessonPlan() {
+	if (adc.assessment.MigrateFlag == constant.AssessmentHistoryFlag && adc.assessment.Status != v2.AssessmentStatusNotStarted) || !schedule.IsLockedLessonPlan() {
 		log.Info(ctx, "assessment belongs to the migration or schedule can not locked lessPlan", log.Any("assessment", adc.assessment))
 		return true, nil
 	}
@@ -128,7 +128,7 @@ func (adc *AssessmentDetailComponent) getContentOutcomeIDsMap(contentIDs []strin
 
 	contentIDs = utils.SliceDeduplication(contentIDs)
 
-	contents, err := GetContentModel().GetContentNameByIDListInternal(ctx, dbo.MustGetDB(ctx), contentIDs)
+	contents, err := GetContentModel().GetContentByIDListInternal(ctx, dbo.MustGetDB(ctx), contentIDs)
 	if err != nil {
 		log.Error(ctx, "toViews: GetContentModel().GetContentByIDList: get failed",
 			log.Err(err),
@@ -158,9 +158,14 @@ func (adc *AssessmentDetailComponent) getScheduleLockedContents(schedule *entity
 		return err
 	}
 
-	latestContentIDMap, err := GetContentModel().GetLatestContentIDMapByIDListInternal(ctx, dbo.MustGetDB(ctx), contentIDs)
+	contentInfos, err := GetContentModel().GetContentByIDListInternal(ctx, dbo.MustGetDB(ctx), contentIDs)
 	if err != nil {
 		return err
+	}
+
+	contentInfoMap := make(map[string]*entity.ContentInfoInternal, len(contentInfos))
+	for _, item := range contentInfos {
+		contentInfoMap[item.ID] = item
 	}
 
 	liveLessonPlan := schedule.LiveLessonPlan
@@ -170,7 +175,10 @@ func (adc *AssessmentDetailComponent) getScheduleLockedContents(schedule *entity
 		Name:        liveLessonPlan.LessonPlanName,
 		ContentType: v2.AssessmentContentTypeLessonPlan,
 		OutcomeIDs:  contentOutcomeIDsMap[liveLessonPlan.LessonPlanID],
-		LatestID:    latestContentIDMap[liveLessonPlan.LessonPlanID],
+	}
+	if contentItem, ok := contentInfoMap[liveLessonPlan.LessonPlanID]; ok {
+		lessPlan.LatestID = contentItem.LatestID
+		lessPlan.FileType = contentItem.FileType
 	}
 
 	adc.contentMapFromSchedule[liveLessonPlan.LessonPlanID] = lessPlan
@@ -182,8 +190,12 @@ func (adc *AssessmentDetailComponent) getScheduleLockedContents(schedule *entity
 			Name:        item.LessonMaterialName,
 			ContentType: v2.AssessmentContentTypeLessonMaterial,
 			OutcomeIDs:  contentOutcomeIDsMap[item.LessonMaterialID],
-			LatestID:    latestContentIDMap[item.LessonMaterialID],
 		}
+		if contentItem, ok := contentInfoMap[item.LessonMaterialID]; ok {
+			materialItem.LatestID = contentItem.LatestID
+			materialItem.FileType = contentItem.FileType
+		}
+
 		adc.contentMapFromSchedule[liveLessonPlan.LessonPlanID] = materialItem
 		adc.contentsFromSchedule = append(adc.contentsFromSchedule, materialItem)
 	}
@@ -217,7 +229,7 @@ func (adc *AssessmentDetailComponent) getLatestContents(schedule *entity.Schedul
 		return constant.ErrRecordNotFound
 	}
 
-	latestLessPlans, err := GetContentModel().GetContentNameByIDListInternal(ctx, dbo.MustGetDB(ctx), []string{latestLessPlanID})
+	latestLessPlans, err := GetContentModel().GetContentByIDListInternal(ctx, dbo.MustGetDB(ctx), []string{latestLessPlanID})
 	if err != nil {
 		return err
 	}
@@ -239,6 +251,7 @@ func (adc *AssessmentDetailComponent) getLatestContents(schedule *entity.Schedul
 		ContentType: v2.AssessmentContentTypeLessonPlan,
 		OutcomeIDs:  latestLessPlan.OutcomeIDs,
 		LatestID:    latestLessPlan.ID,
+		FileType:    latestLessPlan.FileType,
 	}
 	adc.contentMapFromSchedule[latestLessPlan.ID] = lessPlan
 	adc.contentsFromSchedule = append(adc.contentsFromSchedule, lessPlan)
@@ -250,6 +263,7 @@ func (adc *AssessmentDetailComponent) getLatestContents(schedule *entity.Schedul
 			ContentType: v2.AssessmentContentTypeLessonMaterial,
 			OutcomeIDs:  item.OutcomeIDs,
 			LatestID:    item.ID,
+			FileType:    item.FileType,
 		}
 		adc.contentMapFromSchedule[item.ID] = subContentItem
 		adc.contentsFromSchedule = append(adc.contentsFromSchedule, subContentItem)
@@ -630,6 +644,7 @@ func (adc *AssessmentDetailComponent) MatchContentsContainsRoomInfo() error {
 			ReviewerComment:      "",
 			OutcomeIDs:           item.OutcomeIDs,
 			RoomProvideContentID: "",
+			ContentSubtype:       item.FileType.String(),
 		}
 
 		if item.ContentType == v2.AssessmentContentTypeLessonPlan {

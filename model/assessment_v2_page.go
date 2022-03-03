@@ -266,7 +266,7 @@ func (apc *AssessmentPageComponent) GetLessPlanMap() (map[string]*v2.AssessmentC
 
 	lessPlanIDs := utils.SliceDeduplicationExcludeEmpty(attemptedLessPlanIDs)
 
-	lessPlans, err := GetContentModel().GetContentNameByIDListInternal(ctx, dbo.MustGetDB(ctx), lessPlanIDs)
+	lessPlans, err := GetContentModel().GetContentByIDListInternal(ctx, dbo.MustGetDB(ctx), lessPlanIDs)
 	if err != nil {
 		log.Error(ctx, "get content by ids error", log.Err(err), log.Strings("lessPlanIDs", lessPlanIDs))
 		return nil, err
@@ -280,6 +280,7 @@ func (apc *AssessmentPageComponent) GetLessPlanMap() (map[string]*v2.AssessmentC
 			OutcomeIDs:  item.OutcomeIDs,
 			ContentType: v2.AssessmentContentTypeLessonPlan,
 			LatestID:    item.LatestID,
+			FileType:    item.FileType,
 		}
 		apc.allLessPlanMap[item.ID] = lessPlanItem
 	}

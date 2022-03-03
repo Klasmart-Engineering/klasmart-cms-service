@@ -84,7 +84,7 @@ type SubContentsWithName struct {
 	ID         string      `json:"id"`
 	Name       string      `json:"name"`
 	Data       ContentData `json:"data"`
-	OutcomeIDs []string    `json:"outcome_i_ds"`
+	OutcomeIDs []string    `json:"outcome_ids"`
 }
 
 type IContentModel interface {
@@ -158,8 +158,8 @@ type IContentModel interface {
 
 	GetSpecifiedLessonPlan(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, planID string, materialIDs []string, withAP bool) (*entity.ContentInfoWithDetails, error)
 
-	GetContentNameByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
-	GetContentsSubContentsMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*SubContentsWithName, error)
+	GetContentByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentInfoInternal, error)
+	GetContentsSubContentsMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*entity.ContentInfoInternal, error)
 	GetLatestContentIDMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) (map[string]string, error)
 }
 
@@ -1713,7 +1713,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 				log.Error(ctx, "can't prepare version for sub contents", log.Err(err), log.Any("content", content))
 				return nil, err
 			}
-			err = v.PrepareResult(ctx, tx, content, user, false)
+			err = v.PrepareResult(ctx, tx, content, user, true)
 			if err != nil {
 				log.Error(ctx, "can't get sub contents", log.Err(err), log.Any("content", content))
 				return nil, err
@@ -1730,10 +1730,9 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 						return
 					}
 					ret = append(ret, &SubContentsWithName{
-						ID:         l.Material.ID,
-						Name:       l.Material.Name,
-						Data:       cd0,
-						OutcomeIDs: l.Material.Outcomes,
+						ID:   l.Material.ID,
+						Name: l.Material.Name,
+						Data: cd0,
 					})
 				}
 			})
@@ -1743,10 +1742,9 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 			//if sub contents is not exists, return current content
 			ret := []*SubContentsWithName{
 				{
-					ID:         obj.ID,
-					Name:       obj.Name,
-					Data:       v,
-					OutcomeIDs: cm.parseContentOutcomes(ctx, obj),
+					ID:   obj.ID,
+					Name: obj.Name,
+					Data: v,
 				},
 			}
 			contentInfoMap[obj.ID] = ret
@@ -1755,10 +1753,9 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 			//if sub contents is not exists, return current content
 			ret := []*SubContentsWithName{
 				{
-					ID:         obj.ID,
-					Name:       obj.Name,
-					Data:       v,
-					OutcomeIDs: cm.parseContentOutcomes(ctx, obj),
+					ID:   obj.ID,
+					Name: obj.Name,
+					Data: v,
 				},
 			}
 			contentInfoMap[obj.ID] = ret
@@ -3593,20 +3590,26 @@ func (cm *ContentModel) convertFolderContent(ctx context.Context, objs []*entity
 	return ret
 }
 
-func (cm *ContentModel) GetContentNameByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error) {
+func (cm *ContentModel) GetContentByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentInfoInternal, error) {
 	if len(cids) < 1 {
 		return nil, nil
 	}
-	resp := make([]*entity.ContentName, 0)
+	resp := make([]*entity.ContentInfoInternal, 0)
 
 	nid, cachedContent := da.GetContentRedis().GetContentCacheByIDList(ctx, cids)
 	for i := range cachedContent {
-		resp = append(resp, &entity.ContentName{
+		fileType, err := cm.parseFileType(ctx, cachedContent[i].ContentType, cachedContent[i].Data)
+		if err != nil {
+			log.Error(ctx, "parse file type error", log.Err(err), log.Any("content", cachedContent[i]))
+			return nil, err
+		}
+		resp = append(resp, &entity.ContentInfoInternal{
 			ID:          cachedContent[i].ID,
 			Name:        cachedContent[i].Name,
 			ContentType: cachedContent[i].ContentType,
 			LatestID:    cachedContent[i].LatestID,
 			OutcomeIDs:  cachedContent[i].Outcomes,
+			FileType:    fileType,
 		})
 	}
 	if len(nid) < 1 {
@@ -3629,18 +3632,42 @@ func (cm *ContentModel) GetContentNameByIDListInternal(ctx context.Context, tx *
 		if data[i].LatestID == "" {
 			latestID = data[i].ID
 		}
-		resp = append(resp, &entity.ContentName{
+		fileType, err := cm.parseFileType(ctx, data[i].ContentType, data[i].Data)
+		if err != nil {
+			log.Error(ctx, "parse file type error", log.Err(err), log.Any("content", data[i]))
+			return nil, err
+		}
+		resp = append(resp, &entity.ContentInfoInternal{
 			ID:          data[i].ID,
 			Name:        data[i].Name,
 			ContentType: data[i].ContentType,
 			LatestID:    latestID,
 			OutcomeIDs:  cm.parseContentOutcomes(ctx, data[i]),
+			FileType:    fileType,
 		})
 	}
 	return resp, nil
 }
 
-func (cm *ContentModel) GetContentsSubContentsMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*SubContentsWithName, error) {
+func (cm *ContentModel) parseFileType(ctx context.Context, contentType entity.ContentType, dataStr string) (entity.FileType, error) {
+	data, err := cm.CreateContentData(ctx, contentType, dataStr)
+	if err != nil {
+		log.Error(ctx, "get lesson material source map: create content data failed",
+			log.Err(err),
+			log.Any("contentType", contentType),
+			log.String("dataStr", dataStr),
+		)
+		return 0, err
+	}
+
+	if v, ok := data.(*MaterialData); ok {
+		return v.FileType, nil
+	}
+
+	return 0, nil
+}
+
+func (cm *ContentModel) GetContentsSubContentsMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*entity.ContentInfoInternal, error) {
 	objs, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
 		IncludeDeleted: true,
 		IDS: entity.NullStrings{
@@ -3652,7 +3679,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDListInternal(ctx context.Co
 		log.Error(ctx, "can't read content", log.Err(err), log.Strings("cids", cids))
 		return nil, err
 	}
-	contentInfoMap := make(map[string][]*SubContentsWithName)
+	contentInfoMap := make(map[string][]*entity.ContentInfoInternal)
 	for _, obj := range objs {
 		cd, err := cm.CreateContentData(ctx, obj.ContentType, obj.Data)
 		if err != nil {
@@ -3674,27 +3701,25 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDListInternal(ctx context.Co
 				log.Error(ctx, "can't prepare version for sub contents", log.Err(err), log.Any("content", content))
 				return nil, err
 			}
-			err = v.PrepareResult(ctx, tx, content, user, false)
+			err = v.PrepareResult(ctx, tx, content, user, true)
 			if err != nil {
 				log.Error(ctx, "can't get sub contents", log.Err(err), log.Any("content", content))
 				return nil, err
 			}
-			ret := make([]*SubContentsWithName, 0)
+			ret := make([]*entity.ContentInfoInternal, 0)
 			v.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 				if l.Material != nil {
-					cd0, err := cm.CreateContentData(ctx, l.Material.ContentType, l.Material.Data)
+					fileType, err := cm.parseFileType(ctx, l.Material.ContentType, l.Material.Data)
 					if err != nil {
-						log.Error(ctx, "can't parse sub content data",
-							log.Err(err),
-							log.Any("lesson", l),
-							log.Any("subContent", l.Material))
 						return
 					}
-					ret = append(ret, &SubContentsWithName{
-						ID:         l.Material.ID,
-						Name:       l.Material.Name,
-						Data:       cd0,
-						OutcomeIDs: l.Material.Outcomes,
+					ret = append(ret, &entity.ContentInfoInternal{
+						ID:          l.Material.ID,
+						Name:        l.Material.Name,
+						ContentType: l.Material.ContentType,
+						OutcomeIDs:  l.Material.Outcomes,
+						LatestID:    l.Material.ID,
+						FileType:    fileType,
 					})
 				}
 			})
@@ -3702,24 +3727,28 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDListInternal(ctx context.Co
 		case *MaterialData:
 			//若不存在子内容，则返回当前内容
 			//if sub contents is not exists, return current content
-			ret := []*SubContentsWithName{
+			ret := []*entity.ContentInfoInternal{
 				{
-					ID:         obj.ID,
-					Name:       obj.Name,
-					Data:       v,
-					OutcomeIDs: cm.parseContentOutcomes(ctx, obj),
+					ID:          obj.ID,
+					Name:        obj.Name,
+					ContentType: obj.ContentType,
+					OutcomeIDs:  cm.parseContentOutcomes(ctx, obj),
+					LatestID:    obj.ID,
+					FileType:    v.FileType,
 				},
 			}
 			contentInfoMap[obj.ID] = ret
 		case *AssetsData:
 			//若不存在子内容，则返回当前内容
 			//if sub contents is not exists, return current content
-			ret := []*SubContentsWithName{
+			ret := []*entity.ContentInfoInternal{
 				{
-					ID:         obj.ID,
-					Name:       obj.Name,
-					Data:       v,
-					OutcomeIDs: cm.parseContentOutcomes(ctx, obj),
+					ID:          obj.ID,
+					Name:        obj.Name,
+					ContentType: obj.ContentType,
+					OutcomeIDs:  cm.parseContentOutcomes(ctx, obj),
+					LatestID:    obj.ID,
+					FileType:    v.FileType,
 				},
 			}
 			contentInfoMap[obj.ID] = ret
