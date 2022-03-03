@@ -2,7 +2,6 @@ package external
 
 import (
 	"context"
-	"net/http"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -51,196 +50,240 @@ func (t *AmsTeacherLoadService) BatchGetActiveClassWithStudent(ctx context.Conte
 		userOr = append(userOr, uf)
 	}
 
-	query := `
-query ($classOr:[ClassFilter!], $userOr:[UserFilter!], $classPageDirection: ConnectionDirection!, $classPageCursor: String, $studentPageDirection: ConnectionDirection!, $studentPageCursor: String, $teacherPageDirection:ConnectionDirection!, $teacherPageCursor: String){
-	classesConnection(direction:$classPageDirection, directionArgs:{cursor: $classPageCursor,}  filter:{status: {operator: eq, value: "active"}, OR: $classOr}) {
-    totalCount
-    pageInfo {
-      hasNextPage
-      hasPreviousPage
-      startCursor
-      endCursor
-    }
-    edges{
-      node{
-        id
-        name
-        status
-        studentsConnection(direction: $studentPageDirection, cursor:$studentPageCursor, filter:{userStatus: {operator:eq, value:"active"}}){
-          totalCount
-          pageInfo {
-            hasNextPage
-            hasPreviousPage
-            startCursor
-            endCursor
-          }
-          edges{
-            node{
-              id
-              givenName
-              familyName
-              status
-            }
-          }
-        }
-        teachersConnection(direction:$teacherPageDirection, cursor: $teacherPageCursor,filter:{OR: $userOr}){
-           pageInfo {
-            hasNextPage
-            hasPreviousPage
-            startCursor
-            endCursor
-          }
-          edges{
-            node{
-              id
-              givenName
-              familyName
-              status
-            }
-          }
-        }
-      }
-    }
-  }
-}
-`
+	classQuery := `
+		query ($classOr:[ClassFilter!], $userOr:[UserFilter!], $classPageDirection: ConnectionDirection!, $classPageCursor: String, $studentPageDirection: ConnectionDirection!, $studentPageCursor: String, $teacherPageDirection:ConnectionDirection!, $teacherPageCursor: String){
+			classesConnection(direction:$classPageDirection, directionArgs:{cursor: $classPageCursor,}  filter:{status: {operator: eq, value: "active"}, OR: $classOr}) {
+			totalCount
+			pageInfo {
+			  hasNextPage
+			  hasPreviousPage
+			  startCursor
+			  endCursor
+			}
+			edges{
+			  node{
+				id
+				name
+				status
+				studentsConnection(direction: $studentPageDirection, cursor:$studentPageCursor, filter:{userStatus: {operator:eq, value:"active"}}){
+				  totalCount
+				  pageInfo {
+					hasNextPage
+					hasPreviousPage
+					startCursor
+					endCursor
+				  }
+				  edges{
+					node{
+					  id
+					  givenName
+					  familyName
+					  status
+					}
+				  }
+				}
+				teachersConnection(direction:$teacherPageDirection, cursor: $teacherPageCursor,filter:{OR: $userOr}){
+				   pageInfo {
+					hasNextPage
+					hasPreviousPage
+					startCursor
+					endCursor
+				  }
+				  edges{
+					node{
+					  id
+					  givenName
+					  familyName
+					  status
+					}
+				  }
+				}
+			  }
+			}
+		  }
+		}
+	`
+	classVariables := make(map[string]interface{})
+	classVariables["classOr"] = classOr
+	classVariables["userOr"] = userOr
+	classVariables["classPageDirection"] = Forward
+	classVariables["studentPageDirection"] = Forward
+	classVariables["studentPageCursor"] = ""
+	classVariables["teacherPageDirection"] = Forward
+	classVariables["teacherPageCursor"] = ""
 
-	request := chlorine.NewRequest(query, chlorine.ReqToken(operator.Token))
-	request.Var("classOr", classOr)
-	request.Var("userOr", userOr)
-	request.Var("classPageDirection", "FORWARD")
-	request.Var("classPageCursor", "")
-	request.Var("studentPageDirection", "FORWARD")
-	request.Var("studentPageCursor", "")
-	request.Var("teacherPageDirection", "FORWARD")
-	request.Var("teacherPageCursor", "")
-
-	var data ClassesConnection
-	response := &chlorine.Response{
+	var classData ClassesConnection
+	classResponse := chlorine.Response{
 		Data: &struct {
 			*ClassesConnection `json:"classesConnection"`
 		}{
-			&data,
+			&classData,
 		},
 	}
 
-	statusCode, err := GetAmsClient().Run(ctx, request, response)
-	if err != nil {
-		log.Error(ctx, "BatchGetClassWithStudent: run failed", log.Err(err), log.Strings("teacher_ids", ids))
-		return nil, err
-	}
-	if statusCode != http.StatusOK {
-		err = &entity.ExternalError{
-			Err:  constant.ErrAmsHttpFailed,
-			Type: constant.InternalErrorTypeAms,
-		}
-		log.Warn(ctx, "BatchGetClassWithStudent: run failed", log.Int("status_code", statusCode), log.Strings("teacher_ids", ids))
-		return nil, err
-	}
-	result := make(map[string]*TeacherClassWithStudent, len(data.Edges))
+	cIterator := &classData
 
-	for _, class := range data.Edges {
-		studentsConnection := &(class.Node.StudentsConnection)
-		var studentEdges []UserConnectionEdge
-		studentEdges = append(studentEdges, studentsConnection.Edges...)
-		for studentsConnection.HasNext() {
-			result, err := studentsConnection.Next(ctx, func() (Iterator, error) {
-				cursor := studentsConnection.PageInfo.ForwardCursor()
-				studentQuery := `
-						query ($classFilter:ClassFilter!,$classPageDirection: ConnectionDirection!, $studentPageDirection: ConnectionDirection!, $studentPageCursor: String){
-							classesConnection(direction: $classPageDirection, filter: $classFilter) {
-							totalCount
-							edges{
-							  node{
-								id
-								name
-								status
-								studentsConnection(direction: $studentPageDirection, cursor:$studentPageCursor, filter:{userStatus: {operator:eq, value:"active"}}){
-											totalCount
-								  pageInfo {
-									hasNextPage
-									hasPreviousPage
-									startCursor
-									endCursor
-								  }
-								  edges{
-									node{
-									  id
-									  givenName
-									  familyName
-									  status
-									}
-								  }
-								}
-							  }
+	result := make(map[string]*TeacherClassWithStudent)
+
+	for cIterator.HasNext() {
+		classVariables["classPageCursor"] = cIterator.PageInfo.ForwardCursor()
+		cEdge, err := cIterator.Next(ctx, operator, classQuery, classVariables, classResponse)
+		if err != nil {
+			log.Error(ctx, "BatchGetClassWithStudent: cIterator next failed", log.Err(err), log.Any("result", result), log.Strings("teacher_ids", ids))
+			return nil, err
+		}
+		classEdges, ok := cEdge.([]ClassesConnectionEdge)
+		if !ok {
+			err = constant.ErrAssertFailed
+			log.Error(ctx, "BatchGetClassWithStudent: assert failed", log.Err(err), log.Any("result", result), log.Strings("teacher_ids", ids))
+			return nil, err
+		}
+
+		for _, class := range classEdges {
+			sIterator := &(class.Node.StudentsConnection)
+			studentsQuery := `
+				query ($classFilter:ClassFilter!,$classPageDirection: ConnectionDirection!, $studentPageDirection: ConnectionDirection!, $studentPageCursor: String){
+					classesConnection(direction: $classPageDirection, filter: $classFilter) {
+					totalCount
+					edges{
+					  node{
+						id
+						name
+						status
+						studentsConnection(direction: $studentPageDirection, cursor:$studentPageCursor, filter:{userStatus: {operator:eq, value:"active"}}){
+									totalCount
+						  pageInfo {
+							hasNextPage
+							hasPreviousPage
+							startCursor
+							endCursor
+						  }
+						  edges{
+							node{
+							  id
+							  givenName
+							  familyName
+							  status
 							}
 						  }
 						}
-						`
-				request := chlorine.NewRequest(studentQuery, chlorine.ReqToken(operator.Token))
-				request.Var("classFilter", ClassFilter{ID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(class.Node.ID)}})
-				request.Var("classPageDirection", Forward)
-				request.Var("studentPageDirection", Forward)
-				request.Var("studentPageCursor", cursor)
+					  }
+					}
+				  }
+				}
+			`
+			studentVariables := make(map[string]interface{})
+
+			studentVariables["classFilter"] = ClassFilter{ID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(class.Node.ID)}}
+			studentVariables["classPageDirection"] = Forward
+			studentVariables["studentPageDirection"] = Forward
+
+			var studentEdges []UserConnectionEdge
+			studentEdges = append(studentEdges, sIterator.Edges...)
+			for sIterator.HasNext() {
+				studentVariables["studentPageCursor"] = sIterator.PageInfo.ForwardCursor()
 				var data ClassesConnection
-				response := &chlorine.Response{
+				studentResponse := chlorine.Response{
 					Data: &struct {
 						*ClassesConnection `json:"classesConnection"`
 					}{
 						&data,
 					},
 				}
-
-				statusCode, err := GetAmsClient().Run(ctx, request, response)
+				sEdge, err := sIterator.Next(ctx, operator, studentsQuery, studentVariables, studentResponse)
 				if err != nil {
-					log.Error(ctx, "BatchGetClassWithStudent: run failed", log.Err(err), log.Strings("teacher_ids", ids))
 					return nil, err
 				}
-				if statusCode != http.StatusOK {
-					err = &entity.ExternalError{
-						Err:  constant.ErrAmsHttpFailed,
-						Type: constant.InternalErrorTypeAms,
+				edges, ok := sEdge.([]UserConnectionEdge)
+				if !ok {
+					err = constant.ErrAssertFailed
+					log.Error(ctx, "BatchGetClassWithStudent: assert failed", log.Err(err), log.Any("result", result), log.Strings("teacher_ids", ids))
+					return nil, err
+				}
+				studentEdges = append(studentEdges, edges...)
+			}
+
+			classStudents := ClassStudents{ClassID: class.Node.ID}
+			classStudents.Students = make([]*StudentInClass, 0, len(studentEdges))
+			for _, edge := range studentEdges {
+				classStudents.Students = append(classStudents.Students, &StudentInClass{UserID: edge.Node.ID})
+			}
+
+			tIterator := &(class.Node.TeachersConnection)
+			teachersQuery := `
+				query ($classFilter:ClassFilter!,$classPageDirection: ConnectionDirection!, $studentPageDirection: ConnectionDirection!, $studentPageCursor: String){
+					classesConnection(direction: $classPageDirection, filter: $classFilter) {
+					totalCount
+					edges{
+					  node{
+						id
+						name
+						status
+						studentsConnection(direction: $studentPageDirection, cursor:$studentPageCursor, filter:{userStatus: {operator:eq, value:"active"}}){
+									totalCount
+						  pageInfo {
+							hasNextPage
+							hasPreviousPage
+							startCursor
+							endCursor
+						  }
+						  edges{
+							node{
+							  id
+							  givenName
+							  familyName
+							  status
+							}
+						  }
+						}
+					  }
 					}
-					log.Warn(ctx, "BatchGetClassWithStudent: run failed", log.Int("status_code", statusCode), log.Strings("teacher_ids", ids))
+				  }
+				}
+			`
+			teacherVariables := make(map[string]interface{})
+
+			teacherVariables["classFilter"] = ClassFilter{ID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(class.Node.ID)}}
+			teacherVariables["classPageDirection"] = Forward
+			teacherVariables["teacherPageDirection"] = Forward
+
+			var teacherEdges []UserConnectionEdge
+			teacherEdges = append(teacherEdges, tIterator.Edges...)
+			for tIterator.HasNext() {
+				teacherVariables["teacherPageCursor"] = tIterator.PageInfo.ForwardCursor()
+				var data ClassesConnection
+				teacherResponse := chlorine.Response{
+					Data: &struct {
+						*ClassesConnection `json:"classesConnection"`
+					}{
+						&data,
+					},
+				}
+				sEdge, err := sIterator.Next(ctx, operator, teachersQuery, teacherVariables, teacherResponse)
+				if err != nil {
 					return nil, err
 				}
-				if data.Edges == nil || len(data.Edges) == 0 {
-					err = constant.ErrRecordNotFound
-					log.Error(ctx, "BatchGetClassWithStudent: class not found", log.Err(err), log.Any("data", data), log.Strings("teacher_ids", ids))
+				edges, ok := sEdge.([]UserConnectionEdge)
+				if !ok {
+					err = constant.ErrAssertFailed
+					log.Error(ctx, "BatchGetClassWithStudent: assert failed", log.Err(err), log.Any("result", result), log.Strings("teacher_ids", ids))
 					return nil, err
-
 				}
-				return &(data.Edges[0].Node.StudentsConnection), nil
-			})
-			if err != nil {
-				return nil, err
+				teacherEdges = append(studentEdges, edges...)
 			}
-			edges, ok := result.([]UserConnectionEdge)
-			if !ok {
-				err = constant.ErrAssertFailed
-				log.Error(ctx, "BatchGetClassWithStudent: assert failed", log.Err(err), log.Any("result", result), log.Strings("teacher_ids", ids))
-				return nil, err
-			}
-			studentEdges = append(studentEdges, edges...)
-		}
 
-		classStudents := ClassStudents{ClassID: class.Node.ID}
-		classStudents.Students = make([]*StudentInClass, 0, len(studentEdges))
-		for _, edge := range studentEdges {
-			classStudents.Students = append(classStudents.Students, &StudentInClass{UserID: edge.Node.ID})
-		}
-
-		for _, teacher := range class.Node.TeachersConnection.Edges {
-			if _, ok := result[teacher.Node.ID]; !ok {
-				result[teacher.Node.ID] = &TeacherClassWithStudent{
-					UserID: teacher.Node.ID,
+			for _, teacher := range teacherEdges {
+				if _, ok := result[teacher.Node.ID]; !ok {
+					result[teacher.Node.ID] = &TeacherClassWithStudent{
+						UserID: teacher.Node.ID,
+					}
 				}
+				result[teacher.Node.ID].ClassesTeaching = append(result[teacher.Node.ID].ClassesTeaching, &classStudents)
 			}
-			result[teacher.Node.ID].ClassesTeaching = append(result[teacher.Node.ID].ClassesTeaching, &classStudents)
 		}
 	}
 
-	return result, err
+	return result, nil
 }
 
 type StudentInClass struct {
