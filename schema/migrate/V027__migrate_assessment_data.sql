@@ -144,7 +144,7 @@ INSERT IGNORE INTO
   schedule_id
 )
 SELECT
-    REPLACE(UUID(), _utf8'-', _utf8'') as uuid,
+    REPLACE(UUID(), _utf8'-', _utf8'') as id,
     assessments_users_v2.id assessment_user_id,
     assessments_contents_v2.id assessment_content_id,
     tmp_cms_contents_outcomes.outcome_id,
