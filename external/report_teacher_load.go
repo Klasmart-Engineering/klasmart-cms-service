@@ -127,7 +127,19 @@ func (t *AmsTeacherLoadService) BatchGetActiveClassWithStudent(ctx context.Conte
 
 	for cIterator.HasNext() {
 		classVariables["classPageCursor"] = cIterator.PageInfo.ForwardCursor()
-		cEdge, err := cIterator.Next(ctx, operator, classQuery, classVariables, classResponse)
+		cEdge, err := cIterator.Next(ctx, operator, classQuery, classVariables, classResponse, func() (Iterator, error) {
+			classesConnection, ok := classResponse.Data.(*struct {
+				*ClassesConnection `json:"classesConnection"`
+			})
+			if !ok {
+				err := constant.ErrAssertFailed
+				log.Error(ctx, "Next: assert failed",
+					log.Err(err),
+					log.Any("data", classResponse))
+				return nil, err
+			}
+			return classesConnection.ClassesConnection, nil
+		})
 		if err != nil {
 			log.Error(ctx, "BatchGetClassWithStudent: cIterator next failed", log.Err(err), log.Any("result", result), log.Strings("teacher_ids", ids))
 			return nil, err
@@ -190,7 +202,26 @@ func (t *AmsTeacherLoadService) BatchGetActiveClassWithStudent(ctx context.Conte
 						&data,
 					},
 				}
-				sEdge, err := sIterator.Next(ctx, operator, studentsQuery, studentVariables, studentResponse)
+				sEdge, err := sIterator.Next(ctx, operator, studentsQuery, studentVariables, studentResponse, func() (Iterator, error) {
+					data, ok := studentResponse.Data.(*struct {
+						*ClassesConnection `json:"classesConnection"`
+					})
+					if !ok {
+						err = constant.ErrAssertFailed
+						log.Error(ctx, "Next: assert failed",
+							log.Err(err),
+							log.Any("data", studentResponse))
+						return nil, err
+					}
+					if data == nil || len(data.Edges) == 0 {
+						err = constant.ErrAmsDataFailed
+						log.Error(ctx, "Next: data failed",
+							log.Err(err),
+							log.Any("data", studentResponse))
+						return nil, err
+					}
+					return &(data.Edges[0].Node.StudentsConnection), nil
+				})
 				if err != nil {
 					return nil, err
 				}
@@ -259,7 +290,26 @@ func (t *AmsTeacherLoadService) BatchGetActiveClassWithStudent(ctx context.Conte
 						&data,
 					},
 				}
-				sEdge, err := sIterator.Next(ctx, operator, teachersQuery, teacherVariables, teacherResponse)
+				sEdge, err := sIterator.Next(ctx, operator, teachersQuery, teacherVariables, teacherResponse, func() (Iterator, error) {
+					data, ok := teacherResponse.Data.(*struct {
+						*ClassesConnection `json:"classesConnection"`
+					})
+					if !ok {
+						err = constant.ErrAssertFailed
+						log.Error(ctx, "Next: assert failed",
+							log.Err(err),
+							log.Any("data", teacherResponse))
+						return nil, err
+					}
+					if data == nil || len(data.Edges) == 0 {
+						err = constant.ErrAmsDataFailed
+						log.Error(ctx, "Next: data failed",
+							log.Err(err),
+							log.Any("data", teacherResponse))
+						return nil, err
+					}
+					return &(data.Edges[0].Node.TeachersConnection), nil
+				})
 				if err != nil {
 					return nil, err
 				}
