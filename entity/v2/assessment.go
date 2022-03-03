@@ -370,6 +370,7 @@ type AssessmentContentView struct {
 	ContentType AssessmentContentType `json:"content_type"`
 	OutcomeIDs  []string              `json:"outcome_ids"`
 	LatestID    string                `json:"latest_id"`
+	FileType    entity.FileType       `json:"file_type"`
 }
 
 type StatisticsCountReq struct {
