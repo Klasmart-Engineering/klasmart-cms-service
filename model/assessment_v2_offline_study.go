@@ -524,6 +524,8 @@ func (a *assessmentOfflineStudyModel) Page(ctx context.Context, op *entity.Opera
 		if permission.MyPermission.Status.Valid {
 			queryCondition.TeacherIDs.Strings = append(queryCondition.TeacherIDs.Strings, permission.MyPermission.UserID)
 		}
+
+		queryCondition.TeacherIDs.Valid = true
 	}
 
 	queryCondition.Status.Strings = strings.Split(req.Status, ",")
@@ -538,8 +540,9 @@ func (a *assessmentOfflineStudyModel) Page(ctx context.Context, op *entity.Opera
 		for i, item := range teachers {
 			queryCondition.TeacherIDs.Strings[i] = item.ID
 		}
+
+		queryCondition.TeacherIDs.Valid = true
 	}
-	queryCondition.TeacherIDs.Valid = len(queryCondition.TeacherIDs.Strings) > 0
 
 	log.Debug(ctx, "query condition", log.Any("queryCondition", queryCondition))
 
