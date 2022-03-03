@@ -144,7 +144,7 @@ INSERT IGNORE INTO
   schedule_id
 )
 SELECT
-    replace(uuid(),"-","") as uuid,
+    REPLACE(UUID(), _utf8'-', _utf8'') as uuid,
     assessments_users_v2.id assessment_user_id,
     assessments_contents_v2.id assessment_content_id,
     tmp_cms_contents_outcomes.outcome_id,
@@ -196,7 +196,7 @@ WHERE
 
 INSERT IGNORE INTO  tmp_assessments_users_outcomes_v2
 (id,assessment_user_id,assessment_content_id,outcome_id,status,create_at,update_at,delete_at,assessment_id,user_id,schedule_id)
-SELECT replace(uuid(),"-","") as uuid,
+SELECT REPLACE(UUID(), _utf8'-', _utf8'') as id,
        assessments_users_v2.id assessment_user_id,
        null,
        schedules_relations.relation_id,
@@ -245,3 +245,22 @@ DROP TABLE
     IF EXISTS tmp_assessments_users_outcomes_v2;
 DROP TABLE
     IF EXISTS tmp_cms_contents_outcomes;
+
+update assessments_users_outcomes_v2,assessments_users_v2,outcomes_attendances
+set assessments_users_outcomes_v2.status = 'Achieved'
+where assessments_users_outcomes_v2.assessment_user_id = assessments_users_v2.id
+  and assessments_users_outcomes_v2.outcome_id = outcomes_attendances.outcome_id
+  and assessments_users_v2.user_id = outcomes_attendances.attendance_id
+  and assessments_users_v2.assessment_id = outcomes_attendances.assessment_id;
+
+
+-- rename assessment old tables
+alter table assessments rename to assessments_backup;
+alter table assessments_attendances rename to assessments_attendances_backup;
+alter table assessments_contents rename to assessments_contents_backup;
+alter table assessments_outcomes rename to assessments_outcomes_backup;
+alter table assessments_contents_outcomes rename to assessments_contents_outcomes_backup;
+alter table home_fun_studies rename to home_fun_studies_backup;
+alter table outcomes_attendances rename to outcomes_attendances_backup;
+alter table contents_outcomes_attendances rename to contents_outcomes_attendances_backup;
+
