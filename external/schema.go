@@ -120,6 +120,10 @@ func (tc *TeachersConnection) Next(ctx context.Context, operator *entity.Operato
 			log.Any("data", res))
 		return nil, err
 	}
+	log.Debug(ctx, "Next: success",
+		log.String("query", query),
+		log.Any("variables", variables),
+		log.Any("classesConnection", teacherConnection))
 	tc.PageInfo = teacherConnection.PageInfo
 	tc.Edges = teacherConnection.Edges
 	return tc.Edges, err
@@ -157,6 +161,10 @@ func (sc *StudentsConnection) Next(ctx context.Context, operator *entity.Operato
 			log.Any("data", res))
 		return nil, err
 	}
+	log.Debug(ctx, "Next: success",
+		log.String("query", query),
+		log.Any("variables", variables),
+		log.Any("classesConnection", studentsConnection))
 	sc.PageInfo = studentsConnection.PageInfo
 	sc.Edges = studentsConnection.Edges
 	return sc.Edges, err
@@ -205,6 +213,11 @@ func (cc *ClassesConnection) Next(ctx context.Context, operator *entity.Operator
 		return nil, err
 	}
 
+	log.Debug(ctx, "Next: success",
+		log.String("query", query),
+		log.Any("variables", variables),
+		log.Any("classesConnection", classesConnection))
+
 	cc.PageInfo = classesConnection.PageInfo
 	cc.Edges = classesConnection.Edges
 	return cc.Edges, err
@@ -235,5 +248,11 @@ func do(ctx context.Context, operator *entity.Operator, query string, variables 
 			log.Any("variables", variables))
 		return err
 	}
+
+	log.Debug(ctx, "do success",
+		log.String("query", query),
+		log.Any("variables", variables),
+		log.Any("response", response))
+
 	return nil
 }
