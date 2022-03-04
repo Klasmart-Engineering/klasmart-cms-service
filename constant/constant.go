@@ -45,6 +45,8 @@ var (
 	ErrSqlBuilderFailed   = errors.New("sql builder failed")
 	ErrAmsHttpFailed      = errors.New("ams http failed")
 	ErrBadUsageOfKl2Cache = errors.New("bad usage of kl2cache see log for detail")
+	ErrAssertFailed       = errors.New("assert failed")
+	ErrAmsDataFailed      = errors.New("ams data failed")
 )
 
 const (
