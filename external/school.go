@@ -441,6 +441,7 @@ func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Op
 	schools = []*School{}
 	key := append(s.BaseCacheKey,
 		"GetByOperator",
+		operator.OrgID,
 		operator.UserID)
 
 	// TODO: replace by schoolConnection
