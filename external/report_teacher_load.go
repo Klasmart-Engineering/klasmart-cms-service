@@ -30,12 +30,7 @@ func GetTeacherLoadServiceProvider() TeacherLoadServiceProvider {
 	return _amsTeacherLoadService
 }
 
-func (t *AmsTeacherLoadService) BatchGetActiveClassWithStudent(ctx context.Context, operator *entity.Operator, teacherIDs []string) (map[string]*TeacherClassWithStudent, error) {
-
-	ids := utils.SliceDeduplicationExcludeEmpty(teacherIDs)
-	if len(ids) == 0 {
-		return map[string]*TeacherClassWithStudent{}, nil
-	}
+func makeClassConnectionRequest(ids []string) (string, map[string]interface{}, chlorine.Response) {
 	classOr := make([]ClassFilter, 0, len(ids))
 	userOr := make([]UserFilter, 0, len(ids))
 	for _, v := range ids {
@@ -111,49 +106,16 @@ func (t *AmsTeacherLoadService) BatchGetActiveClassWithStudent(ctx context.Conte
 	classVariables["studentPageCursor"] = ""
 	classVariables["teacherPageDirection"] = Forward
 	classVariables["teacherPageCursor"] = ""
-
-	var classData ClassesConnection
 	classResponse := chlorine.Response{
 		Data: &struct {
-			*ClassesConnection `json:"classesConnection"`
-		}{
-			&classData,
-		},
+			ClassesConnection `json:"classesConnection"`
+		}{},
 	}
+	return classQuery, classVariables, classResponse
+}
 
-	cIterator := &classData
-
-	result := make(map[string]*TeacherClassWithStudent)
-
-	for cIterator.HasNext() {
-		classVariables["classPageCursor"] = cIterator.PageInfo.ForwardCursor()
-		cEdge, err := cIterator.Next(ctx, operator, classQuery, classVariables, classResponse, func() (Iterator, error) {
-			classesConnection, ok := classResponse.Data.(*struct {
-				*ClassesConnection `json:"classesConnection"`
-			})
-			if !ok {
-				err := constant.ErrAssertFailed
-				log.Error(ctx, "Next: assert failed",
-					log.Err(err),
-					log.Any("data", classResponse))
-				return nil, err
-			}
-			return classesConnection.ClassesConnection, nil
-		})
-		if err != nil {
-			log.Error(ctx, "BatchGetClassWithStudent: cIterator next failed", log.Err(err), log.Any("result", result), log.Strings("teacher_ids", ids))
-			return nil, err
-		}
-		classEdges, ok := cEdge.([]ClassesConnectionEdge)
-		if !ok {
-			err = constant.ErrAssertFailed
-			log.Error(ctx, "BatchGetClassWithStudent: assert failed", log.Err(err), log.Any("result", result), log.Strings("teacher_ids", ids))
-			return nil, err
-		}
-
-		for _, class := range classEdges {
-			sIterator := &(class.Node.StudentsConnection)
-			studentsQuery := `
+func makeStudentsConnectionRequest(classID string) (string, map[string]interface{}, chlorine.Response) {
+	studentsQuery := `
 				query ($classFilter:ClassFilter!,$classPageDirection: ConnectionDirection!, $studentPageDirection: ConnectionDirection!, $studentPageCursor: String){
 					classesConnection(direction: $classPageDirection, filter: $classFilter) {
 					totalCount
@@ -184,64 +146,29 @@ func (t *AmsTeacherLoadService) BatchGetActiveClassWithStudent(ctx context.Conte
 				  }
 				}
 			`
-			studentVariables := make(map[string]interface{})
+	studentVariables := make(map[string]interface{})
 
-			studentVariables["classFilter"] = ClassFilter{ID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(class.Node.ID)}}
-			studentVariables["classPageDirection"] = Forward
-			studentVariables["studentPageDirection"] = Forward
+	studentVariables["classFilter"] = ClassFilter{ID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(classID)}}
+	studentVariables["classPageDirection"] = Forward
+	studentVariables["studentPageDirection"] = Forward
 
-			var studentEdges []UserConnectionEdge
-			studentEdges = append(studentEdges, sIterator.Edges...)
-			for sIterator.HasNext() {
-				studentVariables["studentPageCursor"] = sIterator.PageInfo.ForwardCursor()
-				var data ClassesConnection
-				studentResponse := chlorine.Response{
-					Data: &struct {
-						*ClassesConnection `json:"classesConnection"`
-					}{
-						&data,
-					},
-				}
-				sEdge, err := sIterator.Next(ctx, operator, studentsQuery, studentVariables, studentResponse, func() (Iterator, error) {
-					data, ok := studentResponse.Data.(*struct {
-						*ClassesConnection `json:"classesConnection"`
-					})
-					if !ok {
-						err = constant.ErrAssertFailed
-						log.Error(ctx, "Next: assert failed",
-							log.Err(err),
-							log.Any("data", studentResponse))
-						return nil, err
-					}
-					if data == nil || len(data.Edges) == 0 {
-						err = constant.ErrAmsDataFailed
-						log.Error(ctx, "Next: data failed",
-							log.Err(err),
-							log.Any("data", studentResponse))
-						return nil, err
-					}
-					return &(data.Edges[0].Node.StudentsConnection), nil
-				})
-				if err != nil {
-					return nil, err
-				}
-				edges, ok := sEdge.([]UserConnectionEdge)
-				if !ok {
-					err = constant.ErrAssertFailed
-					log.Error(ctx, "BatchGetClassWithStudent: assert failed", log.Err(err), log.Any("result", result), log.Strings("teacher_ids", ids))
-					return nil, err
-				}
-				studentEdges = append(studentEdges, edges...)
-			}
+	studentResponse := chlorine.Response{
+		Data: &struct {
+			ClassesConnection `json:"classesConnection"`
+		}{},
+	}
+	return studentsQuery, studentVariables, studentResponse
+}
 
-			classStudents := ClassStudents{ClassID: class.Node.ID}
-			classStudents.Students = make([]*StudentInClass, 0, len(studentEdges))
-			for _, edge := range studentEdges {
-				classStudents.Students = append(classStudents.Students, &StudentInClass{UserID: edge.Node.ID})
-			}
-
-			tIterator := &(class.Node.TeachersConnection)
-			teachersQuery := `
+func makeTeacherConnectionRequest(classID string, teacherIDs []string) (string, map[string]interface{}, chlorine.Response) {
+	userOr := make([]UserFilter, 0, len(teacherIDs))
+	for _, v := range teacherIDs {
+		uf := UserFilter{}
+		uf.UserID.Operator = UUIDOperator(OperatorTypeEq)
+		uf.UserID.Value = UUID(v)
+		userOr = append(userOr, uf)
+	}
+	teachersQuery := `
 				query ($classFilter:ClassFilter!, $userOr:[UserFilter!], $classPageDirection: ConnectionDirection! $teacherPageDirection:ConnectionDirection!, $teacherPageCursor: String){
 					classesConnection(direction: $classPageDirection, filter: $classFilter) {
 					totalCount
@@ -277,41 +204,127 @@ func (t *AmsTeacherLoadService) BatchGetActiveClassWithStudent(ctx context.Conte
 				  }
 				}
 			`
-			teacherVariables := make(map[string]interface{})
+	teacherVariables := make(map[string]interface{})
 
-			teacherVariables["classFilter"] = ClassFilter{ID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(class.Node.ID)}}
-			teacherVariables["classPageDirection"] = Forward
-			teacherVariables["teacherPageDirection"] = Forward
-			teacherVariables["userOr"] = userOr
+	teacherVariables["classFilter"] = ClassFilter{ID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(classID)}}
+	teacherVariables["classPageDirection"] = Forward
+	teacherVariables["teacherPageDirection"] = Forward
+	teacherVariables["userOr"] = userOr
 
-			var teacherEdges []UserConnectionEdge
-			teacherEdges = append(teacherEdges, tIterator.Edges...)
-			for tIterator.HasNext() {
-				teacherVariables["teacherPageCursor"] = tIterator.PageInfo.ForwardCursor()
-				var data ClassesConnection
-				teacherResponse := chlorine.Response{
-					Data: &struct {
-						*ClassesConnection `json:"classesConnection"`
-					}{
-						&data,
-					},
-				}
-				sEdge, err := sIterator.Next(ctx, operator, teachersQuery, teacherVariables, teacherResponse, func() (Iterator, error) {
-					data, ok := teacherResponse.Data.(*struct {
-						*ClassesConnection `json:"classesConnection"`
+	teacherResponse := chlorine.Response{
+		Data: &struct {
+			ClassesConnection `json:"classesConnection"`
+		}{},
+	}
+	return teachersQuery, teacherVariables, teacherResponse
+}
+func (t *AmsTeacherLoadService) BatchGetActiveClassWithStudent(ctx context.Context, operator *entity.Operator, teacherIDs []string) (map[string]*TeacherClassWithStudent, error) {
+
+	ids := utils.SliceDeduplicationExcludeEmpty(teacherIDs)
+	if len(ids) == 0 {
+		return map[string]*TeacherClassWithStudent{}, nil
+	}
+	result := make(map[string]*TeacherClassWithStudent)
+
+	classQuery, classVariables, classResponse := makeClassConnectionRequest(ids)
+
+	var classData ClassesConnection
+	cIterator := &classData
+	for cIterator.HasNext() {
+		classVariables["classPageCursor"] = cIterator.PageInfo.ForwardCursor()
+		cEdge, err := cIterator.Next(ctx, operator, classQuery, classVariables, classResponse, func(response *chlorine.Response) (Iterator, error) {
+			classesConnection, ok := response.Data.(*struct {
+				ClassesConnection `json:"classesConnection"`
+			})
+			if !ok {
+				err := constant.ErrAssertFailed
+				log.Error(ctx, "Next: assert failed",
+					log.Err(err),
+					log.Any("data", response))
+				return nil, err
+			}
+			return &classesConnection.ClassesConnection, nil
+		})
+		if err != nil {
+			log.Error(ctx, "BatchGetClassWithStudent: cIterator next failed", log.Err(err), log.Any("result", result), log.Strings("teacher_ids", ids))
+			return nil, err
+		}
+		classEdges, ok := cEdge.([]ClassesConnectionEdge)
+		if !ok {
+			err = constant.ErrAssertFailed
+			log.Error(ctx, "BatchGetClassWithStudent: assert failed", log.Err(err), log.Any("result", result), log.Strings("teacher_ids", ids))
+			return nil, err
+		}
+
+		for _, class := range classEdges {
+			sIterator := &(class.Node.StudentsConnection)
+			studentsQuery, studentVariables, studentResponse := makeStudentsConnectionRequest(class.Node.ID)
+
+			var studentEdges []UserConnectionEdge
+			studentEdges = append(studentEdges, sIterator.Edges...)
+			for sIterator.HasNext() {
+				studentVariables["studentPageCursor"] = sIterator.PageInfo.ForwardCursor()
+				sEdge, err := sIterator.Next(ctx, operator, studentsQuery, studentVariables, studentResponse, func(response *chlorine.Response) (Iterator, error) {
+					data, ok := response.Data.(*struct {
+						ClassesConnection `json:"classesConnection"`
 					})
 					if !ok {
 						err = constant.ErrAssertFailed
 						log.Error(ctx, "Next: assert failed",
 							log.Err(err),
-							log.Any("data", teacherResponse))
+							log.Any("data", response))
 						return nil, err
 					}
-					if data == nil || len(data.Edges) == 0 {
+					if len(data.Edges) == 0 {
 						err = constant.ErrAmsDataFailed
 						log.Error(ctx, "Next: data failed",
 							log.Err(err),
-							log.Any("data", teacherResponse))
+							log.Any("data", response))
+						return nil, err
+					}
+					return &(data.Edges[0].Node.StudentsConnection), nil
+				})
+				if err != nil {
+					return nil, err
+				}
+				edges, ok := sEdge.([]UserConnectionEdge)
+				if !ok {
+					err = constant.ErrAssertFailed
+					log.Error(ctx, "BatchGetClassWithStudent: assert failed", log.Err(err), log.Any("result", result), log.Strings("teacher_ids", ids))
+					return nil, err
+				}
+				studentEdges = append(studentEdges, edges...)
+			}
+
+			classStudents := ClassStudents{ClassID: class.Node.ID}
+			classStudents.Students = make([]*StudentInClass, 0, len(studentEdges))
+			for _, edge := range studentEdges {
+				classStudents.Students = append(classStudents.Students, &StudentInClass{UserID: edge.Node.ID})
+			}
+
+			tIterator := &(class.Node.TeachersConnection)
+			teachersQuery, teacherVariables, teacherResponse := makeTeacherConnectionRequest(class.Node.ID, ids)
+
+			var teacherEdges []UserConnectionEdge
+			teacherEdges = append(teacherEdges, tIterator.Edges...)
+			for tIterator.HasNext() {
+				teacherVariables["teacherPageCursor"] = tIterator.PageInfo.ForwardCursor()
+				sEdge, err := sIterator.Next(ctx, operator, teachersQuery, teacherVariables, teacherResponse, func(response *chlorine.Response) (Iterator, error) {
+					data, ok := response.Data.(*struct {
+						ClassesConnection `json:"classesConnection"`
+					})
+					if !ok {
+						err = constant.ErrAssertFailed
+						log.Error(ctx, "Next: assert failed",
+							log.Err(err),
+							log.Any("data", response))
+						return nil, err
+					}
+					if len(data.Edges) == 0 {
+						err = constant.ErrAmsDataFailed
+						log.Error(ctx, "Next: data failed",
+							log.Err(err),
+							log.Any("data", response))
 						return nil, err
 					}
 					return &(data.Edges[0].Node.TeachersConnection), nil

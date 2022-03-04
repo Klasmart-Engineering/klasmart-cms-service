@@ -11,7 +11,7 @@ import (
 
 type Iterator interface {
 	HasNext() bool
-	Next(ctx context.Context, operator *entity.Operator, query string, variables map[string]interface{}, response chlorine.Response, f func() (Iterator, error)) (interface{}, error)
+	Next(ctx context.Context, operator *entity.Operator, query string, variables map[string]interface{}, res chlorine.Response, f func(*chlorine.Response) (Iterator, error)) (interface{}, error)
 }
 
 type Direction string
@@ -100,30 +100,28 @@ func (tc *TeachersConnection) HasNext() bool {
 	return tc.PageInfo.HasNext()
 }
 
-func (tc *TeachersConnection) Next(ctx context.Context, operator *entity.Operator, query string, variables map[string]interface{}, response chlorine.Response, f func() (Iterator, error)) (interface{}, error) {
-	err := do(ctx, operator, query, variables, &response)
+func (tc *TeachersConnection) Next(ctx context.Context, operator *entity.Operator, query string, variables map[string]interface{}, res chlorine.Response, f func(response *chlorine.Response) (Iterator, error)) (interface{}, error) {
+	//var res chlorine.Response
+	err := do(ctx, operator, query, variables, &res)
 	if err != nil {
 		return nil, err
 	}
-	data, ok := response.Data.(*struct {
-		*ClassesConnection `json:"classesConnection"`
-	})
+	it, err := f(&res)
+	if err != nil {
+		log.Error(ctx, "Next: f failed",
+			log.Any("data", res))
+		return nil, err
+	}
+	teacherConnection, ok := it.(*TeachersConnection)
 	if !ok {
 		err = constant.ErrAssertFailed
 		log.Error(ctx, "Next: assert failed",
 			log.Err(err),
-			log.Any("data", response))
+			log.Any("data", res))
 		return nil, err
 	}
-	if data == nil || len(data.Edges) == 0 {
-		err = constant.ErrAmsDataFailed
-		log.Error(ctx, "Next: data failed",
-			log.Err(err),
-			log.Any("data", response))
-		return nil, err
-	}
-	tc.PageInfo = data.Edges[0].Node.TeachersConnection.PageInfo
-	tc.Edges = data.Edges[0].Node.TeachersConnection.Edges
+	tc.PageInfo = teacherConnection.PageInfo
+	tc.Edges = teacherConnection.Edges
 	return tc.Edges, err
 }
 
@@ -139,15 +137,16 @@ func (sc *StudentsConnection) HasNext() bool {
 	return sc.PageInfo.HasNext()
 }
 
-func (sc *StudentsConnection) Next(ctx context.Context, operator *entity.Operator, query string, variables map[string]interface{}, response chlorine.Response, f func() (Iterator, error)) (interface{}, error) {
-	err := do(ctx, operator, query, variables, &response)
+func (sc *StudentsConnection) Next(ctx context.Context, operator *entity.Operator, query string, variables map[string]interface{}, res chlorine.Response, f func(response *chlorine.Response) (Iterator, error)) (interface{}, error) {
+	//var res chlorine.Response
+	err := do(ctx, operator, query, variables, &res)
 	if err != nil {
 		return nil, err
 	}
-	it, err := f()
+	it, err := f(&res)
 	if err != nil {
 		log.Error(ctx, "Next: f failed",
-			log.Any("data", response))
+			log.Any("data", res))
 		return nil, err
 	}
 	studentsConnection, ok := it.(*StudentsConnection)
@@ -155,7 +154,7 @@ func (sc *StudentsConnection) Next(ctx context.Context, operator *entity.Operato
 		err = constant.ErrAssertFailed
 		log.Error(ctx, "Next: assert failed",
 			log.Err(err),
-			log.Any("data", response))
+			log.Any("data", res))
 		return nil, err
 	}
 	sc.PageInfo = studentsConnection.PageInfo
@@ -184,16 +183,17 @@ func (cc *ClassesConnection) HasNext() bool {
 	return cc.PageInfo.HasNext()
 }
 
-func (cc *ClassesConnection) Next(ctx context.Context, operator *entity.Operator, query string, variables map[string]interface{}, response chlorine.Response, f func() (Iterator, error)) (interface{}, error) {
-	err := do(ctx, operator, query, variables, &response)
+func (cc *ClassesConnection) Next(ctx context.Context, operator *entity.Operator, query string, variables map[string]interface{}, res chlorine.Response, f func(response *chlorine.Response) (Iterator, error)) (interface{}, error) {
+	//var res chlorine.Response
+	err := do(ctx, operator, query, variables, &res)
 	if err != nil {
 		return nil, err
 	}
 
-	it, err := f()
+	it, err := f(&res)
 	if err != nil {
 		log.Error(ctx, "Next: f failed",
-			log.Any("data", response))
+			log.Any("data", res))
 		return nil, err
 	}
 	classesConnection, ok := it.(*ClassesConnection)
@@ -201,7 +201,7 @@ func (cc *ClassesConnection) Next(ctx context.Context, operator *entity.Operator
 		err = constant.ErrAssertFailed
 		log.Error(ctx, "Next: assert failed",
 			log.Err(err),
-			log.Any("data", response))
+			log.Any("data", res))
 		return nil, err
 	}
 
