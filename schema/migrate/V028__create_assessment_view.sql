@@ -26,7 +26,8 @@ from assessments_users_v2
                     on assessments_v2.schedule_id = schedules_relations.schedule_id and assessments_users_v2.user_id = schedules_relations.relation_id
 where assessments_v2.delete_at = 0
   and ((assessments_v2.assessment_type='OnlineClass' and assessments_users_v2.status_by_system='Participate')
-    or assessments_v2.assessment_type in ('OfflineClass','OnlineStudy'));
+    or (assessments_v2.assessment_type = 'OfflineClass' and assessments_v2.status in ('Started','Draft','Complete'))
+    or (assessments_v2.assessment_type = 'OnlineStudy'));
 
 -- assessments_contents view
 create or replace view assessments_contents as

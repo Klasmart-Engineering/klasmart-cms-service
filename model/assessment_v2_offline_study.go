@@ -544,7 +544,7 @@ func (a *assessmentOfflineStudyModel) Page(ctx context.Context, op *entity.Opera
 		queryCondition.TeacherIDs.Valid = true
 	}
 
-	log.Debug(ctx, "query condition", log.Any("queryCondition", queryCondition))
+	log.Debug(ctx, "query condition", log.Any("queryCondition", queryCondition), log.Any("permission", permission))
 
 	total, userResults, err := assessmentV2.GetAssessmentUserResultDA().PageByCondition(ctx, queryCondition)
 	if err != nil {
