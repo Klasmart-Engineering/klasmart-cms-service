@@ -26,16 +26,18 @@ const (
 
 	AliasContentTypeFolder = 10
 
-	MaterialInputSourceH5p    = 1
-	MaterialInputSourceDisk   = 2
-	MaterialInputSourceAssets = 3
+	MaterialInputSourceH5p              = 1
+	MaterialInputSourceDisk             = 2
+	MaterialInputSourceAssets           = 3
+	MaterialInputSourceBadanamuAppToWeb = 100
 
-	FileTypeImage     = 1
-	FileTypeVideo     = 2
-	FileTypeAudio     = 3
-	FileTypeDocument  = 4
-	FileTypeH5p       = 5
-	FileTypeH5pExtend = 6
+	FileTypeImage            = 1
+	FileTypeVideo            = 2
+	FileTypeAudio            = 3
+	FileTypeDocument         = 4
+	FileTypeH5p              = 5
+	FileTypeH5pExtend        = 6
+	FileTypeBadanamuAppToWeb = 100
 
 	FileTypeAssetsTypeOffset = 9
 
@@ -95,6 +97,8 @@ func NewFileType(fileType int) FileType {
 		return FileTypeH5p
 	case FileTypeH5pExtend:
 		return FileTypeH5pExtend
+	case FileTypeBadanamuAppToWeb:
+		return FileTypeBadanamuAppToWeb
 	default:
 		return FileTypeH5p
 	}
@@ -113,6 +117,8 @@ func (f FileType) String() string {
 		return "h5p"
 	case FileTypeH5pExtend:
 		return "extend h5p"
+	case FileTypeBadanamuAppToWeb:
+		return "Badanamu App to Web"
 	default:
 		return "unknown"
 	}

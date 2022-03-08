@@ -69,6 +69,7 @@ func (this *MaterialData) Validate(ctx context.Context, contentType entity.Conte
 	switch this.InputSource {
 	case entity.MaterialInputSourceH5p:
 	case entity.MaterialInputSourceAssets:
+	case entity.MaterialInputSourceBadanamuAppToWeb:
 		//查看assets?
 		fallthrough
 	case entity.MaterialInputSourceDisk:
