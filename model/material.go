@@ -94,6 +94,10 @@ func (h *MaterialData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequ
 		}
 		return nil
 	}
+	if h.InputSource == entity.MaterialInputSourceBadanamuAppToWeb {
+		h.FileType = entity.FileTypeBadanamuAppToWeb
+		return nil
+	}
 	fileType, err := ExtensionToFileType(ctx, h.Source)
 	if err != nil {
 		return err
