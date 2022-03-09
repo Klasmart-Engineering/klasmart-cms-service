@@ -295,23 +295,27 @@ type Schedule struct {
 	Status         ScheduleStatus          `gorm:"column:status;type:varchar(100)" json:"status"`
 	IsAllDay       bool                    `gorm:"column:is_all_day;default:false" json:"is_all_day"`
 	// disabled
-	SubjectID       string            `gorm:"column:subject_id;type:varchar(100)" json:"subject_id"`
-	ProgramID       string            `gorm:"column:program_id;type:varchar(100)" json:"program_id"`
-	ClassType       ScheduleClassType `gorm:"column:class_type;type:varchar(100)" json:"class_type"`
-	DueAt           int64             `gorm:"column:due_at;type:bigint" json:"due_at"`
-	Description     string            `gorm:"column:description;type:varchar(500)" json:"description"`
-	Attachment      string            `gorm:"column:attachment;type:text;" json:"attachment"`
-	ScheduleVersion int64             `gorm:"column:version;type:bigint" json:"schedule_version"`
-	RepeatID        string            `gorm:"column:repeat_id;type:varchar(100)" json:"repeat_id"`
-	RepeatJson      string            `gorm:"column:repeat;type:json;" json:"repeat_json"`
-	IsHidden        bool              `gorm:"column:is_hidden;default:false" json:"is_hidden"`
-	IsHomeFun       bool              `gorm:"column:is_home_fun;default:false" json:"is_home_fun"`
-	CreatedID       string            `gorm:"column:created_id;type:varchar(100)" json:"created_id"`
-	UpdatedID       string            `gorm:"column:updated_id;type:varchar(100)" json:"updated_id"`
-	DeletedID       string            `gorm:"column:deleted_id;type:varchar(100)" json:"deleted_id"`
-	CreatedAt       int64             `gorm:"column:created_at;type:bigint" json:"created_at"`
-	UpdatedAt       int64             `gorm:"column:updated_at;type:bigint" json:"updated_at"`
-	DeleteAt        int64             `gorm:"column:delete_at;type:bigint" json:"delete_at"`
+	SubjectID       string               `gorm:"column:subject_id;type:varchar(100)" json:"subject_id"`
+	ProgramID       string               `gorm:"column:program_id;type:varchar(100)" json:"program_id"`
+	ClassType       ScheduleClassType    `gorm:"column:class_type;type:varchar(100)" json:"class_type"`
+	DueAt           int64                `gorm:"column:due_at;type:bigint" json:"due_at"`
+	Description     string               `gorm:"column:description;type:varchar(500)" json:"description"`
+	Attachment      string               `gorm:"column:attachment;type:text;" json:"attachment"`
+	ScheduleVersion int64                `gorm:"column:version;type:bigint" json:"schedule_version"`
+	RepeatID        string               `gorm:"column:repeat_id;type:varchar(100)" json:"repeat_id"`
+	RepeatJson      string               `gorm:"column:repeat;type:json;" json:"repeat_json"`
+	IsHidden        bool                 `gorm:"column:is_hidden;default:false" json:"is_hidden"`
+	IsHomeFun       bool                 `gorm:"column:is_home_fun;default:false" json:"is_home_fun"`
+	IsReview        bool                 `gorm:"column:is_review;default:false" json:"is_review"`
+	ContentStartAt  int64                `gorm:"column:content_start_at;type:bigint" json:"content_start_at"`
+	ContentEndAt    int64                `gorm:"column:content_end_at;type:bigint" json:"content_end_at"`
+	ReviewStatus    ScheduleReviewStatus `gorm:"column:review_status;type:varchar(100)" json:"review_status"`
+	CreatedID       string               `gorm:"column:created_id;type:varchar(100)" json:"created_id"`
+	UpdatedID       string               `gorm:"column:updated_id;type:varchar(100)" json:"updated_id"`
+	DeletedID       string               `gorm:"column:deleted_id;type:varchar(100)" json:"deleted_id"`
+	CreatedAt       int64                `gorm:"column:created_at;type:bigint" json:"created_at"`
+	UpdatedAt       int64                `gorm:"column:updated_at;type:bigint" json:"updated_at"`
+	DeleteAt        int64                `gorm:"column:delete_at;type:bigint" json:"delete_at"`
 }
 
 // Check if the version of lesson plan is locked
@@ -407,6 +411,14 @@ const (
 	ScheduleStatusNotStart ScheduleStatus = "NotStart"
 	ScheduleStatusStarted  ScheduleStatus = "Started"
 	ScheduleStatusClosed   ScheduleStatus = "Closed"
+)
+
+type ScheduleReviewStatus string
+
+const (
+	ScheduleReviewStatusPending ScheduleReviewStatus = "pending"
+	ScheduleReviewStatusSuccess ScheduleReviewStatus = "success"
+	ScheduleReviewStatusFailed  ScheduleReviewStatus = "failed"
 )
 
 func (Schedule) TableName() string {
@@ -509,23 +521,27 @@ type ScheduleUpdateView struct {
 }
 
 type ScheduleListView struct {
-	ID                 string            `json:"id"`
-	Title              string            `json:"title"`
-	StartAt            int64             `json:"start_at"`
-	EndAt              int64             `json:"end_at"`
-	IsRepeat           bool              `json:"is_repeat"`
-	LessonPlanID       string            `json:"lesson_plan_id"`
-	ClassType          ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
-	ClassTypeLabel     ScheduleShortInfo `json:"class_type_label"`
-	Status             ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
-	ClassID            string            `json:"class_id"`
-	DueAt              int64             `json:"due_at"`
-	IsHidden           bool              `json:"is_hidden"`
-	RoleType           ScheduleRoleType  `json:"role_type"`
-	ExistFeedback      bool              `json:"exist_feedback"`
-	IsHomeFun          bool              `json:"is_home_fun"`
-	ExistAssessment    bool              `json:"exist_assessment"`
-	CompleteAssessment bool              `json:"complete_assessment"`
+	ID                 string               `json:"id"`
+	Title              string               `json:"title"`
+	StartAt            int64                `json:"start_at"`
+	EndAt              int64                `json:"end_at"`
+	IsRepeat           bool                 `json:"is_repeat"`
+	LessonPlanID       string               `json:"lesson_plan_id"`
+	ClassType          ScheduleClassType    `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
+	ClassTypeLabel     ScheduleShortInfo    `json:"class_type_label"`
+	Status             ScheduleStatus       `json:"status" enums:"NotStart,Started,Closed"`
+	ClassID            string               `json:"class_id"`
+	DueAt              int64                `json:"due_at"`
+	IsHidden           bool                 `json:"is_hidden"`
+	RoleType           ScheduleRoleType     `json:"role_type"`
+	ExistFeedback      bool                 `json:"exist_feedback"`
+	IsHomeFun          bool                 `json:"is_home_fun"`
+	IsReview           bool                 `json:"is_review"`
+	ContentStartAt     int64                `json:"content_start_at"`
+	ContentEndAt       int64                `json:"content_end_at"`
+	ReviewStatus       ScheduleReviewStatus `json:"review_status"`
+	ExistAssessment    bool                 `json:"exist_assessment"`
+	CompleteAssessment bool                 `json:"complete_assessment"`
 }
 
 type ScheduleDateView struct {
@@ -555,6 +571,10 @@ type ScheduleDetailsView struct {
 	ParticipantsStudents []*ScheduleAccessibleUserView `json:"participants_students"`
 	IsHidden             bool                          `json:"is_hidden"`
 	IsHomeFun            bool                          `json:"is_home_fun"`
+	IsReview             bool                          `json:"is_review"`
+	ReviewStatus         ScheduleReviewStatus          `json:"review_status" enums:"pending,success,failed"`
+	ContentStartAt       int64                         `json:"content_start_at"`
+	ContentEndAt         int64                         `json:"content_end_at"`
 	RoleType             ScheduleRoleType              `json:"role_type" enums:"Student,Teacher,Unknown"`
 	ExistFeedback        bool                          `json:"exist_feedback"`
 	LessonPlan           *ScheduleLessonPlan           `json:"lesson_plan"`
@@ -902,21 +922,25 @@ type ScheduleQueryCondition struct {
 }
 
 type ScheduleTimeView struct {
-	ID                 string            `json:"id"`
-	Title              string            `json:"title"`
-	StartAt            int64             `json:"start_at"`
-	EndAt              int64             `json:"end_at"`
-	DueAt              int64             `json:"due_at"`
-	ClassType          ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
-	Status             ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
-	ClassID            string            `json:"class_id"`
-	IsHomeFun          bool              `json:"is_home_fun"`
-	IsRepeat           bool              `json:"is_repeat"`
-	IsHidden           bool              `json:"is_hidden"`
-	LessonPlanID       string            `json:"lesson_plan_id"`
-	RoleType           ScheduleRoleType  `json:"role_type" enums:"Student,Teacher,Unknown"`
-	ExistFeedback      bool              `json:"exist_feedback"`
-	IsLockedLessonPlan bool              `json:"is_locked_lesson_plan"`
+	ID                 string               `json:"id"`
+	Title              string               `json:"title"`
+	StartAt            int64                `json:"start_at"`
+	EndAt              int64                `json:"end_at"`
+	DueAt              int64                `json:"due_at"`
+	ClassType          ScheduleClassType    `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
+	Status             ScheduleStatus       `json:"status" enums:"NotStart,Started,Closed"`
+	ClassID            string               `json:"class_id"`
+	IsHomeFun          bool                 `json:"is_home_fun"`
+	IsReview           bool                 `json:"is_review"`
+	ReviewStatus       ScheduleReviewStatus `json:"review_status" enums:"pending,success,failed"`
+	ContentStartAt     int64                `json:"content_start_at"`
+	ContentEndAt       int64                `json:"content_end_at"`
+	IsRepeat           bool                 `json:"is_repeat"`
+	IsHidden           bool                 `json:"is_hidden"`
+	LessonPlanID       string               `json:"lesson_plan_id"`
+	RoleType           ScheduleRoleType     `json:"role_type" enums:"Student,Teacher,Unknown"`
+	ExistFeedback      bool                 `json:"exist_feedback"`
+	IsLockedLessonPlan bool                 `json:"is_locked_lesson_plan"`
 	// Accurate for Home Fun Study and student user only, in_progress: submitted, complete: completed, empty string: never submitted
 	AssessmentStatus AssessmentStatus `json:"assessment_status" enums:"in_progress,complete"`
 	CreatedAt        int64            `json:"created_at"`

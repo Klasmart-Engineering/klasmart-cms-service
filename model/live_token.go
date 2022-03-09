@@ -11,6 +11,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -80,6 +81,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		UserID:     op.UserID,
 		Type:       tokenType, //entity.LiveTokenTypeLive,
 		RoomID:     scheduleID,
+		IsReview:   schedule.IsReview,
 		ClassType:  classType,
 		OrgID:      op.OrgID,
 		ScheduleID: schedule.ID,
@@ -109,6 +111,32 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 	// task and homefun study not support live token
 	if schedule.ClassType == entity.ScheduleClassTypeTask || (schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun) {
 		liveTokenInfo.Materials = make([]*entity.LiveMaterial, 0)
+	} else if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsReview {
+		// review schedule live token
+		scheduleReview, err := da.GetScheduleReviewDA().GetScheduleReviewByScheduleIDAndStudentID(ctx, dbo.MustGetDB(ctx), scheduleID, op.UserID)
+		if err != nil {
+			log.Error(ctx, "da.GetScheduleReviewDA().GetScheduleReviewByScheduleIDAndStudentID error",
+				log.Err(err),
+				log.Any("op", op),
+				log.String("scheduleID", scheduleID),
+				log.Any("tokenType", tokenType))
+			return "", err
+		}
+		if scheduleReview.ReviewStatus != entity.ScheduleReviewStatusSuccess {
+			log.Error(ctx, "review lesson plan not ready", log.Any("scheduleReview", scheduleReview))
+			return "", errors.New("review lesson plan not ready")
+		}
+
+		liveTokenInfo.Materials, err = s.convertToLiveMaterial(ctx, op, scheduleID, tokenType, scheduleReview.LiveLessonPlan.LessonMaterials)
+		if err != nil {
+			log.Error(ctx, "s.convertToLiveMaterial error",
+				log.Err(err),
+				log.Any("op", op),
+				log.String("scheduleID", scheduleID),
+				log.Any("tokenType", tokenType),
+				log.Any("liveLessonMaterials", scheduleReview.LiveLessonPlan.LessonMaterials))
+			return "", err
+		}
 	} else {
 		// anyone has attempted live
 		if schedule.IsLockedLessonPlan() {

@@ -77,6 +77,7 @@ var AllPermissionNames = []PermissionName{
 	ScheduleViewOrgCalendar,
 	ScheduleViewSchoolCalendar,
 	ScheduleViewMyCalendar,
+	ScheduleViewPendingCalendar,
 	ScheduleCreateEvent,
 	ScheduleCreateMyEvent,
 	ScheduleCreateMySchoolEvent,
@@ -245,9 +246,11 @@ const (
 	ScheduleViewOrgCalendar             PermissionName = "view_org_calendar_511"
 	ScheduleViewSchoolCalendar          PermissionName = "view_school_calendar_512"
 	ScheduleViewMyCalendar              PermissionName = "view_my_calendar_510"
+	ScheduleViewPendingCalendar         PermissionName = "view_pending_calendar_events_514"
 	ScheduleCreateEvent                 PermissionName = "create_event_520"
 	ScheduleCreateMyEvent               PermissionName = "create_my_schedule_events_521"
 	ScheduleCreateMySchoolEvent         PermissionName = "create_my_schools_schedule_events_522"
+	ScheduleCreateReviewEvent           PermissionName = "create_review_calendar_events_523"
 	ScheduleCreateLiveCalendarEvents    PermissionName = "create_live_calendar_events_524"
 	ScheduleCreateClassCalendarEvents   PermissionName = "create_class_calendar_events_525"
 	ScheduleCreateStudyCalendarEvents   PermissionName = "create_study_calendar_events_526"
