@@ -239,7 +239,7 @@ func (s *Server) sendCode(c *gin.Context) {
 // @Success 200
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /users/send_code [post]
+// @Router `/users/send_code [post]
 func (s *Server) inviteNotify(c *gin.Context) {
 	var req SendCodeRequest
 	ctx := c.Request.Context()
