@@ -41,6 +41,7 @@ type Config struct {
 	Assessment            AssessmentConfig      `yaml:"assessment_config"`
 	AMS                   AMSConfig             `json:"ams" yaml:"ams"`
 	H5P                   H5PServiceConfig      `json:"h5p" yaml:"h5p"`
+	DataService           DataServiceConfig     `json:"data_service" yaml:"data_service"`
 	KidsLoopRegion        string                `json:"kidsloop_region" yaml:"kidsloop_region"`
 	TencentConfig         TencentConfig         `json:"tencent" yaml:"tencent"`
 	KidsloopCNLoginConfig KidsloopCNLoginConfig `json:"kidsloop_cn" yaml:"kidsloop_cn"`
@@ -129,6 +130,11 @@ type AMSConfig struct {
 	AuthorizedKey  string      `json:"authorized_key"`
 }
 
+type DataServiceConfig struct {
+	EndPoint      string `json:"endpoint" yaml:"endpoint"`
+	AuthorizedKey string `json:"authorized_key"`
+}
+
 type H5PServiceConfig struct {
 	EndPoint string `json:"endpoint" yaml:"endpoint"`
 }
@@ -197,6 +203,7 @@ func LoadEnvConfig() {
 	loadLiveTokenEnvConfig(ctx)
 	loadAMSConfig(ctx)
 	loadH5PServiceConfig(ctx)
+	loadDataServiceConfig(ctx)
 	loadTencentConfig(ctx)
 	loadKidsloopCNLoginConfig(ctx)
 	loadAssessmentConfig(ctx)
@@ -503,6 +510,11 @@ func loadH5PServiceConfig(ctx context.Context) {
 	if h5pEndpoint != "" {
 		config.H5P.EndPoint = h5pEndpoint
 	}
+}
+
+func loadDataServiceConfig(ctx context.Context) {
+	// TODO assertGetEnv
+	config.DataService.EndPoint = os.Getenv("data_service_endpoint")
 }
 
 func loadCORSConfig(ctx context.Context) {

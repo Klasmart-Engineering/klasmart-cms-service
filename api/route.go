@@ -92,6 +92,7 @@ func (s Server) registeRoute() {
 		schedules.POST("/schedules_time_view/dates", s.mustLogin, s.postScheduledDates)
 		schedules.POST("/schedules_time_view", s.mustLogin, s.postScheduleTimeView)
 		schedules.POST("/schedules_time_view/list", s.mustLogin, s.getScheduleTimeViewList)
+		schedules.POST("/schedules/review/checkData", s.mustLogin, s.checkScheduleReviewData)
 	}
 	scheduleFeedback := s.engine.Group("/v1/schedules_feedbacks")
 	{
@@ -320,6 +321,8 @@ func (s Server) registeRoute() {
 		internal.GET("/contents", s.mustLoginWithoutOrgID, s.queryContentInternal)
 		internal.GET("/schedules", s.mustLoginWithoutOrgID, s.queryScheduleInternal)
 		internal.GET("/schedules/:id/relation_ids", s.mustLoginWithoutOrgID, s.queryScheduleRelationIDsInternal)
+		// TODO no authorization
+		internal.GET("/schedules/updateReviewStatus", s.updateScheduleReviewStatus)
 	}
 }
 

@@ -456,6 +456,9 @@ type ScheduleAddView struct {
 	TimeZoneOffset         int               `json:"time_zone_offset"`
 	Location               *time.Location    `json:"-"`
 	IsHomeFun              bool              `json:"is_home_fun"`
+	IsReview               bool              `json:"is_review"`
+	ContentStartAt         int64             `json:"content_start_at"`
+	ContentEndAt           int64             `json:"content_end_at"`
 	OutcomeIDs             []string          `json:"outcome_ids"`
 }
 
@@ -468,6 +471,7 @@ type ScheduleEditValidation struct {
 	ClassType              ScheduleClassType
 	Title                  string
 	OutcomeIDs             []string
+	IsReview               bool
 }
 
 func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
@@ -489,6 +493,10 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 		UpdatedAt:       time.Now().Unix(),
 		IsAllDay:        s.IsAllDay,
 		IsHomeFun:       s.IsHomeFun,
+		IsReview:        s.IsReview,
+		ReviewStatus:    ScheduleReviewStatusPending,
+		ContentStartAt:  s.ContentStartAt,
+		ContentEndAt:    s.ContentEndAt,
 	}
 	if schedule.ClassType != ScheduleClassTypeHomework {
 		schedule.IsHomeFun = false
@@ -995,4 +1003,38 @@ type ScheduleRelationIDs struct {
 	ClassRosterStudentIDs []string `json:"class_roster_student_ids"`
 	ParticipantTeacherIDs []string `json:"participant_teacher_ids"`
 	ParticipantStudentIDs []string `json:"participant_student_ids"`
+}
+
+type CheckScheduleReviewDataRequest struct {
+	TimeZoneOffset int64    `json:"time_zone_offset"`
+	ProgramID      string   `json:"program_id"`
+	SubjectIDs     []string `json:"subject_ids"`
+	StudentIDs     []string `json:"student_ids"`
+	ContentStartAt int64    `json:"content_start_at"`
+	ContentEndAt   int64    `json:"content_end_at"`
+}
+
+type CheckScheduleReviewDataResponse struct {
+	Results []CheckScheduleReviewDataResult `json:"results"`
+}
+
+type CheckScheduleReviewDataResult struct {
+	StudentID string `json:"student_id"`
+	Status    bool   `json:"status"`
+}
+
+type UpdateScheduleReviewStatusRequest struct {
+	ScheduleID       string                          `json:"schedule_id"`
+	SucceededResults []ScheduleReviewSucceededResult `json:"succeeded_results"`
+	FailedResults    []ScheduleReviewFailedResult    `json:"failed_results"`
+}
+
+type ScheduleReviewSucceededResult struct {
+	StudentID  string   `json:"student_id"`
+	ContentIDs []string `json:"content_ids"`
+}
+
+type ScheduleReviewFailedResult struct {
+	StudentID string `json:"student_id"`
+	Status    string `json:"status"`
 }
