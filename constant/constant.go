@@ -10,6 +10,7 @@ const (
 	TableNameSchedule           = "schedules"
 	TableNameScheduleFeedback   = "schedules_feedbacks"
 	TableNameScheduleRelation   = "schedules_relations"
+	TableNameScheduleReview     = "schedules_reviews"
 	TableNameFeedbackAssignment = "feedbacks_assignments"
 
 	TableNameClassType   = "class_types"
