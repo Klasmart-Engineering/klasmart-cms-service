@@ -9,8 +9,8 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
-// @Summary get student usage of material report
-// @Description get student usage of material report
+// @Summary get learner weekly report overview
+// @Description get learner weekly report overview
 // @Tags reports
 // @ID getLearnerWeeklyReportOverview
 // @Accept json
