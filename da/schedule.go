@@ -558,12 +558,13 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.ReviewStatus.Strings)
 	}
 
-	if c.SuccessReviewStudentID.Valid {
-		sql := fmt.Sprintf("exists(select 1 from %s where (%s.is_review = 1 and %s.schedule_id = %s.id and student_id = ? and %s.review_status = ?) or (%s.is_review = 0))",
-			constant.TableNameScheduleReview, constant.TableNameSchedule, constant.TableNameScheduleReview, constant.TableNameSchedule, constant.TableNameScheduleReview, constant.TableNameSchedule)
-		wheres = append(wheres, sql)
-		params = append(params, c.SuccessReviewStudentID.String, entity.ScheduleReviewStatusSuccess)
-	}
+	// TODO
+	// if c.SuccessReviewStudentID.Valid {
+	// 	sql := fmt.Sprintf("exists(select 1 from %s where (%s.is_review = 1 and %s.schedule_id = %s.id and student_id = ? and %s.review_status = ?) or (%s.is_review = 0))",
+	// 		constant.TableNameScheduleReview, constant.TableNameSchedule, constant.TableNameScheduleReview, constant.TableNameSchedule, constant.TableNameScheduleReview, constant.TableNameSchedule)
+	// 	wheres = append(wheres, sql)
+	// 	params = append(params, c.SuccessReviewStudentID.String, entity.ScheduleReviewStatusSuccess)
+	// }
 
 	if c.DueToEq.Valid {
 		wheres = append(wheres, "due_at = ?")
