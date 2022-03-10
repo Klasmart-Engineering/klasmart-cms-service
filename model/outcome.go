@@ -1928,10 +1928,11 @@ func (o OutcomeModel) transformToPublishedOutcomeView(ctx context.Context, opera
 	outcomeIDs := make([]string, len(outcomes))
 	for i, outcome := range outcomes {
 		result[i] = &PublishedOutcomeView{
-			OutcomeID:   outcome.ID,
-			OutcomeName: outcome.Name,
-			Shortcode:   outcome.Shortcode,
-			Assumed:     outcome.Assumed,
+			OutcomeID:      outcome.ID,
+			OutcomeName:    outcome.Name,
+			Shortcode:      outcome.Shortcode,
+			Assumed:        outcome.Assumed,
+			ScoreThreshold: outcome.ScoreThreshold,
 			// init zero value
 			Sets:           []*OutcomeSetCreateView{},
 			ProgramIDs:     []string{},
@@ -2035,17 +2036,18 @@ func (o OutcomeModel) transformToOutcomeView(ctx context.Context, operator *enti
 
 	for i, outcome := range outcomes {
 		result[i] = &OutcomeView{
-			OutcomeID:     outcome.ID,
-			AncestorID:    outcome.AncestorID,
-			OutcomeName:   outcome.Name,
-			Shortcode:     outcome.Shortcode,
-			Assumed:       outcome.Assumed,
-			LockedBy:      outcome.LockedBy,
-			AuthorID:      outcome.AuthorID,
-			AuthorName:    outcome.AuthorName,
-			PublishStatus: string(outcome.PublishStatus),
-			CreatedAt:     outcome.CreateAt,
-			UpdatedAt:     outcome.UpdateAt,
+			OutcomeID:      outcome.ID,
+			AncestorID:     outcome.AncestorID,
+			OutcomeName:    outcome.Name,
+			Shortcode:      outcome.Shortcode,
+			Assumed:        outcome.Assumed,
+			LockedBy:       outcome.LockedBy,
+			AuthorID:       outcome.AuthorID,
+			AuthorName:     outcome.AuthorName,
+			PublishStatus:  string(outcome.PublishStatus),
+			CreatedAt:      outcome.CreateAt,
+			UpdatedAt:      outcome.UpdateAt,
+			ScoreThreshold: outcome.ScoreThreshold,
 
 			// init zero value
 			LockedLocation: []string{},
@@ -2287,6 +2289,7 @@ func (o OutcomeModel) transformToOutcomeDetailView(ctx context.Context, operator
 		Grade:          []Grade{},
 		Sets:           []*OutcomeSetCreateView{},
 		Milestones:     []*Milestone{},
+		ScoreThreshold: outcome.ScoreThreshold,
 	}
 
 	if outcome.HasLocked() {

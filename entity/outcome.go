@@ -57,6 +57,8 @@ type Outcome struct {
 	Ages           []string     `gorm:"-" json:"ages"`
 	Milestones     []*Milestone `gorm:"-" json:"milestones"`
 	EditingOutcome *Outcome     `gorm:"-" json:"-"`
+
+	ScoreThreshold float32 `gorm:"score_threshold"`
 }
 
 func (Outcome) TableName() string {
