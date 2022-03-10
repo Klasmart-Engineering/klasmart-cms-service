@@ -38,7 +38,7 @@ func (s *Server) getLearnerWeeklyReportOverview(c *gin.Context) {
 	}()
 	op := s.getOperator(c)
 	tr := entity.TimeRange(c.Query("time_range"))
-	res, err := model.GetReportModel().GetLearnerReportOverview(ctx, op, entity.LearnerReportOverviewCondition{
+	res, err := model.GetReportModel().GetLearnerReportOverview(ctx, op, &entity.LearnerReportOverviewCondition{
 		TimeRange:   tr,
 		PermOrg:     external.ReportLearningSummmaryOrg.String(),
 		PermSchool:  external.ReportLearningSummarySchool.String(),

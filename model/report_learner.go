@@ -10,7 +10,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
-func (m *reportModel) GetLearnerReportOverview(ctx context.Context, op *entity.Operator, cond entity.LearnerReportOverviewCondition) (res entity.LearnerReportOverview, err error) {
+func (m *reportModel) GetLearnerReportOverview(ctx context.Context, op *entity.Operator, cond *entity.LearnerReportOverviewCondition) (res entity.LearnerReportOverview, err error) {
 	permOrg := external.PermissionName(cond.PermOrg)
 	permSchool := external.PermissionName(cond.PermSchool)
 	permTeacher := external.PermissionName(cond.PermTeacher)
