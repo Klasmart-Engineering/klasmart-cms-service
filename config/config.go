@@ -105,9 +105,10 @@ type CDNConfig struct {
 }
 
 type ScheduleConfig struct {
-	MaxRepeatYear    int           `json:"max_repeat_year" yaml:"max_repeat_year"`
-	CacheExpiration  time.Duration `yaml:"cache_expiration"`
-	ClassEventSecret interface{}   `json:"class_event_secret"`
+	ReviewTypeEnabled bool          `json:"review_type_enabled" yaml:"review_type_enabled"`
+	MaxRepeatYear     int           `json:"max_repeat_year" yaml:"max_repeat_year"`
+	CacheExpiration   time.Duration `yaml:"cache_expiration"`
+	ClassEventSecret  interface{}   `json:"class_event_secret"`
 }
 
 type LiveTokenConfig struct {
@@ -321,6 +322,15 @@ func loadRedisEnvConfig(ctx context.Context) {
 }
 
 func loadScheduleEnvConfig(ctx context.Context) {
+	reviewTypeEnabledStr := os.Getenv("schedule_review_type_enabled")
+	reviewTypeEnabled, err := strconv.ParseBool(reviewTypeEnabledStr)
+	if err != nil {
+		log.Warn(ctx, "parse env schedule_review_type_enabled failed",
+			log.Err(err),
+			log.String("schedule_review_type_enabled", reviewTypeEnabledStr))
+	}
+	config.Schedule.ReviewTypeEnabled = reviewTypeEnabled
+
 	maxRepeatYearStr := strings.TrimSpace(os.Getenv("max_repeat_year"))
 	if maxRepeatYearStr == "" {
 		config.Schedule.MaxRepeatYear = 2

@@ -12,6 +12,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/test/utils"
 )
 
 func TestAdd(t *testing.T) {
@@ -172,4 +173,22 @@ func TestGetScheduleRelationIDs(t *testing.T) {
 	t.Log(result.ClassRosterStudentIDs)
 	t.Log(result.ParticipantTeacherIDs)
 	t.Log(result.ParticipantStudentIDs)
+}
+
+func TestQueryScheduleTimeView(t *testing.T) {
+	ctx := context.TODO()
+	token := "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRhMGNjZWU0LTA4MmItNDM5OC05NzMxLWEyNTUwNDE2MzkzNCIsImVtYWlsIjoidGVjaDFAeW9wbWFpbC5jb20iLCJleHAiOjE2NDY3NTkxMzEsImlzcyI6ImtpZHNsb29wIn0.bx5IXoruQs_ATYs0mJ4ODUvEjS9tRKxHVKdK85LlseujyYFTc2WidB3k9Twl7OaRFl9_EYl7PDhWH77Rg1ocR84GnOJAzNUIM9wpt5H4urnKEzWabtWdBjNBtbaRVPY4bKEeP5NaOF5Z72kKzYCsXWgTr9fIL_v2E4WGroXeUw3pRVNGvRcCWnLTM5fXWP7fy2NGdrJee4da-CSGWWCuRkF2nmveLujFTvpfiBQzFCZ0fW1xZ_ugYQMOeG_AWZ3PPdayivijYP9STphXCB3YXoXrLdWevzWJAu6JctXqMdbP7gJCORn6J5dZuen9iFak-9C8BB3uYHiBg8Lc0kLKEg"
+	orgID := "92db7ddd-1f23-4f64-bd47-94f6d34a50c0"
+	op := utils.InitOperator(ctx, token, orgID)
+	query := &entity.ScheduleTimeViewListRequest{
+		ViewType: "month",
+		TimeAt:   1638316800,
+	}
+	count, result, err := GetScheduleModel().QueryScheduleTimeView(ctx, query, op, time.Local)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(count)
+	t.Log(result)
 }

@@ -90,6 +90,7 @@ type IScheduleModel interface {
 type scheduleModel struct {
 	scheduleDA         da.IScheduleDA
 	scheduleRelationDA da.IScheduleRelationDA
+	scheduleReviewDA   da.IScheduleReviewDA
 
 	userService    external.UserServiceProvider
 	schoolService  external.SchoolServiceProvider
@@ -2512,6 +2513,7 @@ func (s *scheduleModel) PrepareScheduleTimeViewCondition(ctx context.Context, qu
 		external.ScheduleViewOrgCalendar,
 		external.ScheduleViewSchoolCalendar,
 		external.ScheduleViewMyCalendar,
+		external.ScheduleViewPendingCalendar,
 	})
 	if err == constant.ErrForbidden {
 		log.Info(ctx, "request info",
@@ -2647,6 +2649,14 @@ func (s *scheduleModel) PrepareScheduleTimeViewCondition(ctx context.Context, qu
 			Valid:  true,
 		}
 	}
+
+	if !permissionMap[external.ScheduleViewPendingCalendar] {
+		condition.SuccessReviewStudentID = sql.NullString{
+			String: op.UserID,
+			Valid:  true,
+		}
+	}
+
 	condition.AnyTime = sql.NullBool{
 		Bool:  query.Anytime,
 		Valid: query.Anytime,
@@ -2913,22 +2923,64 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 		return nil, nil
 	}
 
+	// check unsuccessful review schedule permission
+	permissionNames := []external.PermissionName{
+		external.ScheduleViewPendingCalendar,
+	}
+	permissionMap, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, permissionNames)
+	if err != nil {
+		log.Error(ctx, "external.GetPermissionServiceProvider().HasOrganizationPermissions error",
+			log.Err(err),
+			log.Any("permissionNames", permissionNames),
+			log.Any("operator", operator),
+		)
+
+		return nil, err
+	}
+
+	var scheduleReview *entity.ScheduleReview
+	if !permissionMap[external.ScheduleViewPendingCalendar] &&
+		schedule.IsReview {
+		scheduleReview, err = s.scheduleReviewDA.GetScheduleReviewByScheduleIDAndStudentID(ctx, dbo.MustGetDB(ctx),
+			schedule.ID, operator.UserID)
+		if err != nil {
+			log.Error(ctx, "s.scheduleReviewDA.GetScheduleReviewByScheduleIDAndStudentID error",
+				log.Err(err),
+				log.String("scheduleID", schedule.ID),
+				log.String("studentID", operator.UserID),
+			)
+			return nil, err
+		}
+		if scheduleReview.ReviewStatus != entity.ScheduleReviewStatusSuccess {
+			log.Error(ctx, "no permission to view unsuccessful schedule review",
+				log.String("scheduleID", schedule.ID),
+				log.String("studentID", operator.UserID),
+				log.Any("scheduleReview", scheduleReview),
+			)
+			return nil, constant.ErrForbidden
+		}
+	}
+
 	scheduleDetailsView := &entity.ScheduleDetailsView{
-		ID:          schedule.ID,
-		Title:       schedule.Title,
-		OrgID:       schedule.OrgID,
-		StartAt:     schedule.StartAt,
-		EndAt:       schedule.EndAt,
-		IsAllDay:    schedule.IsAllDay,
-		ClassType:   schedule.ClassType,
-		DueAt:       schedule.DueAt,
-		Description: schedule.Description,
-		Version:     schedule.ScheduleVersion,
-		IsRepeat:    schedule.RepeatID != "",
-		Status:      schedule.Status,
-		IsHomeFun:   schedule.IsHomeFun,
-		IsHidden:    schedule.IsHidden,
-		RoleType:    entity.ScheduleRoleTypeUnknown,
+		ID:             schedule.ID,
+		Title:          schedule.Title,
+		OrgID:          schedule.OrgID,
+		StartAt:        schedule.StartAt,
+		EndAt:          schedule.EndAt,
+		IsAllDay:       schedule.IsAllDay,
+		ClassType:      schedule.ClassType,
+		DueAt:          schedule.DueAt,
+		Description:    schedule.Description,
+		Version:        schedule.ScheduleVersion,
+		IsRepeat:       schedule.RepeatID != "",
+		Status:         schedule.Status,
+		IsHomeFun:      schedule.IsHomeFun,
+		IsHidden:       schedule.IsHidden,
+		IsReview:       schedule.IsReview,
+		ReviewStatus:   schedule.ReviewStatus,
+		ContentStartAt: schedule.ContentStartAt,
+		ContentEndAt:   schedule.ContentEndAt,
+		RoleType:       entity.ScheduleRoleTypeUnknown,
 		ClassTypeLabel: entity.ScheduleShortInfo{
 			ID:   schedule.ClassType.String(),
 			Name: schedule.ClassType.ToLabel().String(),
@@ -2970,7 +3022,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 	}
 
 	var scheduleRelations []*entity.ScheduleRelation
-	err := s.scheduleRelationDA.Query(ctx, &da.ScheduleRelationCondition{
+	err = s.scheduleRelationDA.Query(ctx, &da.ScheduleRelationCondition{
 		ScheduleID: sql.NullString{
 			String: schedule.ID,
 			Valid:  true,
@@ -3334,6 +3386,22 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 
 	// fill to scheduleDetailsView
 	scheduleDetailsView.LessonPlan = scheduleLessonPlan
+	// review schedule for student
+	if schedule.IsReview && !permissionMap[external.ScheduleViewPendingCalendar] {
+		materials := make([]*entity.ScheduleLessonPlanMaterial, len(scheduleReview.LiveLessonPlan.LessonMaterials))
+		for i, v := range scheduleReview.LiveLessonPlan.LessonMaterials {
+			materials[i] = &entity.ScheduleLessonPlanMaterial{
+				ID:   v.LessonMaterialID,
+				Name: v.LessonMaterialName,
+			}
+		}
+		scheduleDetailsView.LessonPlan = &entity.ScheduleLessonPlan{
+			ID:        scheduleReview.LiveLessonPlan.LessonPlanID,
+			Name:      scheduleReview.LiveLessonPlan.LessonPlanName,
+			IsAuth:    true,
+			Materials: materials,
+		}
+	}
 	scheduleDetailsView.Class = scheduleAccessibleUserView
 	scheduleDetailsView.Program = scheduleProgram
 	scheduleDetailsView.Subjects = scheduleSubjects
@@ -3734,11 +3802,15 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 	var homefunHomeworkIDs []string
 	var notHomefunHomeworkIDs []string
 	var withAssessmentScheduleIDs []string
+	var reviewScheduleIDs []string
 
 	scheduleIDs := make([]string, len(scheduleList))
 	for i, schedule := range scheduleList {
 		if schedule.ClassType == entity.ScheduleClassTypeHomework {
-			if schedule.IsHomeFun {
+			// review schedule not support assessment
+			if schedule.IsReview {
+				reviewScheduleIDs = append(reviewScheduleIDs, schedule.ID)
+			} else if schedule.IsHomeFun {
 				homefunHomeworkIDs = append(homefunHomeworkIDs, schedule.ID)
 			} else {
 				notHomefunHomeworkIDs = append(notHomefunHomeworkIDs, schedule.ID)
@@ -3850,20 +3922,33 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 		return nil, err
 	}
 
+	allowViewPendingReview, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ScheduleViewPendingCalendar)
+	if err != nil {
+		log.Error(ctx, "external.GetPermissionServiceProvider().HasOrganizationPermission error",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("permissionName", external.ScheduleViewPendingCalendar))
+		return nil, err
+	}
+
 	for i := range scheduleListView {
 		schedule := scheduleList[i]
 		item := &entity.ScheduleListView{
-			ID:           schedule.ID,
-			Title:        schedule.Title,
-			StartAt:      schedule.StartAt,
-			EndAt:        schedule.EndAt,
-			IsRepeat:     schedule.RepeatID != "",
-			LessonPlanID: schedule.LessonPlanID,
-			ClassID:      schedule.ClassID,
-			ClassType:    schedule.ClassType,
-			DueAt:        schedule.DueAt,
-			IsHidden:     schedule.IsHidden,
-			IsHomeFun:    schedule.IsHomeFun,
+			ID:             schedule.ID,
+			Title:          schedule.Title,
+			StartAt:        schedule.StartAt,
+			EndAt:          schedule.EndAt,
+			IsRepeat:       schedule.RepeatID != "",
+			LessonPlanID:   schedule.LessonPlanID,
+			ClassID:        schedule.ClassID,
+			ClassType:      schedule.ClassType,
+			DueAt:          schedule.DueAt,
+			IsHidden:       schedule.IsHidden,
+			IsHomeFun:      schedule.IsHomeFun,
+			IsReview:       schedule.IsReview,
+			ContentStartAt: schedule.ContentStartAt,
+			ContentEndAt:   schedule.ContentEndAt,
+			ReviewStatus:   schedule.ReviewStatus,
 			ClassTypeLabel: entity.ScheduleShortInfo{
 				ID:   schedule.ClassType.String(),
 				Name: schedule.ClassType.ToLabel().String(),
@@ -3874,6 +3959,11 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 				ClassType: schedule.ClassType,
 			}),
 			RoleType: entity.ScheduleRoleTypeUnknown,
+		}
+
+		// student only view success review schedule
+		if item.IsReview && !allowViewPendingReview {
+			item.ReviewStatus = entity.ScheduleReviewStatusSuccess
 		}
 
 		if schedule.IsLockedLessonPlan() {
@@ -3904,6 +3994,15 @@ func (s *scheduleModel) transformToScheduleTimeView(ctx context.Context, operato
 	var scheduleIDs []string
 	var homefunHomeworkIDs []string
 	var notHomefunHomeworkIDs []string
+	allowViewPendingReview, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ScheduleViewPendingCalendar)
+	if err != nil {
+		log.Error(ctx, "external.GetPermissionServiceProvider().HasOrganizationPermission error",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("permissionName", external.ScheduleViewPendingCalendar))
+		return nil, err
+	}
+
 	for i, v := range scheduleList {
 		result[i] = &entity.ScheduleTimeView{
 			ID:                 v.ID,
@@ -3915,12 +4014,21 @@ func (s *scheduleModel) transformToScheduleTimeView(ctx context.Context, operato
 			Status:             v.Status,
 			ClassID:            v.ClassID,
 			IsHomeFun:          v.IsHomeFun,
+			IsReview:           v.IsReview,
+			ReviewStatus:       v.ReviewStatus,
+			ContentStartAt:     v.ContentStartAt,
+			ContentEndAt:       v.ContentEndAt,
 			IsRepeat:           v.RepeatID != "",
 			IsHidden:           v.IsHidden,
 			LessonPlanID:       v.LessonPlanID,
 			IsLockedLessonPlan: v.IsLockedLessonPlan(),
 			RoleType:           entity.ScheduleRoleTypeUnknown,
 			CreatedAt:          v.CreatedAt,
+		}
+
+		// student only view success review schedule
+		if v.IsReview && !allowViewPendingReview {
+			result[i].ReviewStatus = entity.ScheduleReviewStatusSuccess
 		}
 
 		if v.IsLockedLessonPlan() {
@@ -4163,6 +4271,7 @@ func GetScheduleModel() IScheduleModel {
 		_scheduleModel = &scheduleModel{
 			scheduleDA:         da.GetScheduleDA(),
 			scheduleRelationDA: da.GetScheduleRelationDA(),
+			scheduleReviewDA:   da.GetScheduleReviewDA(),
 
 			userService:    external.GetUserServiceProvider(),
 			schoolService:  external.GetSchoolServiceProvider(),

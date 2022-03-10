@@ -399,6 +399,8 @@ type ScheduleCondition struct {
 	RelationSchoolIDs        entity.NullStrings
 	ClassTypes               entity.NullStrings
 	IsHomefun                sql.NullBool
+	ReviewStatus             entity.NullStrings
+	SuccessReviewStudentID   sql.NullString
 	DueToEq                  sql.NullInt64
 	AnyTime                  sql.NullBool
 	RosterClassID            sql.NullString
@@ -549,6 +551,18 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	if c.IsHomefun.Valid {
 		wheres = append(wheres, "((is_home_fun = ? and class_type = ?) or (class_type != ?))")
 		params = append(params, c.IsHomefun.Bool, entity.ScheduleClassTypeHomework, entity.ScheduleClassTypeHomework)
+	}
+
+	if c.ReviewStatus.Valid {
+		wheres = append(wheres, "review_status in (?)")
+		params = append(params, c.ReviewStatus.Strings)
+	}
+
+	if c.SuccessReviewStudentID.Valid {
+		sql := fmt.Sprintf("exists(select 1 from %s where (%s.is_review = 1 and %s.schedule_id = %s.id and student_id = ? and %s.review_status = ?) or (%s.is_review = 0))",
+			constant.TableNameScheduleReview, constant.TableNameSchedule, constant.TableNameScheduleReview, constant.TableNameSchedule, constant.TableNameScheduleReview, constant.TableNameSchedule)
+		wheres = append(wheres, sql)
+		params = append(params, c.SuccessReviewStudentID.String, entity.ScheduleReviewStatusSuccess)
 	}
 
 	if c.DueToEq.Valid {
