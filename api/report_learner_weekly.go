@@ -1,6 +1,7 @@
 package api
 
 import (
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +17,7 @@ import (
 // @Accept json
 // @Produce json
 // @Param time_range query string true "time_range"
-// @Success 200 {object} entity.LearnerWeeklyReportOverview
+// @Success 200 {object} entity.LearnerReportOverview
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -37,7 +38,13 @@ func (s *Server) getLearnerWeeklyReportOverview(c *gin.Context) {
 	}()
 	op := s.getOperator(c)
 	tr := entity.TimeRange(c.Query("time_range"))
-	res, err := model.GetReportModel().GetLearnerWeeklyReportOverview(ctx, op, tr)
+	res, err := model.GetReportModel().GetLearnerReportOverview(ctx, op, entity.LearnerReportOverviewCondition{
+		TimeRange:   tr,
+		PermOrg:     external.ReportLearningSummmaryOrg.String(),
+		PermSchool:  external.ReportLearningSummarySchool.String(),
+		PermTeacher: external.ReportLearningSummaryTeacher.String(),
+		PermStudent: external.ReportLearningSummaryStudent.String(),
+	})
 	if err != nil {
 		return
 	}

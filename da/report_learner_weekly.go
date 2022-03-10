@@ -12,10 +12,10 @@ import (
 )
 
 type ILearnerWeekly interface {
-	GetLearnerWeeklyReportOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, cond entity.GetUserCountCondition) (res entity.LearnerWeeklyReportOverview, err error)
+	GetLearnerWeeklyReportOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, cond entity.GetUserCountCondition) (res entity.LearnerReportOverview, err error)
 }
 
-func (r *ReportDA) GetLearnerWeeklyReportOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, cond entity.GetUserCountCondition) (res entity.LearnerWeeklyReportOverview, err error) {
+func (r *ReportDA) GetLearnerWeeklyReportOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, cond entity.GetUserCountCondition) (res entity.LearnerReportOverview, err error) {
 	sqlSchedule := strings.Builder{}
 	sqlSchedule.WriteString(`
 	select id from schedules s 
@@ -128,7 +128,7 @@ group by user_id
 		return
 	}
 	if len(*ret) == 0 {
-		res.Status = constant.LearnerWeeklyReportOverviewStatusNoData
+		res.Status = constant.LearnerReportOverviewStatusNoData
 		return
 	}
 	m := map[string][]float64{}
