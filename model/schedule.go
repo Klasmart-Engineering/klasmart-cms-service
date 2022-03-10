@@ -890,7 +890,7 @@ func (s *scheduleModel) prepareScheduleUpdateData(ctx context.Context, op *entit
 // finished
 func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, scheduleList []*entity.Schedule, scheduleRelations []*entity.ScheduleRelation, scheduleReviews []*entity.ScheduleReview) ([]*entity.Schedule, error) {
 	// insert into `schedules` table
-	result, err := s.scheduleDA.InsertInBatchesTx(ctx, tx, scheduleList, len(scheduleList))
+	result, err := s.scheduleDA.InsertInBatchesTx(ctx, tx, scheduleList, constant.ScheduleInsertBatchSize)
 	if err != nil {
 		log.Error(ctx, "s.scheduleDA.InsertInBatchesTx error",
 			log.Err(err),
@@ -899,7 +899,7 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *
 	}
 
 	// insert into `schedules_relations` table
-	_, err = s.scheduleRelationDA.InsertInBatchesTx(ctx, tx, scheduleRelations, len(scheduleRelations))
+	_, err = s.scheduleRelationDA.InsertInBatchesTx(ctx, tx, scheduleRelations, constant.ScheduleInsertBatchSize)
 	if err != nil {
 		log.Error(ctx, "s.scheduleRelationDA.InsertInBatchesTx error",
 			log.Err(err),
@@ -908,7 +908,7 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *
 	}
 
 	if len(scheduleReviews) > 0 {
-		_, err = s.scheduleReviewDA.InsertInBatchesTx(ctx, tx, scheduleReviews, len(scheduleReviews))
+		_, err = s.scheduleReviewDA.InsertInBatchesTx(ctx, tx, scheduleReviews, constant.ScheduleInsertBatchSize)
 		if err != nil {
 			log.Error(ctx, "s.scheduleReviewDA.InsertInBatchesTx error",
 				log.Err(err),
