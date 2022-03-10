@@ -281,6 +281,7 @@ type OutcomeView struct {
 	Sets           []*OutcomeSetCreateView `json:"sets"`
 	CreatedAt      int64                   `json:"created_at"`
 	UpdatedAt      int64                   `json:"update_at"`
+	ScoreThreshold float32                 `json:"score_threshold"`
 }
 
 type SearchOutcomeResponse struct {
@@ -300,6 +301,7 @@ type PublishedOutcomeView struct {
 	GradeIDs       []string                `json:"grade_ids"`
 	AgeIDs         []string                `json:"age_ids"`
 	Sets           []*OutcomeSetCreateView `json:"sets"`
+	ScoreThreshold float32                 `json:"score_threshold"`
 }
 
 type SearchPublishedOutcomeResponse struct {
@@ -335,4 +337,5 @@ type OutcomeDetailView struct {
 	Milestones       []*Milestone            `json:"milestones"`
 	CreatedAt        int64                   `json:"created_at"`
 	UpdatedAt        int64                   `json:"update_at"`
+	ScoreThreshold   float32                 `json:"score_threshold"`
 }
