@@ -26,7 +26,8 @@ from assessments_users_v2
                     on assessments_v2.schedule_id = schedules_relations.schedule_id and assessments_users_v2.user_id = schedules_relations.relation_id
 where assessments_v2.delete_at = 0
   and ((assessments_v2.assessment_type='OnlineClass' and assessments_users_v2.status_by_system='Participate')
-    or assessments_v2.assessment_type in ('OfflineClass','OnlineStudy'));
+    or (assessments_v2.assessment_type = 'OfflineClass' and assessments_v2.status in ('Started','Draft','Complete'))
+    or (assessments_v2.assessment_type = 'OnlineStudy'));
 
 -- assessments_contents view
 create or replace view assessments_contents as
@@ -58,7 +59,7 @@ group by assessments_users_v2.assessment_id,assessments_users_outcomes_v2.outcom
 -- outcomes_attendances view
 create or replace view outcomes_attendances as
 select
-    assessments_users_outcomes_v2.id id,
+    REPLACE(UUID(), _utf8'-', _utf8'') as id,
     assessments_users_v2.assessment_id assessment_id,
     assessments_users_outcomes_v2.outcome_id outcome_id,
     assessments_users_v2.user_id attendance_id
@@ -70,11 +71,11 @@ group by assessments_users_v2.assessment_id,assessments_users_outcomes_v2.outcom
 -- assessments_contents_outcomes view
 create or replace view assessments_contents_outcomes as
 select
-    assessments_users_outcomes_v2.id id,
+    REPLACE(UUID(), _utf8'-', _utf8'') as id,
     assessments_contents_v2.assessment_id assessment_id,
     assessments_users_outcomes_v2.outcome_id outcome_id,
     assessments_contents_v2.content_id content_id,
-    if(assessments_users_outcomes_v2.status='NotAchieved',1,0) none_achieved
+    if(sum(if(assessments_users_outcomes_v2.status!='NotAchieved',1,0))=0,1,0) none_achieved
 from assessments_users_outcomes_v2 inner join assessments_contents_v2
                                               on assessments_users_outcomes_v2.assessment_content_id = assessments_contents_v2.id
 where assessments_users_outcomes_v2.delete_at=0

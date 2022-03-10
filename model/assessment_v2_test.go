@@ -34,14 +34,14 @@ func TestAssessmentModel_Query(t *testing.T) {
 		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 		Token:  "",
 	}
-	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ2NTNmODgwLWI5MjAtNDM1Zi04ZjJkLTk4YjVkNDYyMWViOCIsImVtYWlsIjoic2Nob29sXzAzMDMyOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0NjI4NTg5NiwiaXNzIjoia2lkc2xvb3AifQ.D1pgyNLU2AZoRfFovvTYw3_bnBnq3EBaKXsxvIGhVsUAcK9PPNcz9zjuLc9ExHMaYqqmR-JF82La4DxETdkZlFcHMt-uww4gpprMe1bFNf0Sl2XXCDBY-XVclHOWyeRAWGrUjg4HWtu-DZRHFerD6E_cCgzVAtFmnvyoM22lIe-hV3PjV_8_DjlDEbSDNrsvG81lSUz4eTpufdlJ0oikkRP5zQ2FwQgeZm5H2UTBc5_QZzi-EPHumjHqo5NrBxkrDcgxGbcsR1n_Q0gr9z-WLKao7r4bdu8r4Acxf8Vm_bxz-8lL9pHB7iUydoqFl9ZXowfGT9wPZhOUJEVBakb7Yw"
+	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImUyNTY0MTM0LTU1OTAtNDU1MS1hODIzLTBkNDE1MjUzOTAzYSIsImVtYWlsIjoic2Nob29sMDNfMDFAeW9wbWFpbC5jb20iLCJleHAiOjE2NDYyOTY5ODQsImlzcyI6ImtpZHNsb29wIn0.UZGQBby6jNuHNYp5atRhNk6NQp0zYlhAqofSh7moC2aXAh9xpb0C-vCDhe_czVGp2q0354oNOb9XLa4BJGNyQLkngKvekDTRLSjDd8wjke1clDE7OA5s-PsYqROH5Sn-nHqLJ-8ezM0oeCQQO7Z7Kfa1XFiiC8HSy5jkEriTbiSNSRhDrnfLhTB2ZtwoeFS59QpVG5YNulKtbrjs2DwJieKbeXFe-rLwFZKtOzHF8mSoL64oHBcZzhQBvYzu-o5ZCCY1EGUgGi34x4MXuCRSuKUJi2zFOsIPvC0_j50DdRvxGbQqLC-f1__R825vBs8z8IUem4Zm8ZL2XTs3YWBb-Q"
 	t.Log(op)
 	result, err := GetAssessmentModelV2().Page(ctx, op, &v2.AssessmentQueryReq{
 		//QueryKey:       "org mi",
 		//QueryType:      v2.QueryTypeTeacherName,
-		AssessmentType: v2.AssessmentTypeOnlineClass,
+		AssessmentType: v2.AssessmentTypeOfflineClass,
 		OrderBy:        "-create_at",
-		Status:         "NotStared,Started,Draft,Complete",
+		Status:         "Started,Draft,Complete",
 		PageIndex:      1,
 		PageSize:       10,
 	})

@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS `assessments_v2` (
     UNIQUE `assessments_unique` (`schedule_id`,`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='assessments_v2';
 
+ALTER TABLE `assessments_v2` ADD INDEX assessments_complete_at(`complete_at`);
 
 CREATE TABLE IF NOT EXISTS `assessments_users_v2` (
   `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
@@ -96,4 +97,3 @@ CREATE TABLE IF NOT EXISTS `assessments_users_outcomes_v2` (
 
     UNIQUE `assessments_users_results_v2_unique` (`assessment_user_id`,`assessment_content_id`,`outcome_id`,`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='assessments_users_outcomes_v2';
-

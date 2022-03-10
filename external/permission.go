@@ -56,7 +56,7 @@ func (s AmsPermissionService) HasOrganizationPermission(ctx context.Context, ope
 	if err == nil {
 		log.Debug(ctx, "permission cache hit",
 			log.Any("operator", operator),
-			log.Any("permissionName", permissionName))
+			log.Any("permissionMap", permissionMap))
 		return permissionMap[permissionName], nil
 	}
 	log.Warn(ctx, "s.getOrganizationPermission error",
@@ -424,7 +424,7 @@ func (s AmsPermissionService) getOrganizationPermission(ctx context.Context, ope
 	if err == nil {
 		log.Debug(ctx, "permission cache hit",
 			log.Any("operator", operator),
-			log.Any("permissionNames", permissionNames))
+			log.Any("permissionMap", permissionMap))
 		return permissionMap, nil
 	}
 
@@ -480,6 +480,10 @@ func (s AmsPermissionService) getOrganizationPermissionCache(ctx context.Context
 		return nil, err
 	}
 
+	log.Debug(ctx, "redis pipeline exec result",
+		log.Any("exist", exist.Val()),
+		log.Any("result", r.Val()))
+
 	// key not exist
 	if exist.Val() == int64(0) {
 		return nil, ro.ErrKeyNotExist
@@ -521,8 +525,8 @@ func (s AmsPermissionService) setOrganizationPermissionCache(ctx context.Context
 	redisClient := ro.MustGetRedis(ctx)
 	pipe := redisClient.TxPipeline()
 
-	pipe.HMSet(key, fields)
-	pipe.Expire(key, config.Get().User.PermissionCacheExpiration)
+	hmsetResult := pipe.HMSet(key, fields)
+	expireResult := pipe.Expire(key, config.Get().User.PermissionCacheExpiration)
 	_, err := pipe.Exec()
 	if err != nil {
 		log.Error(ctx, "failed to exec redis pipeline",
@@ -532,6 +536,10 @@ func (s AmsPermissionService) setOrganizationPermissionCache(ctx context.Context
 			log.Duration("expiration", config.Get().User.PermissionCacheExpiration))
 		return err
 	}
+
+	log.Debug(ctx, "redis pipeline exec result",
+		log.Any("hmsetResult", hmsetResult.Val()),
+		log.Any("expireResult", expireResult.Val()))
 
 	return nil
 }
