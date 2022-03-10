@@ -3252,7 +3252,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 	}
 
 	// check if the assessment completed, homefun homework
-	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
+	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun && !schedule.IsReview {
 		g.Go(func() error {
 			scheduleAssessmentMap, err := GetAssessmentOfflineStudyModel().IsAnyOneCompleteByScheduleIDs(ctx, operator, []string{schedule.ID})
 			if err != nil {
@@ -3522,6 +3522,44 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 		return nil, nil
 	}
 
+	// check unsuccessful review schedule permission
+	permissionNames := []external.PermissionName{
+		external.ScheduleViewPendingCalendar,
+	}
+	permissionMap, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, permissionNames)
+	if err != nil {
+		log.Error(ctx, "external.GetPermissionServiceProvider().HasOrganizationPermissions error",
+			log.Err(err),
+			log.Any("permissionNames", permissionNames),
+			log.Any("operator", operator),
+		)
+
+		return nil, err
+	}
+
+	var scheduleReview *entity.ScheduleReview
+	if !permissionMap[external.ScheduleViewPendingCalendar] &&
+		schedule.IsReview {
+		scheduleReview, err = s.scheduleReviewDA.GetScheduleReviewByScheduleIDAndStudentID(ctx, dbo.MustGetDB(ctx),
+			schedule.ID, operator.UserID)
+		if err != nil {
+			log.Error(ctx, "s.scheduleReviewDA.GetScheduleReviewByScheduleIDAndStudentID error",
+				log.Err(err),
+				log.String("scheduleID", schedule.ID),
+				log.String("studentID", operator.UserID),
+			)
+			return nil, err
+		}
+		if scheduleReview.ReviewStatus != entity.ScheduleReviewStatusSuccess {
+			log.Error(ctx, "no permission to view unsuccessful schedule review",
+				log.String("scheduleID", schedule.ID),
+				log.String("studentID", operator.UserID),
+				log.Any("scheduleReview", scheduleReview),
+			)
+			return nil, constant.ErrForbidden
+		}
+	}
+
 	classType := entity.ScheduleShortInfo{
 		ID:   schedule.ClassType.String(),
 		Name: schedule.ClassType.ToLabel().String(),
@@ -3539,6 +3577,10 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 		Status:         schedule.Status,
 		IsHomeFun:      schedule.IsHomeFun,
 		IsHidden:       schedule.IsHidden,
+		IsReview:       schedule.IsReview,
+		ReviewStatus:   schedule.ReviewStatus,
+		ContentStartAt: schedule.ContentStartAt,
+		ContentEndAt:   schedule.ContentEndAt,
 		RoomID:         schedule.ID,
 		IsRepeat:       schedule.RepeatID != "",
 		LessonPlanID:   schedule.LessonPlanID,
@@ -3574,7 +3616,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 	}
 
 	var scheduleRelations []*entity.ScheduleRelation
-	err := s.scheduleRelationDA.Query(ctx, &da.ScheduleRelationCondition{
+	err = s.scheduleRelationDA.Query(ctx, &da.ScheduleRelationCondition{
 		ScheduleID: sql.NullString{
 			String: schedule.ID,
 			Valid:  true,
@@ -3719,7 +3761,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 	})
 
 	// check if the assessment completed, homefun homework
-	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
+	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun && !schedule.IsReview {
 		g.Go(func() error {
 			scheduleAssessmentMap, err := GetAssessmentOfflineStudyModel().IsAnyOneCompleteByScheduleIDs(ctx, operator, []string{schedule.ID})
 			if err != nil {
@@ -3767,6 +3809,22 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 
 	// fill to scheduleViewDetail
 	scheduleViewDetail.LessonPlan = scheduleLessonPlan
+	// review schedule for student
+	if schedule.IsReview && !permissionMap[external.ScheduleViewPendingCalendar] {
+		materials := make([]*entity.ScheduleLessonPlanMaterial, len(scheduleReview.LiveLessonPlan.LessonMaterials))
+		for i, v := range scheduleReview.LiveLessonPlan.LessonMaterials {
+			materials[i] = &entity.ScheduleLessonPlanMaterial{
+				ID:   v.LessonMaterialID,
+				Name: v.LessonMaterialName,
+			}
+		}
+		scheduleViewDetail.LessonPlan = &entity.ScheduleLessonPlan{
+			ID:        scheduleReview.LiveLessonPlan.LessonPlanID,
+			Name:      scheduleReview.LiveLessonPlan.LessonPlanName,
+			IsAuth:    true,
+			Materials: materials,
+		}
+	}
 	scheduleViewDetail.Class = scheduleClass
 	scheduleViewDetail.ExistFeedback = scheduleExistFeedback
 	scheduleViewDetail.ExistAssessment = schedule.IsLockedLessonPlan()
