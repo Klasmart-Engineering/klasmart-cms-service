@@ -108,7 +108,7 @@ func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator)
 		outcome.Sets[i] = set
 	}
 
-	if !req.Assumed && req.ScoreThreshold <= 0 {
+	if !req.Assumed && (req.ScoreThreshold <= 0 || req.ScoreThreshold > 1) {
 		log.Warn(ctx, "score threshold need set value when assumed is false", log.Any("req", req))
 		return nil, constant.ErrInvalidArgs
 	} else {
@@ -128,7 +128,7 @@ func (req OutcomeCreateView) ToOutcomeWithID(ctx context.Context, op *entity.Ope
 	}
 	outcome.ID = outcomeID
 
-	if !req.Assumed && req.ScoreThreshold <= 0 {
+	if !req.Assumed && (req.ScoreThreshold <= 0 || req.ScoreThreshold > 1) {
 		log.Warn(ctx, "score threshold need set value when assumed is false", log.Any("req", req))
 		return nil, constant.ErrInvalidArgs
 	} else {
