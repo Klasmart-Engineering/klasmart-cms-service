@@ -10,18 +10,23 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
-func (m *reportModel) GetLearnerWeeklyReportOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange) (res entity.LearnerWeeklyReportOverview, err error) {
+func (m *reportModel) GetLearnerReportOverview(ctx context.Context, op *entity.Operator, cond *entity.LearnerReportOverviewCondition) (res entity.LearnerReportOverview, err error) {
+	permOrg := external.PermissionName(cond.PermOrg)
+	permSchool := external.PermissionName(cond.PermSchool)
+	permTeacher := external.PermissionName(cond.PermTeacher)
+	permStudent := external.PermissionName(cond.PermStudent)
+
 	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
-		external.ReportLearningSummmaryOrg,
-		external.ReportLearningSummarySchool,
-		external.ReportLearningSummaryTeacher,
-		external.ReportLearningSummaryStudent,
+		permOrg,
+		permSchool,
+		permTeacher,
+		permStudent,
 	})
 	role, err := external.GetRoleServiceProvider().GetRole(ctx, op, entity.RoleStudent)
 	if err != nil {
 		return
 	}
-	cond := entity.GetUserCountCondition{
+	ucCond := entity.GetUserCountCondition{
 		OrgID: entity.NullString{
 			String: op.OrgID,
 			Valid:  true,
@@ -31,43 +36,43 @@ func (m *reportModel) GetLearnerWeeklyReportOverview(ctx context.Context, op *en
 			Valid:  true,
 		},
 	}
-	if perms[external.ReportLearningSummmaryOrg] {
+	if perms[permOrg] {
 		// query count of student in organization
 		goto queryUserCount
 	}
 
-	if perms[external.ReportLearningSummarySchool] {
+	if perms[permSchool] {
 		// query count of student in schools of op
-		cond.SchoolIDs.Valid = true
+		ucCond.SchoolIDs.Valid = true
 		var schools map[string][]*external.School
 		schools, err = external.GetSchoolServiceProvider().GetByUsers(ctx, op, op.OrgID, []string{op.UserID})
 		if err != nil {
 			return
 		}
 		for _, s := range schools[op.UserID] {
-			cond.SchoolIDs.Strings = append(cond.SchoolIDs.Strings, s.ID)
+			ucCond.SchoolIDs.Strings = append(ucCond.SchoolIDs.Strings, s.ID)
 		}
 
 		goto queryUserCount
 	}
-	if perms[external.ReportLearningSummaryTeacher] {
+	if perms[permTeacher] {
 		// query count of in teacher’s classes
-		cond.ClassIDs.Valid = true
+		ucCond.ClassIDs.Valid = true
 		var classes []*external.Class
 		classes, err = external.GetClassServiceProvider().GetByUserID(ctx, op, op.UserID)
 		if err != nil {
 			return
 		}
 		for _, class := range classes {
-			cond.ClassIDs.Strings = append(cond.ClassIDs.Strings, class.ID)
+			ucCond.ClassIDs.Strings = append(ucCond.ClassIDs.Strings, class.ID)
 		}
 		goto queryUserCount
 	}
 
-	if perms[external.ReportLearningSummaryStudent] {
+	if perms[permStudent] {
 		// parent and student use the same user_id
 		res.Attendees = 1
-		cond.StudentID = entity.NullString{
+		ucCond.StudentID = entity.NullString{
 			String: op.UserID,
 			Valid:  true,
 		}
@@ -76,13 +81,13 @@ func (m *reportModel) GetLearnerWeeklyReportOverview(ctx context.Context, op *en
 
 	return
 queryUserCount:
-	res.Attendees, err = external.GetUserServiceProvider().GetUserCount(ctx, op, cond)
+	res.Attendees, err = external.GetUserServiceProvider().GetUserCount(ctx, op, ucCond)
 	if err != nil {
 		return
 	}
 
 queryAttendance:
-	r, err := da.GetReportDA().GetLearnerWeeklyReportOverview(ctx, op, tr, cond)
+	r, err := da.GetReportDA().GetLearnerWeeklyReportOverview(ctx, op, cond.TimeRange, ucCond)
 	if err != nil {
 		return
 	}

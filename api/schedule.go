@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -68,6 +69,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 		ClassType:              data.ClassType,
 		Title:                  data.Title,
 		OutcomeIDs:             data.OutcomeIDs,
+		IsReview:               data.IsReview,
 	})
 	if err != nil {
 		log.Debug(ctx, "request data verify error",
@@ -85,6 +87,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 		external.ScheduleCreateClassCalendarEvents,
 		external.ScheduleCreateStudyCalendarEvents,
 		external.ScheduleCreateHomefunCalendarEvents,
+		external.ScheduleCreateReviewEvent,
 	})
 	if err == constant.ErrForbidden {
 		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
@@ -107,7 +110,8 @@ func (s *Server) addSchedule(c *gin.Context) {
 	if (data.ClassType == entity.ScheduleClassTypeOnlineClass && !permissionMap[external.ScheduleCreateLiveCalendarEvents]) ||
 		(data.ClassType == entity.ScheduleClassTypeOfflineClass && !permissionMap[external.ScheduleCreateClassCalendarEvents]) ||
 		(data.ClassType == entity.ScheduleClassTypeHomework && !data.IsHomeFun && !permissionMap[external.ScheduleCreateStudyCalendarEvents]) ||
-		(data.ClassType == entity.ScheduleClassTypeHomework && data.IsHomeFun && !permissionMap[external.ScheduleCreateHomefunCalendarEvents]) {
+		(data.ClassType == entity.ScheduleClassTypeHomework && data.IsHomeFun && !permissionMap[external.ScheduleCreateHomefunCalendarEvents]) ||
+		(data.ClassType == entity.ScheduleClassTypeHomework && data.IsReview && !permissionMap[external.ScheduleCreateReviewEvent]) {
 		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
 		return
 	}
@@ -446,6 +450,12 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditValidation) error {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
+
+	if input.IsReview && !config.Get().Schedule.ReviewTypeEnabled {
+		log.Debug(ctx, "schedule review type not support", log.Any("input", input))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return constant.ErrInvalidArgs
+	}
 
 	if strings.TrimSpace(input.Title) == "" {
 		log.Info(ctx, "schedule title required", log.Any("input", input))
@@ -1479,4 +1489,68 @@ func (s *Server) buildInternalScheduleCondition(c *gin.Context) (*da.ScheduleCon
 			Strings: scheduleIDs,
 		},
 	}, nil
+}
+
+// @Summary checkScheduleReviewData
+// @ID checkScheduleReviewData
+// @Description check schedule review data before create
+// @Accept json
+// @Produce json
+// @Param queryData body entity.CheckScheduleReviewDataRequest true "schedule review data to check"
+// @Tags schedule
+// @Success 200 {object} entity.CheckScheduleReviewDataResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules/review/checkData [post]
+func (s *Server) checkScheduleReviewData(c *gin.Context) {
+	op := s.getOperator(c)
+	ctx := c.Request.Context()
+
+	requestBody := new(entity.CheckScheduleReviewDataRequest)
+	if err := c.ShouldBindJSON(requestBody); err != nil {
+		log.Error(ctx, "c.ShouldBindJSON error", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	result, err := model.GetScheduleModel().CheckScheduleReviewData(ctx, op, requestBody)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		s.defaultErrorHandler(c, err)
+	}
+}
+
+// @Summary updateScheduleReviewStatus
+// @ID updateScheduleReviewStatus
+// @Description update review schedule status
+// @Accept json
+// @Produce json
+// @Param queryData body entity.UpdateScheduleReviewStatusRequest true "schedule review create result"
+// @Tags schedule
+// @Success 200 {object} string ok
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules/updateReviewStatus [post]
+func (s *Server) updateScheduleReviewStatus(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	requestBody := new(entity.UpdateScheduleReviewStatusRequest)
+	if err := c.ShouldBindJSON(requestBody); err != nil {
+		log.Error(ctx, "c.ShouldBindJSON error", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	log.Debug(ctx, "UpdateScheduleReviewStatus", log.Any("requestBody", requestBody))
+	err := model.GetScheduleModel().UpdateScheduleReviewStatus(ctx, requestBody)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, "")
+	default:
+		s.defaultErrorHandler(c, err)
+	}
 }

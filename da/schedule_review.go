@@ -6,12 +6,14 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 type IScheduleReviewDA interface {
 	dbo.DataAccesser
 	GetScheduleReviewByScheduleIDAndStudentID(ctx context.Context, tx *dbo.DBContext, scheduleID, studentID string) (*entity.ScheduleReview, error)
+	UpdateScheduleReview(ctx context.Context, tx *dbo.DBContext, scheduleID, studentID string, status entity.ScheduleReviewStatus, liveLessonPlan *entity.ScheduleLiveLessonPlan) error
 }
 
 type scheduleReviewDA struct {
@@ -48,4 +50,28 @@ func (s *scheduleReviewDA) GetScheduleReviewByScheduleIDAndStudentID(ctx context
 	}
 
 	return result, nil
+}
+
+func (s *scheduleReviewDA) UpdateScheduleReview(ctx context.Context, tx *dbo.DBContext,
+	scheduleID, studentID string, status entity.ScheduleReviewStatus,
+	liveLessonPlan *entity.ScheduleLiveLessonPlan) error {
+	tx.ResetCondition()
+
+	err := tx.Table(constant.TableNameScheduleReview).
+		Where("schedule_id = ? and student_id = ?", scheduleID, studentID).
+		Updates(map[string]interface{}{
+			"live_lesson_plan": liveLessonPlan,
+			"review_status":    status,
+		}).Error
+	if err != nil {
+		log.Error(ctx, "UpdateScheduleReview error",
+			log.Err(err),
+			log.String("scheduleID", scheduleID),
+			log.String("studentID", studentID),
+			log.Any("reviewStatus", status),
+			log.Any("liveLessonPlan", liveLessonPlan))
+		return err
+	}
+
+	return nil
 }
