@@ -1832,6 +1832,7 @@ func (ocm OutcomeModel) UpdateOutcome(data *entity.Outcome, oc *entity.Outcome) 
 	oc.Shortcode = data.Shortcode
 	oc.Sets = data.Sets
 	oc.UpdateAt = time.Now().Unix()
+	oc.ScoreThreshold = data.ScoreThreshold
 }
 
 func (ocm OutcomeModel) Clone(op *entity.Operator, oc *entity.Outcome) entity.Outcome {
