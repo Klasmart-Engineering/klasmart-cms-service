@@ -65,21 +65,22 @@ func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator)
 		return nil, &ErrValidFailed{Msg: "invalid shortcode"}
 	}
 
-	if !req.Assumed && (req.ScoreThreshold <= 0 || req.ScoreThreshold > 1) {
+	outcome := entity.Outcome{
+		Name:          req.OutcomeName,
+		Assumed:       req.Assumed,
+		EstimatedTime: req.Estimated,
+		Description:   req.Description,
+		Shortcode:     req.Shortcode,
+		ShortcodeNum:  shortcodeNum,
+	}
+
+	if req.Assumed {
+		req.ScoreThreshold = 0
+	} else if req.ScoreThreshold <= 0 || req.ScoreThreshold > 1 {
 		log.Warn(ctx, "score threshold need set value when assumed is false", log.Any("req", req))
 		return nil, constant.ErrInvalidArgs
 	} else {
-		req.ScoreThreshold = 0
-	}
-
-	outcome := entity.Outcome{
-		Name:           req.OutcomeName,
-		Assumed:        req.Assumed,
-		EstimatedTime:  req.Estimated,
-		Description:    req.Description,
-		Shortcode:      req.Shortcode,
-		ShortcodeNum:   shortcodeNum,
-		ScoreThreshold: req.ScoreThreshold,
+		outcome.ScoreThreshold = req.ScoreThreshold
 	}
 
 	programIDs := utils.SliceDeduplicationExcludeEmpty(req.Program)
