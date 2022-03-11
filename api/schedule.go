@@ -109,8 +109,9 @@ func (s *Server) addSchedule(c *gin.Context) {
 	if (data.ClassType == entity.ScheduleClassTypeOnlineClass && !permissionMap[external.ScheduleCreateLiveCalendarEvents]) ||
 		(data.ClassType == entity.ScheduleClassTypeOfflineClass && !permissionMap[external.ScheduleCreateClassCalendarEvents]) ||
 		(data.ClassType == entity.ScheduleClassTypeHomework && !data.IsHomeFun && !permissionMap[external.ScheduleCreateStudyCalendarEvents]) ||
-		(data.ClassType == entity.ScheduleClassTypeHomework && data.IsHomeFun && !permissionMap[external.ScheduleCreateHomefunCalendarEvents]) ||
-		(data.ClassType == entity.ScheduleClassTypeHomework && data.IsReview && !permissionMap[external.ScheduleCreateReviewEvent]) {
+		(data.ClassType == entity.ScheduleClassTypeHomework && data.IsHomeFun && !permissionMap[external.ScheduleCreateHomefunCalendarEvents]) {
+		// TODO debug
+		// (data.ClassType == entity.ScheduleClassTypeHomework && data.IsReview && !permissionMap[external.ScheduleCreateReviewEvent]) {
 		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
 		return
 	}
@@ -457,7 +458,8 @@ func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditVa
 	// 	return constant.ErrInvalidArgs
 	// }
 
-	if strings.TrimSpace(input.Title) == "" {
+	// review schedule has no title
+	if strings.TrimSpace(input.Title) == "" && !input.IsReview {
 		log.Info(ctx, "schedule title required", log.Any("input", input))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return constant.ErrInvalidArgs
