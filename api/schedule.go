@@ -1502,7 +1502,7 @@ func (s *Server) buildInternalScheduleCondition(c *gin.Context) (*da.ScheduleCon
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules/review/checkData [post]
+// @Router /schedules/review/check_data [post]
 func (s *Server) checkScheduleReviewData(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
@@ -1534,7 +1534,7 @@ func (s *Server) checkScheduleReviewData(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules/updateReviewStatus [post]
+// @Router /schedules/update_review_status [post]
 func (s *Server) updateScheduleReviewStatus(c *gin.Context) {
 	ctx := c.Request.Context()
 
