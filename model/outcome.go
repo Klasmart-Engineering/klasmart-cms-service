@@ -1861,9 +1861,10 @@ func (ocm OutcomeModel) Clone(op *entity.Operator, oc *entity.Outcome) entity.Ou
 		LatestID:      oc.LatestID,
 		Sets:          oc.Sets,
 
-		Version:  1,
-		SourceID: oc.ID,
-		Assumed:  oc.Assumed,
+		Version:        1,
+		SourceID:       oc.ID,
+		Assumed:        oc.Assumed,
+		ScoreThreshold: oc.ScoreThreshold,
 
 		CreateAt: now,
 		UpdateAt: now,
