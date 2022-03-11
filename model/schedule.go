@@ -2055,18 +2055,21 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 	if v.ClassType == entity.ScheduleClassTypeHomework && v.IsHomeFun {
 		return nil
 	}
-	// verify lessPlan type
-	lessonPlanInfo, err := GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), v.LessonPlanID)
-	if err != nil {
-		log.Error(ctx, "verifyData:get lessPlan info error", log.Err(err), log.Any("ScheduleVerify", v))
-		return err
+
+	if v.LessonPlanID != "" {
+		// verify lessPlan type
+		lessonPlanInfo, err := GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), v.LessonPlanID)
+		if err != nil {
+			log.Error(ctx, "verifyData:get lessPlan info error", log.Err(err), log.Any("ScheduleVerify", v))
+			return err
+		}
+		if lessonPlanInfo.ContentType != entity.ContentTypePlan {
+			log.Error(ctx, "verifyData:content type is not lesson", log.Any("lessonPlanInfo", lessonPlanInfo), log.Any("ScheduleVerify", v))
+			return constant.ErrInvalidArgs
+		}
+		// verify lessPlan is valid
+		_, err = s.VerifyLessonPlanAuthed(ctx, operator, v.LessonPlanID)
 	}
-	if lessonPlanInfo.ContentType != entity.ContentTypePlan {
-		log.Error(ctx, "verifyData:content type is not lesson", log.Any("lessonPlanInfo", lessonPlanInfo), log.Any("ScheduleVerify", v))
-		return constant.ErrInvalidArgs
-	}
-	// verify lessPlan is valid
-	_, err = s.VerifyLessonPlanAuthed(ctx, operator, v.LessonPlanID)
 
 	// verify learning outcome
 	if len(v.OutcomeIDs) > 0 {
