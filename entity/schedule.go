@@ -425,7 +425,7 @@ type ScheduleReviewType string
 
 const (
 	ScheduleReviewTypePersonalized ScheduleReviewType = "personalized"
-	ScheduleReviewTypeRandom       ScheduleReviewType = "random"
+	ScheduleReviewTypeStandard     ScheduleReviewType = "standard"
 )
 
 func (Schedule) TableName() string {
@@ -1039,18 +1039,18 @@ type CheckScheduleReviewDataResult struct {
 }
 
 type UpdateScheduleReviewStatusRequest struct {
-	ScheduleID       string                          `json:"schedule_id"`
-	SucceededResults []ScheduleReviewSucceededResult `json:"succeeded_results"`
-	FailedResults    []ScheduleReviewFailedResult    `json:"failed_results"`
+	ScheduleID          string                          `json:"schedule_id"`
+	StandardResults     []ScheduleReviewSucceededResult `json:"standard_results"`
+	PersonalizedResults []ScheduleReviewSucceededResult `json:"personalized_results"`
+	FailedResults       []ScheduleReviewFailedResult    `json:"failed_results"`
 }
 
 type ScheduleReviewSucceededResult struct {
-	StudentID  string             `json:"student_id"`
-	Type       ScheduleReviewType `json:"type" enums:"random, personalized"`
-	ContentIDs []string           `json:"content_ids"`
+	StudentID  string   `json:"student_id"`
+	ContentIDs []string `json:"content_ids"`
 }
 
 type ScheduleReviewFailedResult struct {
 	StudentID string `json:"student_id"`
-	Status    string `json:"status"`
+	Reason    string `json:"reason"`
 }

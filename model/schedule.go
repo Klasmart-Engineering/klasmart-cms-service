@@ -1188,9 +1188,7 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 		return err
 	}
 
-	if schedule.IsReview {
-
-	}
+	// TODO if schedule type is review, invoke data service delete api
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		// delete schedule
 		err := s.deleteScheduleTx(ctx, tx, op, schedule, editType)
@@ -1212,6 +1210,18 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 			)
 			return err
 		}
+
+		if schedule.IsReview {
+			err = s.scheduleReviewDA.DeleteScheduleReviewByScheduleID(ctx, tx, schedule.ID)
+			if err != nil {
+				log.Error(ctx, "s.scheduleReviewDA.DeleteScheduleReviewByScheduleID error",
+					log.Err(err),
+					log.Any("schedule", schedule),
+				)
+				return err
+			}
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -3004,7 +3014,10 @@ func (s *scheduleModel) CheckScheduleReviewData(ctx context.Context, op *entity.
 func (s *scheduleModel) UpdateScheduleReviewStatus(ctx context.Context, request *entity.UpdateScheduleReviewStatusRequest) error {
 	log.Debug(ctx, "UpdateScheduleReviewStatus", log.Any("request", request))
 	var contentIDs []string
-	for _, v := range request.SucceededResults {
+	for _, v := range request.StandardResults {
+		contentIDs = append(contentIDs, v.ContentIDs...)
+	}
+	for _, v := range request.PersonalizedResults {
 		contentIDs = append(contentIDs, v.ContentIDs...)
 	}
 	contentIDs = utils.SliceDeduplicationExcludeEmpty(contentIDs)
@@ -3020,8 +3033,29 @@ func (s *scheduleModel) UpdateScheduleReviewStatus(ctx context.Context, request 
 	for _, v := range contents {
 		contentMap[v.ID] = v
 	}
-	studentLiveLessonPlanMap := make(map[string]*entity.ScheduleLiveLessonPlan, len(request.SucceededResults))
-	for _, v := range request.SucceededResults {
+	studentLiveLessonPlanMap := make(map[string]*entity.ScheduleLiveLessonPlan, len(request.PersonalizedResults)+len(request.StandardResults))
+	for _, v := range request.StandardResults {
+		// no lesson plan id and name for review schedule
+		liveLessonPlan := &entity.ScheduleLiveLessonPlan{}
+		for _, contentID := range v.ContentIDs {
+			if content, ok := contentMap[contentID]; ok {
+				liveLessonPlan.LessonMaterials = append(liveLessonPlan.LessonMaterials,
+					&entity.ScheduleLiveLessonMaterial{
+						LessonMaterialID:   content.ID,
+						LessonMaterialName: content.Name,
+					})
+				studentLiveLessonPlanMap[v.StudentID] = liveLessonPlan
+			} else {
+				log.Error(ctx, "content not found",
+					log.String("contentID", contentID),
+					log.Any("request", request),
+					log.Any("contentMap", contentMap))
+				return errors.New("content not found")
+			}
+		}
+	}
+
+	for _, v := range request.PersonalizedResults {
 		// no lesson plan id and name for review schedule
 		liveLessonPlan := &entity.ScheduleLiveLessonPlan{}
 		for _, contentID := range v.ContentIDs {
@@ -3043,7 +3077,7 @@ func (s *scheduleModel) UpdateScheduleReviewStatus(ctx context.Context, request 
 	}
 
 	reviewStatus := entity.ScheduleReviewStatusSuccess
-	if len(request.SucceededResults) == 0 {
+	if len(request.StandardResults) == 0 && len(request.PersonalizedResults) == 0 {
 		reviewStatus = entity.ScheduleReviewStatusFailed
 	}
 
@@ -3059,8 +3093,21 @@ func (s *scheduleModel) UpdateScheduleReviewStatus(ctx context.Context, request 
 			return err
 		}
 
-		for _, v := range request.SucceededResults {
-			err := s.scheduleReviewDA.UpdateScheduleReview(ctx, tx, request.ScheduleID, v.StudentID, entity.ScheduleReviewStatusSuccess, v.Type, studentLiveLessonPlanMap[v.StudentID])
+		for _, v := range request.PersonalizedResults {
+			err := s.scheduleReviewDA.UpdateScheduleReview(ctx, tx, request.ScheduleID, v.StudentID, entity.ScheduleReviewStatusSuccess, entity.ScheduleReviewTypePersonalized, studentLiveLessonPlanMap[v.StudentID])
+			if err != nil {
+				log.Error(ctx, "s.scheduleReviewDA.UpdateScheduleReview error",
+					log.Err(err),
+					log.String("student_id", v.StudentID),
+					log.Any("request", request),
+					log.Any("studentLiveLessonPlanMap", studentLiveLessonPlanMap),
+				)
+				return err
+			}
+		}
+
+		for _, v := range request.StandardResults {
+			err := s.scheduleReviewDA.UpdateScheduleReview(ctx, tx, request.ScheduleID, v.StudentID, entity.ScheduleReviewStatusSuccess, entity.ScheduleReviewTypeStandard, studentLiveLessonPlanMap[v.StudentID])
 			if err != nil {
 				log.Error(ctx, "s.scheduleReviewDA.UpdateScheduleReview error",
 					log.Err(err),
@@ -4101,7 +4148,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 		for _, v := range scheduleReviews {
 			if user, ok := userMap[v.StudentID]; ok && user.Valid {
 				switch v.Type {
-				case entity.ScheduleReviewTypeRandom:
+				case entity.ScheduleReviewTypeStandard:
 					scheduleViewDetail.RandomReviewStudents = append(scheduleViewDetail.RandomReviewStudents, &entity.ScheduleShortInfo{
 						ID:   user.ID,
 						Name: user.Name,
