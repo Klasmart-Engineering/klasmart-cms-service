@@ -746,6 +746,9 @@ func (a *assessmentModelV2) Update(ctx context.Context, op *entity.Operator, sta
 	waitUpdateAssessmentOutcomes := make([]*v2.AssessmentUserOutcome, 0)
 
 	for _, stuItem := range req.Students {
+		if stuItem.Status == v2.AssessmentUserStatusNotParticipate {
+			continue
+		}
 		// verify student data
 		assessmentUserItem, ok := userIDAndUserTypeMap[detailComponent.getKey([]string{stuItem.StudentID, v2.AssessmentUserTypeStudent.String()})]
 		if !ok {
