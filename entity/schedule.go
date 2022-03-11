@@ -857,6 +857,10 @@ type ScheduleViewDetail struct {
 	Status             ScheduleStatus       `json:"status" enums:"NotStart,Started,Closed"`
 	IsHidden           bool                 `json:"is_hidden"`
 	IsHomeFun          bool                 `json:"is_home_fun"`
+	IsReview           bool                 `json:"is_review"`
+	ReviewStatus       ScheduleReviewStatus `json:"review_status" enums:"pending,success,failed"`
+	ContentStartAt     int64                `json:"content_start_at"`
+	ContentEndAt       int64                `json:"content_end_at"`
 	RoleType           ScheduleRoleType     `json:"role_type" enums:"Student,Teacher,Unknown"`
 	ExistFeedback      bool                 `json:"exist_feedback"`
 	LessonPlan         *ScheduleLessonPlan  `json:"lesson_plan"`
