@@ -1187,6 +1187,10 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 		)
 		return err
 	}
+
+	if schedule.IsReview {
+
+	}
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		// delete schedule
 		err := s.deleteScheduleTx(ctx, tx, op, schedule, editType)
@@ -3053,7 +3057,7 @@ func (s *scheduleModel) UpdateScheduleReviewStatus(ctx context.Context, request 
 		}
 
 		for _, v := range request.SucceededResults {
-			err := s.scheduleReviewDA.UpdateScheduleReview(ctx, tx, request.ScheduleID, v.StudentID, entity.ScheduleReviewStatusSuccess, studentLiveLessonPlanMap[v.StudentID])
+			err := s.scheduleReviewDA.UpdateScheduleReview(ctx, tx, request.ScheduleID, v.StudentID, entity.ScheduleReviewStatusSuccess, v.Type, studentLiveLessonPlanMap[v.StudentID])
 			if err != nil {
 				log.Error(ctx, "s.scheduleReviewDA.UpdateScheduleReview error",
 					log.Err(err),
@@ -3066,7 +3070,7 @@ func (s *scheduleModel) UpdateScheduleReviewStatus(ctx context.Context, request 
 		}
 
 		for _, v := range request.FailedResults {
-			err := s.scheduleReviewDA.UpdateScheduleReview(ctx, tx, request.ScheduleID, v.StudentID, entity.ScheduleReviewStatusFailed, nil)
+			err := s.scheduleReviewDA.UpdateScheduleReview(ctx, tx, request.ScheduleID, v.StudentID, entity.ScheduleReviewStatusFailed, "", nil)
 			if err != nil {
 				log.Error(ctx, "s.scheduleReviewDA.UpdateScheduleReview error",
 					log.Err(err),
@@ -3711,6 +3715,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 		return nil, err
 	}
 
+	// student perspectives
 	var scheduleReview *entity.ScheduleReview
 	if !permissionMap[external.ScheduleViewPendingCalendar] &&
 		schedule.IsReview {
@@ -3760,9 +3765,12 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 		LessonPlanID:   schedule.LessonPlanID,
 		Description:    schedule.Description,
 		// init empty slice
-		OutcomeIDs: []string{},
-		Teachers:   []*entity.ScheduleShortInfo{},
-		Students:   []*entity.ScheduleShortInfo{},
+		OutcomeIDs:                 []string{},
+		Teachers:                   []*entity.ScheduleShortInfo{},
+		Students:                   []*entity.ScheduleShortInfo{},
+		Subjects:                   []*entity.ScheduleShortInfo{},
+		PersonalizedReviewStudents: []*entity.ScheduleShortInfo{},
+		RandomReviewStudents:       []*entity.ScheduleShortInfo{},
 	}
 
 	if schedule.IsLockedLessonPlan() {
@@ -3802,6 +3810,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 
 	var teacherIDs []string
 	var studentIDs []string
+	var subjectIDs []string
 	var userMap map[string]*external.NullableUser
 	for _, scheduleRelation := range scheduleRelations {
 		// get operator role type in the schedule
@@ -3822,6 +3831,8 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 			teacherIDs = append(teacherIDs, scheduleRelation.RelationID)
 		case entity.ScheduleRelationTypeClassRosterStudent, entity.ScheduleRelationTypeParticipantStudent:
 			studentIDs = append(studentIDs, scheduleRelation.RelationID)
+		case entity.ScheduleRelationTypeSubject:
+			subjectIDs = append(subjectIDs, scheduleRelation.RelationID)
 		}
 	}
 
@@ -3831,6 +3842,8 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 	var scheduleClass *entity.ScheduleShortInfo
 	var scheduleExistFeedback bool
 	var scheduleCompleteAssessment bool
+	var scheduleProgram *entity.ScheduleShortInfo
+	var scheduleSubjects []*entity.ScheduleShortInfo
 
 	// get lesson plan
 	if schedule.LessonPlanID != "" {
@@ -3895,6 +3908,53 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 			scheduleClass = &entity.ScheduleShortInfo{
 				ID:   classes[0].ID,
 				Name: classes[0].Name,
+			}
+
+			return nil
+		})
+	}
+
+	// get program info
+	if schedule.ProgramID != "" {
+		g.Go(func() error {
+			programs, err := s.programService.BatchGet(ctx, operator, []string{schedule.ProgramID})
+			if err != nil {
+				log.Error(ctx, "s.programService.BatchGet error",
+					log.Err(err),
+					log.String("programID", schedule.ProgramID))
+				return err
+			}
+
+			if len(programs) == 0 {
+				log.Error(ctx, "program info not found", log.String("programID", schedule.ProgramID))
+				return constant.ErrRecordNotFound
+			}
+
+			scheduleProgram = &entity.ScheduleShortInfo{
+				ID:   programs[0].ID,
+				Name: programs[0].Name,
+			}
+
+			return nil
+		})
+	}
+
+	// get subject info
+	if len(subjectIDs) > 0 {
+		g.Go(func() error {
+			subjects, err := s.subjectService.BatchGet(ctx, operator, subjectIDs)
+			if err != nil {
+				log.Error(ctx, "s.subjectService.BatchGet error",
+					log.Err(err),
+					log.Strings("subjectIDs", subjectIDs))
+				return err
+			}
+
+			for _, subject := range subjects {
+				scheduleSubjects = append(scheduleSubjects, &entity.ScheduleShortInfo{
+					ID:   subject.ID,
+					Name: subject.Name,
+				})
 			}
 
 			return nil
@@ -4003,6 +4063,8 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 	scheduleViewDetail.ExistFeedback = scheduleExistFeedback
 	scheduleViewDetail.ExistAssessment = schedule.IsLockedLessonPlan()
 	scheduleViewDetail.CompleteAssessment = scheduleCompleteAssessment
+	scheduleViewDetail.Program = scheduleProgram
+	scheduleViewDetail.Subjects = scheduleSubjects
 
 	for _, teacherID := range teacherIDs {
 		if user, ok := userMap[teacherID]; ok && user.Valid {
@@ -4023,6 +4085,33 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 			})
 		} else {
 			log.Warn(ctx, "student info not found", log.String("studentID", studentID))
+		}
+	}
+
+	// fill schedule review student type list
+	if schedule.IsReview {
+		scheduleReviews, err := s.scheduleReviewDA.GetScheduleReviewsByScheduleID(ctx, dbo.MustGetDB(ctx), schedule.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, v := range scheduleReviews {
+			if user, ok := userMap[v.StudentID]; ok && user.Valid {
+				switch v.Type {
+				case entity.ScheduleReviewTypeRandom:
+					scheduleViewDetail.RandomReviewStudents = append(scheduleViewDetail.RandomReviewStudents, &entity.ScheduleShortInfo{
+						ID:   user.ID,
+						Name: user.Name,
+					})
+				case entity.ScheduleReviewTypePersonalized:
+					scheduleViewDetail.PersonalizedReviewStudents = append(scheduleViewDetail.PersonalizedReviewStudents, &entity.ScheduleShortInfo{
+						ID:   user.ID,
+						Name: user.Name,
+					})
+				}
+			} else {
+				log.Warn(ctx, "student info not found", log.String("studentID", v.StudentID))
+			}
 		}
 	}
 

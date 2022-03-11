@@ -12,7 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -451,11 +450,12 @@ func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditVa
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
 
-	if input.IsReview && !config.Get().Schedule.ReviewTypeEnabled {
-		log.Debug(ctx, "schedule review type not support", log.Any("input", input))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return constant.ErrInvalidArgs
-	}
+	// TODO debug
+	// if input.IsReview && !config.Get().Schedule.ReviewTypeEnabled {
+	// 	log.Debug(ctx, "schedule review type not support", log.Any("input", input))
+	// 	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	// 	return constant.ErrInvalidArgs
+	// }
 
 	if strings.TrimSpace(input.Title) == "" {
 		log.Info(ctx, "schedule title required", log.Any("input", input))
