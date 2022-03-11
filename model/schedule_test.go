@@ -192,3 +192,31 @@ func TestQueryScheduleTimeView(t *testing.T) {
 	t.Log(count)
 	t.Log(result)
 }
+
+func TestUpdateScheduleReviewStatus(t *testing.T) {
+	ctx := context.TODO()
+	request := &entity.UpdateScheduleReviewStatusRequest{
+		ScheduleID: "614091d5e8155193e489a9ba",
+		SucceededResults: []entity.ScheduleReviewSucceededResult{
+			{
+				StudentID:  "1234",
+				ContentIDs: []string{"6157fd712ea559a89469450f", "61403312d85e5b1126bba790"},
+			},
+			{
+				StudentID:  "12345",
+				ContentIDs: []string{"6139ac5da9af6131f7331e69"},
+			},
+		},
+		FailedResults: []entity.ScheduleReviewFailedResult{
+			{
+				StudentID: "123456",
+				Status:    "failed",
+			},
+		},
+	}
+
+	err := GetScheduleModel().UpdateScheduleReviewStatus(ctx, request)
+	if err != nil {
+		t.Fatal(err)
+	}
+}

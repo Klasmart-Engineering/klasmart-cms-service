@@ -85,6 +85,8 @@ type IScheduleModel interface {
 	GetScheduleLiveLessonPlan(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ContentInfoWithDetails, error)
 
 	GetScheduleRelationIDs(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleRelationIDs, error)
+	CheckScheduleReviewData(ctx context.Context, op *entity.Operator, request *entity.CheckScheduleReviewDataRequest) (*entity.CheckScheduleReviewDataResponse, error)
+	UpdateScheduleReviewStatus(ctx context.Context, request *entity.UpdateScheduleReviewStatusRequest) error
 }
 
 type scheduleModel struct {
@@ -147,6 +149,49 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 		return nil, err
 	}
 
+	scheduleReviews := make([]*entity.ScheduleReview, 0, len(viewData.ClassRosterStudentIDs)+len(viewData.ParticipantsStudentIDs))
+	if schedule.IsReview {
+		studentIDs := make([]string, 0, len(viewData.ClassRosterStudentIDs)+len(viewData.ParticipantsStudentIDs))
+		for _, v := range viewData.ClassRosterStudentIDs {
+			scheduleReviews = append(scheduleReviews, &entity.ScheduleReview{
+				ScheduleID:   schedule.ID,
+				StudentID:    v,
+				ReviewStatus: entity.ScheduleReviewStatusPending,
+			})
+			studentIDs = append(studentIDs, v)
+		}
+
+		for _, v := range viewData.ParticipantsStudentIDs {
+			scheduleReviews = append(scheduleReviews, &entity.ScheduleReview{
+				ScheduleID:   schedule.ID,
+				StudentID:    v,
+				ReviewStatus: entity.ScheduleReviewStatusPending,
+			})
+			studentIDs = append(studentIDs, v)
+		}
+
+		createScheduleReviewRequest := external.CreateScheduleReviewRequest{
+			ScheduleID:     schedule.ID,
+			DueAt:          schedule.DueAt,
+			TimeZoneOffset: int64(viewData.TimeZoneOffset),
+			ProgramID:      viewData.ProgramID,
+			SubjectIDs:     viewData.SubjectIDs,
+			ClassID:        viewData.ClassID,
+			StudentIDs:     studentIDs,
+			ContentStartAt: viewData.ContentStartAt,
+			ContentEndAt:   viewData.ContentEndAt,
+		}
+		err = external.GetScheduleReviewServiceProvider().CreateScheduleReview(ctx, op, createScheduleReviewRequest)
+		if err != nil {
+			log.Error(ctx, "external.GetScheduleReviewServiceProvider().CreateScheduleReview error",
+				log.Err(err),
+				log.Any("op", op),
+				log.Any("relationInput", relationInput))
+			return nil, err
+		}
+	}
+
+	// repeat not support review
 	scheduleList, allRelations, err := s.prepareScheduleAddData(ctx, op, schedule, &viewData.Repeat, viewData.Location, relations)
 	if err != nil {
 		log.Error(ctx, "prepareScheduleAddData: error",
@@ -166,8 +211,10 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 		className = classInfos[schedule.ClassID]
 	}
 
+	// TODO assessment not support review
 	var assessmentAddReq *v2.AssessmentAddWhenCreateSchedulesReq
-	if viewData.ClassType != entity.ScheduleClassTypeTask {
+	if viewData.ClassType != entity.ScheduleClassTypeTask ||
+		!viewData.IsReview {
 		assessmentAddReq, err = s.getAssessmentAddWhenCreateSchedulesReq(ctx, op, schedule, scheduleList, relations, className)
 		if err != nil {
 			log.Error(ctx, "s.getAssessmentAddWhenCreateSchedulesReq error",
@@ -181,7 +228,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 	}
 
 	result, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
-		result, err := s.addSchedule(ctx, tx, op, scheduleList, allRelations)
+		result, err := s.addSchedule(ctx, tx, op, scheduleList, allRelations, scheduleReviews)
 		if err != nil {
 			log.Error(ctx, "add schedule: error",
 				log.Err(err),
@@ -191,7 +238,8 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 			return nil, err
 		}
 
-		if schedule.ClassType != entity.ScheduleClassTypeTask {
+		if schedule.ClassType != entity.ScheduleClassTypeTask ||
+			!schedule.IsReview {
 			log.Debug(ctx, "start add assessment", log.Any("assessmentAddReq", assessmentAddReq))
 			err = GetAssessmentModelV2().AddWhenCreateSchedules(ctx, tx, op, assessmentAddReq)
 			if err != nil {
@@ -840,9 +888,9 @@ func (s *scheduleModel) prepareScheduleUpdateData(ctx context.Context, op *entit
 }
 
 // finished
-func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, scheduleList []*entity.Schedule, scheduleRelations []*entity.ScheduleRelation) ([]*entity.Schedule, error) {
+func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, scheduleList []*entity.Schedule, scheduleRelations []*entity.ScheduleRelation, scheduleReviews []*entity.ScheduleReview) ([]*entity.Schedule, error) {
 	// insert into `schedules` table
-	result, err := s.scheduleDA.InsertInBatchesTx(ctx, tx, scheduleList, len(scheduleList))
+	result, err := s.scheduleDA.InsertInBatchesTx(ctx, tx, scheduleList, constant.ScheduleInsertBatchSize)
 	if err != nil {
 		log.Error(ctx, "s.scheduleDA.InsertInBatchesTx error",
 			log.Err(err),
@@ -851,12 +899,22 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *
 	}
 
 	// insert into `schedules_relations` table
-	_, err = s.scheduleRelationDA.InsertInBatchesTx(ctx, tx, scheduleRelations, len(scheduleRelations))
+	_, err = s.scheduleRelationDA.InsertInBatchesTx(ctx, tx, scheduleRelations, constant.ScheduleInsertBatchSize)
 	if err != nil {
 		log.Error(ctx, "s.scheduleRelationDA.InsertInBatchesTx error",
 			log.Err(err),
 			log.Any("scheduleRelations", scheduleRelations))
 		return nil, err
+	}
+
+	if len(scheduleReviews) > 0 {
+		_, err = s.scheduleReviewDA.InsertInBatchesTx(ctx, tx, scheduleReviews, constant.ScheduleInsertBatchSize)
+		if err != nil {
+			log.Error(ctx, "s.scheduleReviewDA.InsertInBatchesTx error",
+				log.Err(err),
+				log.Any("scheduleReviews", scheduleReviews))
+			return nil, err
+		}
 	}
 
 	return result.([]*entity.Schedule), nil
@@ -957,6 +1015,13 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		)
 		return nil, err
 	}
+
+	if schedule.IsReview {
+		log.Error(ctx, "schedule review not support edit",
+			log.Any("schedule", schedule))
+		return nil, errors.New("schedule review not support edit")
+	}
+
 	viewData.SubjectIDs = utils.SliceDeduplicationExcludeEmpty(viewData.SubjectIDs)
 	// verify data
 	err = s.verifyData(ctx, operator, &entity.ScheduleVerifyInput{
@@ -1068,9 +1133,9 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 			return err
 		}
 
-		result, err = s.addSchedule(ctx, tx, operator, scheduleList, allRelations)
+		result, err = s.addSchedule(ctx, tx, operator, scheduleList, allRelations, nil)
 		if err != nil {
-			log.Error(ctx, "s.addSchedule error",
+			log.Error(ctx, "s.addSchedaule error",
 				log.Err(err),
 				log.Any("schedule", updateSchedule),
 				log.Any("viewData", viewData),
@@ -2914,6 +2979,115 @@ func (s *scheduleModel) GetScheduleRelationIDs(ctx context.Context, op *entity.O
 	}
 
 	return result, nil
+}
+
+func (s *scheduleModel) CheckScheduleReviewData(ctx context.Context, op *entity.Operator, request *entity.CheckScheduleReviewDataRequest) (*entity.CheckScheduleReviewDataResponse, error) {
+	// TODO implement
+	log.Debug(ctx, "CheckScheduleReviewData", log.Any("request", request))
+	result := &entity.CheckScheduleReviewDataResponse{}
+	for _, v := range request.StudentIDs {
+		result.Results = append(result.Results, entity.CheckScheduleReviewDataResult{
+			StudentID: v,
+			Status:    true,
+		})
+	}
+	return result, nil
+}
+
+func (s *scheduleModel) UpdateScheduleReviewStatus(ctx context.Context, request *entity.UpdateScheduleReviewStatusRequest) error {
+	log.Debug(ctx, "UpdateScheduleReviewStatus", log.Any("request", request))
+	var contentIDs []string
+	for _, v := range request.SucceededResults {
+		contentIDs = append(contentIDs, v.ContentIDs...)
+	}
+	contentIDs = utils.SliceDeduplicationExcludeEmpty(contentIDs)
+
+	contents, err := GetContentModel().GetRawContentByIDList(ctx, dbo.MustGetDB(ctx), contentIDs)
+	if err != nil {
+		log.Error(ctx, "GetContentModel().GetRawContentByIDList error",
+			log.Err(err),
+			log.Strings("contentIDs", contentIDs))
+		return err
+	}
+	contentMap := make(map[string]*entity.Content, len(contents))
+	for _, v := range contents {
+		contentMap[v.ID] = v
+	}
+	studentLiveLessonPlanMap := make(map[string]*entity.ScheduleLiveLessonPlan, len(request.SucceededResults))
+	for _, v := range request.SucceededResults {
+		// no lesson plan id and name for review schedule
+		liveLessonPlan := &entity.ScheduleLiveLessonPlan{}
+		for _, contentID := range v.ContentIDs {
+			if content, ok := contentMap[contentID]; ok {
+				liveLessonPlan.LessonMaterials = append(liveLessonPlan.LessonMaterials,
+					&entity.ScheduleLiveLessonMaterial{
+						LessonMaterialID:   content.ID,
+						LessonMaterialName: content.Name,
+					})
+				studentLiveLessonPlanMap[v.StudentID] = liveLessonPlan
+			} else {
+				log.Error(ctx, "content not found",
+					log.String("contentID", contentID),
+					log.Any("request", request),
+					log.Any("contentMap", contentMap))
+				return errors.New("content not found")
+			}
+		}
+	}
+
+	reviewStatus := entity.ScheduleReviewStatusSuccess
+	if len(request.SucceededResults) == 0 {
+		reviewStatus = entity.ScheduleReviewStatusFailed
+	}
+
+	// TODO too long transaction
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := s.scheduleDA.UpdateScheduleReviewStatus(ctx, tx, request.ScheduleID, reviewStatus)
+		if err != nil {
+			log.Error(ctx, "s.scheduleDA.UpdateScheduleReviewStatus error",
+				log.Err(err),
+				log.Any("request", request),
+				log.Any("reviewStatus", reviewStatus),
+			)
+			return err
+		}
+
+		for _, v := range request.SucceededResults {
+			err := s.scheduleReviewDA.UpdateScheduleReview(ctx, tx, request.ScheduleID, v.StudentID, entity.ScheduleReviewStatusSuccess, studentLiveLessonPlanMap[v.StudentID])
+			if err != nil {
+				log.Error(ctx, "s.scheduleReviewDA.UpdateScheduleReview error",
+					log.Err(err),
+					log.String("student_id", v.StudentID),
+					log.Any("request", request),
+					log.Any("studentLiveLessonPlanMap", studentLiveLessonPlanMap),
+				)
+				return err
+			}
+		}
+
+		for _, v := range request.FailedResults {
+			err := s.scheduleReviewDA.UpdateScheduleReview(ctx, tx, request.ScheduleID, v.StudentID, entity.ScheduleReviewStatusFailed, nil)
+			if err != nil {
+				log.Error(ctx, "s.scheduleReviewDA.UpdateScheduleReview error",
+					log.Err(err),
+					log.String("student_id", v.StudentID),
+					log.Any("request", request),
+				)
+				return err
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		log.Error(ctx, "UpdateScheduleReviewStatus error",
+			log.Err(err),
+			log.Any("request", request),
+		)
+		return err
+	}
+
+	return nil
 }
 
 // Schedule model interval function

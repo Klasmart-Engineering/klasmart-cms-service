@@ -27,6 +27,7 @@ type IScheduleDA interface {
 	GetClassTypes(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
 	GetTeachLoadByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]*ScheduleTeachLoadDBResult, error)
 	UpdateLiveLessonPlan(ctx context.Context, tx *dbo.DBContext, scheduleID string, liveMaterials *entity.ScheduleLiveLessonPlan) error
+	UpdateScheduleReviewStatus(ctx context.Context, tx *dbo.DBContext, scheduleID string, reviewStatus entity.ScheduleReviewStatus) error
 }
 
 type scheduleDA struct {
@@ -309,6 +310,23 @@ func (s *scheduleDA) UpdateLiveLessonPlan(ctx context.Context, tx *dbo.DBContext
 			log.Err(err),
 			log.String("scheduleID", scheduleID),
 			log.Any("liveLessonPlan", liveLessonPlan))
+		return err
+	}
+
+	return nil
+}
+
+func (s *scheduleDA) UpdateScheduleReviewStatus(ctx context.Context, tx *dbo.DBContext, scheduleID string, reviewStatus entity.ScheduleReviewStatus) error {
+	tx.ResetCondition()
+
+	err := tx.Table(constant.TableNameSchedule).
+		Where("id = ?", scheduleID).
+		Update("review_status", reviewStatus).Error
+	if err != nil {
+		log.Error(ctx, "UpdateScheduleReviewStatus error",
+			log.Err(err),
+			log.String("scheduleID", scheduleID),
+			log.Any("reviewStatus", reviewStatus))
 		return err
 	}
 
