@@ -121,7 +121,7 @@ type IContentModel interface {
 	SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 
-	SearchSimplifyContentInternal(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentInternalConditionRequest) (int, []*entity.ContentSimplified, error)
+	SearchSimplifyContentInternal(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentInternalConditionRequest) (*entity.ContentSimplifiedList, error)
 
 	GetContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	GetVisibleContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
@@ -2194,7 +2194,7 @@ func (cm *ContentModel) CountUserFolderContent(ctx context.Context, tx *dbo.DBCo
 	return total, nil
 }
 
-func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentInternalConditionRequest) (int, []*entity.ContentSimplified, error) {
+func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentInternalConditionRequest) (*entity.ContentSimplifiedList, error) {
 	//get material ids from plan if condition contains plan id
 	if condition.PlanID != "" {
 		plan, err := da.GetContentDA().GetContentByID(ctx, tx, condition.PlanID)
@@ -2202,7 +2202,7 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 			log.Error(ctx, "get plan failed", log.Err(err),
 				log.String("plan_id", condition.PlanID),
 				log.Any("condition", condition))
-			return 0, nil, err
+			return nil, err
 		}
 		if plan.LatestID != "" && plan.LatestID != plan.ID {
 			plan, err = da.GetContentDA().GetContentByID(ctx, tx, plan.LatestID)
@@ -2210,20 +2210,20 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 				log.Error(ctx, "get latest plan failed", log.Err(err),
 					log.Any("plan", plan),
 					log.Any("condition", condition))
-				return 0, nil, err
+				return nil, err
 			}
 		}
 		if plan.ContentType != entity.ContentTypePlan {
 			log.Error(ctx, "content data parse failed",
 				log.Any("plan", plan))
-			return 0, nil, ErrInvalidContentType
+			return nil, ErrInvalidContentType
 		}
 		cd, err := cm.CreateContentData(ctx, entity.ContentTypePlan, plan.Data)
 		if err != nil {
 			log.Error(ctx, "content data parse failed",
 				log.Err(err),
 				log.Any("plan", plan))
-			return 0, nil, err
+			return nil, err
 		}
 		err = cd.PrepareVersion(ctx)
 		if err != nil {
@@ -2232,7 +2232,7 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 				log.Any("cd", cd),
 				log.Any("plan", plan),
 				log.Any("condition", condition))
-			return 0, nil, err
+			return nil, err
 		}
 		planData, ok := cd.(*LessonData)
 		if !ok {
@@ -2240,7 +2240,7 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 				log.Any("obj", cd),
 				log.String("data", plan.Data),
 			)
-			return 0, nil, ErrInvalidContentType
+			return nil, ErrInvalidContentType
 		}
 		materialIDs := planData.SubContentIDs(ctx)
 		//Add material IDs
@@ -2265,14 +2265,46 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 		log.Error(ctx, "search content internal failed",
 			log.Err(err),
 			log.Any("condition", cdt))
-		return 0, nil, err
+		return nil, err
 	}
+	contentIDs := make([]string, len(data))
 	res := make([]*entity.ContentSimplified, len(data))
 	for i := range data {
 		res[i] = data[i].ToContentSimplified()
+		contentIDs[i] = data[i].ID
 	}
 
-	return total, res, nil
+	var studentContentMap []*entity.ScheduleReviewStudentContent
+	// get schedule review student content map
+	if condition.ScheduleID != "" {
+		scheduleReviews, err := da.GetScheduleReviewDA().GetScheduleReviewsByScheduleID(ctx, dbo.MustGetDB(ctx), condition.ScheduleID)
+		if err != nil {
+			log.Error(ctx, "search schedule review student content failed",
+				log.Err(err),
+				log.String("scheduleID", condition.ScheduleID))
+			return nil, err
+		}
+		for _, scheduleReview := range scheduleReviews {
+			studentContentIDs := []string{}
+			if scheduleReview.LiveLessonPlan != nil {
+				for _, lessonMaterial := range scheduleReview.LiveLessonPlan.LessonMaterials {
+					if utils.ContainsString(contentIDs, lessonMaterial.LessonMaterialID) {
+						studentContentIDs = append(studentContentIDs, lessonMaterial.LessonMaterialID)
+					}
+				}
+			}
+			studentContentMap = append(studentContentMap, &entity.ScheduleReviewStudentContent{
+				StudentID:  scheduleReview.StudentID,
+				ContentIDs: studentContentIDs,
+			})
+		}
+	}
+
+	return &entity.ContentSimplifiedList{
+		Total:             total,
+		ContentList:       res,
+		StudentContentMap: studentContentMap,
+	}, nil
 }
 
 func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error) {
