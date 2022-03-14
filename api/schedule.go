@@ -109,9 +109,8 @@ func (s *Server) addSchedule(c *gin.Context) {
 	if (data.ClassType == entity.ScheduleClassTypeOnlineClass && !permissionMap[external.ScheduleCreateLiveCalendarEvents]) ||
 		(data.ClassType == entity.ScheduleClassTypeOfflineClass && !permissionMap[external.ScheduleCreateClassCalendarEvents]) ||
 		(data.ClassType == entity.ScheduleClassTypeHomework && !data.IsHomeFun && !permissionMap[external.ScheduleCreateStudyCalendarEvents]) ||
-		(data.ClassType == entity.ScheduleClassTypeHomework && data.IsHomeFun && !permissionMap[external.ScheduleCreateHomefunCalendarEvents]) {
-		// TODO debug
-		// (data.ClassType == entity.ScheduleClassTypeHomework && data.IsReview && !permissionMap[external.ScheduleCreateReviewEvent]) {
+		(data.ClassType == entity.ScheduleClassTypeHomework && data.IsHomeFun && !permissionMap[external.ScheduleCreateHomefunCalendarEvents]) ||
+		(data.ClassType == entity.ScheduleClassTypeHomework && data.IsReview && !permissionMap[external.ScheduleCreateReviewEvent]) {
 		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
 		return
 	}

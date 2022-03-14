@@ -81,6 +81,7 @@ var AllPermissionNames = []PermissionName{
 	ScheduleCreateEvent,
 	ScheduleCreateMyEvent,
 	ScheduleCreateMySchoolEvent,
+	ScheduleCreateReviewEvent,
 	ScheduleCreateLiveCalendarEvents,
 	ScheduleCreateClassCalendarEvents,
 	ScheduleCreateStudyCalendarEvents,
