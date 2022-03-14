@@ -1024,7 +1024,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		return nil, err
 	}
 
-	if schedule.IsReview {
+	if schedule.IsReview || viewData.IsReview {
 		log.Error(ctx, "schedule review not support edit",
 			log.Any("schedule", schedule))
 		return nil, errors.New("schedule review not support edit")
@@ -1106,11 +1106,11 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 
 	var assessmentAddReq *v2.AssessmentAddWhenCreateSchedulesReq
 	if viewData.ClassType != entity.ScheduleClassTypeTask {
-		assessmentAddReq, err = s.getAssessmentAddWhenCreateSchedulesReq(ctx, operator, schedule, scheduleList, relations, className)
+		assessmentAddReq, err = s.getAssessmentAddWhenCreateSchedulesReq(ctx, operator, updateSchedule, scheduleList, relations, className)
 		if err != nil {
 			log.Error(ctx, "s.getAssessmentAddWhenCreateSchedulesReq error",
 				log.Err(err),
-				log.Any("schedule", schedule),
+				log.Any("schedule", updateSchedule),
 				log.Any("scheduleList", scheduleList),
 				log.Any("relations", relations),
 				log.String("className", className))
