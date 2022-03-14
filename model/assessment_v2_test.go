@@ -116,7 +116,7 @@ func TestAssessmentModel_AddWhenCreateSchedules(t *testing.T) {
 		}
 	}
 
-	assessmentType, err := v2.GetAssessmentTypeByScheduleType(ctx, schedule.ClassType, schedule.IsHomeFun)
+	assessmentType, err := v2.GetAssessmentTypeByScheduleType(ctx, v2.GetAssessmentTypeByScheduleTypeInput{})
 	if err != nil {
 		t.Fatal(err)
 	}
