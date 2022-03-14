@@ -501,9 +501,13 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 		IsAllDay:        s.IsAllDay,
 		IsHomeFun:       s.IsHomeFun,
 		IsReview:        s.IsReview,
-		ReviewStatus:    ScheduleReviewStatusPending,
+		ReviewStatus:    "",
 		ContentStartAt:  s.ContentStartAt,
 		ContentEndAt:    s.ContentEndAt,
+	}
+
+	if s.IsReview {
+		schedule.ReviewStatus = ScheduleReviewStatusPending
 	}
 	if schedule.ClassType != ScheduleClassTypeHomework {
 		schedule.IsHomeFun = false

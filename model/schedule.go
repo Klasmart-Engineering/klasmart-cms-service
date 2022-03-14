@@ -948,6 +948,14 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 		)
 		return nil, constant.ErrOperateNotAllowed
 	}
+	// is review status is success, not allow to edit
+	if schedule.IsReview && schedule.ReviewStatus == entity.ScheduleReviewStatusSuccess {
+		log.Warn(ctx, "checkScheduleStatus: schedule status error",
+			log.String("id", id),
+			log.Any("schedule", schedule),
+		)
+		return nil, constant.ErrOperateNotAllowed
+	}
 	if schedule.ClassType == entity.ScheduleClassTypeHomework &&
 		schedule.IsHomeFun &&
 		schedule.IsHidden {
