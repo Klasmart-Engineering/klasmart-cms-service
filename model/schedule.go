@@ -4569,7 +4569,11 @@ func (s *scheduleModel) transformToScheduleTimeView(ctx context.Context, operato
 }
 
 func (s *scheduleModel) getAssessmentAddWhenCreateSchedulesReq(ctx context.Context, operator *entity.Operator, schedule *entity.Schedule, repeatScheduleList []*entity.Schedule, scheduleRelations []*entity.ScheduleRelation, className string) (*v2.AssessmentAddWhenCreateSchedulesReq, error) {
-	assessmentType, err := v2.GetAssessmentTypeByScheduleType(ctx, schedule.ClassType, schedule.IsHomeFun)
+	assessmentType, err := v2.GetAssessmentTypeByScheduleType(ctx, v2.GetAssessmentTypeByScheduleTypeInput{
+		ScheduleType: schedule.ClassType,
+		IsHomeFun:    schedule.IsHomeFun,
+		IsReview:     schedule.IsReview,
+	})
 	if err != nil {
 		log.Error(ctx, "v2.GetAssessmentTypeByScheduleType error",
 			log.Err(err),

@@ -946,8 +946,8 @@ func (a *assessmentModelV2) ScheduleEndClassCallback(ctx context.Context, op *en
 }
 
 func (a *assessmentModelV2) AddWhenCreateSchedules(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, req *v2.AssessmentAddWhenCreateSchedulesReq) error {
-	if req.IsEmpty() {
-		log.Info(ctx, "req is invalid", log.Any("req", req), log.Any("op", op))
+	if !req.Valid(ctx) {
+		log.Warn(ctx, "req is invalid", log.Any("req", req), log.Any("op", op))
 		return constant.ErrInvalidArgs
 	}
 

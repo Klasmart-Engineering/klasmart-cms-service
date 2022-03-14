@@ -73,11 +73,11 @@ type AssessmentUserReq struct {
 	UserType AssessmentUserType
 }
 
-func (req *AssessmentAddWhenCreateSchedulesReq) IsEmpty() bool {
-	if len(req.RepeatScheduleIDs) <= 0 || req.AssessmentType == "" {
-		return true
+func (req *AssessmentAddWhenCreateSchedulesReq) Valid(ctx context.Context) bool {
+	if len(req.RepeatScheduleIDs) <= 0 || !req.AssessmentType.Valid(ctx) {
+		return false
 	}
-	return false
+	return true
 }
 
 type AssessmentAttendancesReq struct {
