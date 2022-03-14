@@ -177,7 +177,7 @@ func TestGetScheduleRelationIDs(t *testing.T) {
 
 func TestQueryScheduleTimeView(t *testing.T) {
 	ctx := context.TODO()
-	token := "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRhMGNjZWU0LTA4MmItNDM5OC05NzMxLWEyNTUwNDE2MzkzNCIsImVtYWlsIjoidGVjaDFAeW9wbWFpbC5jb20iLCJleHAiOjE2NDY3NTkxMzEsImlzcyI6ImtpZHNsb29wIn0.bx5IXoruQs_ATYs0mJ4ODUvEjS9tRKxHVKdK85LlseujyYFTc2WidB3k9Twl7OaRFl9_EYl7PDhWH77Rg1ocR84GnOJAzNUIM9wpt5H4urnKEzWabtWdBjNBtbaRVPY4bKEeP5NaOF5Z72kKzYCsXWgTr9fIL_v2E4WGroXeUw3pRVNGvRcCWnLTM5fXWP7fy2NGdrJee4da-CSGWWCuRkF2nmveLujFTvpfiBQzFCZ0fW1xZ_ugYQMOeG_AWZ3PPdayivijYP9STphXCB3YXoXrLdWevzWJAu6JctXqMdbP7gJCORn6J5dZuen9iFak-9C8BB3uYHiBg8Lc0kLKEg"
+	token := "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRhMGNjZWU0LTA4MmItNDM5OC05NzMxLWEyNTUwNDE2MzkzNCIsImVtYWlsIjoidGVjaDFAeW9wbWFpbC5jb20iLCJleHAiOjE2NDY4OTk3MTMsImlzcyI6ImtpZHNsb29wIn0.jWnYDCzhs4Ec34rTpn9nLUXP5zCJE2ufS9dgh-IkGtKxMEqzMlm3Io69mrC_ZcmALQoM4UhlGa82dmDKOUDl3tpIJ5U0uwwe8u7slBTjBj-C8EnjZxTlzsfwpzU3mK9gB_J3l4UaWO1tb5cOwyU17BAXWhPN4cfN5G8VmQaQOSt1uc4uts9L_DHdV_clwMHSVEIQF5ZWlisr0k6iDDFRr_k2CaxkVibFK2ZP49WJhj6Iv0qPBqSNXbBRg3HCbid9a1jtMb9ywAx0FDsWPdtI_ms9I5IlTXXjBh7hcPvs2jjjPPFWDLxbR8o_JiTK2aEJDwlrNm3F55TwhwlTofO_mA"
 	orgID := "92db7ddd-1f23-4f64-bd47-94f6d34a50c0"
 	op := utils.InitOperator(ctx, token, orgID)
 	query := &entity.ScheduleTimeViewListRequest{
@@ -197,7 +197,7 @@ func TestUpdateScheduleReviewStatus(t *testing.T) {
 	ctx := context.TODO()
 	request := &entity.UpdateScheduleReviewStatusRequest{
 		ScheduleID: "614091d5e8155193e489a9ba",
-		SucceededResults: []entity.ScheduleReviewSucceededResult{
+		StandardResults: []entity.ScheduleReviewSucceededResult{
 			{
 				StudentID:  "1234",
 				ContentIDs: []string{"6157fd712ea559a89469450f", "61403312d85e5b1126bba790"},
@@ -210,7 +210,7 @@ func TestUpdateScheduleReviewStatus(t *testing.T) {
 		FailedResults: []entity.ScheduleReviewFailedResult{
 			{
 				StudentID: "123456",
-				Status:    "failed",
+				Reason:    "failed",
 			},
 		},
 	}

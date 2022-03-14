@@ -1321,6 +1321,8 @@ func (s *Server) getScheduleViewByID(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMessageLessonPlanInvalid))
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(ScheduleMessageEditOverlap))
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
 	default:
 		s.defaultErrorHandler(c, err)
 	}
@@ -1531,7 +1533,7 @@ func (s *Server) checkScheduleReviewData(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param queryData body entity.UpdateScheduleReviewStatusRequest true "schedule review create result"
-// @Tags schedule
+// @Tags internal
 // @Success 200 {object} string ok
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse

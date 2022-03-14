@@ -15,6 +15,7 @@ type IScheduleReviewDA interface {
 	GetScheduleReviewByScheduleIDAndStudentID(ctx context.Context, tx *dbo.DBContext, scheduleID, studentID string) (*entity.ScheduleReview, error)
 	GetScheduleReviewsByScheduleID(ctx context.Context, tx *dbo.DBContext, scheduleID string) ([]*entity.ScheduleReview, error)
 	UpdateScheduleReview(ctx context.Context, tx *dbo.DBContext, scheduleID, studentID string, status entity.ScheduleReviewStatus, reviewType entity.ScheduleReviewType, liveLessonPlan *entity.ScheduleLiveLessonPlan) error
+	DeleteScheduleReviewByScheduleID(ctx context.Context, tx *dbo.DBContext, scheduleID string) error
 }
 
 type scheduleReviewDA struct {
@@ -90,6 +91,21 @@ func (s *scheduleReviewDA) UpdateScheduleReview(ctx context.Context, tx *dbo.DBC
 			log.String("studentID", studentID),
 			log.Any("reviewStatus", status),
 			log.Any("liveLessonPlan", liveLessonPlan))
+		return err
+	}
+
+	return nil
+}
+
+func (s *scheduleReviewDA) DeleteScheduleReviewByScheduleID(ctx context.Context, tx *dbo.DBContext, scheduleID string) error {
+	tx.ResetCondition()
+	err := tx.Where("schedule_id = ?", scheduleID).
+		Delete(&entity.ScheduleReview{}).Error
+	if err != nil {
+		log.Error(ctx, "DeleteScheduleReviewByScheduleID error",
+			log.Err(err),
+			log.String("scheduleID", scheduleID),
+		)
 		return err
 	}
 
