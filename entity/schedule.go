@@ -421,6 +421,13 @@ const (
 	ScheduleReviewStatusFailed  ScheduleReviewStatus = "failed"
 )
 
+type ScheduleReviewType string
+
+const (
+	ScheduleReviewTypePersonalized ScheduleReviewType = "personalized"
+	ScheduleReviewTypeStandard     ScheduleReviewType = "standard"
+)
+
 func (Schedule) TableName() string {
 	return constant.TableNameSchedule
 }
@@ -494,9 +501,13 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 		IsAllDay:        s.IsAllDay,
 		IsHomeFun:       s.IsHomeFun,
 		IsReview:        s.IsReview,
-		ReviewStatus:    ScheduleReviewStatusPending,
+		ReviewStatus:    "",
 		ContentStartAt:  s.ContentStartAt,
 		ContentEndAt:    s.ContentEndAt,
+	}
+
+	if s.IsReview {
+		schedule.ReviewStatus = ScheduleReviewStatusPending
 	}
 	if schedule.ClassType != ScheduleClassTypeHomework {
 		schedule.IsHomeFun = false
@@ -843,35 +854,39 @@ func (s ScheduleShowOption) IsValid() bool {
 }
 
 type ScheduleViewDetail struct {
-	ID                 string               `json:"id"`
-	IsRepeat           bool                 `json:"is_repeat"`
-	LessonPlanID       string               `json:"lesson_plan_id"`
-	ClassID            string               `json:"class_id"`
-	Title              string               `json:"title"`
-	Attachment         ScheduleShortInfo    `json:"attachment"`
-	StartAt            int64                `json:"start_at"`
-	EndAt              int64                `json:"end_at"`
-	ClassType          ScheduleShortInfo    `json:"class_type"`
-	ClassTypeLabel     ScheduleShortInfo    `json:"class_type_label"`
-	DueAt              int64                `json:"due_at"`
-	Status             ScheduleStatus       `json:"status" enums:"NotStart,Started,Closed"`
-	IsHidden           bool                 `json:"is_hidden"`
-	IsHomeFun          bool                 `json:"is_home_fun"`
-	IsReview           bool                 `json:"is_review"`
-	ReviewStatus       ScheduleReviewStatus `json:"review_status" enums:"pending,success,failed"`
-	ContentStartAt     int64                `json:"content_start_at"`
-	ContentEndAt       int64                `json:"content_end_at"`
-	RoleType           ScheduleRoleType     `json:"role_type" enums:"Student,Teacher,Unknown"`
-	ExistFeedback      bool                 `json:"exist_feedback"`
-	LessonPlan         *ScheduleLessonPlan  `json:"lesson_plan"`
-	Class              *ScheduleShortInfo   `json:"class"`
-	Teachers           []*ScheduleShortInfo `json:"teachers"`
-	Students           []*ScheduleShortInfo `json:"students"`
-	RoomID             string               `json:"room_id"`
-	ExistAssessment    bool                 `json:"exist_assessment"`
-	CompleteAssessment bool                 `json:"complete_assessment"`
-	Description        string               `json:"description"`
-	OutcomeIDs         []string             `json:"outcome_ids"`
+	ID                         string               `json:"id"`
+	IsRepeat                   bool                 `json:"is_repeat"`
+	LessonPlanID               string               `json:"lesson_plan_id"`
+	ClassID                    string               `json:"class_id"`
+	Title                      string               `json:"title"`
+	Attachment                 ScheduleShortInfo    `json:"attachment"`
+	StartAt                    int64                `json:"start_at"`
+	EndAt                      int64                `json:"end_at"`
+	ClassType                  ScheduleShortInfo    `json:"class_type"`
+	ClassTypeLabel             ScheduleShortInfo    `json:"class_type_label"`
+	DueAt                      int64                `json:"due_at"`
+	Status                     ScheduleStatus       `json:"status" enums:"NotStart,Started,Closed"`
+	IsHidden                   bool                 `json:"is_hidden"`
+	IsHomeFun                  bool                 `json:"is_home_fun"`
+	IsReview                   bool                 `json:"is_review"`
+	ReviewStatus               ScheduleReviewStatus `json:"review_status" enums:"pending,success,failed"`
+	ContentStartAt             int64                `json:"content_start_at"`
+	ContentEndAt               int64                `json:"content_end_at"`
+	PersonalizedReviewStudents []*ScheduleShortInfo `json:"personalized_review_students"`
+	RandomReviewStudents       []*ScheduleShortInfo `json:"personalized_review_students"`
+	RoleType                   ScheduleRoleType     `json:"role_type" enums:"Student,Teacher,Unknown"`
+	ExistFeedback              bool                 `json:"exist_feedback"`
+	LessonPlan                 *ScheduleLessonPlan  `json:"lesson_plan"`
+	Class                      *ScheduleShortInfo   `json:"class"`
+	Teachers                   []*ScheduleShortInfo `json:"teachers"`
+	Students                   []*ScheduleShortInfo `json:"students"`
+	RoomID                     string               `json:"room_id"`
+	ExistAssessment            bool                 `json:"exist_assessment"`
+	CompleteAssessment         bool                 `json:"complete_assessment"`
+	Description                string               `json:"description"`
+	OutcomeIDs                 []string             `json:"outcome_ids"`
+	Subjects                   []*ScheduleShortInfo `json:"subjects"`
+	Program                    *ScheduleShortInfo   `json:"program"`
 }
 
 type ScheduleTeachingLoadInput struct {
@@ -1028,9 +1043,10 @@ type CheckScheduleReviewDataResult struct {
 }
 
 type UpdateScheduleReviewStatusRequest struct {
-	ScheduleID       string                          `json:"schedule_id"`
-	SucceededResults []ScheduleReviewSucceededResult `json:"succeeded_results"`
-	FailedResults    []ScheduleReviewFailedResult    `json:"failed_results"`
+	ScheduleID          string                          `json:"schedule_id"`
+	StandardResults     []ScheduleReviewSucceededResult `json:"standard_results"`
+	PersonalizedResults []ScheduleReviewSucceededResult `json:"personalized_results"`
+	FailedResults       []ScheduleReviewFailedResult    `json:"failed_results"`
 }
 
 type ScheduleReviewSucceededResult struct {
@@ -1040,5 +1056,5 @@ type ScheduleReviewSucceededResult struct {
 
 type ScheduleReviewFailedResult struct {
 	StudentID string `json:"student_id"`
-	Status    string `json:"status"`
+	Reason    string `json:"reason"`
 }

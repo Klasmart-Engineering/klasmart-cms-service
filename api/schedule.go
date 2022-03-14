@@ -12,7 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -110,8 +109,9 @@ func (s *Server) addSchedule(c *gin.Context) {
 	if (data.ClassType == entity.ScheduleClassTypeOnlineClass && !permissionMap[external.ScheduleCreateLiveCalendarEvents]) ||
 		(data.ClassType == entity.ScheduleClassTypeOfflineClass && !permissionMap[external.ScheduleCreateClassCalendarEvents]) ||
 		(data.ClassType == entity.ScheduleClassTypeHomework && !data.IsHomeFun && !permissionMap[external.ScheduleCreateStudyCalendarEvents]) ||
-		(data.ClassType == entity.ScheduleClassTypeHomework && data.IsHomeFun && !permissionMap[external.ScheduleCreateHomefunCalendarEvents]) ||
-		(data.ClassType == entity.ScheduleClassTypeHomework && data.IsReview && !permissionMap[external.ScheduleCreateReviewEvent]) {
+		(data.ClassType == entity.ScheduleClassTypeHomework && data.IsHomeFun && !permissionMap[external.ScheduleCreateHomefunCalendarEvents]) {
+		// TODO debug
+		// (data.ClassType == entity.ScheduleClassTypeHomework && data.IsReview && !permissionMap[external.ScheduleCreateReviewEvent]) {
 		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
 		return
 	}
@@ -451,13 +451,15 @@ func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditVa
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
 
-	if input.IsReview && !config.Get().Schedule.ReviewTypeEnabled {
-		log.Debug(ctx, "schedule review type not support", log.Any("input", input))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return constant.ErrInvalidArgs
-	}
+	// TODO debug
+	// if input.IsReview && !config.Get().Schedule.ReviewTypeEnabled {
+	// 	log.Debug(ctx, "schedule review type not support", log.Any("input", input))
+	// 	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	// 	return constant.ErrInvalidArgs
+	// }
 
-	if strings.TrimSpace(input.Title) == "" {
+	// review schedule has no title
+	if strings.TrimSpace(input.Title) == "" && !input.IsReview {
 		log.Info(ctx, "schedule title required", log.Any("input", input))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return constant.ErrInvalidArgs
@@ -1319,6 +1321,8 @@ func (s *Server) getScheduleViewByID(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMessageLessonPlanInvalid))
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(ScheduleMessageEditOverlap))
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
 	default:
 		s.defaultErrorHandler(c, err)
 	}
@@ -1502,7 +1506,7 @@ func (s *Server) buildInternalScheduleCondition(c *gin.Context) (*da.ScheduleCon
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules/review/checkData [post]
+// @Router /schedules/review/check_data [post]
 func (s *Server) checkScheduleReviewData(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
@@ -1529,12 +1533,12 @@ func (s *Server) checkScheduleReviewData(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param queryData body entity.UpdateScheduleReviewStatusRequest true "schedule review create result"
-// @Tags schedule
+// @Tags internal
 // @Success 200 {object} string ok
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules/updateReviewStatus [post]
+// @Router /schedules/update_review_status [post]
 func (s *Server) updateScheduleReviewStatus(c *gin.Context) {
 	ctx := c.Request.Context()
 

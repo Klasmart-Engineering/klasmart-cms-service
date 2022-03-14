@@ -3,8 +3,9 @@ package model
 import (
 	"context"
 	"errors"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"regexp"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"strings"
 
@@ -61,7 +62,7 @@ func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator)
 		log.Error(ctx, "utils.BHexToNum error",
 			log.Err(err),
 			log.String("shortcode", req.Shortcode))
-		return nil, err
+		return nil, &ErrValidFailed{Msg: "invalid shortcode"}
 	}
 
 	outcome := entity.Outcome{
