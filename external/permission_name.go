@@ -8,6 +8,12 @@ func (p PermissionName) String() string {
 
 var AllPermissionNames = []PermissionName{
 	CreateContentPage201,
+	UnpublishedContentPage202,
+	PendingContentPage203,
+	PublishedContentPage204,
+	ArchivedContentPage205,
+
+	ViewMyUnpublishedContent210,
 
 	ViewMyPending212,
 	ViewOrgPending213,
@@ -51,7 +57,11 @@ var AllPermissionNames = []PermissionName{
 
 	ApprovePendingContent271,
 	RejectPendingContent272,
+	ArchivePublishedContent273,
 	RepublishArchivedContent274,
+	DeleteArchivedContent275,
+
+	AssociateLearningOutcomes284,
 	CreateFolder289,
 
 	FullContentMmanagement294,
@@ -60,6 +70,7 @@ var AllPermissionNames = []PermissionName{
 	PublishFeaturedContentForAllOrgsHub,
 	PublishFeaturedContentForSpecificOrgsHub,
 
+	CreateAssetPage301,
 	CreateAsset320,
 	DeleteAsset340,
 
@@ -75,10 +86,12 @@ var AllPermissionNames = []PermissionName{
 	ScheduleCreateStudyCalendarEvents,
 	ScheduleCreateHomefunCalendarEvents,
 
+	ScheduleEditEvent,
 	ScheduleDeleteEvent,
 	LiveClassTeacher,
 	LiveClassStudent,
 
+	ViewLearningOutcomePage,
 	ViewMyUnpublishedLearningOutcome,
 	ViewOrgUnpublishedLearningOutcome,
 	ViewMyPendingLearningOutcome,
@@ -98,6 +111,7 @@ var AllPermissionNames = []PermissionName{
 
 	ReportTeacherReports603,
 	ReportViewReports610,
+	ReportLearningOutcomesInCategories616,
 
 	ReportViewMySchoolReports611,
 	ReportSchoolsSkillsTaught641,
@@ -111,8 +125,11 @@ var AllPermissionNames = []PermissionName{
 	ReportMySkillsTaught642,
 	ReportMyClassAchievments648,
 
+	Assessments400,
+	AssessmentPage406,
 	AssessmentViewCompletedAssessments414,
 	AssessmentViewInProgressAssessments415,
+	AssessmentEditAttendanceForInProgressAssessment438,
 	AssessmentEditInProgressAssessment439,
 	AssessmentViewOrgCompletedAssessments424,
 	AssessmentViewOrgInProgressAssessments425,
@@ -159,7 +176,13 @@ var AllPermissionNames = []PermissionName{
 
 // Important: If you add a new permission, you must also add it to the AllPermissionNames
 const (
-	CreateContentPage201 PermissionName = "create_content_page_201"
+	CreateContentPage201      PermissionName = "create_content_page_201"
+	UnpublishedContentPage202 PermissionName = "unpublished_content_page_202"
+	PendingContentPage203     PermissionName = "pending_content_page_203"
+	PublishedContentPage204   PermissionName = "published_content_page_204"
+	ArchivedContentPage205    PermissionName = "archived_content_page_205"
+
+	ViewMyUnpublishedContent210 PermissionName = "view_my_unpublished_content_210"
 
 	ViewMyPending212         PermissionName = "view_my_pending_212"
 	ViewOrgPending213        PermissionName = "view_org_pending_213"
@@ -203,9 +226,12 @@ const (
 
 	ApprovePendingContent271    PermissionName = "approve_pending_content_271"
 	RejectPendingContent272     PermissionName = "reject_pending_content_272"
+	ArchivePublishedContent273  PermissionName = "archive_published_content_273"
 	RepublishArchivedContent274 PermissionName = "republish_archived_content_274"
+	DeleteArchivedContent275    PermissionName = "delete_archived_content_275"
 
-	CreateFolder289 PermissionName = "create_folder_289"
+	AssociateLearningOutcomes284 PermissionName = "associate_learning_outcomes_284"
+	CreateFolder289              PermissionName = "create_folder_289"
 
 	FullContentMmanagement294 PermissionName = "full_content_management_294"
 
@@ -213,8 +239,9 @@ const (
 	PublishFeaturedContentForAllOrgsHub      PermissionName = "publish_featured_content_for_all_orgs_79002"
 	PublishFeaturedContentForSpecificOrgsHub PermissionName = "publish_featured_content_for_specific_orgs_79001"
 
-	CreateAsset320 PermissionName = "create_asset_320"
-	DeleteAsset340 PermissionName = "delete_asset_340"
+	CreateAssetPage301 PermissionName = "create_asset_page_301"
+	CreateAsset320     PermissionName = "create_asset_320"
+	DeleteAsset340     PermissionName = "delete_asset_340"
 
 	ScheduleViewOrgCalendar             PermissionName = "view_org_calendar_511"
 	ScheduleViewSchoolCalendar          PermissionName = "view_school_calendar_512"
@@ -229,10 +256,12 @@ const (
 	ScheduleCreateStudyCalendarEvents   PermissionName = "create_study_calendar_events_526"
 	ScheduleCreateHomefunCalendarEvents PermissionName = "create_home_fun_calendar_events_527"
 
+	ScheduleEditEvent   PermissionName = "edit_event_530"
 	ScheduleDeleteEvent PermissionName = "delete_event_540"
 	LiveClassTeacher    PermissionName = "attend_live_class_as_a_teacher_186"
 	LiveClassStudent    PermissionName = "attend_live_class_as_a_student_187"
 
+	ViewLearningOutcomePage             PermissionName = "learning_outcome_page_404"
 	ViewMyUnpublishedLearningOutcome    PermissionName = "view_my_unpublished_learning_outcome_410"
 	ViewOrgUnpublishedLearningOutcome   PermissionName = "view_org_unpublished_learning_outcome_411"
 	ViewMyPendingLearningOutcome        PermissionName = "view_my_pending_learning_outcome_412"
@@ -250,8 +279,9 @@ const (
 	ApprovePendingLearningOutcome       PermissionName = "approve_pending_learning_outcome_481"
 	RejectPendingLearningOutcome        PermissionName = "reject_pending_learning_outcome_482"
 
-	ReportTeacherReports603 PermissionName = "teacher_reports_603"
-	ReportViewReports610    PermissionName = "view_reports_610"
+	ReportTeacherReports603               PermissionName = "teacher_reports_603"
+	ReportViewReports610                  PermissionName = "view_reports_610"
+	ReportLearningOutcomesInCategories616 PermissionName = "report_learning_outcomes_in_categories_616"
 
 	ReportViewMySchoolReports611      PermissionName = "view_my_school_reports_611"
 	ReportSchoolsSkillsTaught641      PermissionName = "report_schools_skills_taught_641"
@@ -265,14 +295,17 @@ const (
 	ReportMySkillsTaught642     PermissionName = "report_my_skills_taught_642"
 	ReportMyClassAchievments648 PermissionName = "report_my_class_achievments_648"
 
-	AssessmentViewCompletedAssessments414        PermissionName = "view_completed_assessments_414"
-	AssessmentViewInProgressAssessments415       PermissionName = "view_in_progress_assessments_415"
-	AssessmentEditInProgressAssessment439        PermissionName = "edit_in_progress_assessment_439"
-	AssessmentViewOrgCompletedAssessments424     PermissionName = "view_org_completed_assessments_424"
-	AssessmentViewOrgInProgressAssessments425    PermissionName = "view_org_in_progress_assessments_425"
-	AssessmentViewSchoolCompletedAssessments426  PermissionName = "view_school_completed_assessments_426"
-	AssessmentViewSchoolInProgressAssessments427 PermissionName = "view_school_in_progress_assessments_427"
-	AssessmentViewTeacherFeedback670             PermissionName = "view_teacher_feedback_670"
+	Assessments400                                     PermissionName = "assessments_400"
+	AssessmentPage406                                  PermissionName = "assessments_page_406"
+	AssessmentViewCompletedAssessments414              PermissionName = "view_completed_assessments_414"
+	AssessmentViewInProgressAssessments415             PermissionName = "view_in_progress_assessments_415"
+	AssessmentEditAttendanceForInProgressAssessment438 PermissionName = "edit_attendance_for_in_progress_assessment_438"
+	AssessmentEditInProgressAssessment439              PermissionName = "edit_in_progress_assessment_439"
+	AssessmentViewOrgCompletedAssessments424           PermissionName = "view_org_completed_assessments_424"
+	AssessmentViewOrgInProgressAssessments425          PermissionName = "view_org_in_progress_assessments_425"
+	AssessmentViewSchoolCompletedAssessments426        PermissionName = "view_school_completed_assessments_426"
+	AssessmentViewSchoolInProgressAssessments427       PermissionName = "view_school_in_progress_assessments_427"
+	AssessmentViewTeacherFeedback670                   PermissionName = "view_teacher_feedback_670"
 
 	ViewUnPublishedMilestone     PermissionName = "view_unpublished_milestone_417"
 	ViewPublishedMilestone       PermissionName = "view_published_milestone_418"
