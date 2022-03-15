@@ -418,8 +418,8 @@ func (s *liveTokenModel) GetMaterials(ctx context.Context, op *entity.Operator, 
 			materialItem.TypeName = entity.MaterialTypeVideo
 		case entity.FileTypeH5p, entity.FileTypeH5pExtend:
 			materialItem.TypeName = entity.MaterialTypeH5P
-		case entity.FileTypeBadanamuAppToWeb:
-			materialItem.TypeName = entity.MaterialTypeH5P
+		//case entity.FileTypeBadanamuAppToWeb:
+		//	materialItem.TypeName = entity.MaterialTypeH5P
 		case entity.FileTypeDocument:
 			log.Debug(ctx, "content material doc type", log.Any("op", op), log.Any("content", item))
 			//if mData.Source.Ext() != constant.LiveTokenDocumentPDF {
@@ -436,8 +436,8 @@ func (s *liveTokenModel) GetMaterials(ctx context.Context, op *entity.Operator, 
 			materialItem.URL = fmt.Sprintf("/h5pextend/index.html?org_id=%s&content_id=%s&schedule_id=%s&type=%s#/live-h5p", op.OrgID, item.ID, input.ScheduleID, input.TokenType)
 		case entity.FileTypeH5p:
 			materialItem.URL = fmt.Sprintf("/h5p/play/%v", mData.Source)
-		case entity.FileTypeBadanamuAppToWeb:
-			materialItem.URL = fmt.Sprintf("%v", mData.Source)
+		//case entity.FileTypeBadanamuAppToWeb:
+		//	materialItem.URL = fmt.Sprintf("%v", mData.Source)
 		default:
 			sourcePath, err := mData.Source.ConvertToPath(ctx)
 			if err != nil {
@@ -516,8 +516,8 @@ func (s *liveTokenModel) convertToLiveMaterial(ctx context.Context, op *entity.O
 			liveMaterial.TypeName = entity.MaterialTypeVideo
 		case entity.FileTypeH5p, entity.FileTypeH5pExtend:
 			liveMaterial.TypeName = entity.MaterialTypeH5P
-		case entity.FileTypeBadanamuAppToWeb:
-			liveMaterial.TypeName = entity.MaterialTypeH5P
+		//case entity.FileTypeBadanamuAppToWeb:
+		//	liveMaterial.TypeName = entity.MaterialTypeH5P
 		case entity.FileTypeDocument:
 			log.Debug(ctx, "content material doc type", log.Any("MaterialData", m))
 			liveMaterial.TypeName = entity.MaterialTypeH5P
@@ -532,8 +532,8 @@ func (s *liveTokenModel) convertToLiveMaterial(ctx context.Context, op *entity.O
 				op.OrgID, material.ID, scheduleID, tokenType)
 		case entity.FileTypeH5p:
 			liveMaterial.URL = fmt.Sprintf("/h5p/play/%v", m.Source)
-		case entity.FileTypeBadanamuAppToWeb:
-			liveMaterial.URL = fmt.Sprintf("%v", m.Source)
+		//case entity.FileTypeBadanamuAppToWeb:
+		//	liveMaterial.URL = fmt.Sprintf("%v", m.Source)
 		default:
 			sourcePath, err := m.Source.ConvertToPath(ctx)
 			if err != nil {
