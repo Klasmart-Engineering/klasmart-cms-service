@@ -457,7 +457,7 @@ func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditVa
 	// 	return constant.ErrInvalidArgs
 	// }
 
-	if strings.TrimSpace(input.Title) == "" {
+	if strings.TrimSpace(input.Title) == "" && !input.IsReview {
 		log.Info(ctx, "schedule title required", log.Any("input", input))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return constant.ErrInvalidArgs
