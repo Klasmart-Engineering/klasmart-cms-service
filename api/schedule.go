@@ -457,8 +457,7 @@ func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditVa
 	// 	return constant.ErrInvalidArgs
 	// }
 
-	// review schedule has no title
-	if strings.TrimSpace(input.Title) == "" && !input.IsReview {
+	if strings.TrimSpace(input.Title) == "" {
 		log.Info(ctx, "schedule title required", log.Any("input", input))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return constant.ErrInvalidArgs

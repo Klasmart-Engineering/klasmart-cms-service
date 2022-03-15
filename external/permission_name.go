@@ -247,7 +247,7 @@ const (
 	ScheduleViewOrgCalendar             PermissionName = "view_org_calendar_511"
 	ScheduleViewSchoolCalendar          PermissionName = "view_school_calendar_512"
 	ScheduleViewMyCalendar              PermissionName = "view_my_calendar_510"
-	ScheduleViewPendingCalendar         PermissionName = "view_pending_calendar_events_514"
+	ScheduleViewPendingCalendar         PermissionName = "view_pending_calendar_events_513"
 	ScheduleCreateEvent                 PermissionName = "create_event_520"
 	ScheduleCreateMyEvent               PermissionName = "create_my_schedule_events_521"
 	ScheduleCreateMySchoolEvent         PermissionName = "create_my_schools_schedule_events_522"
