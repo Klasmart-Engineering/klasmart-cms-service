@@ -42,7 +42,6 @@ type IAssessmentModelV2 interface {
 	AddWhenCreateSchedules(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, req *v2.AssessmentAddWhenCreateSchedulesReq) error
 	Draft(ctx context.Context, op *entity.Operator, req *v2.AssessmentUpdateReq) error
 	Complete(ctx context.Context, op *entity.Operator, req *v2.AssessmentUpdateReq) error
-	DeleteByScheduleIDsTx(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, scheduleIDs []string) error
 
 	Page(ctx context.Context, op *entity.Operator, input *v2.AssessmentQueryReq) (*v2.AssessmentPageReply, error)
 	GetByID(ctx context.Context, op *entity.Operator, id string) (*v2.AssessmentDetailReply, error)
@@ -55,6 +54,8 @@ type IAssessmentModelV2 interface {
 	QueryInternal(ctx context.Context, op *entity.Operator, condition *assessmentV2.AssessmentCondition) ([]*v2.Assessment, error)
 
 	LockAssessmentContentAndOutcome(ctx context.Context, op *entity.Operator, schedule *entity.Schedule) error
+
+	InternalDeleteByScheduleIDsTx(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, scheduleIDs []string) error
 }
 
 func GetAssessmentModelV2() IAssessmentModelV2 {
@@ -517,7 +518,7 @@ func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *
 	}, nil
 }
 
-func (a *assessmentModelV2) DeleteByScheduleIDsTx(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, scheduleIDs []string) error {
+func (a *assessmentModelV2) InternalDeleteByScheduleIDsTx(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, scheduleIDs []string) error {
 	var assessments []*v2.Assessment
 	err := assessmentV2.GetAssessmentDA().Query(ctx, &assessmentV2.AssessmentCondition{
 		ScheduleIDs: entity.NullStrings{
@@ -532,9 +533,9 @@ func (a *assessmentModelV2) DeleteByScheduleIDsTx(ctx context.Context, op *entit
 
 	assessmentIDs := make([]string, len(assessments))
 	for i, item := range assessments {
-		if item.Status != v2.AssessmentStatusNotStarted {
-			return ErrAssessmentNotAllowDelete
-		}
+		//if item.Status != v2.AssessmentStatusNotStarted {
+		//	return ErrAssessmentNotAllowDelete
+		//}
 		assessmentIDs[i] = item.ID
 	}
 

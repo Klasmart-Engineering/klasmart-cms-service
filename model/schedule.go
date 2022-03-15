@@ -1299,7 +1299,7 @@ func (s *scheduleModel) deleteScheduleRelationTx(ctx context.Context, tx *dbo.DB
 	}
 
 	// delete schedule assessment relation error
-	err = GetAssessmentModelV2().DeleteByScheduleIDsTx(ctx, op, tx, scheduleIDs)
+	err = GetAssessmentModelV2().InternalDeleteByScheduleIDsTx(ctx, op, tx, scheduleIDs)
 	if err != nil {
 		log.Error(ctx, "delete schedule assessment relation error",
 			log.Err(err),
