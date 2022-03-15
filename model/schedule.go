@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -3013,7 +3014,7 @@ func (s *scheduleModel) CheckScheduleReviewData(ctx context.Context, op *entity.
 	for _, v := range request.StudentIDs {
 		result.Results = append(result.Results, entity.CheckScheduleReviewDataResult{
 			StudentID: v,
-			Status:    true,
+			Status:    rand.Intn(2) == 1,
 		})
 	}
 	return result, nil
