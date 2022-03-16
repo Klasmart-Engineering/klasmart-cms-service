@@ -1,6 +1,7 @@
 package external
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
@@ -15,8 +16,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-
-	"go.uber.org/zap/buffer"
 )
 
 type ClassServiceProvider interface {
@@ -216,7 +215,7 @@ func (s AmsClassService) QueryByIDs(ctx context.Context, ids []string, options .
 
 	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
 
-	buf := buffer.Buffer{}
+	buf := bytes.Buffer{}
 	err = temp.Execute(&buf, _ids)
 	if err != nil {
 		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))

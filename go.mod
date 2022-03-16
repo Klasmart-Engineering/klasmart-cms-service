@@ -29,7 +29,6 @@ require (
 	gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.15
 	gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20210813055601-f0a5d22461a0
 	go.mongodb.org/mongo-driver v1.8.1
-	go.uber.org/zap v1.20.0
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
@@ -74,6 +73,7 @@ require (
 	github.com/ugorji/go/codec v1.2.2 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
+	go.uber.org/zap v1.20.0 // indirect
 	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
