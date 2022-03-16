@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"strings"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -80,7 +81,7 @@ func (s AmsGradeService) QueryByIDs(ctx context.Context, ids []string, options .
 
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$grade_id_", ": ID!", len(_ids)))
 	for index := range _ids {
-		fmt.Fprintf(sb, "q%d: gradeNode(id: $grade_id_%d) {id name status system}\n", index, index)
+		fmt.Fprintf(sb, "q%d: grade(id: $grade_id_%d) {id name status system}\n", index, index)
 	}
 	sb.WriteString("}")
 
@@ -157,7 +158,6 @@ func (s AmsGradeService) BatchGetNameMap(ctx context.Context, operator *entity.O
 func (s AmsGradeService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Grade, error) {
 	condition := NewCondition(options...)
 
-	// TODO: replace by gradeConnection
 	request := chlorine.NewRequest(`
 	query($program_id: ID!) {
 		program(id: $program_id) {
@@ -232,7 +232,6 @@ func (s AmsGradeService) GetByProgram(ctx context.Context, operator *entity.Oper
 func (s AmsGradeService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Grade, error) {
 	condition := NewCondition(options...)
 
-	// TODO: replace by gradeConnection
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {

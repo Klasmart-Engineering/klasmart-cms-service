@@ -21,6 +21,7 @@ import (
 
 type SchoolServiceProvider interface {
 	cache.IDataSource
+	Get(ctx context.Context, operator *entity.Operator, id string) (*School, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableSchool, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableSchool, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -72,6 +73,19 @@ type AmsSchoolService struct {
 	BaseCacheKey kl2cache.KeyByStrings
 }
 
+func (s AmsSchoolService) Get(ctx context.Context, operator *entity.Operator, id string) (*School, error) {
+	schools, err := s.BatchGet(ctx, operator, []string{id})
+	if err != nil {
+		return nil, err
+	}
+
+	if schools[0].School == nil || !schools[0].Valid {
+		return nil, constant.ErrRecordNotFound
+	}
+
+	return schools[0].School, nil
+}
+
 func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableSchool, error) {
 	if len(ids) == 0 {
 		return []*NullableSchool{}, nil
@@ -100,7 +114,7 @@ func (s AmsSchoolService) QueryByIDs(ctx context.Context, ids []string, options 
 
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$school_id_", ": ID!", len(_ids)))
 	for index := range _ids {
-		fmt.Fprintf(sb, "q%d: schoolNode(id: $school_id_%d) {id name status}\n", index, index)
+		fmt.Fprintf(sb, "q%d: school(school_id: $school_id_%d) {id:school_id name:school_name status}\n", index, index)
 	}
 	sb.WriteString("}")
 
@@ -174,6 +188,7 @@ func (s AmsSchoolService) BatchGetNameMap(ctx context.Context, operator *entity.
 	return dict, nil
 }
 
+//TODO:Test failed
 func (s AmsSchoolService) GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string, options ...APOption) (map[string][]*School, error) {
 	_classIDs := utils.SliceDeduplicationExcludeEmpty(classIDs)
 
@@ -200,7 +215,6 @@ func (s AmsSchoolService) GetByClasses(ctx context.Context, operator *entity.Ope
 			}
 			pageClassIDs := _classIDs[start:end]
 
-			// TODO: replace by schoolConnection
 			sb := new(strings.Builder)
 			fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$class_id_", ": ID!", len(pageClassIDs)))
 			for index := range pageClassIDs {
@@ -279,8 +293,6 @@ func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, operator *ent
 		"GetByOrganizationID",
 		operator.UserID,
 		organizationID)
-
-	// TODO: replace by schoolConnection
 	fGetData := func(ctx context.Context, key kl2cache.Key) (val interface{}, err error) {
 		request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
@@ -443,8 +455,6 @@ func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Op
 		"GetByOperator",
 		operator.OrgID,
 		operator.UserID)
-
-	// TODO: replace by schoolConnection
 	fGetData := func(ctx context.Context, key kl2cache.Key) (val interface{}, err error) {
 		request := chlorine.NewRequest(`
 	query($user_id: ID!) {
@@ -557,7 +567,6 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 
 			sb := new(strings.Builder)
 
-			// TODO: replace by schoolConnection
 			fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$user_id_", ": ID!", len(pageUserIDs)))
 			for index := range pageUserIDs {
 				fmt.Fprintf(sb, `q%d: user(user_id: $user_id_%d) {school_memberships {school {school_id school_name status organization {organization_id}}}}`, index, index)

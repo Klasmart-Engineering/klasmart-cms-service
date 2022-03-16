@@ -8,14 +8,16 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/go-redis/redis"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+	"gitlab.badanamu.com.cn/calmisland/ro"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/ro"
 )
 
 var (
@@ -110,6 +112,7 @@ func initOperator(orgID string, authTo string, authCode string) *entity.Operator
 func TestMain(m *testing.M) {
 	config.Set(&config.Config{
 		AMS: config.AMSConfig{
+			//EndPoint: "https://api.beta.kidsloop.net/user/",
 			EndPoint: "https://api.alpha.kidsloop.net/user/",
 		},
 		H5P: config.H5PServiceConfig{
@@ -141,4 +144,9 @@ func initQuerier(ctx context.Context) {
 	engine.AddDataSource(ctx, GetClassServiceProvider())
 	engine.AddDataSource(ctx, GetCategoryServiceProvider())
 	engine.AddDataSource(ctx, GetAgeServiceProvider())
+}
+
+func TestRegexp(t *testing.T) {
+	r, _ := regexp.Compile("(\\S+=\\S+;)*access=\\S+(;\\S+=\\S+)*")
+	t.Log(r.MatchString("abc=;access=123"))
 }

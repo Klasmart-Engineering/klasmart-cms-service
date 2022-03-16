@@ -7,9 +7,11 @@ import (
 	"strings"
 	"text/template"
 
-	"gitlab.badanamu.com.cn/calmisland/chlorine"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+
+	"gitlab.badanamu.com.cn/calmisland/chlorine"
+	cl "gitlab.badanamu.com.cn/calmisland/chlorine"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
@@ -23,6 +25,7 @@ type OrganizationServiceProvider interface {
 	GetNameByOrganizationOrSchool(ctx context.Context, operator *entity.Operator, id []string) ([]string, error)
 	GetNameMapByOrganizationOrSchool(ctx context.Context, operator *entity.Operator, id []string) (map[string]string, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName, options ...APOption) ([]*Organization, error)
+	GetByUserID(ctx context.Context, operator *entity.Operator, id string, options ...APOption) ([]*Organization, error)
 }
 
 type Organization struct {
@@ -73,38 +76,52 @@ func (s AmsOrganizationService) QueryByIDs(ctx context.Context, ids []string, op
 		return nil, err
 	}
 
-	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+	q := `query orgs($orgIDs: [ID!]){
+	organizations(organization_ids: $orgIDs){
+    	id: organization_id
+    	name: organization_name
+		status
+  	}
+}`
 
-	sb := new(strings.Builder)
+	_ids := utils.SliceDeduplication(ids)
 
-	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$org_id_", ": ID!", len(_ids)))
-	for index := range _ids {
-		fmt.Fprintf(sb, "q%d: organizationNode(id: $org_id_%d) {id name status}\n", index, index)
-	}
-	sb.WriteString("}")
+	req := cl.NewRequest(q, chlorine.ReqToken(operator.Token))
+	req.Var("orgIDs", _ids)
 
-	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
-	for index, id := range _ids {
-		request.Var(fmt.Sprintf("org_id_%d", index), id)
-	}
+	data := struct {
+		Organizations []*Organization `json:"organizations"`
+	}{}
 
-	data := map[string]*Organization{}
-	response := &chlorine.Response{
+	res := &chlorine.Response{
 		Data: &data,
 	}
 
-	_, err = GetAmsClient().Run(ctx, request, response)
+	_, err = GetAmsClient().Run(ctx, req, res)
 	if err != nil {
-		log.Error(ctx, "get organizations by ids failed",
-			log.Err(err),
-			log.Strings("ids", ids))
+		log.Error(ctx, "Run error", log.String("q", q), log.Any("res", res), log.Err(err))
 		return nil, err
+	}
+	if len(res.Errors) > 0 {
+		log.Error(ctx, "Res error", log.String("q", q), log.Any("res", res), log.Err(res.Errors))
+		return nil, res.Errors
+	}
+
+	// user service返回的结果会是乱序的，不会按照index顺序
+	// The results of querying user service may be out of order
+	organizations := make(map[string]*Organization, len(data.Organizations))
+	for _, organization := range data.Organizations {
+		if organization == nil {
+			continue
+		}
+
+		organizations[organization.ID] = organization
 	}
 
 	nullableOrganizations := make([]cache.Object, len(ids))
-	for index := range ids {
-		organization := data[fmt.Sprintf("q%d", indexMapping[index])]
-		if organization == nil {
+	for index, id := range ids {
+		organization, found := organizations[id]
+		if !found {
 			nullableOrganizations[index] = &NullableOrganization{
 				StrID: ids[index],
 				Valid: false,
@@ -172,7 +189,6 @@ func (s AmsOrganizationService) GetByClasses(ctx context.Context, operator *enti
 
 	sb := new(strings.Builder)
 
-	// TODO: replace by organizationConnection
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$class_id_", ": ID!", len(_classIDs)))
 	for index := range _classIDs {
 		fmt.Fprintf(sb, `q%d: class(class_id: $class_id_%d) {organization{id:organization_id name:organization_name status}}`, index, index)
@@ -239,14 +255,14 @@ func (s AmsOrganizationService) GetNameByOrganizationOrSchool(ctx context.Contex
 
 	raw := `query{
 	{{range $i, $e := .}}
-	org_{{$i}}: organizationNode(id: "{{$e}}"){
-		id
-    	name
+	org_{{$i}}: organization(organization_id: "{{$e}}"){
+		id: organization_id
+    	name: organization_name
 		status
   	}
-	sch_{{$i}}: schoolNode(id: "{{$e}}"){
-		id
-    	name
+	sch_{{$i}}: school(school_id: "{{$e}}"){
+		id: school_id
+    	name: school_name
 		status
   	}
 	{{end}}
@@ -278,7 +294,10 @@ func (s AmsOrganizationService) GetNameByOrganizationOrSchool(ctx context.Contex
 		log.Error(ctx, "Run error", log.String("q", buf.String()), log.Any("res", res), log.Err(err))
 		return nil, err
 	}
-
+	if len(res.Errors) > 0 {
+		log.Error(ctx, "Res error", log.String("q", buf.String()), log.Any("res", res), log.Err(res.Errors))
+		return nil, res.Errors
+	}
 	nameList := make([]string, len(ids))
 	for i := range ids {
 		orgKey := fmt.Sprintf("org_%d", indexMapping[i])
@@ -315,7 +334,6 @@ func (s AmsOrganizationService) GetNameMapByOrganizationOrSchool(ctx context.Con
 func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName, options ...APOption) ([]*Organization, error) {
 	condition := NewCondition(options...)
 
-	// TODO: replace by organizationConnection
 	request := chlorine.NewRequest(`
 	query(
 		$user_id: ID!
@@ -382,6 +400,70 @@ func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *e
 	log.Info(ctx, "get orgs by permission success",
 		log.Any("operator", operator),
 		log.String("permissionName", permissionName.String()),
+		log.Any("orgs", orgs))
+
+	return orgs, nil
+}
+
+func (s AmsOrganizationService) GetByUserID(ctx context.Context, operator *entity.Operator, id string, options ...APOption) ([]*Organization, error) {
+	condition := NewCondition(options...)
+
+	request := chlorine.NewRequest(`
+	query($user_id: ID!) {
+		user(user_id: $user_id) {
+			memberships{
+				organization{
+					id:organization_id
+					name:organization_name
+					status
+				}
+			}
+		}
+	}`, chlorine.ReqToken(operator.Token))
+	request.Var("user_id", id)
+
+	data := &struct {
+		User struct {
+			Memberships []struct {
+				Organization Organization `json:"organization"`
+			} `json:"memberships"`
+		} `json:"user"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetAmsClient().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get orgs by user failed",
+			log.Err(err),
+			log.String("userID", id))
+		return nil, err
+	}
+
+	orgs := make([]*Organization, 0)
+	for _, membership := range data.User.Memberships {
+		if condition.Status.Valid {
+			if condition.Status.Status != membership.Organization.Status {
+				continue
+			}
+		} else {
+			// only status = "Active" data is returned by default
+			if membership.Organization.Status != Active {
+				continue
+			}
+		}
+
+		orgs = append(orgs, &Organization{
+			ID:     membership.Organization.ID,
+			Name:   membership.Organization.Name,
+			Status: membership.Organization.Status,
+		})
+	}
+
+	log.Info(ctx, "get orgs by user success",
+		log.String("userID", id),
 		log.Any("orgs", orgs))
 
 	return orgs, nil
