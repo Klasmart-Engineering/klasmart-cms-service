@@ -577,7 +577,7 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if c.SuccessReviewStudentID.Valid {
-		sql := fmt.Sprintf("not exists(select 1 from %s where %s.is_review = 1 and %s.schedule_id = %s.id and %s.student_id = ? and %s.review_status = ?)",
+		sql := fmt.Sprintf("not exists(select 1 from %s where %s.is_review = 1 and %s.schedule_id = %s.id and %s.student_id = ? and %s.review_status != ?)",
 			constant.TableNameScheduleReview, constant.TableNameSchedule, constant.TableNameScheduleReview, constant.TableNameSchedule, constant.TableNameScheduleReview, constant.TableNameScheduleReview)
 		wheres = append(wheres, sql)
 		params = append(params, c.SuccessReviewStudentID.String, entity.ScheduleReviewStatusSuccess)

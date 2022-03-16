@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -213,7 +214,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 
 	// TODO assessment not support review
 	var assessmentAddReq *v2.AssessmentAddWhenCreateSchedulesReq
-	if viewData.ClassType != entity.ScheduleClassTypeTask ||
+	if viewData.ClassType != entity.ScheduleClassTypeTask &&
 		!viewData.IsReview {
 		assessmentAddReq, err = s.getAssessmentAddWhenCreateSchedulesReq(ctx, op, schedule, scheduleList, relations, className)
 		if err != nil {
@@ -238,7 +239,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 			return nil, err
 		}
 
-		if schedule.ClassType != entity.ScheduleClassTypeTask ||
+		if schedule.ClassType != entity.ScheduleClassTypeTask &&
 			!schedule.IsReview {
 			log.Debug(ctx, "start add assessment", log.Any("assessmentAddReq", assessmentAddReq))
 			err = GetAssessmentModelV2().AddWhenCreateSchedules(ctx, tx, op, assessmentAddReq)
@@ -3013,7 +3014,7 @@ func (s *scheduleModel) CheckScheduleReviewData(ctx context.Context, op *entity.
 	for _, v := range request.StudentIDs {
 		result.Results = append(result.Results, entity.CheckScheduleReviewDataResult{
 			StudentID: v,
-			Status:    true,
+			Status:    rand.Intn(2) == 1,
 		})
 	}
 	return result, nil

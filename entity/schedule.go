@@ -873,7 +873,7 @@ type ScheduleViewDetail struct {
 	ContentStartAt             int64                `json:"content_start_at"`
 	ContentEndAt               int64                `json:"content_end_at"`
 	PersonalizedReviewStudents []*ScheduleShortInfo `json:"personalized_review_students"`
-	RandomReviewStudents       []*ScheduleShortInfo `json:"personalized_review_students"`
+	RandomReviewStudents       []*ScheduleShortInfo `json:"random_review_students"`
 	RoleType                   ScheduleRoleType     `json:"role_type" enums:"Student,Teacher,Unknown"`
 	ExistFeedback              bool                 `json:"exist_feedback"`
 	LessonPlan                 *ScheduleLessonPlan  `json:"lesson_plan"`
