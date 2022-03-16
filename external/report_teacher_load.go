@@ -1,9 +1,12 @@
 package external
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"net/http"
 	"sync"
+	"text/template"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -13,6 +16,7 @@ import (
 )
 
 type TeacherLoadServiceProvider interface {
+	BatchGetClassWithStudent(ctx context.Context, operator *entity.Operator, teacherIDs []string) (map[string]*TeacherClassWithStudent, error)
 	BatchGetActiveClassWithStudent(ctx context.Context, operator *entity.Operator, teacherIDs []string) (map[string]*TeacherClassWithStudent, error)
 }
 
@@ -29,6 +33,70 @@ func GetTeacherLoadServiceProvider() TeacherLoadServiceProvider {
 	})
 
 	return _amsTeacherLoadService
+}
+
+func (t *AmsTeacherLoadService) BatchGetClassWithStudent(ctx context.Context, operator *entity.Operator, teacherIDs []string) (map[string]*TeacherClassWithStudent, error) {
+	ids := utils.SliceDeduplicationExcludeEmpty(teacherIDs)
+	if len(ids) == 0 {
+		return map[string]*TeacherClassWithStudent{}, nil
+	}
+
+	query := `
+query {
+	{{range $i, $e := .}}
+	q{{$i}}: user(user_id: "{{$e}}") {
+		user_id
+		classesTeaching {
+			class_id
+			students{
+				user_id
+			}
+		}
+	}
+	{{end}}
+}`
+
+	temp, err := template.New("").Parse(query)
+	if err != nil {
+		log.Error(ctx, "BatchGetClassWithStudent: init template failed", log.Err(err))
+		return nil, err
+	}
+	buffer := new(bytes.Buffer)
+	err = temp.Execute(buffer, ids)
+	if err != nil {
+		log.Error(ctx, "BatchGetClassWithStudent: execute template failed", log.Err(err), log.Strings("teacher_ids", ids))
+		return nil, err
+	}
+
+	request := chlorine.NewRequest(buffer.String(), chlorine.ReqToken(operator.Token))
+	data := map[string]*TeacherClassWithStudent{}
+	response := &chlorine.Response{
+		Data: &data,
+	}
+
+	statusCode, err := GetAmsClient().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "BatchGetClassWithStudent: run failed", log.Err(err), log.Strings("teacher_ids", ids))
+		return nil, err
+	}
+	if statusCode != http.StatusOK {
+		err = &entity.ExternalError{
+			Err:  errors.New("response data contains err"),
+			Type: constant.InternalErrorTypeAms,
+		}
+		log.Error(ctx, "BatchGetClassWithStudent: run failed", log.Int("status_code", statusCode), log.Err(err), log.Strings("teacher_ids", ids))
+		return nil, err
+	}
+	result := make(map[string]*TeacherClassWithStudent, len(data))
+	for i, v := range data {
+		log.Debug(ctx, "BatchGetClassWithStudent: extract result",
+			log.String("index", i),
+			log.Any("data", v))
+		if v != nil {
+			result[v.UserID] = v
+		}
+	}
+	return result, nil
 }
 
 type UserFilter struct {

@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"strings"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -80,7 +81,7 @@ func (s AmsSubCategoryService) QueryByIDs(ctx context.Context, ids []string, opt
 
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$subcategory_id_", ": ID!", len(_ids)))
 	for index := range _ids {
-		fmt.Fprintf(sb, "q%d: subcategoryNode(id: $subcategory_id_%d) {id name status system}\n", index, index)
+		fmt.Fprintf(sb, "q%d: subcategory(id: $subcategory_id_%d) {id name status system}\n", index, index)
 	}
 	sb.WriteString("}")
 

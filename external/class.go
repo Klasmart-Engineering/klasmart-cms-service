@@ -1,19 +1,22 @@
 package external
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"strings"
 	"sync"
 	"text/template"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+
+	"go.uber.org/zap/buffer"
 )
 
 type ClassServiceProvider interface {
@@ -194,10 +197,14 @@ func (s AmsClassService) QueryByIDs(ctx context.Context, ids []string, options .
 
 	raw := `query{
 	{{range $i, $e := .}}
-	index_{{$i}}: classNode(id: "{{$e}}"){
-		id
-    	name
+	index_{{$i}}: class(class_id: "{{$e}}"){
+		id: class_id
+    	name: class_name
 		status
+		students{
+			id: user_id
+			name: user_name			
+		}
   	}
 	{{end}}
 }`
@@ -209,7 +216,7 @@ func (s AmsClassService) QueryByIDs(ctx context.Context, ids []string, options .
 
 	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
 
-	buf := bytes.Buffer{}
+	buf := buffer.Buffer{}
 	err = temp.Execute(&buf, _ids)
 	if err != nil {
 		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
@@ -322,7 +329,6 @@ func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Oper
 			}
 			pageUserIDs := _userIDs[start:end]
 
-			// TODO: replace by classConnection
 			sb := new(strings.Builder)
 			fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$user_id_", ": ID!", len(pageUserIDs)))
 			for index := range pageUserIDs {
@@ -418,7 +424,6 @@ func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, operator *ent
 
 	sb := new(strings.Builder)
 
-	// TODO: replace by classConnection
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$organization_id_", ": ID!", len(_organizationIDs)))
 	for index := range _organizationIDs {
 		fmt.Fprintf(sb, "q%d: organization(organization_id: $organization_id_%d) {classes{id: class_id name: class_name status}}\n", index, index)
@@ -487,8 +492,8 @@ func (s AmsClassService) GetBySchoolIDs(ctx context.Context, operator *entity.Op
 
 	_schoolIDs, indexMapping := utils.SliceDeduplicationMap(schoolIDs)
 
-	// TODO: replace by classConnection
 	sb := new(strings.Builder)
+
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$school_id_", ": ID!", len(_schoolIDs)))
 	for index := range _schoolIDs {
 		fmt.Fprintf(sb, "q%d: school(school_id: $school_id_%d) {classes{id: class_id name: class_name status}}\n", index, index)

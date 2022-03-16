@@ -78,7 +78,7 @@ func (s AmsAgeService) QueryByIDs(ctx context.Context, ids []string, options ...
 	sb := new(strings.Builder)
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$age_id_", ": ID!", len(_ids)))
 	for index := range _ids {
-		fmt.Fprintf(sb, "q%d: ageRangeNode(id: $age_id_%d) {id name status system}\n", index, index)
+		fmt.Fprintf(sb, "q%d: age_range(id: $age_id_%d) {id name status system}\n", index, index)
 	}
 	sb.WriteString("}")
 
@@ -156,7 +156,6 @@ func (s AmsAgeService) BatchGetNameMap(ctx context.Context, operator *entity.Ope
 func (s AmsAgeService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Age, error) {
 	condition := NewCondition(options...)
 
-	// TODO: replace by ageRangeConnection
 	request := chlorine.NewRequest(`
 	query($program_id: ID!) {
 		program(id: $program_id) {
@@ -231,7 +230,6 @@ func (s AmsAgeService) GetByProgram(ctx context.Context, operator *entity.Operat
 func (s AmsAgeService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Age, error) {
 	condition := NewCondition(options...)
 
-	// TODO: replace by ageRangeConnection
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {

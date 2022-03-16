@@ -3,10 +3,11 @@ package external
 import (
 	"context"
 	"testing"
+	"time"
 )
 
 func TestAmsCategoryService_BatchGet(t *testing.T) {
-	ids := []string{"64e000aa-4a2c-4e2e-9d8d-f779e97bdd73", "64e000aa-4a2c-4e2e-9d8d-f779e97bdd73"}
+	ids := []string{"84b8f87a-7b61-4580-a190-a9ce3fe90dd3", "2d5ea951-836c-471e-996e-76823a992689"}
 	categories, err := GetCategoryServiceProvider().BatchGet(context.TODO(), testOperator, ids)
 	if err != nil {
 		t.Errorf("GetCategoryServiceProvider.BatchGet() error = %v", err)
@@ -24,6 +25,7 @@ func TestAmsCategoryService_BatchGet(t *testing.T) {
 			return
 		}
 	}
+	time.Sleep(time.Second)
 }
 
 func TestAmsCategoryService_GetByProgram(t *testing.T) {
