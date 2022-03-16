@@ -666,6 +666,7 @@ func (adc *AssessmentDetailComponent) MatchContentsContainsRoomInfo() error {
 			contentReplyItem.H5PID = roomContentItem.H5PID
 			contentReplyItem.MaxScore = roomContentItem.MaxScore
 			contentReplyItem.RoomProvideContentID = roomContentItem.ID
+			contentReplyItem.H5PSubID = roomContentItem.SubContentID
 
 			if roomContentItem.FileType == external.FileTypeH5P {
 				if canScoringMap[roomContentItem.SubContentType] {
@@ -960,6 +961,7 @@ func (adc *AssessmentDetailComponent) appendContent(roomContent *RoomContent, ma
 		MaxScore:             roomContent.MaxScore,
 		H5PID:                roomContent.H5PID,
 		RoomProvideContentID: roomContent.ID,
+		H5PSubID:             roomContent.SubContentID,
 		//LatestID:       materialItem.LatestID,
 	}
 
