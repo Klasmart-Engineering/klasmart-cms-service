@@ -254,12 +254,12 @@ fragment scoresByUser on Room {
 	}
 
 	if len(response.Errors) > 0 {
-		log.Error(ctx, "get room scores failed",
+		log.Warn(ctx, "get room scores failed",
 			log.Err(response.Errors),
 			log.Any("operator", operator),
 			log.String("query", buffer.String()),
 			log.Strings("roomIDs", roomIDs))
-		return nil, response.Errors
+		//return nil, response.Errors
 	}
 
 	for _, studentScores := range data {

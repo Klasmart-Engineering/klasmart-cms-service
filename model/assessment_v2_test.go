@@ -18,8 +18,8 @@ func TestAssessmentModel_GetByID(t *testing.T) {
 		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 		Token:  "",
 	}
-	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ2NTNmODgwLWI5MjAtNDM1Zi04ZjJkLTk4YjVkNDYyMWViOCIsImVtYWlsIjoic2Nob29sXzAzMDMyOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0NjI4NTg5NiwiaXNzIjoia2lkc2xvb3AifQ.D1pgyNLU2AZoRfFovvTYw3_bnBnq3EBaKXsxvIGhVsUAcK9PPNcz9zjuLc9ExHMaYqqmR-JF82La4DxETdkZlFcHMt-uww4gpprMe1bFNf0Sl2XXCDBY-XVclHOWyeRAWGrUjg4HWtu-DZRHFerD6E_cCgzVAtFmnvyoM22lIe-hV3PjV_8_DjlDEbSDNrsvG81lSUz4eTpufdlJ0oikkRP5zQ2FwQgeZm5H2UTBc5_QZzi-EPHumjHqo5NrBxkrDcgxGbcsR1n_Q0gr9z-WLKao7r4bdu8r4Acxf8Vm_bxz-8lL9pHB7iUydoqFl9ZXowfGT9wPZhOUJEVBakb7Yw"
-	result, err := GetAssessmentModelV2().GetByID(ctx, op, "61ca7d4ca14cf9fbc9acf911")
+	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0NzQxNjE3OSwiaXNzIjoia2lkc2xvb3AifQ.XIIRTlyHUTnX4DkBjunldeIi7uXr6xCrdB1iZH8t2GczfXQnRquUrnJeDMlgUEoibKFCoVT1K0yO1OmwIcYlpdZXC1nlAExqZXsmlx0DP3f2eraEuClylwwd589wLkOuCE3jHKACVUiHFvQqsp8FgjrJM5drtQ6RIwzAxy42aHynSNYKUGABzeTAabBEec_8cT9oBpG8yUauu3F_PNH2kaK_Yc7OmHiB09MJbQmXEH-U1iIPwz3SMywUA5IqM8WxOLNsPY78jD4T8HSlvuGlWm-vnIUZEFibVUY5t9DwOUZQ7LxiUGtlrEo_TihuAbB93yJZlAvz-b68L_3ibki2tg"
+	result, err := GetAssessmentModelV2().GetByID(ctx, op, "623168807b41e967998394bd")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func TestAssessmentModel_DeleteByScheduleIDs(t *testing.T) {
 		UserID: "17a28338-3b88-4bac-ab15-cce3887af357", //"c57ef68d-a635-451d-b997-aebc3c29b99a",
 		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 	}
-	err := GetAssessmentModelV2().DeleteByScheduleIDsTx(ctx, op, dbo.MustGetDB(ctx), []string{"6099c496e05f6e940027387c"})
+	err := GetAssessmentModelV2().InternalDeleteByScheduleIDsTx(ctx, op, dbo.MustGetDB(ctx), []string{"6099c496e05f6e940027387c"})
 	if err != nil {
 		t.Fatal(err)
 	}
