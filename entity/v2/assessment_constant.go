@@ -92,6 +92,16 @@ func (a AssessmentType) String() string {
 	return string(a)
 }
 
+func (a AssessmentType) Valid(ctx context.Context) bool {
+	switch a {
+	case AssessmentTypeOfflineClass, AssessmentTypeOnlineClass, AssessmentTypeOfflineStudy, AssessmentTypeOnlineStudy:
+		return true
+	default:
+		log.Warn(ctx, "assessment type is invalid", log.String("AssessmentType", a.String()))
+		return false
+	}
+}
+
 type GenerateAssessmentTitleInput struct {
 	ClassName    string
 	ScheduleName string
@@ -120,12 +130,23 @@ func (a AssessmentType) Title(ctx context.Context, input GenerateAssessmentTitle
 	return title, nil
 }
 
-func GetAssessmentTypeByScheduleType(ctx context.Context, scheduleType entity.ScheduleClassType, isHomeFun bool) (AssessmentType, error) {
+type GetAssessmentTypeByScheduleTypeInput struct {
+	ScheduleType entity.ScheduleClassType
+	IsHomeFun    bool
+	IsReview     bool
+}
+
+func GetAssessmentTypeByScheduleType(ctx context.Context, input GetAssessmentTypeByScheduleTypeInput) (AssessmentType, error) {
+	if input.IsReview {
+		log.Warn(ctx, "not support this schedule type", log.Any("input", input))
+		return "", constant.ErrInvalidArgs
+	}
+
 	var result AssessmentType
 
-	switch scheduleType {
+	switch input.ScheduleType {
 	case entity.ScheduleClassTypeHomework:
-		if isHomeFun {
+		if input.IsHomeFun {
 			result = AssessmentTypeOfflineStudy
 		} else {
 			result = AssessmentTypeOnlineStudy
@@ -135,7 +156,7 @@ func GetAssessmentTypeByScheduleType(ctx context.Context, scheduleType entity.Sc
 	case entity.ScheduleClassTypeOnlineClass:
 		result = AssessmentTypeOnlineClass
 	default:
-		log.Error(ctx, "ConvertScheduleTypeToAssessmentType error", log.String("scheduleType", scheduleType.String()), log.Bool("isHomeFun", isHomeFun))
+		log.Warn(ctx, "ConvertScheduleTypeToAssessmentType error", log.Any("input", input))
 		return "", constant.ErrInvalidArgs
 	}
 
@@ -198,6 +219,18 @@ func (a UserResultProcessStatus) Valid() bool {
 	}
 
 	return false
+}
+
+func (a UserResultProcessStatus) Compliant(ctx context.Context) string {
+	switch a {
+	case UserResultProcessStatusStarted, UserResultProcessStatusDraft:
+		return "in_progress"
+	case UserResultProcessStatusComplete:
+		return "complete"
+	default:
+		log.Warn(ctx, "status is invalid", log.Any("UserResultProcessStatus", a))
+		return ""
+	}
 }
 
 type AssessmentUserType string

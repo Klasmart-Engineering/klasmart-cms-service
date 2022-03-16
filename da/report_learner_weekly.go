@@ -12,27 +12,30 @@ import (
 )
 
 type ILearnerWeekly interface {
-	GetLearnerWeeklyReportOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, cond entity.GetUserCountCondition) (res entity.LearnerWeeklyReportOverview, err error)
+	GetLearnerWeeklyReportOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, cond entity.GetUserCountCondition) (res entity.LearnerReportOverview, err error)
 }
 
-func (r *ReportDA) GetLearnerWeeklyReportOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, cond entity.GetUserCountCondition) (res entity.LearnerWeeklyReportOverview, err error) {
+func (r *ReportDA) GetLearnerWeeklyReportOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, cond entity.GetUserCountCondition) (res entity.LearnerReportOverview, err error) {
 	sqlSchedule := strings.Builder{}
 	sqlSchedule.WriteString(`
-select id from schedules s 
-where s.class_type in (?) 
-and s.end_at >= ? and s.end_at <?
-and s.org_id = ?
+	select id from schedules s 
+	where ((s.class_type=? and s.end_at >= ? and s.end_at <?) or (s.class_type=? and s.created_at >= ? and s.created_at <?))
+	and s.org_id = ?
 `)
-	var argsSchedule []interface{}
-	argsSchedule = append(argsSchedule, []interface{}{
-		entity.ScheduleClassTypeOnlineClass,
-		entity.ScheduleClassTypeHomework,
-	})
 	start, end, err := tr.Value(ctx)
 	if err != nil {
 		return
 	}
-	argsSchedule = append(argsSchedule, start, end, op.OrgID)
+	argsSchedule := []interface{}{
+		entity.ScheduleClassTypeOnlineClass,
+		start,
+		end,
+		entity.ScheduleClassTypeHomework,
+		start,
+		end,
+		op.OrgID,
+	}
+
 	if cond.SchoolIDs.Valid {
 		sqlSchedule.WriteString(`
 and EXISTS (
@@ -125,7 +128,7 @@ group by user_id
 		return
 	}
 	if len(*ret) == 0 {
-		res.Status = constant.LearnerWeeklyReportOverviewStatusNoData
+		res.Status = constant.LearnerReportOverviewStatusNoData
 		return
 	}
 	m := map[string][]float64{}

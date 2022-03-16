@@ -80,6 +80,10 @@ func (s *Server) addStudentUsageRecordEvent(c *gin.Context) {
 		err = constant.ErrInvalidArgs
 		return
 	}
+	if len(req.Students) <= 0 {
+		log.Warn(ctx, "students is required", log.Any("req", req))
+		err = constant.ErrInvalidArgs
+	}
 
 	err = model.GetReportModel().AddStudentUsageRecordTx(ctx, dbo.MustGetDB(ctx), op, &req.StudentUsageRecord)
 	if err != nil {

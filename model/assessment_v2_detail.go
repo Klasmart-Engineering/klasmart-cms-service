@@ -85,7 +85,7 @@ func (adc *AssessmentDetailComponent) isNeedConvertLatestContent() (bool, error)
 		return false, constant.ErrRecordNotFound
 	}
 
-	if adc.assessment.MigrateFlag == constant.AssessmentHistoryFlag || !schedule.IsLockedLessonPlan() {
+	if (adc.assessment.MigrateFlag == constant.AssessmentHistoryFlag && adc.assessment.Status != v2.AssessmentStatusNotStarted) || !schedule.IsLockedLessonPlan() {
 		log.Info(ctx, "assessment belongs to the migration or schedule can not locked lessPlan", log.Any("assessment", adc.assessment))
 		return true, nil
 	}
@@ -128,7 +128,7 @@ func (adc *AssessmentDetailComponent) getContentOutcomeIDsMap(contentIDs []strin
 
 	contentIDs = utils.SliceDeduplication(contentIDs)
 
-	contents, err := GetContentModel().GetContentNameByIDListInternal(ctx, dbo.MustGetDB(ctx), contentIDs)
+	contents, err := GetContentModel().GetContentByIDListInternal(ctx, dbo.MustGetDB(ctx), contentIDs)
 	if err != nil {
 		log.Error(ctx, "toViews: GetContentModel().GetContentByIDList: get failed",
 			log.Err(err),
@@ -145,6 +145,8 @@ func (adc *AssessmentDetailComponent) getContentOutcomeIDsMap(contentIDs []strin
 }
 
 func (adc *AssessmentDetailComponent) getScheduleLockedContents(schedule *entity.Schedule) error {
+	ctx := adc.ctx
+
 	contentIDs := make([]string, 0)
 	contentIDs = append(contentIDs, schedule.LiveLessonPlan.LessonPlanID)
 	for _, materialItem := range schedule.LiveLessonPlan.LessonMaterials {
@@ -156,7 +158,15 @@ func (adc *AssessmentDetailComponent) getScheduleLockedContents(schedule *entity
 		return err
 	}
 
-	latestContentIDMap, err := adc.apc.GetLatestContentIDMapByIDList(contentIDs)
+	contentInfos, err := GetContentModel().GetContentByIDListInternal(ctx, dbo.MustGetDB(ctx), contentIDs)
+	if err != nil {
+		return err
+	}
+
+	contentInfoMap := make(map[string]*entity.ContentInfoInternal, len(contentInfos))
+	for _, item := range contentInfos {
+		contentInfoMap[item.ID] = item
+	}
 
 	liveLessonPlan := schedule.LiveLessonPlan
 
@@ -165,7 +175,10 @@ func (adc *AssessmentDetailComponent) getScheduleLockedContents(schedule *entity
 		Name:        liveLessonPlan.LessonPlanName,
 		ContentType: v2.AssessmentContentTypeLessonPlan,
 		OutcomeIDs:  contentOutcomeIDsMap[liveLessonPlan.LessonPlanID],
-		LatestID:    latestContentIDMap[liveLessonPlan.LessonPlanID],
+	}
+	if contentItem, ok := contentInfoMap[liveLessonPlan.LessonPlanID]; ok {
+		lessPlan.LatestID = contentItem.LatestID
+		lessPlan.FileType = contentItem.FileType
 	}
 
 	adc.contentMapFromSchedule[liveLessonPlan.LessonPlanID] = lessPlan
@@ -177,8 +190,12 @@ func (adc *AssessmentDetailComponent) getScheduleLockedContents(schedule *entity
 			Name:        item.LessonMaterialName,
 			ContentType: v2.AssessmentContentTypeLessonMaterial,
 			OutcomeIDs:  contentOutcomeIDsMap[item.LessonMaterialID],
-			LatestID:    latestContentIDMap[item.LessonMaterialID],
 		}
+		if contentItem, ok := contentInfoMap[item.LessonMaterialID]; ok {
+			materialItem.LatestID = contentItem.LatestID
+			materialItem.FileType = contentItem.FileType
+		}
+
 		adc.contentMapFromSchedule[liveLessonPlan.LessonPlanID] = materialItem
 		adc.contentsFromSchedule = append(adc.contentsFromSchedule, materialItem)
 	}
@@ -202,15 +219,17 @@ func (adc *AssessmentDetailComponent) getLatestContents(schedule *entity.Schedul
 	ctx := adc.ctx
 	op := adc.op
 
-	latestLessPlanIDs, err := GetContentModel().GetLatestContentIDByIDListInternal(ctx, dbo.MustGetDB(ctx), []string{schedule.LessonPlanID})
+	latestLessPlanIDMap, err := GetContentModel().GetLatestContentIDMapByIDListInternal(ctx, dbo.MustGetDB(ctx), []string{schedule.LessonPlanID})
 	if err != nil {
 		return err
 	}
-	if len(latestLessPlanIDs) <= 0 {
+	latestLessPlanID, ok := latestLessPlanIDMap[schedule.LessonPlanID]
+	if !ok {
+		log.Error(ctx, "lessPlan not found", log.Any("schedule", schedule), log.Any("latestLessPlanIDMap", latestLessPlanIDMap))
 		return constant.ErrRecordNotFound
 	}
 
-	latestLessPlans, err := GetContentModel().GetContentNameByIDListInternal(ctx, dbo.MustGetDB(ctx), latestLessPlanIDs)
+	latestLessPlans, err := GetContentModel().GetContentByIDListInternal(ctx, dbo.MustGetDB(ctx), []string{latestLessPlanID})
 	if err != nil {
 		return err
 	}
@@ -218,7 +237,7 @@ func (adc *AssessmentDetailComponent) getLatestContents(schedule *entity.Schedul
 		return constant.ErrRecordNotFound
 	}
 
-	subContentsMap, err := GetContentModel().GetContentsSubContentsMapByIDListInternal(ctx, dbo.MustGetDB(ctx), latestLessPlanIDs, op)
+	subContentsMap, err := GetContentModel().GetContentsSubContentsMapByIDListInternal(ctx, dbo.MustGetDB(ctx), []string{latestLessPlanID}, op)
 	if err != nil {
 		return err
 	}
@@ -232,6 +251,7 @@ func (adc *AssessmentDetailComponent) getLatestContents(schedule *entity.Schedul
 		ContentType: v2.AssessmentContentTypeLessonPlan,
 		OutcomeIDs:  latestLessPlan.OutcomeIDs,
 		LatestID:    latestLessPlan.ID,
+		FileType:    latestLessPlan.FileType,
 	}
 	adc.contentMapFromSchedule[latestLessPlan.ID] = lessPlan
 	adc.contentsFromSchedule = append(adc.contentsFromSchedule, lessPlan)
@@ -243,6 +263,7 @@ func (adc *AssessmentDetailComponent) getLatestContents(schedule *entity.Schedul
 			ContentType: v2.AssessmentContentTypeLessonMaterial,
 			OutcomeIDs:  item.OutcomeIDs,
 			LatestID:    item.ID,
+			FileType:    item.FileType,
 		}
 		adc.contentMapFromSchedule[item.ID] = subContentItem
 		adc.contentsFromSchedule = append(adc.contentsFromSchedule, subContentItem)
@@ -300,7 +321,7 @@ func (adc *AssessmentDetailComponent) GetContentMapFromLiveRoom() (map[string]*R
 			oldContentMap[item.MaterialID] = item
 		}
 
-		latestContentIDMap, err := adc.apc.GetLatestContentIDMapByIDList(oldContentIDs)
+		latestContentIDMap, err := GetContentModel().GetLatestContentIDMapByIDListInternal(ctx, dbo.MustGetDB(ctx), oldContentIDs)
 		if err != nil {
 			log.Error(ctx, "GetLatestContentIDMapByIDList error", log.Err(err), log.Strings("oldContentIDs", oldContentIDs))
 			return nil, err
@@ -497,7 +518,7 @@ func (adc *AssessmentDetailComponent) GetAssessmentContentMap() (map[string]*v2.
 			assessmentContentMap[item.ContentID] = item
 		}
 
-		latestContentIDMap, err := adc.apc.GetLatestContentIDMapByIDList(oldContentIDs)
+		latestContentIDMap, err := GetContentModel().GetLatestContentIDMapByIDListInternal(ctx, dbo.MustGetDB(ctx), oldContentIDs)
 		if err != nil {
 			log.Error(ctx, "GetLatestContentIDMapByIDList error", log.Err(err), log.Strings("oldContentIDs", oldContentIDs))
 			return nil, err
@@ -623,6 +644,7 @@ func (adc *AssessmentDetailComponent) MatchContentsContainsRoomInfo() error {
 			ReviewerComment:      "",
 			OutcomeIDs:           item.OutcomeIDs,
 			RoomProvideContentID: "",
+			ContentSubtype:       item.FileType.String(),
 		}
 
 		if item.ContentType == v2.AssessmentContentTypeLessonPlan {
@@ -644,6 +666,7 @@ func (adc *AssessmentDetailComponent) MatchContentsContainsRoomInfo() error {
 			contentReplyItem.H5PID = roomContentItem.H5PID
 			contentReplyItem.MaxScore = roomContentItem.MaxScore
 			contentReplyItem.RoomProvideContentID = roomContentItem.ID
+			contentReplyItem.H5PSubID = roomContentItem.SubContentID
 
 			if roomContentItem.FileType == external.FileTypeH5P {
 				if canScoringMap[roomContentItem.SubContentType] {
@@ -687,6 +710,8 @@ func (adc *AssessmentDetailComponent) MatchOutcome() error {
 }
 
 func (adc *AssessmentDetailComponent) MatchStudentNotContainsRoomInfo() error {
+	ctx := adc.ctx
+
 	userMap, err := adc.apc.GetUserMap()
 	if err != nil {
 		return err
@@ -729,7 +754,11 @@ func (adc *AssessmentDetailComponent) MatchStudentNotContainsRoomInfo() error {
 
 		studentInfo, ok := userMap[item.UserID]
 		if !ok {
-			continue
+			log.Warn(ctx, "not found user info from user service", log.Any("item", item), log.Any("userMap", userMap))
+			studentInfo = &entity.IDName{
+				ID:   item.UserID,
+				Name: "",
+			}
 		}
 
 		if adc.assessment.AssessmentType == v2.AssessmentTypeOnlineClass && item.StatusByUser == v2.AssessmentUserStatusNotParticipate {
@@ -786,6 +815,8 @@ func (adc *AssessmentDetailComponent) MatchStudentNotContainsRoomInfo() error {
 }
 
 func (adc *AssessmentDetailComponent) MatchStudentContainsRoomInfo() error {
+	ctx := adc.ctx
+
 	assessmentUserMap, err := adc.apc.GetAssessmentUserMap()
 	if err != nil {
 		return err
@@ -839,7 +870,11 @@ func (adc *AssessmentDetailComponent) MatchStudentContainsRoomInfo() error {
 
 		studentInfo, ok := userMap[item.UserID]
 		if !ok {
-			continue
+			log.Warn(ctx, "not found user info from user service", log.Any("item", item), log.Any("userMap", userMap))
+			studentInfo = &entity.IDName{
+				ID:   item.UserID,
+				Name: "",
+			}
 		}
 
 		studentReply := &v2.AssessmentStudentReply{
@@ -926,6 +961,7 @@ func (adc *AssessmentDetailComponent) appendContent(roomContent *RoomContent, ma
 		MaxScore:             roomContent.MaxScore,
 		H5PID:                roomContent.H5PID,
 		RoomProvideContentID: roomContent.ID,
+		H5PSubID:             roomContent.SubContentID,
 		//LatestID:       materialItem.LatestID,
 	}
 

@@ -233,28 +233,8 @@ func (apc *AssessmentPageComponent) GetAssessmentContentMap() (map[string][]*v2.
 	return apc.assessmentContentMap, nil
 }
 
-func (apc *AssessmentPageComponent) GetLatestContentIDMapByIDList(cids []string) (map[string]string, error) {
-	ctx := apc.ctx
-
-	resp := make(map[string]string)
-	data, err := da.GetContentDA().GetContentByIDList(ctx, dbo.MustGetDB(ctx), cids)
-	if err != nil {
-		log.Error(ctx, "can't search content", log.Err(err), log.Strings("cids", cids))
-		return nil, err
-	}
-	for i := range data {
-		latestID := data[i].LatestID
-		if data[i].LatestID == "" {
-			latestID = data[i].ID
-		}
-		resp[data[i].ID] = latestID
-	}
-	return resp, nil
-}
-
 func (apc *AssessmentPageComponent) GetLessPlanMap() (map[string]*v2.AssessmentContentView, error) {
 	ctx := apc.ctx
-	tx := dbo.MustGetDB(ctx)
 
 	if _, ok := apc.allLessPlanMap[constant.AssessmentInitializedKey]; ok {
 		return apc.allLessPlanMap, nil
@@ -275,7 +255,7 @@ func (apc *AssessmentPageComponent) GetLessPlanMap() (map[string]*v2.AssessmentC
 		}
 	}
 
-	latestLassPlanIDMap, err := apc.GetLatestContentIDMapByIDList(notAttemptedLessPlanIDs)
+	latestLassPlanIDMap, err := GetContentModel().GetLatestContentIDMapByIDListInternal(ctx, dbo.MustGetDB(ctx), notAttemptedLessPlanIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +266,7 @@ func (apc *AssessmentPageComponent) GetLessPlanMap() (map[string]*v2.AssessmentC
 
 	lessPlanIDs := utils.SliceDeduplicationExcludeEmpty(attemptedLessPlanIDs)
 
-	lessPlans, err := GetContentModel().GetContentNameByIDListInternal(ctx, tx, lessPlanIDs)
+	lessPlans, err := GetContentModel().GetContentByIDListInternal(ctx, dbo.MustGetDB(ctx), lessPlanIDs)
 	if err != nil {
 		log.Error(ctx, "get content by ids error", log.Err(err), log.Strings("lessPlanIDs", lessPlanIDs))
 		return nil, err
@@ -300,6 +280,7 @@ func (apc *AssessmentPageComponent) GetLessPlanMap() (map[string]*v2.AssessmentC
 			OutcomeIDs:  item.OutcomeIDs,
 			ContentType: v2.AssessmentContentTypeLessonPlan,
 			LatestID:    item.LatestID,
+			FileType:    item.FileType,
 		}
 		apc.allLessPlanMap[item.ID] = lessPlanItem
 	}
@@ -791,6 +772,8 @@ func (apc *AssessmentPageComponent) ConvertPageReply(configs []AssessmentConfigF
 		}
 		result[i] = replyItem
 
+		replyItem.Teachers = apc.assTeacherMap[item.ID]
+
 		schedule, ok := apc.assScheduleMap[item.ID]
 		if !ok {
 			log.Warn(ctx, "not found assessment schedule", log.Any("assScheduleMap", apc.assScheduleMap), log.Any("assessmentItem", item))
@@ -805,7 +788,6 @@ func (apc *AssessmentPageComponent) ConvertPageReply(configs []AssessmentConfigF
 
 		replyItem.Program = apc.assProgramMap[item.ID]
 		replyItem.Subjects = apc.assSubjectMap[item.ID]
-		replyItem.Teachers = apc.assTeacherMap[item.ID]
 		replyItem.DueAt = schedule.DueAt
 		replyItem.ClassInfo = apc.assClassMap[item.ID]
 		replyItem.RemainingTime = apc.assRemainingTimeMap[item.ID]

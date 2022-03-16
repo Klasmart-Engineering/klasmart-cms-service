@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
@@ -148,7 +149,7 @@ func (s *Server) updateAssessmentV2(c *gin.Context) {
 // @ID getAssessmentsSummary
 // @Accept json
 // @Produce json
-// @Param status query string false "search status, multiple states are separated by commas,optional value is NotStarted,Started,Draft,Complete"
+// @Param status query string false "search status, multiple states are separated by commas,optional value is Started,Draft,Complete"
 // @Success 200 {object} v2.AssessmentsSummary
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -167,7 +168,6 @@ func (s *Server) getAssessmentsSummary(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	default:
 		s.defaultErrorHandler(c, err)
-		return
 	}
 }
 
@@ -220,12 +220,23 @@ func (s *Server) getStudentAssessments(c *gin.Context) {
 	conditions.OrgID = op.OrgID
 	conditions.StudentID = op.UserID
 
+	log.Debug(ctx, "request params", log.Any("conditions", conditions))
+
 	total, result, err := model.GetAssessmentModelV2().QueryTeacherFeedback(ctx, op, conditions)
 
-	c.JSON(http.StatusOK, &v2.SearchStudentAssessmentsResponse{
-		List:  result,
-		Total: total,
-	})
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, &v2.SearchStudentAssessmentsResponse{
+			List:  result,
+			Total: total,
+		})
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	default:
+		s.defaultErrorHandler(c, err)
+	}
 }
 
 // @Summary add assessments
@@ -294,6 +305,53 @@ func (s *Server) addAssessment(c *gin.Context) {
 			log.Err(err),
 			log.Any("args", args),
 		)
+		s.defaultErrorHandler(c, err)
+	}
+}
+
+// @Summary list assessments
+// @Description list assessments
+// @Tags assessments
+// @ID listAssessment
+// @Accept json
+// @Produce json
+// @Param status query string false "status search"
+// @Param page query int false "page number" default(1)
+// @Param page_size query integer false "page size" format(int) default(10)
+// @Param order_by query string false "list order by" enums(class_end_time,-class_end_time,complete_time,-complete_time) default(-class_end_time)
+// @Success 200 {object} v2.ListAssessmentsResultForHomePage
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /assessments [get]
+func (s *Server) queryAssessments(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	req := new(v2.AssessmentQueryReq)
+	if err := c.ShouldBind(req); err != nil {
+		return
+	}
+
+	if req.Status == v2.AssessmentStatusCompliantCompleted.String() {
+		req.Status = v2.AssessmentStatusComplete.String()
+	} else if req.Status == v2.AssessmentStatusCompliantNotCompleted.String() {
+		req.Status = fmt.Sprintf("%s,%s", v2.AssessmentStatusStarted.String(), v2.AssessmentStatusInDraft.String())
+	}
+
+	if req.PageSize <= 0 || req.PageIndex <= 0 {
+		req.PageIndex = constant.DefaultPageIndex
+		req.PageSize = constant.DefaultPageSize
+	}
+
+	log.Debug(ctx, "queryAssessment request", log.Any("req", req), log.Any("op", op))
+
+	result, err := model.GetAssessmentModelV2().PageForHomePage(ctx, op, req)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	default:
 		s.defaultErrorHandler(c, err)
 	}
 }

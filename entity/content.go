@@ -26,16 +26,18 @@ const (
 
 	AliasContentTypeFolder = 10
 
-	MaterialInputSourceH5p    = 1
-	MaterialInputSourceDisk   = 2
-	MaterialInputSourceAssets = 3
+	MaterialInputSourceH5p              = 1
+	MaterialInputSourceDisk             = 2
+	MaterialInputSourceAssets           = 3
+	MaterialInputSourceBadanamuAppToWeb = 100
 
-	FileTypeImage     = 1
-	FileTypeVideo     = 2
-	FileTypeAudio     = 3
-	FileTypeDocument  = 4
-	FileTypeH5p       = 5
-	FileTypeH5pExtend = 6
+	FileTypeImage            = 1
+	FileTypeVideo            = 2
+	FileTypeAudio            = 3
+	FileTypeDocument         = 4
+	FileTypeH5p              = 5
+	FileTypeH5pExtend        = 6
+	FileTypeBadanamuAppToWeb = 100
 
 	FileTypeAssetsTypeOffset = 9
 
@@ -95,6 +97,8 @@ func NewFileType(fileType int) FileType {
 		return FileTypeH5p
 	case FileTypeH5pExtend:
 		return FileTypeH5pExtend
+	case FileTypeBadanamuAppToWeb:
+		return FileTypeBadanamuAppToWeb
 	default:
 		return FileTypeH5p
 	}
@@ -113,6 +117,8 @@ func (f FileType) String() string {
 		return "h5p"
 	case FileTypeH5pExtend:
 		return "extend h5p"
+	case FileTypeBadanamuAppToWeb:
+		return "Badanamu App to Web"
 	default:
 		return "unknown"
 	}
@@ -390,6 +396,7 @@ type ContentInternalConditionRequest struct {
 	ContentType  int      `json:"content_type"`
 	PlanID       string   `json:"plan_id"`
 	DataSourceID string   `json:"source_id"`
+	ScheduleID   string   `json:"schedule_id"`
 }
 
 type ContentConditionRequest struct {
@@ -534,8 +541,14 @@ type FolderContentInfoWithDetailsResponse struct {
 }
 
 type ContentSimplifiedList struct {
-	Total       int                  `json:"total"`
-	ContentList []*ContentSimplified `json:"list"`
+	Total             int                             `json:"total"`
+	ContentList       []*ContentSimplified            `json:"list"`
+	StudentContentMap []*ScheduleReviewStudentContent `json:"student_content_map"`
+}
+
+type ScheduleReviewStudentContent struct {
+	StudentID  string   `json:"student_id"`
+	ContentIDs []string `json:"content_ids"`
 }
 
 type ContentSimplified struct {
@@ -578,6 +591,15 @@ type ContentName struct {
 	ContentType ContentType `json:"content_type"`
 	LatestID    string      `json:"latest_id"`
 	OutcomeIDs  []string    `json:"outcome_ids"`
+}
+
+type ContentInfoInternal struct {
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	ContentType ContentType `json:"content_type"`
+	LatestID    string      `json:"latest_id"`
+	OutcomeIDs  []string    `json:"outcome_ids"`
+	FileType    FileType    `json:"file_type"`
 }
 
 //Content in folder

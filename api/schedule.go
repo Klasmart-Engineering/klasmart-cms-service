@@ -68,6 +68,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 		ClassType:              data.ClassType,
 		Title:                  data.Title,
 		OutcomeIDs:             data.OutcomeIDs,
+		IsReview:               data.IsReview,
 	})
 	if err != nil {
 		log.Debug(ctx, "request data verify error",
@@ -85,6 +86,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 		external.ScheduleCreateClassCalendarEvents,
 		external.ScheduleCreateStudyCalendarEvents,
 		external.ScheduleCreateHomefunCalendarEvents,
+		external.ScheduleCreateReviewEvent,
 	})
 	if err == constant.ErrForbidden {
 		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
@@ -107,7 +109,8 @@ func (s *Server) addSchedule(c *gin.Context) {
 	if (data.ClassType == entity.ScheduleClassTypeOnlineClass && !permissionMap[external.ScheduleCreateLiveCalendarEvents]) ||
 		(data.ClassType == entity.ScheduleClassTypeOfflineClass && !permissionMap[external.ScheduleCreateClassCalendarEvents]) ||
 		(data.ClassType == entity.ScheduleClassTypeHomework && !data.IsHomeFun && !permissionMap[external.ScheduleCreateStudyCalendarEvents]) ||
-		(data.ClassType == entity.ScheduleClassTypeHomework && data.IsHomeFun && !permissionMap[external.ScheduleCreateHomefunCalendarEvents]) {
+		(data.ClassType == entity.ScheduleClassTypeHomework && data.IsHomeFun && !permissionMap[external.ScheduleCreateHomefunCalendarEvents]) ||
+		(data.ClassType == entity.ScheduleClassTypeHomework && data.IsReview && !permissionMap[external.ScheduleCreateReviewEvent]) {
 		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
 		return
 	}
@@ -447,7 +450,14 @@ func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditVa
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
 
-	if strings.TrimSpace(input.Title) == "" {
+	// TODO debug
+	// if input.IsReview && !config.Get().Schedule.ReviewTypeEnabled {
+	// 	log.Debug(ctx, "schedule review type not support", log.Any("input", input))
+	// 	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	// 	return constant.ErrInvalidArgs
+	// }
+
+	if strings.TrimSpace(input.Title) == "" && !input.IsReview {
 		log.Info(ctx, "schedule title required", log.Any("input", input))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return constant.ErrInvalidArgs
@@ -575,6 +585,11 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(ScheduleMessageEditOverlap))
 		return
 	}
+	if err == constant.ErrForbidden {
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+		return
+	}
+
 	log.Error(ctx, "get schedule by id error", log.Err(err), log.Any("id", id))
 	s.defaultErrorHandler(c, err)
 }
@@ -780,22 +795,30 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	offsetStr := c.Query("time_zone_offset")
 	offset, _ := strconv.Atoi(offsetStr)
 	loc := utils.GetTimeLocationByOffset(offset)
-	log.Info(ctx, "getScheduleTimeView: time_zone_offset", log.String("time_zone_offset", offsetStr), log.Any("loc", loc))
+	log.Info(ctx, "getScheduleTimeView: time_zone_offset",
+		log.String("time_zone_offset", offsetStr),
+		log.Any("loc", loc))
 	condition, err := s.getScheduleTimeViewCondition(c, loc)
 	if err != nil {
+		s.defaultErrorHandler(c, err)
 		return
 	}
+
 	result, err := model.GetScheduleModel().QueryByCondition(ctx, op, condition, loc)
 	if err == nil {
 		c.JSON(http.StatusOK, result)
 		return
 	}
 	if err == constant.ErrRecordNotFound {
-		log.Info(ctx, "record not found", log.Any("condition", condition))
+		log.Error(ctx, "record not found",
+			log.Any("condition", condition))
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 		return
 	}
-	log.Debug(ctx, "getScheduleTimeView error", log.Err(err), log.Any("condition", condition), log.Any("condition", condition), log.String("offsetStr", offsetStr))
+	log.Debug(ctx, "getScheduleTimeView",
+		log.Err(err),
+		log.Any("condition", condition),
+		log.Any("params", c.Request.URL.Query()))
 	s.defaultErrorHandler(c, err)
 }
 
@@ -824,15 +847,21 @@ func (s *Server) getScheduledDates(c *gin.Context) {
 	offsetStr := c.Query("time_zone_offset")
 	offset, _ := strconv.Atoi(offsetStr)
 	loc := utils.GetTimeLocationByOffset(offset)
-	log.Info(ctx, "getScheduleTimeView: time_zone_offset", log.String("time_zone_offset", offsetStr), log.Any("loc", loc))
+	log.Info(ctx, "getScheduleTimeView: time_zone_offset",
+		log.String("time_zone_offset", offsetStr),
+		log.Any("loc", loc))
 
 	condition, err := s.getScheduleTimeViewCondition(c, loc)
 	if err != nil {
+		s.defaultErrorHandler(c, err)
 		return
 	}
+
 	result, err := model.GetScheduleModel().QueryScheduledDatesByCondition(ctx, op, condition, loc)
 	if err != nil {
-		log.Error(ctx, "getScheduledDates:GetScheduleModel.QueryScheduledDates error", log.Err(err), log.Any("condition", condition))
+		log.Error(ctx, "model.GetScheduleModel().QueryScheduledDatesByCondition error",
+			log.Err(err),
+			log.Any("condition", condition))
 		s.defaultErrorHandler(c, err)
 		return
 	}
@@ -843,18 +872,29 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context, loc *time.Location
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
 
-	permissionMap, err := model.GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
+	permissionNames := []external.PermissionName{
 		external.ScheduleViewOrgCalendar,
 		external.ScheduleViewSchoolCalendar,
 		external.ScheduleViewMyCalendar,
-	})
-	if err == constant.ErrForbidden {
-		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
-		return nil, constant.ErrForbidden
+		external.ScheduleViewPendingCalendar,
 	}
+	permissionMap, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, permissionNames)
 	if err != nil {
+		log.Error(ctx, "external.GetPermissionServiceProvider().HasOrganizationPermissions error",
+			log.Err(err),
+			log.Any("permissionNames", permissionNames),
+			log.Any("operator", op))
 		s.defaultErrorHandler(c, err)
-		return nil, constant.ErrInternalServer
+		return nil, err
+	}
+	if !permissionMap[external.ScheduleViewOrgCalendar] &&
+		!permissionMap[external.ScheduleViewSchoolCalendar] &&
+		!permissionMap[external.ScheduleViewMyCalendar] {
+		log.Debug(ctx, "operator has no permission",
+			log.Any("operator", op),
+			log.Any("permissionMap", permissionMap))
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+		return nil, err
 	}
 
 	viewType := c.Query("view_type")
@@ -863,7 +903,9 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context, loc *time.Location
 		timeAtStr := c.Query("time_at")
 		timeAt, err := strconv.ParseInt(timeAtStr, 10, 64)
 		if err != nil {
-			log.Info(ctx, "getScheduleTimeView: time_at is empty or invalid", log.String("time_at", timeAtStr))
+			log.Error(ctx, "time_at is empty or invalid",
+				log.Err(err),
+				log.String("time_at", timeAtStr))
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 			return nil, err
 		}
@@ -885,10 +927,12 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context, loc *time.Location
 			start = utils.StartOfYearByTimeStamp(timeAt, loc).Unix()
 			end = utils.EndOfYearByTimeStamp(timeAt, loc).Unix()
 		default:
-			log.Info(ctx, "getScheduleTimeView:view_type is empty or invalid", log.String("view_type", viewType))
+			log.Error(ctx, "view_type is empty or invalid",
+				log.String("view_type", viewType))
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-			return nil, constant.ErrInvalidArgs
+			return nil, err
 		}
+
 		startAndEndTimeViewRange := make([]sql.NullInt64, 2)
 		startAndEndTimeViewRange[0] = sql.NullInt64{
 			Valid: start >= 0,
@@ -969,6 +1013,14 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context, loc *time.Location
 		}
 		condition.RelationSchoolIDs = schoolIDs
 	}
+
+	if !permissionMap[external.ScheduleViewPendingCalendar] {
+		condition.SuccessReviewStudentID = sql.NullString{
+			String: op.UserID,
+			Valid:  true,
+		}
+	}
+
 	log.Debug(ctx, "condition info",
 		log.String("viewType", viewType),
 		log.Any("condition", condition),
@@ -1267,6 +1319,8 @@ func (s *Server) getScheduleViewByID(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMessageLessonPlanInvalid))
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(ScheduleMessageEditOverlap))
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
 	default:
 		s.defaultErrorHandler(c, err)
 	}
@@ -1437,4 +1491,68 @@ func (s *Server) buildInternalScheduleCondition(c *gin.Context) (*da.ScheduleCon
 			Strings: scheduleIDs,
 		},
 	}, nil
+}
+
+// @Summary checkScheduleReviewData
+// @ID checkScheduleReviewData
+// @Description check schedule review data before create
+// @Accept json
+// @Produce json
+// @Param queryData body entity.CheckScheduleReviewDataRequest true "schedule review data to check"
+// @Tags schedule
+// @Success 200 {object} entity.CheckScheduleReviewDataResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules/review/check_data [post]
+func (s *Server) checkScheduleReviewData(c *gin.Context) {
+	op := s.getOperator(c)
+	ctx := c.Request.Context()
+
+	requestBody := new(entity.CheckScheduleReviewDataRequest)
+	if err := c.ShouldBindJSON(requestBody); err != nil {
+		log.Error(ctx, "c.ShouldBindJSON error", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	result, err := model.GetScheduleModel().CheckScheduleReviewData(ctx, op, requestBody)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		s.defaultErrorHandler(c, err)
+	}
+}
+
+// @Summary updateScheduleReviewStatus
+// @ID updateScheduleReviewStatus
+// @Description update review schedule status
+// @Accept json
+// @Produce json
+// @Param queryData body entity.UpdateScheduleReviewStatusRequest true "schedule review create result"
+// @Tags internal
+// @Success 200 {object} string ok
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules/update_review_status [post]
+func (s *Server) updateScheduleReviewStatus(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	requestBody := new(entity.UpdateScheduleReviewStatusRequest)
+	if err := c.ShouldBindJSON(requestBody); err != nil {
+		log.Error(ctx, "c.ShouldBindJSON error", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	log.Debug(ctx, "UpdateScheduleReviewStatus", log.Any("requestBody", requestBody))
+	err := model.GetScheduleModel().UpdateScheduleReviewStatus(ctx, requestBody)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, "")
+	default:
+		s.defaultErrorHandler(c, err)
+	}
 }

@@ -453,6 +453,7 @@ func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Op
 	schools = []*School{}
 	key := append(s.BaseCacheKey,
 		"GetByOperator",
+		operator.OrgID,
 		operator.UserID)
 	fGetData := func(ctx context.Context, key kl2cache.Key) (val interface{}, err error) {
 		request := chlorine.NewRequest(`

@@ -27,6 +27,7 @@ type IScheduleDA interface {
 	GetClassTypes(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
 	GetTeachLoadByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]*ScheduleTeachLoadDBResult, error)
 	UpdateLiveLessonPlan(ctx context.Context, tx *dbo.DBContext, scheduleID string, liveMaterials *entity.ScheduleLiveLessonPlan) error
+	UpdateScheduleReviewStatus(ctx context.Context, tx *dbo.DBContext, scheduleID string, reviewStatus entity.ScheduleReviewStatus) error
 }
 
 type scheduleDA struct {
@@ -315,6 +316,23 @@ func (s *scheduleDA) UpdateLiveLessonPlan(ctx context.Context, tx *dbo.DBContext
 	return nil
 }
 
+func (s *scheduleDA) UpdateScheduleReviewStatus(ctx context.Context, tx *dbo.DBContext, scheduleID string, reviewStatus entity.ScheduleReviewStatus) error {
+	tx.ResetCondition()
+
+	err := tx.Table(constant.TableNameSchedule).
+		Where("id = ?", scheduleID).
+		Update("review_status", reviewStatus).Error
+	if err != nil {
+		log.Error(ctx, "UpdateScheduleReviewStatus error",
+			log.Err(err),
+			log.String("scheduleID", scheduleID),
+			log.Any("reviewStatus", reviewStatus))
+		return err
+	}
+
+	return nil
+}
+
 var (
 	_scheduleOnce sync.Once
 	_scheduleDA   IScheduleDA
@@ -399,6 +417,8 @@ type ScheduleCondition struct {
 	RelationSchoolIDs        entity.NullStrings
 	ClassTypes               entity.NullStrings
 	IsHomefun                sql.NullBool
+	ReviewStatus             entity.NullStrings
+	SuccessReviewStudentID   sql.NullString
 	DueToEq                  sql.NullInt64
 	AnyTime                  sql.NullBool
 	RosterClassID            sql.NullString
@@ -549,6 +569,18 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	if c.IsHomefun.Valid {
 		wheres = append(wheres, "((is_home_fun = ? and class_type = ?) or (class_type != ?))")
 		params = append(params, c.IsHomefun.Bool, entity.ScheduleClassTypeHomework, entity.ScheduleClassTypeHomework)
+	}
+
+	if c.ReviewStatus.Valid {
+		wheres = append(wheres, "review_status in (?)")
+		params = append(params, c.ReviewStatus.Strings)
+	}
+
+	if c.SuccessReviewStudentID.Valid {
+		sql := fmt.Sprintf("not exists(select 1 from %s where %s.is_review = 1 and %s.schedule_id = %s.id and %s.student_id = ? and %s.review_status != ?)",
+			constant.TableNameScheduleReview, constant.TableNameSchedule, constant.TableNameScheduleReview, constant.TableNameSchedule, constant.TableNameScheduleReview, constant.TableNameScheduleReview)
+		wheres = append(wheres, sql)
+		params = append(params, c.SuccessReviewStudentID.String, entity.ScheduleReviewStatusSuccess)
 	}
 
 	if c.DueToEq.Valid {

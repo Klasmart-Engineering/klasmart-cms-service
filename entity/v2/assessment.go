@@ -23,9 +23,24 @@ const (
 	AssessmentStatusCompliantCompleted    AssessmentStatusForApiCompliant = "complete"
 )
 
+func (a AssessmentStatusForApiCompliant) String() string {
+	return string(a)
+}
+
 type AssessmentPageReply struct {
 	Total       int                     `json:"total"`
 	Assessments []*AssessmentQueryReply `json:"assessments"`
+}
+
+type ListAssessmentsResultForHomePage struct {
+	Total int                          `json:"total"`
+	Items []*AssessmentItemForHomePage `json:"items"`
+}
+type AssessmentItemForHomePage struct {
+	ID       string                          `json:"id"`
+	Title    string                          `json:"title"`
+	Teachers []*entity.IDName                `json:"teachers"`
+	Status   AssessmentStatusForApiCompliant `json:"status"`
 }
 
 type AssessmentQueryReply struct {
@@ -58,11 +73,11 @@ type AssessmentUserReq struct {
 	UserType AssessmentUserType
 }
 
-func (req *AssessmentAddWhenCreateSchedulesReq) IsEmpty() bool {
-	if len(req.RepeatScheduleIDs) <= 0 || req.AssessmentType == "" {
-		return true
+func (req *AssessmentAddWhenCreateSchedulesReq) Valid(ctx context.Context) bool {
+	if len(req.RepeatScheduleIDs) <= 0 || !req.AssessmentType.Valid(ctx) {
+		return false
 	}
-	return false
+	return true
 }
 
 type AssessmentAttendancesReq struct {
@@ -142,6 +157,7 @@ type AssessmentContentReply struct {
 	ContentSubtype       string                  `json:"content_subtype"`
 	FileType             AssessmentFileArchived  `json:"file_type"  enums:"Unknown,HasChildContainer,NotChildContainer,SupportScoreStandAlone,NotSupportScoreStandAlone"`
 	MaxScore             float64                 `json:"max_score"`
+	H5PSubID             string                  `json:"h5p_sub_id"`
 	RoomProvideContentID string                  `json:"-"`
 
 	//LatestID string `json:"latest_id"`
@@ -276,8 +292,8 @@ type StudentQueryAssessmentConditions struct {
 	ClassType AssessmentTypeCompliant `form:"type"`
 
 	OrderBy  string `form:"order_by"`
-	Page     string `form:"page"`
-	PageSize string `form:"page_size"`
+	Page     int    `form:"page"`
+	PageSize int    `form:"page_size"`
 }
 
 type AssessmentTypeCompliant string
@@ -355,6 +371,7 @@ type AssessmentContentView struct {
 	ContentType AssessmentContentType `json:"content_type"`
 	OutcomeIDs  []string              `json:"outcome_ids"`
 	LatestID    string                `json:"latest_id"`
+	FileType    entity.FileType       `json:"file_type"`
 }
 
 type StatisticsCountReq struct {

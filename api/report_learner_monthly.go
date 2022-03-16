@@ -1,19 +1,18 @@
 package api
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	"net/http"
 )
 
-// @Summary get learner weekly report overview
-// @Description get learner weekly report overview
+// @Summary get learner monthly report overview
+// @Description get learner monthly report overview
 // @Tags reports
-// @ID getLearnerWeeklyReportOverview
+// @ID getLearnerMonthlyReportOverview
 // @Accept json
 // @Produce json
 // @Param time_range query string true "time_range"
@@ -21,8 +20,8 @@ import (
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/learner_weekly_overview [get]
-func (s *Server) getLearnerWeeklyReportOverview(c *gin.Context) {
+// @Router /reports/learner_monthly_overview [get]
+func (s *Server) getLearnerMonthlyReportOverview(c *gin.Context) {
 	ctx := c.Request.Context()
 	var err error
 	defer func() {
@@ -40,10 +39,10 @@ func (s *Server) getLearnerWeeklyReportOverview(c *gin.Context) {
 	tr := entity.TimeRange(c.Query("time_range"))
 	res, err := model.GetReportModel().GetLearnerReportOverview(ctx, op, &entity.LearnerReportOverviewCondition{
 		TimeRange:   tr,
-		PermOrg:     external.ReportLearningSummmaryOrg.String(),
-		PermSchool:  external.ReportLearningSummarySchool.String(),
-		PermTeacher: external.ReportLearningSummaryTeacher.String(),
-		PermStudent: external.ReportLearningSummaryStudent.String(),
+		PermOrg:     external.ReportStudentProgressReportOrganization.String(),
+		PermSchool:  external.ReportStudentProgressReportSchool.String(),
+		PermTeacher: external.ReportStudentProgressReportTeacher.String(),
+		PermStudent: external.ReportStudentProgressReportStudent.String(),
 	})
 	if err != nil {
 		return

@@ -42,18 +42,20 @@ type IAssessmentModelV2 interface {
 	AddWhenCreateSchedules(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, req *v2.AssessmentAddWhenCreateSchedulesReq) error
 	Draft(ctx context.Context, op *entity.Operator, req *v2.AssessmentUpdateReq) error
 	Complete(ctx context.Context, op *entity.Operator, req *v2.AssessmentUpdateReq) error
-	DeleteByScheduleIDsTx(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, scheduleIDs []string) error
 
 	Page(ctx context.Context, op *entity.Operator, input *v2.AssessmentQueryReq) (*v2.AssessmentPageReply, error)
 	GetByID(ctx context.Context, op *entity.Operator, id string) (*v2.AssessmentDetailReply, error)
 	// home page
 	StatisticsCount(ctx context.Context, op *entity.Operator, req *v2.StatisticsCountReq) (*v2.AssessmentsSummary, error)
 	QueryTeacherFeedback(ctx context.Context, op *entity.Operator, condition *v2.StudentQueryAssessmentConditions) (int64, []*v2.StudentAssessment, error)
+	PageForHomePage(ctx context.Context, op *entity.Operator, req *v2.AssessmentQueryReq) (*v2.ListAssessmentsResultForHomePage, error)
 
 	AnyoneAttemptedByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]*v2.AssessmentAnyoneAttemptedReply, error)
 	QueryInternal(ctx context.Context, op *entity.Operator, condition *assessmentV2.AssessmentCondition) ([]*v2.Assessment, error)
 
 	LockAssessmentContentAndOutcome(ctx context.Context, op *entity.Operator, schedule *entity.Schedule) error
+
+	InternalDeleteByScheduleIDsTx(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, scheduleIDs []string) error
 }
 
 func GetAssessmentModelV2() IAssessmentModelV2 {
@@ -136,11 +138,24 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 		return 0, nil, constant.ErrInvalidArgs
 	}
 
+	if condition.Page < 0 || condition.PageSize < 0 {
+		log.Warn(ctx, "condition page or pageSize invalid", log.Any("condition", condition))
+		return 0, nil, constant.ErrInvalidArgs
+	}
+
 	if assessmentType == v2.AssessmentTypeOfflineStudy {
 		total, userResults, err := assessmentV2.GetAssessmentUserResultDA().GetAssessmentUserResultDBView(ctx, &assessmentV2.AssessmentUserResultDBViewCondition{
+			OrgID: sql.NullString{
+				String: condition.OrgID,
+				Valid:  true,
+			},
 			UserIDs: entity.NullStrings{
 				Strings: []string{condition.StudentID},
 				Valid:   true,
+			},
+			Pager: dbo.Pager{
+				Page:     condition.Page,
+				PageSize: condition.PageSize,
 			},
 		})
 		if err != nil {
@@ -159,7 +174,7 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 			if _, ok := dedupMap[item.StudentFeedbackID]; !ok {
 				feedbackIDs = append(feedbackIDs, item.StudentFeedbackID)
 			}
-			if _, ok := dedupMap[item.ReviewerID]; !ok {
+			if _, ok := dedupMap[item.ReviewerID]; !ok && item.ReviewerID != "" {
 				teacherIDs = append(teacherIDs, item.ReviewerID)
 			}
 
@@ -187,7 +202,7 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 				ID:                  item.ID,
 				Title:               item.Title,
 				Score:               int(item.AssessScore),
-				Status:              string(item.Status),
+				Status:              item.Status.Compliant(ctx),
 				CreateAt:            item.CreateAt,
 				UpdateAt:            item.UpdateAt,
 				CompleteAt:          item.CompleteAt,
@@ -195,18 +210,22 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 				Schedule:            nil,
 				FeedbackAttachments: nil,
 			}
+			teacherComment := &v2.StudentAssessmentTeacher{
+				Teacher: &v2.StudentAssessmentTeacherInfo{
+					ID:         item.ReviewerID,
+					GivenName:  "",
+					FamilyName: "",
+					Avatar:     "",
+				},
+				Comment: item.ReviewerComment,
+			}
 
 			if teacherInfo, ok := teacherMap[item.ReviewerID]; ok {
-				resultItem.TeacherComments = append(resultItem.TeacherComments, &v2.StudentAssessmentTeacher{
-					Teacher: &v2.StudentAssessmentTeacherInfo{
-						ID:         teacherInfo.ID,
-						GivenName:  teacherInfo.GivenName,
-						FamilyName: teacherInfo.FamilyName,
-						Avatar:     teacherInfo.Avatar,
-					},
-					Comment: item.ReviewerComment,
-				})
+				teacherComment.Teacher.GivenName = teacherInfo.GivenName
+				teacherComment.Teacher.FamilyName = teacherInfo.FamilyName
+				teacherComment.Teacher.Avatar = teacherInfo.Avatar
 			}
+			resultItem.TeacherComments = append(resultItem.TeacherComments, teacherComment)
 
 			if scheduleInfo, ok := scheduleMap[item.ScheduleID]; ok {
 				scheduleAttachment := new(v2.StudentAssessmentAttachment)
@@ -289,8 +308,10 @@ func (a *assessmentModelV2) StatisticsCount(ctx context.Context, op *entity.Oper
 		return nil, err
 	}
 
-	condition.Status.Strings = strings.Split(req.Status, ",")
-	condition.Status.Valid = len(condition.Status.Strings) > 0
+	if req.Status != "" {
+		condition.Status.Strings = strings.Split(req.Status, ",")
+		condition.Status.Valid = len(condition.Status.Strings) > 0
+	}
 
 	var assessments []*v2.Assessment
 	err = assessmentV2.GetAssessmentDA().Query(ctx, condition, &assessments)
@@ -306,6 +327,10 @@ func (a *assessmentModelV2) StatisticsCount(ctx context.Context, op *entity.Oper
 		case v2.AssessmentStatusComplete:
 			r.Complete++
 		}
+
+		//if a.AssessmentType == v2.AssessmentTypeOnlineStudy && a.Status == v2.AssessmentStatusNotStarted {
+		//	r.InProgress++
+		//}
 	}
 
 	return r, nil
@@ -338,8 +363,9 @@ func (a *assessmentModelV2) getConditionByPermission(ctx context.Context, op *en
 		if permission.MyPermission.Status.Valid {
 			condition.TeacherIDs.Strings = append(condition.TeacherIDs.Strings, permission.MyPermission.UserID)
 		}
+
+		condition.TeacherIDs.Valid = true
 	}
-	condition.TeacherIDs.Valid = len(condition.TeacherIDs.Strings) > 0
 
 	log.Debug(ctx, "permission info", log.Any("permission", permission), log.Any("condition", condition))
 
@@ -433,6 +459,10 @@ func (a *assessmentModelV2) GetAssessmentPageConfig(ac *AssessmentPageComponent,
 			ac.MatchCompleteRate,
 			ac.MatchRemainingTime,
 		}
+	default:
+		return []AssessmentConfigFunc{
+			ac.MatchTeacher,
+		}
 	}
 
 	return nil
@@ -488,7 +518,7 @@ func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *
 	}, nil
 }
 
-func (a *assessmentModelV2) DeleteByScheduleIDsTx(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, scheduleIDs []string) error {
+func (a *assessmentModelV2) InternalDeleteByScheduleIDsTx(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, scheduleIDs []string) error {
 	var assessments []*v2.Assessment
 	err := assessmentV2.GetAssessmentDA().Query(ctx, &assessmentV2.AssessmentCondition{
 		ScheduleIDs: entity.NullStrings{
@@ -503,9 +533,9 @@ func (a *assessmentModelV2) DeleteByScheduleIDsTx(ctx context.Context, op *entit
 
 	assessmentIDs := make([]string, len(assessments))
 	for i, item := range assessments {
-		if item.Status != v2.AssessmentStatusNotStarted {
-			return ErrAssessmentNotAllowDelete
-		}
+		//if item.Status != v2.AssessmentStatusNotStarted {
+		//	return ErrAssessmentNotAllowDelete
+		//}
 		assessmentIDs[i] = item.ID
 	}
 
@@ -717,6 +747,9 @@ func (a *assessmentModelV2) Update(ctx context.Context, op *entity.Operator, sta
 	waitUpdateAssessmentOutcomes := make([]*v2.AssessmentUserOutcome, 0)
 
 	for _, stuItem := range req.Students {
+		if stuItem.Status == v2.AssessmentUserStatusNotParticipate {
+			continue
+		}
 		// verify student data
 		assessmentUserItem, ok := userIDAndUserTypeMap[detailComponent.getKey([]string{stuItem.StudentID, v2.AssessmentUserTypeStudent.String()})]
 		if !ok {
@@ -914,8 +947,8 @@ func (a *assessmentModelV2) ScheduleEndClassCallback(ctx context.Context, op *en
 }
 
 func (a *assessmentModelV2) AddWhenCreateSchedules(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, req *v2.AssessmentAddWhenCreateSchedulesReq) error {
-	if req.IsEmpty() {
-		log.Info(ctx, "req is invalid", log.Any("req", req), log.Any("op", op))
+	if !req.Valid(ctx) {
+		log.Warn(ctx, "req is invalid", log.Any("req", req), log.Any("op", op))
 		return constant.ErrInvalidArgs
 	}
 
@@ -1183,4 +1216,49 @@ func (a *assessmentModelV2) endClassCallbackUpdateAssessment(ctx context.Context
 	}
 
 	return nil
+}
+
+func (a *assessmentModelV2) PageForHomePage(ctx context.Context, op *entity.Operator, req *v2.AssessmentQueryReq) (*v2.ListAssessmentsResultForHomePage, error) {
+	condition, err := a.getConditionByPermission(ctx, op)
+	if err != nil {
+		return nil, err
+	}
+
+	condition.Status.Strings = strings.Split(req.Status, ",")
+	condition.Status.Valid = len(condition.Status.Strings) > 0
+	condition.OrderBy = assessmentV2.NewAssessmentOrderBy(req.OrderBy)
+	condition.Pager = dbo.Pager{
+		Page:     req.PageIndex,
+		PageSize: req.PageSize,
+	}
+
+	var assessments []*v2.Assessment
+	total, err := assessmentV2.GetAssessmentDA().Page(ctx, condition, &assessments)
+	if err != nil {
+		log.Error(ctx, "page assessment error", log.Err(err), log.Any("condition", condition))
+		return nil, err
+	}
+
+	assessmentComponent := NewPageComponent(ctx, op, assessments)
+	pageResult, err := assessmentComponent.ConvertPageReply(a.GetAssessmentPageConfig(assessmentComponent, req.AssessmentType))
+	if err != nil {
+		log.Error(ctx, "ConvertPageReply error", log.Err(err))
+		return nil, err
+	}
+
+	result := &v2.ListAssessmentsResultForHomePage{
+		Total: total,
+		Items: make([]*v2.AssessmentItemForHomePage, 0, len(pageResult)),
+	}
+
+	for _, item := range pageResult {
+		result.Items = append(result.Items, &v2.AssessmentItemForHomePage{
+			ID:       item.ID,
+			Title:    item.Title,
+			Teachers: item.Teachers,
+			Status:   item.Status.ToReply(),
+		})
+	}
+
+	return result, nil
 }

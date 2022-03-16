@@ -68,10 +68,8 @@ func (this *MaterialData) Validate(ctx context.Context, contentType entity.Conte
 
 	switch this.InputSource {
 	case entity.MaterialInputSourceH5p:
-	case entity.MaterialInputSourceAssets:
-		//查看assets?
-		fallthrough
-	case entity.MaterialInputSourceDisk:
+	case entity.MaterialInputSourceBadanamuAppToWeb:
+	case entity.MaterialInputSourceDisk, entity.MaterialInputSourceAssets:
 		ext := this.Source.Ext()
 		if !isArray(ext, constant.MaterialsExtension) {
 			return ErrInvalidSourceExt
@@ -91,6 +89,10 @@ func (h *MaterialData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequ
 		} else {
 			return ErrInvalidSourceOrContent
 		}
+		return nil
+	}
+	if h.InputSource == entity.MaterialInputSourceBadanamuAppToWeb {
+		h.FileType = entity.FileTypeBadanamuAppToWeb
 		return nil
 	}
 	fileType, err := ExtensionToFileType(ctx, h.Source)

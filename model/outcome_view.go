@@ -5,6 +5,8 @@ import (
 	"errors"
 	"regexp"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -41,6 +43,7 @@ type OutcomeCreateView struct {
 	Description    string                  `json:"description"`
 	Shortcode      string                  `json:"shortcode,omitempty"`
 	Sets           []*OutcomeSetCreateView `json:"sets"`
+	ScoreThreshold float32                 `json:"score_threshold"`
 }
 
 type OutcomeSetCreateView struct {
@@ -59,7 +62,7 @@ func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator)
 		log.Error(ctx, "utils.BHexToNum error",
 			log.Err(err),
 			log.String("shortcode", req.Shortcode))
-
+		return nil, &ErrValidFailed{Msg: "invalid shortcode"}
 	}
 
 	outcome := entity.Outcome{
@@ -69,6 +72,15 @@ func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator)
 		Description:   req.Description,
 		Shortcode:     req.Shortcode,
 		ShortcodeNum:  shortcodeNum,
+	}
+
+	if req.Assumed {
+		req.ScoreThreshold = 0
+	} else if req.ScoreThreshold <= 0 || req.ScoreThreshold > 1 {
+		log.Warn(ctx, "score threshold need set value when assumed is false", log.Any("req", req))
+		return nil, constant.ErrInvalidArgs
+	} else {
+		outcome.ScoreThreshold = req.ScoreThreshold
 	}
 
 	programIDs := utils.SliceDeduplicationExcludeEmpty(req.Program)
@@ -118,6 +130,7 @@ func (req OutcomeCreateView) ToOutcomeWithID(ctx context.Context, op *entity.Ope
 		return nil, errors.New("outcomeID invalid")
 	}
 	outcome.ID = outcomeID
+
 	return outcome, nil
 }
 
@@ -264,6 +277,7 @@ type OutcomeView struct {
 	Sets           []*OutcomeSetCreateView `json:"sets"`
 	CreatedAt      int64                   `json:"created_at"`
 	UpdatedAt      int64                   `json:"update_at"`
+	ScoreThreshold float32                 `json:"score_threshold"`
 }
 
 type SearchOutcomeResponse struct {
@@ -283,6 +297,7 @@ type PublishedOutcomeView struct {
 	GradeIDs       []string                `json:"grade_ids"`
 	AgeIDs         []string                `json:"age_ids"`
 	Sets           []*OutcomeSetCreateView `json:"sets"`
+	ScoreThreshold float32                 `json:"score_threshold"`
 }
 
 type SearchPublishedOutcomeResponse struct {
@@ -318,4 +333,5 @@ type OutcomeDetailView struct {
 	Milestones       []*Milestone            `json:"milestones"`
 	CreatedAt        int64                   `json:"created_at"`
 	UpdatedAt        int64                   `json:"update_at"`
+	ScoreThreshold   float32                 `json:"score_threshold"`
 }
