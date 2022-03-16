@@ -157,6 +157,7 @@ type AssessmentContentReply struct {
 	ContentSubtype       string                  `json:"content_subtype"`
 	FileType             AssessmentFileArchived  `json:"file_type"  enums:"Unknown,HasChildContainer,NotChildContainer,SupportScoreStandAlone,NotSupportScoreStandAlone"`
 	MaxScore             float64                 `json:"max_score"`
+	H5PSubID             string                  `json:"h5p_sub_id"`
 	RoomProvideContentID string                  `json:"-"`
 
 	//LatestID string `json:"latest_id"`
