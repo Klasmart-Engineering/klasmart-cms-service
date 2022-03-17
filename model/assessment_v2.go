@@ -466,6 +466,16 @@ func (a *assessmentModelV2) getAssessmentDetailConfig(adc *AssessmentDetailCompo
 			adc.MatchContentsContainsRoomInfo,
 			adc.MatchStudentContainsRoomInfo,
 		}
+	case v2.AssessmentTypeReviewStudy:
+		return []AssessmentConfigFunc{
+			adc.apc.MatchSchedule,
+			adc.apc.MatchTeacher,
+			adc.apc.MatchClass,
+			adc.apc.MatchCompleteRate,
+
+			adc.MatchReviewStudyContent,
+			adc.MatchReviewStudyStudentRoomInfo,
+		}
 	}
 
 	return nil
