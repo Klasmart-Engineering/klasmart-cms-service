@@ -61,10 +61,10 @@ type AssessmentQueryReply struct {
 }
 
 type AssessmentAddWhenCreateSchedulesReq struct {
-	RepeatScheduleIDs    []string
-	Users                []*AssessmentUserReq
-	AssessmentType       AssessmentType
-	LessPlanID           string
+	RepeatScheduleIDs []string
+	Users             []*AssessmentUserReq
+	AssessmentType    AssessmentType
+	//LessPlanID           string
 	ClassRosterClassName string
 	ScheduleTitle        string
 }
