@@ -490,6 +490,13 @@ func (a *assessmentModelV2) getAssessmentPageConfig(ac *AssessmentPageComponent,
 			ac.MatchCompleteRate,
 			ac.MatchRemainingTime,
 		}
+	case v2.AssessmentTypeReviewStudy:
+		return []AssessmentConfigFunc{
+			ac.MatchSchedule,
+			ac.MatchTeacher,
+			ac.MatchClass,
+			ac.MatchCompleteRate,
+		}
 	default:
 		return []AssessmentConfigFunc{
 			ac.MatchTeacher,

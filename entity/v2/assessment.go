@@ -44,20 +44,32 @@ type AssessmentItemForHomePage struct {
 }
 
 type AssessmentQueryReply struct {
-	ID         string           `json:"id"`
-	Title      string           `json:"title"`
+	// all type
+	ID     string           `json:"id"`
+	Title  string           `json:"title"`
+	Status AssessmentStatus `json:"status"`
+
+	// onlineClass,offlineClass,OnlineStudy
+	LessonPlan *entity.IDName `json:"lesson_plan"`
+
+	// onlineClass,offlineClass,OnlineStudy,ReviewStudy
+	Teachers []*entity.IDName `json:"teachers"`
+
+	// onlineClass,offlineClass,OnlineStudy
+	CompleteAt int64 `json:"complete_at"`
+
+	// onlineClass,offlineClass
 	Program    *entity.IDName   `json:"program"`
 	Subjects   []*entity.IDName `json:"subjects"`
-	Teachers   []*entity.IDName `json:"teachers"`
 	ClassEndAt int64            `json:"class_end_at"`
-	CompleteAt int64            `json:"complete_at"`
-	Status     AssessmentStatus `json:"status"`
-	LessonPlan *entity.IDName   `json:"lesson_plan"`
 
-	ClassInfo     *entity.IDName `json:"class_info"`
-	DueAt         int64          `json:"due_at"`
-	CompleteRate  float64        `json:"complete_rate"`
-	RemainingTime int64          `json:"remaining_time"`
+	// OnlineStudy,ReviewStudy
+	ClassInfo    *entity.IDName `json:"class_info"`
+	DueAt        int64          `json:"due_at"`
+	CompleteRate float64        `json:"complete_rate"`
+
+	// OnlineStudy
+	RemainingTime int64 `json:"remaining_time"`
 }
 
 type AssessmentAddWhenCreateSchedulesReq struct {
