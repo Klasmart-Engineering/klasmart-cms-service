@@ -37,7 +37,7 @@ type IAssessmentInternalModelV2 interface {
 	DeleteByScheduleIDsTx(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, scheduleIDs []string) error
 	AnyoneAttemptedByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]*v2.AssessmentAnyoneAttemptedReply, error)
 	Query(ctx context.Context, op *entity.Operator, condition *assessmentV2.AssessmentCondition) ([]*v2.Assessment, error)
-	UpdateAssessmentToReady(ctx context.Context, tx *dbo.DBContext, scheduleID string) error
+	UpdateAssessmentWhenReviewScheduleSuccess(ctx context.Context, tx *dbo.DBContext, scheduleID string) error
 }
 
 func (a *assessmentInternalModel) ScheduleEndClassCallback(ctx context.Context, op *entity.Operator, req *v2.ScheduleEndClassCallBackReq) error {
@@ -486,14 +486,14 @@ func (a *assessmentInternalModel) Query(ctx context.Context, op *entity.Operator
 	return assessments, nil
 }
 
-func (a *assessmentInternalModel) UpdateAssessmentToReady(ctx context.Context, tx *dbo.DBContext, scheduleID string) error {
+func (a *assessmentInternalModel) UpdateAssessmentWhenReviewScheduleSuccess(ctx context.Context, tx *dbo.DBContext, scheduleID string) error {
 	assessment, err := a.getAssessmentByScheduleID(ctx, scheduleID)
 	if err != nil {
 		return err
 	}
 
-	if assessment.Status != v2.AssessmentStatusSleep {
-		log.Warn(ctx, "assessment not sleep status", log.Any("assessment", assessment))
+	if assessment.AssessmentType != v2.AssessmentTypeReviewStudy || assessment.Status != v2.AssessmentStatusSleep {
+		log.Warn(ctx, "assessment is not review study or sleep status", log.Any("assessment", assessment))
 		return nil
 	}
 
