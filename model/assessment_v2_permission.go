@@ -70,6 +70,8 @@ func (c *AssessmentPermission) SearchAllPermissions(ctx context.Context, op *ent
 	}
 
 	// school permission
+	c.SchoolPermission = AssessmentSchoolPermission{}
+
 	if permissionMap[external.AssessmentViewSchoolCompletedAssessments426] {
 		c.allowStatusComplete = true
 		c.SchoolPermission.Status.Strings = append(c.SchoolPermission.Status.Strings, completeStatus...)
@@ -89,7 +91,6 @@ func (c *AssessmentPermission) SearchAllPermissions(ctx context.Context, op *ent
 		for i, school := range schools {
 			schoolIDs[i] = school.ID
 		}
-		c.SchoolPermission = AssessmentSchoolPermission{}
 		schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, op, schoolIDs)
 		if err != nil {
 			return err
