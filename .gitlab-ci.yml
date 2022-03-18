@@ -60,9 +60,10 @@ BUILD_CMS:
 DEPLOY_ECS_CMS:
   stage: deploy_ecs_cms
   image: docker:latest
-    #  variables:
-    #DOCKER_DRIVER: overlay
-    #DOCKER_HOST: tcp://localhost:2375
+  variables:
+    DOCKER_HOST: tcp://localhost:2375/
+  services:
+    - name: docker:17.03-dind
   cache:
     paths:
       - main
