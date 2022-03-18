@@ -3140,7 +3140,7 @@ func (s *scheduleModel) UpdateScheduleReviewStatus(ctx context.Context, request 
 			}
 		}
 
-		err = GetAssessmentInternalModel().UpdateAssessmentWhenReviewScheduleSuccess(ctx, tx, request.ScheduleID)
+		err = GetAssessmentInternalModel().UpdateWhenReviewScheduleSuccess(ctx, tx, request.ScheduleID)
 		if err != nil {
 			log.Error(ctx, "GetAssessmentInternalModel().UpdateAssessmentWhenReviewScheduleSuccess error",
 				log.Err(err),

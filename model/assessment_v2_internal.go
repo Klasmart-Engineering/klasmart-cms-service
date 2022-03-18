@@ -37,7 +37,7 @@ type IAssessmentInternalModelV2 interface {
 	DeleteByScheduleIDsTx(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, scheduleIDs []string) error
 	AnyoneAttemptedByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]*v2.AssessmentAnyoneAttemptedReply, error)
 	Query(ctx context.Context, op *entity.Operator, condition *assessmentV2.AssessmentCondition) ([]*v2.Assessment, error)
-	UpdateAssessmentWhenReviewScheduleSuccess(ctx context.Context, tx *dbo.DBContext, scheduleID string) error
+	UpdateWhenReviewScheduleSuccess(ctx context.Context, tx *dbo.DBContext, scheduleID string) error
 }
 
 func (a *assessmentInternalModel) ScheduleEndClassCallback(ctx context.Context, op *entity.Operator, req *v2.ScheduleEndClassCallBackReq) error {
@@ -117,9 +117,6 @@ func (a *assessmentInternalModel) AddWhenCreateSchedules(ctx context.Context, tx
 		}
 		if req.AssessmentType == v2.AssessmentTypeOfflineStudy {
 			assessmentItem.Status = v2.AssessmentStatusNotApplicable
-		}
-		if req.AssessmentType == v2.AssessmentTypeReviewStudy {
-			assessmentItem.Status = v2.AssessmentStatusSleep
 		}
 
 		assessments[i] = assessmentItem
@@ -486,18 +483,18 @@ func (a *assessmentInternalModel) Query(ctx context.Context, op *entity.Operator
 	return assessments, nil
 }
 
-func (a *assessmentInternalModel) UpdateAssessmentWhenReviewScheduleSuccess(ctx context.Context, tx *dbo.DBContext, scheduleID string) error {
+func (a *assessmentInternalModel) UpdateWhenReviewScheduleSuccess(ctx context.Context, tx *dbo.DBContext, scheduleID string) error {
 	assessment, err := a.getAssessmentByScheduleID(ctx, scheduleID)
 	if err != nil {
 		return err
 	}
 
-	if assessment.AssessmentType != v2.AssessmentTypeReviewStudy || assessment.Status != v2.AssessmentStatusSleep {
+	if assessment.AssessmentType != v2.AssessmentTypeReviewStudy || assessment.Status != v2.AssessmentStatusNotStarted {
 		log.Warn(ctx, "assessment is not review study or sleep status", log.Any("assessment", assessment))
 		return nil
 	}
 
-	assessment.Status = v2.AssessmentStatusNotStarted
+	assessment.Status = v2.AssessmentStatusStarted
 	// update create time when schedule ready
 	assessment.CreateAt = time.Now().Unix()
 
