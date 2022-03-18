@@ -229,7 +229,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 			}
 			schedule.LiveLessonPlan = scheduleLiveLessonPlan
 
-			if err := GetAssessmentModelV2().LockAssessmentContentAndOutcome(ctx, op, schedule.Schedule); err != nil {
+			if err := GetAssessmentInternalModel().LockAssessmentContentAndOutcome(ctx, op, schedule.Schedule); err != nil {
 				log.Error(ctx, "assessment lock content version error", log.Any("schedule", schedule), log.Err(err))
 				return "", err
 			}

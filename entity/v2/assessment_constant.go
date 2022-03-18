@@ -18,6 +18,7 @@ const (
 	AssessmentTypeOnlineClass  AssessmentType = "OnlineClass"
 	AssessmentTypeOnlineStudy  AssessmentType = "OnlineStudy"
 	AssessmentTypeOfflineStudy AssessmentType = "OfflineStudy"
+	AssessmentTypeReviewStudy  AssessmentType = "ReviewStudy"
 )
 
 func GetAssessmentStatusByReq() map[AssessmentStatusForApiCompliant][]string {
@@ -94,7 +95,8 @@ func (a AssessmentType) String() string {
 
 func (a AssessmentType) Valid(ctx context.Context) bool {
 	switch a {
-	case AssessmentTypeOfflineClass, AssessmentTypeOnlineClass, AssessmentTypeOfflineStudy, AssessmentTypeOnlineStudy:
+	case AssessmentTypeOfflineClass, AssessmentTypeOnlineClass,
+		AssessmentTypeOfflineStudy, AssessmentTypeOnlineStudy, AssessmentTypeReviewStudy:
 		return true
 	default:
 		log.Warn(ctx, "assessment type is invalid", log.String("AssessmentType", a.String()))
@@ -123,6 +125,8 @@ func (a AssessmentType) Title(ctx context.Context, input GenerateAssessmentTitle
 		title = fmt.Sprintf("%s-%s-%s", timeStr, input.ClassName, input.ScheduleName)
 	case AssessmentTypeOnlineStudy, AssessmentTypeOfflineStudy:
 		title = fmt.Sprintf("%s-%s", input.ClassName, input.ScheduleName)
+	case AssessmentTypeReviewStudy:
+		title = input.ScheduleName
 	default:
 		log.Error(ctx, "get assessment title error", log.Any("input", input))
 		return "", constant.ErrInvalidArgs
@@ -137,17 +141,18 @@ type GetAssessmentTypeByScheduleTypeInput struct {
 }
 
 func GetAssessmentTypeByScheduleType(ctx context.Context, input GetAssessmentTypeByScheduleTypeInput) (AssessmentType, error) {
-	if input.IsReview {
-		log.Warn(ctx, "not support this schedule type", log.Any("input", input))
-		return "", constant.ErrInvalidArgs
-	}
-
+	//if input.IsReview {
+	//	log.Warn(ctx, "not support this schedule type", log.Any("input", input))
+	//	return "", constant.ErrInvalidArgs
+	//}
 	var result AssessmentType
 
 	switch input.ScheduleType {
 	case entity.ScheduleClassTypeHomework:
 		if input.IsHomeFun {
 			result = AssessmentTypeOfflineStudy
+		} else if input.IsReview {
+			result = AssessmentTypeReviewStudy
 		} else {
 			result = AssessmentTypeOnlineStudy
 		}
@@ -175,6 +180,8 @@ const (
 	// home fun study
 	AssessmentStatusNotApplicable AssessmentStatus = "NA"
 	// when create schedule
+	// For the schedule whose data preparation is completed, the assessment status is not start, otherwise it is sleep
+	//AssessmentStatusSleep      AssessmentStatus = "Sleep"
 	AssessmentStatusNotStarted AssessmentStatus = "NotStarted"
 	// when user started work
 	AssessmentStatusStarted AssessmentStatus = "Started"

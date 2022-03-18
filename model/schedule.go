@@ -88,6 +88,7 @@ type IScheduleModel interface {
 	GetScheduleRelationIDs(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleRelationIDs, error)
 	CheckScheduleReviewData(ctx context.Context, op *entity.Operator, request *entity.CheckScheduleReviewDataRequest) (*entity.CheckScheduleReviewDataResponse, error)
 	UpdateScheduleReviewStatus(ctx context.Context, request *entity.UpdateScheduleReviewStatusRequest) error
+	GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleReview, error)
 }
 
 type scheduleModel struct {
@@ -214,8 +215,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 
 	// TODO assessment not support review
 	var assessmentAddReq *v2.AssessmentAddWhenCreateSchedulesReq
-	if viewData.ClassType != entity.ScheduleClassTypeTask &&
-		!viewData.IsReview {
+	if viewData.ClassType != entity.ScheduleClassTypeTask {
 		assessmentAddReq, err = s.getAssessmentAddWhenCreateSchedulesReq(ctx, op, schedule, scheduleList, relations, className)
 		if err != nil {
 			log.Error(ctx, "s.getAssessmentAddWhenCreateSchedulesReq error",
@@ -242,9 +242,9 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 		if schedule.ClassType != entity.ScheduleClassTypeTask &&
 			!schedule.IsReview {
 			log.Debug(ctx, "start add assessment", log.Any("assessmentAddReq", assessmentAddReq))
-			err = GetAssessmentModelV2().AddWhenCreateSchedules(ctx, tx, op, assessmentAddReq)
+			err = GetAssessmentInternalModel().AddWhenCreateSchedules(ctx, tx, op, assessmentAddReq)
 			if err != nil {
-				log.Error(ctx, "GetAssessmentModelV2().AddWhenCreateSchedules error",
+				log.Error(ctx, "GetAssessmentInternalModel().AddWhenCreateSchedules error",
 					log.Err(err),
 					log.Any("assessmentAddReq", assessmentAddReq))
 				return nil, err
@@ -1154,9 +1154,9 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 
 		if schedule.ClassType != entity.ScheduleClassTypeTask {
 			log.Debug(ctx, "start add assessment", log.Any("assessmentAddReq", assessmentAddReq))
-			err = GetAssessmentModelV2().AddWhenCreateSchedules(ctx, tx, operator, assessmentAddReq)
+			err = GetAssessmentInternalModel().AddWhenCreateSchedules(ctx, tx, operator, assessmentAddReq)
 			if err != nil {
-				log.Error(ctx, "GetAssessmentModelV2().AddWhenCreateSchedules error",
+				log.Error(ctx, "GetAssessmentInternalModel().AddWhenCreateSchedules error",
 					log.Err(err),
 					log.Any("assessmentAddReq", assessmentAddReq))
 				return err
@@ -1300,7 +1300,7 @@ func (s *scheduleModel) deleteScheduleRelationTx(ctx context.Context, tx *dbo.DB
 	}
 
 	// delete schedule assessment relation error
-	err = GetAssessmentModelV2().InternalDeleteByScheduleIDsTx(ctx, op, tx, scheduleIDs)
+	err = GetAssessmentInternalModel().DeleteByScheduleIDsTx(ctx, op, tx, scheduleIDs)
 	if err != nil {
 		log.Error(ctx, "delete schedule assessment relation error",
 			log.Err(err),
@@ -1571,7 +1571,7 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 		scheduleIDs[i] = item.ID
 	}
 
-	assessmentAttemptedMap, err := GetAssessmentModelV2().AnyoneAttemptedByScheduleIDs(ctx, op, scheduleIDs)
+	assessmentAttemptedMap, err := GetAssessmentInternalModel().AnyoneAttemptedByScheduleIDs(ctx, op, scheduleIDs)
 	if err != nil {
 		log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.Any("scheduleIDs", studyScheduleIDs))
 		return nil, err
@@ -3140,6 +3140,15 @@ func (s *scheduleModel) UpdateScheduleReviewStatus(ctx context.Context, request 
 			}
 		}
 
+		err = GetAssessmentInternalModel().UpdateWhenReviewScheduleSuccess(ctx, tx, request.ScheduleID)
+		if err != nil {
+			log.Error(ctx, "GetAssessmentInternalModel().UpdateAssessmentWhenReviewScheduleSuccess error",
+				log.Err(err),
+				log.Any("request", request),
+			)
+			return err
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -3151,6 +3160,29 @@ func (s *scheduleModel) UpdateScheduleReviewStatus(ctx context.Context, request 
 	}
 
 	return nil
+}
+
+func (s *scheduleModel) GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleReview, error) {
+	var scheduleReviews []*entity.ScheduleReview
+	daCondition := da.ScheduleReviewCondition{
+		ScheduleIDs: entity.NullStrings{
+			Valid:   true,
+			Strings: []string{scheduleID},
+		},
+		ReviewStatuses: entity.NullStrings{
+			Valid:   true,
+			Strings: []string{string(entity.ScheduleReviewStatusSuccess)},
+		},
+	}
+	err := s.scheduleReviewDA.Query(ctx, daCondition, &scheduleReviews)
+	if err != nil {
+		log.Error(ctx, "s.scheduleReviewDA.Query error",
+			log.Err(err),
+			log.Any("daCondition", daCondition))
+		return nil, err
+	}
+
+	return scheduleReviews, nil
 }
 
 // Schedule model interval function
@@ -3505,7 +3537,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 	} else if schedule.ClassType != entity.ScheduleClassTypeTask {
 		// check if the assessment completed, not homefun homework, no assessment for the Task
 		g.Go(func() error {
-			assessments, err := GetAssessmentModelV2().QueryInternal(ctx, operator, &assessmentV2.AssessmentCondition{
+			assessments, err := GetAssessmentInternalModel().Query(ctx, operator, &assessmentV2.AssessmentCondition{
 				ScheduleIDs: entity.NullStrings{
 					Strings: []string{schedule.ID},
 					Valid:   true,
@@ -4070,7 +4102,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 	} else if schedule.ClassType != entity.ScheduleClassTypeTask {
 		// check if the assessment completed, not homefun homework, no assessment of the Task
 		g.Go(func() error {
-			assessments, err := GetAssessmentModelV2().QueryInternal(ctx, operator, &assessmentV2.AssessmentCondition{
+			assessments, err := GetAssessmentInternalModel().Query(ctx, operator, &assessmentV2.AssessmentCondition{
 				ScheduleIDs: entity.NullStrings{
 					Strings: []string{schedule.ID},
 					Valid:   true,
@@ -4222,7 +4254,7 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 		}
 
 		if len(withAssessmentScheduleIDs) > 0 {
-			assessmentsMap, err := GetAssessmentModelV2().AnyoneAttemptedByScheduleIDs(ctx, operator, withAssessmentScheduleIDs)
+			assessmentsMap, err := GetAssessmentInternalModel().AnyoneAttemptedByScheduleIDs(ctx, operator, withAssessmentScheduleIDs)
 			if err != nil {
 				log.Error(ctx, "s.assessmentModel.Query error",
 					log.Err(err),
@@ -4444,14 +4476,14 @@ func (s *scheduleModel) transformToScheduleTimeView(ctx context.Context, operato
 
 	g.Go(func() error {
 		if len(notHomefunHomeworkIDs) > 0 {
-			assessments, err := GetAssessmentModelV2().QueryInternal(ctx, operator, &assessmentV2.AssessmentCondition{
+			assessments, err := GetAssessmentInternalModel().Query(ctx, operator, &assessmentV2.AssessmentCondition{
 				ScheduleIDs: entity.NullStrings{
 					Strings: notHomefunHomeworkIDs,
 					Valid:   true,
 				},
 			})
 			if err != nil {
-				log.Error(ctx, "GetAssessmentModelV2().QueryInternal error",
+				log.Error(ctx, "GetAssessmentInternalModel().QueryInternal error",
 					log.Err(err),
 					log.Any("notHomefunHomeworkIDs", notHomefunHomeworkIDs))
 				return err
@@ -4586,7 +4618,6 @@ func (s *scheduleModel) getAssessmentAddWhenCreateSchedulesReq(ctx context.Conte
 		RepeatScheduleIDs:    make([]string, len(repeatScheduleList)),
 		Users:                make([]*v2.AssessmentUserReq, 0, len(scheduleRelations)),
 		AssessmentType:       assessmentType,
-		LessPlanID:           schedule.LessonPlanID,
 		ClassRosterClassName: className,
 		ScheduleTitle:        schedule.Title,
 	}
