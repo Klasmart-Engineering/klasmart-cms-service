@@ -88,6 +88,7 @@ type IScheduleModel interface {
 	GetScheduleRelationIDs(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleRelationIDs, error)
 	CheckScheduleReviewData(ctx context.Context, op *entity.Operator, request *entity.CheckScheduleReviewDataRequest) (*entity.CheckScheduleReviewDataResponse, error)
 	UpdateScheduleReviewStatus(ctx context.Context, request *entity.UpdateScheduleReviewStatusRequest) error
+	GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleReview, error)
 }
 
 type scheduleModel struct {
@@ -3151,6 +3152,29 @@ func (s *scheduleModel) UpdateScheduleReviewStatus(ctx context.Context, request 
 	}
 
 	return nil
+}
+
+func (s *scheduleModel) GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleReview, error) {
+	var scheduleReviews []*entity.ScheduleReview
+	daCondition := da.ScheduleReviewCondition{
+		ScheduleIDs: entity.NullStrings{
+			Valid:   true,
+			Strings: []string{scheduleID},
+		},
+		ReviewStatuses: entity.NullStrings{
+			Valid:   true,
+			Strings: []string{string(entity.ScheduleReviewStatusSuccess)},
+		},
+	}
+	err := s.scheduleReviewDA.Query(ctx, daCondition, &scheduleReviews)
+	if err != nil {
+		log.Error(ctx, "s.scheduleReviewDA.Query error",
+			log.Err(err),
+			log.Any("daCondition", daCondition))
+		return nil, err
+	}
+
+	return scheduleReviews, nil
 }
 
 // Schedule model interval function

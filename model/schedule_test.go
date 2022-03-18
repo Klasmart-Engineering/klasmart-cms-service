@@ -220,3 +220,15 @@ func TestUpdateScheduleReviewStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestGetSuccessScheduleReview(t *testing.T) {
+	ctx := context.TODO()
+
+	scheduleReviews, err := GetScheduleModel().GetSuccessScheduleReview(ctx, &entity.Operator{}, "614091d5e8155193e489a9ba")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range scheduleReviews {
+		t.Log(v)
+	}
+}

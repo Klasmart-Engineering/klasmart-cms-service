@@ -111,3 +111,45 @@ func (s *scheduleReviewDA) DeleteScheduleReviewByScheduleID(ctx context.Context,
 
 	return nil
 }
+
+type ScheduleReviewCondition struct {
+	ScheduleIDs    entity.NullStrings
+	StudentIDs     entity.NullStrings
+	ReviewStatuses entity.NullStrings
+	ReviewTypes    entity.NullStrings
+}
+
+func (c ScheduleReviewCondition) GetConditions() ([]string, []interface{}) {
+	var wheres []string
+	var params []interface{}
+
+	if c.ScheduleIDs.Valid {
+		wheres = append(wheres, "schedule_id in (?)")
+		params = append(params, c.ScheduleIDs.Strings)
+	}
+
+	if c.StudentIDs.Valid {
+		wheres = append(wheres, "student_id in (?)")
+		params = append(params, c.StudentIDs.Strings)
+	}
+
+	if c.ReviewStatuses.Valid {
+		wheres = append(wheres, "review_status in (?)")
+		params = append(params, c.ReviewStatuses.Strings)
+	}
+
+	if c.ReviewTypes.Valid {
+		wheres = append(wheres, "type in (?)")
+		params = append(params, c.ReviewTypes.Strings)
+	}
+
+	return wheres, params
+}
+
+func (c ScheduleReviewCondition) GetOrderBy() string {
+	return ""
+}
+
+func (c ScheduleReviewCondition) GetPager() *dbo.Pager {
+	return nil
+}
