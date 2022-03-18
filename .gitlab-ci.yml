@@ -42,7 +42,7 @@ DEPLOY_SWAGGER_Global_JOB:
       when: on_success
       
 
-.build_cms:
+BUILD_CMS:
   stage: build_loadtest_cms
   image: golang:1.18.0-alpine3.14
   cache:
@@ -52,12 +52,12 @@ DEPLOY_SWAGGER_Global_JOB:
     - web-runner-aws
   extends:
     - .go-cache
-    - BUILD_LOADTEST_CMS
+    - .BUILD_LOADTEST_CMS
   rules:
-  - if '$CI_COMMIT_BRANCH =~ /^(loadtest).*$/'
-    when: on_success
+    - if: '$CI_COMMIT_BRANCH =~ /^(loadtest).*$/'
+      when: on_success
 
-.deploy_ecs_cms:
+DEPLOY_ECS_CMS:
   stage: deploy_ecs_cms
   image: docker:latest
   variables:
@@ -69,7 +69,7 @@ DEPLOY_SWAGGER_Global_JOB:
   tags:
     - web-runner-aws
   extends:
-    - DEPLOY_ECS_CMS
+    - .DEPLOY_ECS_CMS
   rules:
-  - if '$CI_COMMIT_BRANCH =~ /^(loadtest).*$/'
-    when: on_success
+    - if: '$CI_COMMIT_BRANCH =~ /^(loadtest).*$/'
+      when: on_success
