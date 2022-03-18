@@ -41,7 +41,7 @@ from (
 		where auv.user_type= ?
 			and auv.user_id in (?)
 			and s.class_type in (?,?)
-			and s.start_at >=? and s.start_at <?
+			and s.end_at >=? and s.end_at <?
 ) tl
 group by teacher_id;
 `
@@ -109,7 +109,7 @@ from (
 	where auv.user_type= ?
 		and auv.user_id in (?)
 		and s.class_type in (?,?)
-		and s.start_at >=? and s.start_at <?
+		and s.end_at >=? and s.end_at <?
 ) tl;
 `
 	start, end, err := args.Duration.Value(ctx)
