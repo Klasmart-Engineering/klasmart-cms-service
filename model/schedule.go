@@ -215,8 +215,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 
 	// TODO assessment not support review
 	var assessmentAddReq *v2.AssessmentAddWhenCreateSchedulesReq
-	if viewData.ClassType != entity.ScheduleClassTypeTask &&
-		!viewData.IsReview {
+	if viewData.ClassType != entity.ScheduleClassTypeTask {
 		assessmentAddReq, err = s.getAssessmentAddWhenCreateSchedulesReq(ctx, op, schedule, scheduleList, relations, className)
 		if err != nil {
 			log.Error(ctx, "s.getAssessmentAddWhenCreateSchedulesReq error",
@@ -3139,6 +3138,15 @@ func (s *scheduleModel) UpdateScheduleReviewStatus(ctx context.Context, request 
 				)
 				return err
 			}
+		}
+
+		err = GetAssessmentInternalModel().UpdateAssessmentWhenReviewScheduleSuccess(ctx, tx, request.ScheduleID)
+		if err != nil {
+			log.Error(ctx, "GetAssessmentInternalModel().UpdateAssessmentWhenReviewScheduleSuccess error",
+				log.Err(err),
+				log.Any("request", request),
+			)
+			return err
 		}
 
 		return nil
