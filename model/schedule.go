@@ -239,8 +239,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 			return nil, err
 		}
 
-		if schedule.ClassType != entity.ScheduleClassTypeTask &&
-			!schedule.IsReview {
+		if schedule.ClassType != entity.ScheduleClassTypeTask {
 			log.Debug(ctx, "start add assessment", log.Any("assessmentAddReq", assessmentAddReq))
 			err = GetAssessmentInternalModel().AddWhenCreateSchedules(ctx, tx, op, assessmentAddReq)
 			if err != nil {
