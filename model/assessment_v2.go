@@ -516,6 +516,7 @@ func (a *assessmentModelV2) getAssessmentPageConfig(ac *AssessmentPageComponent,
 	return nil
 }
 
+// TODO need refactor
 func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, status v2.AssessmentStatus, req *v2.AssessmentUpdateReq) error {
 	if len(req.Students) <= 0 {
 		log.Warn(ctx, "students is empty", log.Any("req", req))

@@ -46,7 +46,7 @@ func (s *Server) approveBulk(c *gin.Context) {
 		return
 	}
 	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 		return
 	}
 
@@ -94,7 +94,7 @@ func (s *Server) approve(c *gin.Context) {
 		return
 	}
 	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 		return
 	}
 
@@ -154,7 +154,7 @@ func (s *Server) reject(c *gin.Context) {
 		return
 	}
 	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 		return
 	}
 
@@ -209,7 +209,7 @@ func (s *Server) rejectBulk(c *gin.Context) {
 		return
 	}
 	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 		return
 	}
 
