@@ -67,6 +67,7 @@ func (rc *RoomContent) GetParentID() string {
 func (rc *RoomContent) AppendChild(item interface{}) {
 	rc.Children = append(rc.Children, item.(*RoomContent))
 }
+
 func (rc *RoomContent) GetInternalID() string {
 	if rc.ParentID == "" {
 		return rc.MaterialID
