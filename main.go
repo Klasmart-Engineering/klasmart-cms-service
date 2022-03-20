@@ -2,48 +2,22 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/go-redis/redis/v8"
 	"gitlab.badanamu.com.cn/calmisland/common-cn/common"
 	"gitlab.badanamu.com.cn/calmisland/common-cn/helper"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/api"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
-	"gitlab.badanamu.com.cn/calmisland/ro"
 )
-
-func initDB() {
-	ctx := context.Background()
-	dboHandler, err := dbo.NewWithConfig(func(c *dbo.Config) {
-		dbConf := config.Get().DBConfig
-		c.DBType = dbo.NewRelicMySQL
-		c.ShowLog = dbConf.ShowLog
-		c.ShowSQL = dbConf.ShowSQL
-		c.MaxIdleConns = dbConf.MaxIdleConns
-		c.MaxOpenConns = dbConf.MaxOpenConns
-		c.ConnMaxIdleTime = dbConf.ConnMaxIdleTime
-		c.ConnMaxLifetime = dbConf.ConnMaxLifetime
-		c.ConnectionString = dbConf.ConnectionString
-		c.LogLevel = dbo.Info
-		c.SlowThreshold = dbConf.SlowThreshold
-	})
-	if err != nil {
-		log.Error(ctx, "create dbo failed", log.Err(err))
-		panic(err)
-
-	}
-	dbo.ReplaceGlobal(dboHandler)
-}
 
 func initDataSource() {
 	//init querier
@@ -66,14 +40,10 @@ func initDataSource() {
 	engine.AddDataSource(ctx, external.GetCategoryServiceProvider())
 	engine.AddDataSource(ctx, external.GetAgeServiceProvider())
 }
-func initCache() {
-	ro.SetConfig(&redis.Options{
-		Addr:     fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
-		Password: config.Get().RedisConfig.Password,
-	})
+func initCache(ctx context.Context) {
+	da.InitRedis(ctx)
 	initDataSource()
 
-	ctx := context.Background()
 	conf := config.Get()
 	err := kl2cache.Init(ctx,
 		kl2cache.OptEnable(conf.RedisConfig.OpenCache),
@@ -138,16 +108,13 @@ func main() {
 
 	log.Debug(ctx, "load config successfully", log.Any("config", config.Get()))
 
-	// init database connection
-	initDB()
-
+	da.InitMySQL(ctx)
 	log.Debug(ctx, "init db successfully")
-	initCache()
 
+	initCache(ctx)
 	log.Debug(ctx, "init cache successfully")
-	// init dynamodb connection
-	storage.DefaultStorage()
 
+	storage.DefaultStorage()
 	log.Debug(ctx, "init storage successfully")
 
 	if os.Getenv("env") == "HTTP" {
