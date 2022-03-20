@@ -6,10 +6,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/go-redis/redis"
-	"gitlab.badanamu.com.cn/calmisland/ro"
-
+	"github.com/go-redis/redis/v8"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/ro"
 )
 
 func Setup() {

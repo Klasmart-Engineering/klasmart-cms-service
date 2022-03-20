@@ -70,7 +70,7 @@ func (machine *Bubble) Launch(ctx context.Context) (bubble string, err error) {
 	}
 	// generate temp redis key and OTP
 	key := utils.GetHashKeyFromPlatformedString(machine.codeKey)
-	if err = client.Set(key, string(baseSecret), time.Second*time.Duration(120*100)).Err(); err != nil {
+	if err = client.Set(ctx, key, string(baseSecret), time.Second*time.Duration(120*100)).Err(); err != nil {
 		log.Error(ctx, "Launch: Set failed", log.String("code_hash_key", key), log.Err(err))
 		return
 	}
@@ -99,13 +99,13 @@ func (machine *Bubble) next(ctx context.Context) (err error) {
 		log.Error(ctx, "next: GetRedis failed", log.Err(err))
 		return
 	}
-	_, err = client.RPush(machine.codeKey, time.Now().Unix()).Result()
+	_, err = client.RPush(ctx, machine.codeKey, time.Now().Unix()).Result()
 	if err != nil {
 		log.Error(ctx, "next: RPush failed", log.Err(err))
 		return
 	}
 
-	sendTimeUnixList, e := client.LRange(machine.codeKey, 0, int64(machine.counts)).Result()
+	sendTimeUnixList, e := client.LRange(ctx, machine.codeKey, 0, int64(machine.counts)).Result()
 	if e != nil {
 		err = e
 		log.Error(ctx, "next: LRange failed", log.Err(err))
@@ -139,7 +139,7 @@ func (machine *Bubble) next(ctx context.Context) (err error) {
 	}
 
 	// remain [expiredCount,s.maxTimes-1]
-	_, err = client.LTrim(machine.codeKey, int64(expiredCount), int64(machine.counts)).Result()
+	_, err = client.LTrim(ctx, machine.codeKey, int64(expiredCount), int64(machine.counts)).Result()
 	if err != nil {
 		log.Error(ctx, "next: LTrim failed", log.Err(err))
 		return

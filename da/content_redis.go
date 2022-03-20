@@ -63,7 +63,7 @@ func (r *ContentRedis) SaveContentCacheList(ctx context.Context, contents []*ent
 				log.Warn(ctx, "Can't parse content into json", log.Err(err), log.String("cid", contents[i].ID))
 				continue
 			}
-			err = ro.MustGetRedis(ctx).SetNX(key, string(contentJSON), r.expiration).Err()
+			err = ro.MustGetRedis(ctx).SetNX(ctx, key, string(contentJSON), r.expiration).Err()
 			if err != nil {
 				log.Warn(ctx, "Can't save content into cache", log.Err(err), log.String("key", key), log.String("data", string(contentJSON)))
 				continue
@@ -96,7 +96,7 @@ func (r *ContentRedis) GetContentCacheByIDList(ctx context.Context, ids []string
 	for i := range ids {
 		keys[i] = r.contentKey(ids[i])
 	}
-	res, err := ro.MustGetRedis(ctx).MGet(keys...).Result()
+	res, err := ro.MustGetRedis(ctx).MGet(ctx, keys...).Result()
 	if err != nil {
 		log.Info(ctx, "Can't get content list from cache", log.Err(err), log.Strings("keys", keys), log.Strings("ids", ids))
 		return ids, nil
@@ -149,7 +149,7 @@ func (r *ContentRedis) GetContentCacheBySearchCondition(ctx context.Context, con
 	log.Info(ctx, "search content ", log.Any("condition", condition), log.String("key", key))
 
 	//res, err := ro.MustGetRedis(ctx).Get(key).Result()
-	res, err := ro.MustGetRedis(ctx).HGet(RedisKeyPrefixContentCondition, r.conditionHash(condition)).Result()
+	res, err := ro.MustGetRedis(ctx).HGet(ctx, RedisKeyPrefixContentCondition, r.conditionHash(condition)).Result()
 
 	if err != nil {
 		log.Info(ctx, "Can't get content condition from cache", log.Err(err), log.String("key", key), log.Any("condition", condition))
@@ -159,7 +159,7 @@ func (r *ContentRedis) GetContentCacheBySearchCondition(ctx context.Context, con
 	err = json.Unmarshal([]byte(res), contentLists)
 	if err != nil {
 		log.Error(ctx, "Can't unmarshal content condition from cache", log.Err(err), log.String("key", key), log.String("json", res))
-		err = ro.MustGetRedis(ctx).Del(key).Err()
+		err = ro.MustGetRedis(ctx).Del(ctx, key).Err()
 		if err != nil {
 			log.Error(ctx, "Can't delete content from cache", log.Err(err), log.String("key", key), log.String("json", res))
 		}
@@ -185,7 +185,7 @@ func (r *ContentRedis) CleanContentCache(ctx context.Context, ids []string) {
 	}
 
 	//删除所有condition cache
-	err := ro.MustGetRedis(ctx).Del(keys...).Err()
+	err := ro.MustGetRedis(ctx).Del(ctx, keys...).Err()
 	if err != nil {
 		log.Error(ctx, "Can't clean content from cache", log.Err(err), log.Strings("keys", keys))
 	}
