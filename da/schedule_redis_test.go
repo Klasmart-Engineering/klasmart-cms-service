@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/go-playground/assert/v2"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )

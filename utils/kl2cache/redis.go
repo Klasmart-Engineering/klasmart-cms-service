@@ -8,10 +8,9 @@ import (
 	"reflect"
 	"strings"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
 func OptRedis(host string, port int, password string) Option {
@@ -35,7 +34,7 @@ func initRedis(ctx context.Context, conf *config) (err error) {
 		Addr:     fmt.Sprintf("%s:%v", conf.Redis.Host, conf.Redis.Port),
 		Password: conf.Redis.Password,
 	})
-	err = rProvider.Client.Ping().Err()
+	err = rProvider.Client.Ping(ctx).Err()
 	if err != nil {
 		log.Error(ctx, "ping redis failed", log.Err(err))
 		return
@@ -122,7 +121,7 @@ func (r *redisProvider) getWithOutCache(ctx context.Context, key Key, val interf
 
 func (r *redisProvider) getWithCache(ctx context.Context, key Key, val interface{}, fGetData innerFuncGet) (innerPanic bool, err error) {
 	var buf []byte
-	s, err := r.Client.Get(key.Key()).Result()
+	s, err := r.Client.Get(ctx, key.Key()).Result()
 	switch err {
 	case nil:
 		log.Info(ctx,
@@ -149,7 +148,7 @@ func (r *redisProvider) getWithCache(ctx context.Context, key Key, val interface
 			log.Error(ctx, "marshal value failed", log.Err(err), log.Any("value", val1))
 			return
 		}
-		err = r.Client.Set(key.Key(), string(buf), r.CalcExpired(nil)).Err()
+		err = r.Client.Set(ctx, key.Key(), string(buf), r.CalcExpired(nil)).Err()
 		if err != nil {
 			log.Error(ctx, "redis set failed", log.Err(err), log.Any("key", key.Key()), log.Any("val", string(buf)))
 			return
@@ -253,7 +252,7 @@ func (r *redisProvider) batchGetWithCache(ctx context.Context, keys []Key, val i
 	for _, key := range keys {
 		keyStrArr = append(keyStrArr, key.Key())
 	}
-	rsCached, err := r.Client.MGet(keyStrArr...).Result()
+	rsCached, err := r.Client.MGet(ctx, keyStrArr...).Result()
 	if err == redis.Nil {
 		log.Info(ctx, "redis mget got redis.Nil", log.Any("keys", keyStrArr), log.Err(err))
 		err = nil
@@ -296,7 +295,7 @@ func (r *redisProvider) batchGetWithCache(ctx context.Context, keys []Key, val i
 				return
 			}
 			s := string(buf)
-			err = pipe.Set(kv.Key.Key(), s, r.CalcExpired(nil)).Err()
+			err = pipe.Set(ctx, kv.Key.Key(), s, r.CalcExpired(nil)).Err()
 			if err != nil {
 				log.Error(ctx,
 					"pipe set failed",
@@ -308,7 +307,7 @@ func (r *redisProvider) batchGetWithCache(ctx context.Context, keys []Key, val i
 			}
 			valStrArr = append(valStrArr, s)
 		}
-		_, err = pipe.Exec()
+		_, err = pipe.Exec(ctx)
 		if err != nil {
 			log.Error(ctx,
 				"set redis caches failed",
