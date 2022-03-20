@@ -166,13 +166,13 @@ func (a *assessmentInternalModel) LockAssessmentContentAndOutcome(ctx context.Co
 
 	now := time.Now().Unix()
 
-	detailComponent := NewAssessmentDetailComponent(ctx, op, assessment)
-	contentsFromSchedule, err := detailComponent.GetScheduleLockedContents(schedule)
+	ags := NewAssessmentGrainSingle(ctx, op, assessment)
+	contentsFromSchedule, err := ags.SingleGetLockedContentsFromSchedule()
 	if err != nil {
 		return err
 	}
 
-	assessmentUserMap, err := detailComponent.apc.GetAssessmentUserMap()
+	assessmentUserMap, err := ags.GetAssessmentUserMap()
 	if err != nil {
 		return err
 	}
