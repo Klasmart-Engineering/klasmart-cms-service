@@ -143,19 +143,6 @@ func (apc *AssessmentPageComponent) GetScheduleRelationMap() (map[string][]*enti
 	return apc.allScheduleRelationMap, nil
 }
 
-//func (apc *AssessmentPageComponent) GetLessPlanMap() (map[string]*v2.AssessmentContentView, error) {
-//	data, err := apc.prepareLessPlanMap()
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	if len(data) == 1 {
-//		return nil, constant.ErrRecordNotFound
-//	}
-//
-//	return data, nil
-//}
-
 func (apc *AssessmentPageComponent) GetAssessmentUserMap() (map[string][]*v2.AssessmentUser, error) {
 	if _, ok := apc.assessmentUserMap[constant.AssessmentInitializedKey]; ok {
 		return apc.assessmentUserMap, nil
