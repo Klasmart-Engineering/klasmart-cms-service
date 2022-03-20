@@ -75,7 +75,7 @@ func TestAssessmentModel_DeleteByScheduleIDs(t *testing.T) {
 		UserID: "17a28338-3b88-4bac-ab15-cce3887af357", //"c57ef68d-a635-451d-b997-aebc3c29b99a",
 		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 	}
-	err := GetAssessmentModelV2().InternalDeleteByScheduleIDsTx(ctx, op, dbo.MustGetDB(ctx), []string{"6099c496e05f6e940027387c"})
+	err := GetAssessmentInternalModel().DeleteByScheduleIDsTx(ctx, op, dbo.MustGetDB(ctx), []string{"6099c496e05f6e940027387c"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,11 +120,10 @@ func TestAssessmentModel_AddWhenCreateSchedules(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = GetAssessmentModelV2().AddWhenCreateSchedules(ctx, dbo.MustGetDB(ctx), op, &v2.AssessmentAddWhenCreateSchedulesReq{
+	err = GetAssessmentInternalModel().AddWhenCreateSchedules(ctx, dbo.MustGetDB(ctx), op, &v2.AssessmentAddWhenCreateSchedulesReq{
 		RepeatScheduleIDs:    []string{"6099c496e05f6e940027387c"},
 		Users:                users,
 		AssessmentType:       assessmentType,
-		LessPlanID:           schedule.LessonPlanID,
 		ClassRosterClassName: "className",
 		ScheduleTitle:        schedule.Title,
 	})
@@ -143,7 +142,7 @@ func TestAssessmentModel_ScheduleEndClassCallback(t *testing.T) {
 
 	scheduleID := "6099c496e05f6e940027387c"
 
-	err := GetAssessmentModelV2().ScheduleEndClassCallback(ctx, op, &v2.ScheduleEndClassCallBackReq{
+	err := GetAssessmentInternalModel().ScheduleEndClassCallback(ctx, op, &v2.ScheduleEndClassCallBackReq{
 		ScheduleID: scheduleID,
 		AttendanceIDs: []string{
 			"b0ffe4a2-94fb-41b0-9e7a-8e2e51686003",
