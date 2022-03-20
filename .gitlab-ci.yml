@@ -59,12 +59,15 @@ BUILD_CMS:
 
 DEPLOY_ECS_CMS:
   stage: deploy_ecs_cms
-    #image: docker:latest
-    #variables:
-    #DOCKER_DRIVER: overlay
-    #DOCKER_HOST: tcp://localhost:2375
-    #services:
-    #- name: docker:18.09.7-dind
+  image: docker:19.03.12
+  variables:
+    DOCKER_DRIVER: overlay
+    DOCKER_HOST: tcp://localhost:2375
+    DOCKER_TLS_CERTDIR: ""
+  services:
+    - name: docker:19.03.12-dind
+  before_script:
+    - docker info
   cache:
     paths:
       - main
