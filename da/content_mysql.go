@@ -409,15 +409,6 @@ func (cd *ContentMySQLDA) QueryContent(ctx context.Context, tx *dbo.DBContext, c
 	return objs, err
 }
 
-func (cd *ContentMySQLDA) QueryContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (contents []*entity.Content, err error) {
-	contents = make([]*entity.Content, 0)
-	err = cd.s.QueryTx(ctx, tx, condition, &contents)
-	if err != nil {
-		return
-	}
-	return
-}
-
 func (cm *ContentMySQLDA) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error {
 	// err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
 	if len(cids) < 1 {

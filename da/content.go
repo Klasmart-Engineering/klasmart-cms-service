@@ -23,7 +23,6 @@ type IContentDA interface {
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition *ContentCondition) (int, []*entity.Content, error)
 	SearchContentUnSafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (int, []*entity.Content, error)
 	QueryContent(cgtx context.Context, tx *dbo.DBContext, condition *ContentCondition) ([]*entity.Content, error)
-	QueryContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (contents []*entity.Content, err error)
 	SearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 ContentCondition, condition2 *FolderCondition) (int, []*entity.FolderContent, error)
 	SearchFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 *FolderCondition) (int, []*entity.FolderContent, error)
 	CountFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 *FolderCondition) (int, error)
@@ -100,10 +99,6 @@ func (c ContentDA) SearchContentUnSafe(ctx context.Context, tx *dbo.DBContext, c
 
 func (c ContentDA) QueryContent(ctx context.Context, tx *dbo.DBContext, condition *ContentCondition) ([]*entity.Content, error) {
 	return c.mysqlDA.QueryContent(ctx, tx, condition)
-}
-
-func (c ContentDA) QueryContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (contents []*entity.Content, err error) {
-	return c.mysqlDA.QueryContentUnsafe(ctx, tx, condition)
 }
 
 func (c ContentDA) SearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 ContentCondition, condition2 *FolderCondition) (int, []*entity.FolderContent, error) {
