@@ -66,7 +66,7 @@ func InitDB(ctx context.Context) {
 
 func loadDBEnvConfig(ctx context.Context) {
 	cfg := config.Get()
-	cfg.DBConfig.ConnectionString = assertGetEnv("connection_string")
+	cfg.DBConfig.ConnectionString = "root:Passw0rd@tcp(127.0.0.1:3306)/kidsloop3?charset=utf8mb4&parseTime=True&loc=Local" //assertGetEnv("connection_string")
 	maxOpenConnsStr := os.Getenv("max_open_conns")
 	maxIdleConnsStr := os.Getenv("max_idle_conns")
 	showLogStr := os.Getenv("show_log")
@@ -112,10 +112,10 @@ func assertGetEnv(key string) string {
 
 func loadAMSConfig() {
 	cfg := config.Get()
-	cfg.AMS.EndPoint = os.Getenv("ams_endpoint")
+	cfg.AMS.EndPoint = "https://api.alpha.kidsloop.net/user/" //os.Getenv("ams_endpoint")
 }
 
 func loadAssessmentServiceConfig() {
 	cfg := config.Get()
-	cfg.H5P.EndPoint = os.Getenv("h5p_endpoint")
+	cfg.H5P.EndPoint = "https://api.alpha.kidsloop.net/assessment/graphql/" //os.Getenv("h5p_endpoint")
 }
