@@ -472,9 +472,6 @@ func (a *assessmentModelV2) getAssessmentDetailConfig(adc *AssessmentDetailCompo
 			adc.apc.MatchTeacher,
 			adc.apc.MatchClass,
 			adc.apc.MatchCompleteRate,
-
-			adc.MatchReviewStudyContent,
-			adc.MatchReviewStudyStudentRoomInfo,
 		}
 	}
 
