@@ -214,6 +214,7 @@ type AssessmentOutcomeReply struct {
 	Assumed            bool                          `json:"assumed"`
 	AssignedToLessPlan bool                          `json:"-"`
 	AssignedToMaterial bool                          `json:"-"`
+	ScoreThreshold     float32                       `json:"score_threshold"`
 	//StudentIDs  []string                      `json:"student_ids"`
 }
 

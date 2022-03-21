@@ -408,6 +408,7 @@ func (adc *AssessmentDetailComponent) GetOutcomeMap() (map[string]*v2.Assessment
 			Assumed:            item.Assumed,
 			AssignedToLessPlan: false,
 			AssignedToMaterial: false,
+			ScoreThreshold:     item.ScoreThreshold,
 		}
 	}
 
@@ -816,6 +817,47 @@ func (adc *AssessmentDetailComponent) MatchStudentNotContainsRoomInfo() error {
 	return nil
 }
 
+func (adc *AssessmentDetailComponent) summaryRoomScores(userMapFromRoomMap map[string]*RoomUserInfo) (map[string]float64, map[string]float64) {
+	contentSummaryTotalScoreMap := make(map[string]float64)
+	contentMap := make(map[string]*v2.AssessmentContentReply)
+	for _, content := range adc.contents {
+		contentID := content.ContentID
+		if content.ContentType == v2.AssessmentContentTypeUnknown {
+			contentID = content.ParentID
+		}
+		contentSummaryTotalScoreMap[contentID] = contentSummaryTotalScoreMap[contentID] + content.MaxScore
+
+		contentMap[content.RoomProvideContentID] = content
+	}
+
+	roomUserResultMap := make(map[string]*RoomUserResults)
+	roomUserSummaryScoreMap := make(map[string]float64)
+	for _, item := range userMapFromRoomMap {
+		for _, resultItem := range item.Results {
+			key := adc.getKey([]string{
+				item.UserID,
+				resultItem.RoomContentID,
+			})
+			roomUserResultMap[key] = resultItem
+
+			if contentItem, ok := contentMap[resultItem.RoomContentID]; ok {
+				contentID := contentItem.ContentID
+				if contentItem.ContentType == v2.AssessmentContentTypeUnknown {
+					contentID = contentItem.ParentID
+				}
+
+				key2 := adc.getKey([]string{
+					item.UserID,
+					contentID,
+				})
+				roomUserSummaryScoreMap[key2] = roomUserSummaryScoreMap[key2] + resultItem.Score
+			}
+		}
+	}
+
+	return contentSummaryTotalScoreMap, roomUserSummaryScoreMap
+}
+
 func (adc *AssessmentDetailComponent) MatchStudentContainsRoomInfo() error {
 	ctx := adc.ctx
 
@@ -865,6 +907,8 @@ func (adc *AssessmentDetailComponent) MatchStudentContainsRoomInfo() error {
 		}
 	}
 
+	contentScoreMap, studentScoreMap := adc.summaryRoomScores(userMapFromRoomMap)
+
 	for _, item := range assessmentUsers {
 		if item.UserType == v2.AssessmentUserTypeTeacher {
 			continue
@@ -892,13 +936,25 @@ func (adc *AssessmentDetailComponent) MatchStudentContainsRoomInfo() error {
 				ContentID: content.ContentID,
 			}
 
+			contentID := content.ContentID
+			if content.ContentType == v2.AssessmentContentTypeUnknown {
+				contentID = content.ParentID
+			}
+
+			var studentContentScore float32
+			if contentScoreItem, ok := contentScoreMap[contentID]; ok && contentScoreItem != 0 {
+				studentScoreKey := adc.getKey([]string{
+					item.UserID,
+					contentID,
+				})
+				if studentScoreItem, ok := studentScoreMap[studentScoreKey]; ok {
+					studentContentScore = float32(studentScoreItem / contentScoreItem)
+				}
+			}
+
 			userOutcomeReply := make([]*v2.AssessmentStudentResultOutcomeReply, 0)
 			for _, outcomeID := range content.OutcomeIDs {
 				var userOutcome *v2.AssessmentUserOutcome
-				contentID := content.ContentID
-				if content.ContentType == v2.AssessmentContentTypeUnknown {
-					contentID = content.ParentID
-				}
 				if assessmentContent, ok := adc.contentMapFromAssessment[contentID]; ok {
 					key := adc.getKey([]string{
 						item.ID,
@@ -913,10 +969,14 @@ func (adc *AssessmentDetailComponent) MatchStudentContainsRoomInfo() error {
 				if userOutcome != nil {
 					userOutcomeReplyItem.Status = userOutcome.Status
 				} else {
-					if outcomeInfo, ok := adc.outcomeMapFromContent[outcomeID]; ok && outcomeInfo.Assumed {
-						userOutcomeReplyItem.Status = v2.AssessmentUserOutcomeStatusAchieved
+					if outcomeInfo, ok := adc.outcomeMapFromContent[outcomeID]; !ok {
+						continue
 					} else {
-						userOutcomeReplyItem.Status = v2.AssessmentUserOutcomeStatusUnknown
+						if outcomeInfo.Assumed || studentContentScore >= outcomeInfo.ScoreThreshold {
+							userOutcomeReplyItem.Status = v2.AssessmentUserOutcomeStatusAchieved
+						} else {
+							userOutcomeReplyItem.Status = v2.AssessmentUserOutcomeStatusUnknown
+						}
 					}
 				}
 
