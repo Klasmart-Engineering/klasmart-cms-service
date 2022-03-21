@@ -181,7 +181,7 @@ const (
 	AssessmentStatusNotApplicable AssessmentStatus = "NA"
 	// when create schedule
 	// For the schedule whose data preparation is completed, the assessment status is not start, otherwise it is sleep
-	AssessmentStatusSleep      AssessmentStatus = "Sleep"
+	//AssessmentStatusSleep      AssessmentStatus = "Sleep"
 	AssessmentStatusNotStarted AssessmentStatus = "NotStarted"
 	// when user started work
 	AssessmentStatusStarted AssessmentStatus = "Started"
