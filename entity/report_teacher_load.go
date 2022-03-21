@@ -74,3 +74,10 @@ type TeacherLoadLessonListResponse struct {
 type TeacherLoadLessonSummaryResponse struct {
 	Summary *TeacherLoadLessonSummary `json:"summary"`
 }
+
+type TeacherLoadOverview struct {
+	NumOfMissedLessons            int `json:"num_of_missed_lessons"`
+	NumOfTeachersCompletedAll     int `json:"num_of_teachers_completed_all"`
+	NumOfTeachersMissedSome       int `json:"num_of_teachers_missed_some"`
+	NumOfTeachersMissedFrequently int `json:"num_of_teachers_missed_frequently"`
+}
