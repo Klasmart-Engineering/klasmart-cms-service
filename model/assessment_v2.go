@@ -466,6 +466,13 @@ func (a *assessmentModelV2) getAssessmentDetailConfig(adc *AssessmentDetailCompo
 			adc.MatchContentsContainsRoomInfo,
 			adc.MatchStudentContainsRoomInfo,
 		}
+	case v2.AssessmentTypeReviewStudy:
+		return []AssessmentConfigFunc{
+			adc.apc.MatchSchedule,
+			adc.apc.MatchTeacher,
+			adc.apc.MatchClass,
+			adc.apc.MatchCompleteRate,
+		}
 	}
 
 	return nil
@@ -489,6 +496,13 @@ func (a *assessmentModelV2) getAssessmentPageConfig(ac *AssessmentPageComponent,
 			ac.MatchClass,
 			ac.MatchCompleteRate,
 			ac.MatchRemainingTime,
+		}
+	case v2.AssessmentTypeReviewStudy:
+		return []AssessmentConfigFunc{
+			ac.MatchSchedule,
+			ac.MatchTeacher,
+			ac.MatchClass,
+			ac.MatchCompleteRate,
 		}
 	default:
 		return []AssessmentConfigFunc{
