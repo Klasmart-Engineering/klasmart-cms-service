@@ -131,3 +131,18 @@ func (s *Server) listTeacherMissedLessons(c *gin.Context) {
 		s.defaultErrorHandler(c, err)
 	}
 }
+
+// @Summary get teacher load overview
+// @Tags reports/teacherLoad
+// @ID getTeacherLoadOverview
+// @Accept json
+// @Produce json
+// @Param time_range query string true "time_range"
+// @Success 200 {object} entity.TeacherLoadOverview
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /reports/teacher_load_overview [get]
+func (s *Server) getTeacherLoadOverview(c *gin.Context) {
+
+}
