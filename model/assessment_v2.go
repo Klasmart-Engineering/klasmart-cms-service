@@ -473,8 +473,7 @@ func (a *assessmentModelV2) getAssessmentDetailConfig(adc *AssessmentDetailCompo
 			adc.apc.MatchClass,
 			adc.apc.MatchCompleteRate,
 
-			adc.MatchReviewStudyContent,
-			adc.MatchReviewStudyStudentRoomInfo,
+			adc.MatchReviewStudyStudentResult,
 		}
 	}
 
@@ -564,6 +563,17 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		}
 		existItem.StatusByUser = item.Status
 		waitUpdatedUsers = append(waitUpdatedUsers, existItem)
+	}
+
+	if waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeReviewStudy {
+		return a.updateReviewStudyAssessment(ctx, op, updateReviewStudyAssessmentInput{
+			status:                status,
+			req:                   req,
+			waitUpdatedAssessment: waitUpdatedAssessment,
+			waitUpdatedUsers:      waitUpdatedUsers,
+			userIDAndUserTypeMap:  userIDAndUserTypeMap,
+			detailComponent:       detailComponent,
+		})
 	}
 
 	scheduleContents, err := detailComponent.GetContentsFromSchedule()
@@ -817,6 +827,101 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		if len(waitUpdateAssessmentOutcomes) > 0 {
 			log.Debug(ctx, "wait update outcomes", log.Any("waitUpdateAssessmentOutcomes", waitUpdateAssessmentOutcomes))
 			if _, err = assessmentV2.GetAssessmentUserOutcomeDA().UpdateTx(ctx, tx, waitUpdateAssessmentOutcomes); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type updateReviewStudyAssessmentInput struct {
+	status                v2.AssessmentStatus
+	req                   *v2.AssessmentUpdateReq
+	waitUpdatedAssessment *v2.Assessment
+	waitUpdatedUsers      []*v2.AssessmentUser
+	userIDAndUserTypeMap  map[string]*v2.AssessmentUser
+	detailComponent       *AssessmentDetailComponent
+}
+
+func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op *entity.Operator, input updateReviewStudyAssessmentInput) error {
+	// user comment,score
+	newScores := make([]*external.H5PSetScoreRequest, 0)
+	newComments := make([]*external.H5PAddRoomCommentRequest, 0)
+
+	contentReqMap := make(map[string]*v2.AssessmentUpdateContentReq)
+	for _, item := range input.req.Contents {
+		contentReqMap[item.ContentID] = item
+	}
+
+	for _, stuItem := range input.req.Students {
+		if stuItem.Status == v2.AssessmentUserStatusNotParticipate {
+			continue
+		}
+		// verify student data
+		_, ok := input.userIDAndUserTypeMap[input.detailComponent.getKey([]string{stuItem.StudentID, v2.AssessmentUserTypeStudent.String()})]
+		if !ok {
+			log.Warn(ctx, "student not exist", log.Any("userIDAndUserTypeMap", input.userIDAndUserTypeMap), log.Any("stuItem", stuItem))
+			return constant.ErrInvalidArgs
+		}
+
+		for _, stuResult := range stuItem.Results {
+			if contentItem, ok := contentReqMap[stuResult.ContentID]; ok {
+				if contentItem.ParentID != "" {
+					newScore := &external.H5PSetScoreRequest{
+						RoomID:       input.waitUpdatedAssessment.ScheduleID,
+						StudentID:    stuItem.StudentID,
+						ContentID:    contentItem.ParentID,
+						SubContentID: contentItem.ContentID,
+						Score:        stuResult.Score,
+					}
+					newScores = append(newScores, newScore)
+				}
+			}
+		}
+
+		newComment := external.H5PAddRoomCommentRequest{
+			RoomID:    input.waitUpdatedAssessment.ScheduleID,
+			StudentID: stuItem.StudentID,
+			Comment:   stuItem.ReviewerComment,
+		}
+		newComments = append(newComments, &newComment)
+	}
+
+	// update student comment
+	if len(newComments) > 0 {
+		if _, err := external.GetH5PRoomCommentServiceProvider().BatchAdd(ctx, op, newComments); err != nil {
+			log.Warn(ctx, "set student comment error", log.Err(err), log.Any("newComments", newComments))
+		}
+	}
+
+	// update student score
+	if len(newScores) > 0 {
+		if _, err := external.GetH5PRoomScoreServiceProvider().BatchSet(ctx, op, newScores); err != nil {
+			log.Warn(ctx, "set student score error", log.Err(err), log.Any("newScores", newScores))
+		}
+	}
+
+	now := time.Now().Unix()
+	input.waitUpdatedAssessment.UpdateAt = now
+	input.waitUpdatedAssessment.Status = input.status
+	if input.status == v2.AssessmentStatusComplete {
+		input.waitUpdatedAssessment.CompleteAt = now
+	}
+
+	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		if _, err := assessmentV2.GetAssessmentDA().UpdateTx(ctx, tx, input.waitUpdatedAssessment); err != nil {
+			return err
+		}
+
+		if len(input.waitUpdatedUsers) > 0 {
+			if _, err := assessmentV2.GetAssessmentUserDA().UpdateTx(ctx, tx, input.waitUpdatedUsers); err != nil {
 				return err
 			}
 		}

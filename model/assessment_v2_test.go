@@ -18,7 +18,7 @@ func TestAssessmentModel_GetByID(t *testing.T) {
 		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 		Token:  "",
 	}
-	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0NzQxNjE3OSwiaXNzIjoia2lkc2xvb3AifQ.XIIRTlyHUTnX4DkBjunldeIi7uXr6xCrdB1iZH8t2GczfXQnRquUrnJeDMlgUEoibKFCoVT1K0yO1OmwIcYlpdZXC1nlAExqZXsmlx0DP3f2eraEuClylwwd589wLkOuCE3jHKACVUiHFvQqsp8FgjrJM5drtQ6RIwzAxy42aHynSNYKUGABzeTAabBEec_8cT9oBpG8yUauu3F_PNH2kaK_Yc7OmHiB09MJbQmXEH-U1iIPwz3SMywUA5IqM8WxOLNsPY78jD4T8HSlvuGlWm-vnIUZEFibVUY5t9DwOUZQ7LxiUGtlrEo_TihuAbB93yJZlAvz-b68L_3ibki2tg"
+	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0NzgzMTkzNiwiaXNzIjoia2lkc2xvb3AifQ.xLmWf_SDWmWxYZ8aIbn9UNNJvuFpd_6uw9YNf6dXFfOYuCwkothXeT4aRbO2jBLc4YXq-HKLk_MN9Mg4FUME36Nd2L5ofd_kuuSMHMoulA63CkZQNgnJAoSNYTnQmqxowniKHMIwFlTjOqUu99R-NUAR0ogAO-CuUl8EkS2DzvCZxPyESOuo6ci8Wy-mov4kdimfKRfzVyUTUhJakpQFU1fIDz7UjCKYmGw-K6j5C6FOUnHKhzKkN_1gxpm2t8fM20k-2eRrVux21uEDVUHYaAY9Eq5i3sO71T0oA_CyVYY2bpundYDKesjoMbChXT0U2wKvy55xfoVEaeJ81rlOag"
 	result, err := GetAssessmentModelV2().GetByID(ctx, op, "623168807b41e967998394bd")
 	if err != nil {
 		t.Fatal(err)
@@ -75,7 +75,7 @@ func TestAssessmentModel_DeleteByScheduleIDs(t *testing.T) {
 		UserID: "17a28338-3b88-4bac-ab15-cce3887af357", //"c57ef68d-a635-451d-b997-aebc3c29b99a",
 		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 	}
-	err := GetAssessmentModelV2().InternalDeleteByScheduleIDsTx(ctx, op, dbo.MustGetDB(ctx), []string{"6099c496e05f6e940027387c"})
+	err := GetAssessmentInternalModel().DeleteByScheduleIDsTx(ctx, op, dbo.MustGetDB(ctx), []string{"6099c496e05f6e940027387c"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,11 +120,10 @@ func TestAssessmentModel_AddWhenCreateSchedules(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = GetAssessmentModelV2().AddWhenCreateSchedules(ctx, dbo.MustGetDB(ctx), op, &v2.AssessmentAddWhenCreateSchedulesReq{
+	err = GetAssessmentInternalModel().AddWhenCreateSchedules(ctx, dbo.MustGetDB(ctx), op, &v2.AssessmentAddWhenCreateSchedulesReq{
 		RepeatScheduleIDs:    []string{"6099c496e05f6e940027387c"},
 		Users:                users,
 		AssessmentType:       assessmentType,
-		LessPlanID:           schedule.LessonPlanID,
 		ClassRosterClassName: "className",
 		ScheduleTitle:        schedule.Title,
 	})
@@ -143,7 +142,7 @@ func TestAssessmentModel_ScheduleEndClassCallback(t *testing.T) {
 
 	scheduleID := "6099c496e05f6e940027387c"
 
-	err := GetAssessmentModelV2().ScheduleEndClassCallback(ctx, op, &v2.ScheduleEndClassCallBackReq{
+	err := GetAssessmentInternalModel().ScheduleEndClassCallback(ctx, op, &v2.ScheduleEndClassCallBackReq{
 		ScheduleID: scheduleID,
 		AttendanceIDs: []string{
 			"b0ffe4a2-94fb-41b0-9e7a-8e2e51686003",
