@@ -3,8 +3,12 @@ package da
 import (
 	"context"
 	"sync"
+	"time"
 
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
@@ -30,6 +34,7 @@ type IContentDA interface {
 	BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error
 
 	GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error)
+	NotifyContentOrFolderChanged(ctx context.Context) error
 }
 
 var (
@@ -39,18 +44,28 @@ var (
 
 func GetContentDA() IContentDA {
 	_contentOnce.Do(func() {
-		contentDA = &ContentDA{
+		da := &ContentDA{
 			redisDA: GetContentRedis(),
 			mysqlDA: new(ContentMySQLDA),
 		}
+
+		cache, err := NewLazyRefreshCache("ContentsAndFolders", time.Minute, da.queryContentsAndFolders)
+		if err != nil {
+			log.Panic(context.Background(), "create content and folder cache failed", log.Err(err))
+		}
+
+		da.contentFolderCache = cache
+
+		contentDA = da
 	})
 
 	return contentDA
 }
 
 type ContentDA struct {
-	redisDA IContentRedis
-	mysqlDA *ContentMySQLDA
+	redisDA            IContentRedis
+	mysqlDA            *ContentMySQLDA
+	contentFolderCache *LazyRefreshCache
 }
 
 func (c ContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co entity.Content) (string, error) {
@@ -106,7 +121,39 @@ func (c ContentDA) SearchFolderContent(ctx context.Context, tx *dbo.DBContext, c
 }
 
 func (c ContentDA) SearchFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 *FolderCondition) (int, []*entity.FolderContent, error) {
-	return c.mysqlDA.SearchFolderContentUnsafe(ctx, tx, condition1, condition2)
+	if !config.Get().RedisConfig.OpenCache {
+		return c.mysqlDA.SearchFolderContentUnsafe(ctx, tx, condition1, condition2)
+	}
+
+	request := &contentFolderRequest{
+		Tx:         tx,
+		Condition1: condition1,
+		Condition2: condition2,
+	}
+
+	response := &contentFolderResponse{Records: []*entity.FolderContent{}}
+
+	err := c.contentFolderCache.Get(ctx, request, response)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return response.Total, response.Records, nil
+}
+
+func (c ContentDA) queryContentsAndFolders(ctx context.Context, condition interface{}) (interface{}, error) {
+	request, ok := condition.(*contentFolderRequest)
+	if !ok {
+		log.Error(ctx, "invalid request", log.Any("condition", condition))
+		return nil, constant.ErrInvalidArgs
+	}
+
+	total, records, err := c.mysqlDA.SearchFolderContentUnsafe(ctx, request.Tx, request.Condition1, request.Condition2)
+	if err != nil {
+		return nil, err
+	}
+
+	return &contentFolderResponse{Total: total, Records: records}, nil
 }
 
 func (c ContentDA) CountFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 *FolderCondition) (int, error) {
@@ -119,4 +166,19 @@ func (c ContentDA) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContex
 
 func (c ContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error) {
 	return c.mysqlDA.GetLessonPlansCanSchedule(ctx, op, cond, condOrgContent, programGroups)
+}
+
+func (c ContentDA) NotifyContentOrFolderChanged(ctx context.Context) error {
+	return c.contentFolderCache.SetDataVersion(ctx, time.Now().UnixNano())
+}
+
+type contentFolderRequest struct {
+	Tx         *dbo.DBContext
+	Condition1 dbo.Conditions
+	Condition2 *FolderCondition
+}
+
+type contentFolderResponse struct {
+	Total   int `json:"total"`
+	Records []*entity.FolderContent
 }
