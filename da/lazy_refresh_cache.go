@@ -25,14 +25,16 @@ func NewLazyRefreshCache(name string, duration time.Duration, query func(ctx con
 		return nil, constant.ErrInvalidArgs
 	}
 
-	return &LazyRefreshCache{
+	cache := &LazyRefreshCache{
 		name:            name,
 		cache:           RedisKeyLazyRefreshCache,
 		locker:          RedisKeyLazyRefreshCacheLocker,
 		dataVersion:     RedisKeyLazyRefreshCacheDataVersion,
 		refreshDuration: duration,
 		refreshQuery:    query,
-	}, nil
+	}
+
+	return cache, nil
 }
 
 func (c LazyRefreshCache) Get(ctx context.Context, request, response interface{}) error {
@@ -46,7 +48,16 @@ func (c LazyRefreshCache) Get(ctx context.Context, request, response interface{}
 	// get data and version from cache
 	data := &lazyRefreshCacheData{Data: response}
 	err := c.cache.Param(hash).GetObject(ctx, data)
-	if err != nil && err != redis.Nil {
+	if err == redis.Nil {
+		// query cache for the first time, let refresh it
+		err = c.refreshCache(ctx, hash, request)
+		if err != nil {
+			return err
+		}
+
+		err = c.cache.Param(hash).GetObject(ctx, data)
+	}
+	if err != nil {
 		return err
 	}
 
@@ -83,38 +94,42 @@ func (c LazyRefreshCache) checkVersion(ctx context.Context, hash string, request
 
 	// fresh cache is version is different
 	return c.locker.Param(hash).GetLocker(ctx, c.refreshDuration, func(ctx context.Context) error {
-		response, err := c.refreshQuery(ctx, request)
-		if err != nil {
-			return err
-		}
-
-		data := &lazyRefreshCacheData{
-			Data:    response,
-			Version: dataVersion,
-		}
-
-		// refresh data and version
-		err = c.cache.Param(hash).SetObject(ctx, data, 0)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return c.refreshCache(ctx, hash, request)
 	})
+}
+
+func (c LazyRefreshCache) refreshCache(ctx context.Context, hash string, request interface{}) error {
+	response, err := c.refreshQuery(ctx, request)
+	if err != nil {
+		return err
+	}
+
+	dataVersion, err := c.getDataVersion(ctx)
+	if err != nil {
+		return err
+	}
+
+	data := &lazyRefreshCacheData{
+		Data:    response,
+		Version: dataVersion,
+	}
+
+	// refresh data and version
+	return c.cache.Param(hash).SetObject(ctx, data, 0)
 }
 
 func (c LazyRefreshCache) getDataVersion(ctx context.Context) (int64, error) {
 	version, err := c.dataVersion.Param(c.name).GetInt64(ctx)
 	if err == redis.Nil {
-		log.Debug(ctx, "data version not exists", log.Any("name", c.name))
-		return 0, nil
+		// use current timestamp as init data version
+		now := time.Now().UnixNano()
+		log.Debug(ctx, "data version not exists, use current timstamp instead",
+			log.Any("name", c.name),
+			log.Int64("now", now))
+		return now, nil
 	}
 
-	if err != nil {
-		return 0, err
-	}
-
-	return version, nil
+	return version, err
 }
 
 func (c LazyRefreshCache) SetDataVersion(ctx context.Context, version int64) error {
