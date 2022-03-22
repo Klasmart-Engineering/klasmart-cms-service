@@ -1,6 +1,8 @@
 package utils
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestHashBytes(t *testing.T) {
 	request := &struct {
@@ -28,5 +30,20 @@ func BenchmarkHashBytes(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		HashBytes(request)
+	}
+}
+
+func TestHash(t *testing.T) {
+	request := &struct {
+		AAA string
+		BBB int
+	}{
+		AAA: "aaa",
+		BBB: 123,
+	}
+
+	hash := Hash(request)
+	if hash == "" {
+		t.Error("caculate hash failed")
 	}
 }

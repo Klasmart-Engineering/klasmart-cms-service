@@ -49,7 +49,7 @@ func (c LazyRefreshCache) Get(ctx context.Context, request, response interface{}
 	data := &lazyRefreshCacheData{Data: response}
 	err := c.cache.Param(hash).GetObject(ctx, data)
 	if err == redis.Nil {
-		// query cache for the first time, let refresh it
+		// query cache for the first time, let's refresh it
 		err = c.refreshCache(ctx, hash, request)
 		if err != nil {
 			return err

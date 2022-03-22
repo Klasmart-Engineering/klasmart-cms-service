@@ -2,8 +2,8 @@ package utils
 
 import (
 	"crypto/sha1"
+	"encoding/gob"
 	"encoding/hex"
-	"fmt"
 )
 
 func Hash(obj interface{}) string {
@@ -13,6 +13,6 @@ func Hash(obj interface{}) string {
 func HashBytes(obj interface{}) []byte {
 	// sha1 is enough
 	h := sha1.New()
-	fmt.Fprintf(h, "%v", obj)
+	gob.NewEncoder(h).Encode(obj)
 	return h.Sum(nil)
 }
