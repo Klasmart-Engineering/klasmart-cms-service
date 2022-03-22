@@ -11,6 +11,8 @@ import (
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 )
 
+const token2 = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0NzkzMDQyMiwiaXNzIjoia2lkc2xvb3AifQ.mf5HZNpmhTHMemuHx0LAq-12O_b8DZR0K3wTUoNrQ-vduAq7DchOIuLhxyqJjsOURepA1JkfSD3szfEvRIQVGNe-EJLgMun5gAWQaTV_GDhor0EyMh7H65L9f0l-QH3PGM6eKFhfIzWH7ER9LqBEDM2zWE5iiT-igRXk1UYmvd4LBS9oQlGGNrZLIv412NRwGFhmimFTKelOhKdkL3fDYHM9gJnYw-uhNFKEPD3I0SugA7UoFz_tIjKjaYsZ3IkvONhgTcpYIFALShQA1UekUnATbu4WvIon8Q7oCgVdB5G30PRwW_a3LeKTIvBc9wYZLmYDPzAPkQt4zkRVY6VmWQ"
+
 func TestAssessmentModel_GetByID(t *testing.T) {
 	ctx := context.Background()
 	op := &entity.Operator{
@@ -34,12 +36,12 @@ func TestAssessmentModel_Query(t *testing.T) {
 		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 		Token:  "",
 	}
-	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImUyNTY0MTM0LTU1OTAtNDU1MS1hODIzLTBkNDE1MjUzOTAzYSIsImVtYWlsIjoic2Nob29sMDNfMDFAeW9wbWFpbC5jb20iLCJleHAiOjE2NDYyOTY5ODQsImlzcyI6ImtpZHNsb29wIn0.UZGQBby6jNuHNYp5atRhNk6NQp0zYlhAqofSh7moC2aXAh9xpb0C-vCDhe_czVGp2q0354oNOb9XLa4BJGNyQLkngKvekDTRLSjDd8wjke1clDE7OA5s-PsYqROH5Sn-nHqLJ-8ezM0oeCQQO7Z7Kfa1XFiiC8HSy5jkEriTbiSNSRhDrnfLhTB2ZtwoeFS59QpVG5YNulKtbrjs2DwJieKbeXFe-rLwFZKtOzHF8mSoL64oHBcZzhQBvYzu-o5ZCCY1EGUgGi34x4MXuCRSuKUJi2zFOsIPvC0_j50DdRvxGbQqLC-f1__R825vBs8z8IUem4Zm8ZL2XTs3YWBb-Q"
+	op.Token = token2
 	t.Log(op)
 	result, err := GetAssessmentModelV2().Page(ctx, op, &v2.AssessmentQueryReq{
 		//QueryKey:       "org mi",
 		//QueryType:      v2.QueryTypeTeacherName,
-		AssessmentType: v2.AssessmentTypeOfflineClass,
+		AssessmentType: v2.AssessmentTypeReviewStudy,
 		OrderBy:        "-create_at",
 		Status:         "Started,Draft,Complete",
 		PageIndex:      1,

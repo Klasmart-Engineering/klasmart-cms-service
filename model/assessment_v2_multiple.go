@@ -174,20 +174,7 @@ func (ags *AssessmentsGrain) GetAssessmentUserMap() (map[string][]*v2.Assessment
 		return ags.assessmentUserMap, nil
 	}
 
-	ctx := ags.ctx
-
-	assessmentIDs := make([]string, len(ags.assessments))
-	for i, item := range ags.assessments {
-		assessmentIDs[i] = item.ID
-	}
-
-	var assessmentUsers []*v2.AssessmentUser
-	err := assessmentV2.GetAssessmentUserDA().Query(ctx, &assessmentV2.AssessmentUserCondition{
-		AssessmentIDs: entity.NullStrings{
-			Strings: assessmentIDs,
-			Valid:   true,
-		},
-	}, &assessmentUsers)
+	assessmentUsers, err := ags.GetAssessmentUsers()
 	if err != nil {
 		return nil, err
 	}
@@ -389,13 +376,28 @@ func (ags *AssessmentsGrain) GetClassMap() (map[string]*entity.IDName, error) {
 	return ags.classMap, nil
 }
 
-func (ags *AssessmentsGrain) GetUserMap(assessmentUserMap map[string][]*v2.AssessmentUser) (map[string]*entity.IDName, error) {
+func (ags *AssessmentsGrain) GetUserMap() (map[string]*entity.IDName, error) {
 	if ags.InitRecord[GrainUser] {
 		return ags.userMap, nil
 	}
 
 	ctx := ags.ctx
 	op := ags.op
+
+	assessmentUsers, err := ags.GetAssessmentUsers()
+	if err != nil {
+		return nil, err
+	}
+
+	userIDs := make([]string, 0, len(assessmentUsers))
+	deDupMap := make(map[string]struct{})
+
+	for _, auItem := range assessmentUsers {
+		if _, ok := deDupMap[auItem.UserID]; !ok {
+			deDupMap[auItem.UserID] = struct{}{}
+			userIDs = append(userIDs, auItem.UserID)
+		}
+	}
 
 	users, err := external.GetUserServiceProvider().BatchGet(ctx, op, userIDs)
 	if err != nil {

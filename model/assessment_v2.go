@@ -103,10 +103,10 @@ func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *
 		return nil, err
 	}
 
-	assessmentComponent := NewPageComponent(ctx, op, assessments)
-	result, err := assessmentComponent.ConvertPageReply(a.getAssessmentPageConfig(assessmentComponent, req.AssessmentType))
+	ags := NewAssessmentsGrain(ctx, op, assessments)
+	match := GetAssessmentMatch(req.AssessmentType, ags)
+	result, err := ConvertAssessmentPageReply(assessments, match)
 	if err != nil {
-		log.Error(ctx, "ConvertPageReply error", log.Err(err))
 		return nil, err
 	}
 
