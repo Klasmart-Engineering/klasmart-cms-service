@@ -9,6 +9,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -50,6 +51,16 @@ func initCache() {
 			Password: config.Get().RedisConfig.Password,
 		})
 		initDataSource()
+	}
+	ctx := context.Background()
+	conf := config.Get()
+	err := kl2cache.Init(ctx,
+		kl2cache.OptEnable(conf.RedisConfig.OpenCache),
+		kl2cache.OptRedis(conf.RedisConfig.Host, conf.RedisConfig.Port, conf.RedisConfig.Password),
+		kl2cache.OptStrategyFixed(constant.MaxCacheExpire),
+	)
+	if err != nil {
+		log.Panic(ctx, "kl2cache.Init failed", log.Err(err))
 	}
 }
 
@@ -298,11 +309,18 @@ SELECT `cms_contents`.`id`,`cms_contents`.`content_type`,`cms_contents`.`content
 SELECT `cms_contents`.`id`,dir_path FROM `cms_contents` WHERE (dir_path like '/61775c746cf950261f91d12c%' or dir_path like '/61ad84533ed7a7c32a8eeb46%') and  publish_status in ('published')  and delete_at=0 ORDER BY update_at desc
 */
 
+var token1 = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNjOWYxNmY1LWJmMjctNDg0YS1hMzk3LWM5MzAyOWJjZGFlNyIsImVtYWlsIjoidGVjaDFAeW9wbWFpbC5jb20iLCJleHAiOjE2NDc5Njc1MTAsImlzcyI6ImtpZHNsb29wIn0.waNQJKhcH3dN7oLZPbIuRekkFe1s6Du2pg9VmWcGnKniit97RRqwlMXc9Gya-VqZfLbz9LurzqiLrS7IAzKVZOFfr6Rr5pXn9XpEjWL5_RGQsY7x76NVWD_PlxwQTJeyXHW0-iWekhN6AfpX_CUmu9vQotqqMBfruP6Cou_h-w0qYd_rqvcgGr_hDN05jSwAAZFb3Rvrvj3lnkT3uWJnbQL99OmHSHAzBoVetEyv1acd6jcUJGT2czF70pS1w-mgc3mrdJ0KfLn7I-Rz6c2uhwn0aoYSk7JabynhBkRpRKjENLThaNJsu5XSAmnGtRaNnBS2fcrI7fYZWFfjrSfe9Q"
+
 func TestQueryContentsFolders(t *testing.T) {
 	setupMilestone()
-	op := initOperator("a44da070-1907-46c4-bc4c-f26ced889439", "14494c07-0d4f-5141-9db2-15799993f448", "", "")
-	url := "/v1/contents_folders?publish_status=published&submenu=published&content_type=1,2,10&order_by=-update_at&page=1&page_size=20&path=&org_id=a44da070-1907-46c4-bc4c-f26ced889439"
-	op.OrgID = "a44da070-1907-46c4-bc4c-f26ced889439"
+	op := &entity.Operator{
+		OrgID:  "1d30ce69-fdaf-448c-9da4-b536e73ef8b9",
+		UserID: "cc9f16f5-bf27-484a-a397-c93029bcdae7",
+		Token:  token1,
+	}
+	//op := initOperator("a44da070-1907-46c4-bc4c-f26ced889439", "14494c07-0d4f-5141-9db2-15799993f448", "", "")
+	url := "/v1/contents_folders?publish_status=published&submenu=published&content_type=1%2C2%2C10&order_by=-update_at&page=1&page_size=20&path=&org_id=1d30ce69-fdaf-448c-9da4-b536e73ef8b9"
+	//op.OrgID = "1d30ce69-fdaf-448c-9da4-b536e73ef8b9"
 	res := DoHttpWithOperator(http.MethodGet, op, url, "")
 	fmt.Println(res)
 }

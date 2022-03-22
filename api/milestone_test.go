@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -25,10 +26,12 @@ func setupMilestone() {
 		ShowLog:          true,
 		ShowSQL:          true,
 	}
+	port := os.Getenv("redis_port")
+	iPort, _ := strconv.Atoi(port)
 	cfg.RedisConfig = config.RedisConfig{
 		OpenCache: true,
 		Host:      os.Getenv("redis_host"),
-		Port:      16379,
+		Port:      iPort,
 		Password:  "",
 	}
 	cfg.AMS = config.AMSConfig{
