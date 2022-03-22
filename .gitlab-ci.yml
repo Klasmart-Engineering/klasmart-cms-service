@@ -5,6 +5,8 @@ include:
 
 stages:
   - deploy_swagger_global
+  - build_loadtest_cms
+  - deploy_ecs_cms
 
 .BASE_IMAGE: &BASE_IMAGE
   image: ccr.ccs.tencentyun.com/base_images/alpine:latest
@@ -37,4 +39,42 @@ DEPLOY_SWAGGER_Global_JOB:
     - .DEPLOY_SWAGGER_GLBOAL
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "trigger"'
+      when: on_success
+      
+
+BUILD_CMS:
+  stage: build_loadtest_cms
+  image: golang:1.18.0-alpine3.14
+  cache:
+    paths:
+      - main
+  tags:
+    - web-runner-aws
+  extends:
+    - .go-cache
+    - .BUILD_LOADTEST_CMS
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^(loadtest).*$/'
+      when: on_success
+
+DEPLOY_ECS_CMS:
+  stage: deploy_ecs_cms
+  image: docker:19.03.12
+  variables:
+    DOCKER_DRIVER: overlay
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  services:
+    - name: docker:19.03.12-dind
+  before_script:
+    - docker info
+  cache:
+    paths:
+      - main
+  tags:
+    - web-runner-aws
+  extends:
+    - .DEPLOY_ECS_CMS
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^(loadtest).*$/'
       when: on_success
