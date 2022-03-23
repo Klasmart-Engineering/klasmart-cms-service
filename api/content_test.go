@@ -12,78 +12,6 @@ import (
 
 var server *Server
 
-//func initDB() {
-//	dboHandler, err := dbo.NewWithConfig(func(c *dbo.Config) {
-//		dbConf := config.Get().DBConfig
-//		c.ShowLog = dbConf.ShowLog
-//		c.ShowSQL = dbConf.ShowSQL
-//		c.MaxIdleConns = dbConf.MaxIdleConns
-//		c.MaxOpenConns = dbConf.MaxOpenConns
-//		c.ConnectionString = dbConf.ConnectionString
-//	})
-//	if err != nil {
-//		log.Error(context.TODO(), "create dbo failed", log.Err(err))
-//		panic(err)
-//	}
-//	dbo.ReplaceGlobal(dboHandler)
-//}
-
-//func initCache() {
-//	if config.Get().RedisConfig.OpenCache {
-//		ro.SetConfig(&redis.Options{
-//			Addr:     fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
-//			Password: config.Get().RedisConfig.Password,
-//		})
-//		initDataSource()
-//	}
-//	ctx := context.Background()
-//	conf := config.Get()
-//	err := kl2cache.Init(ctx,
-//		kl2cache.OptEnable(conf.RedisConfig.OpenCache),
-//		kl2cache.OptRedis(conf.RedisConfig.Host, conf.RedisConfig.Port, conf.RedisConfig.Password),
-//		kl2cache.OptStrategyFixed(constant.MaxCacheExpire),
-//	)
-//	if err != nil {
-//		log.Panic(ctx, "kl2cache.Init failed", log.Err(err))
-//	}
-//}
-//
-//func initDataSource() {
-//	//init querier
-//	ctx := context.Background()
-//	engine := cache.GetCacheEngine()
-//	engine.SetExpire(ctx, constant.MaxCacheExpire)
-//	engine.OpenCache(ctx, config.Get().RedisConfig.OpenCache)
-//	cache.GetPassiveCacheRefresher().SetUpdateFrequency(constant.MaxCacheExpire, constant.MinCacheExpire)
-//
-//	engine.AddDataSource(ctx, external.GetUserServiceProvider())
-//	engine.AddDataSource(ctx, external.GetTeacherServiceProvider())
-//	engine.AddDataSource(ctx, external.GetSubjectServiceProvider())
-//	engine.AddDataSource(ctx, external.GetSubCategoryServiceProvider())
-//	engine.AddDataSource(ctx, external.GetStudentServiceProvider())
-//	engine.AddDataSource(ctx, external.GetSchoolServiceProvider())
-//	engine.AddDataSource(ctx, external.GetProgramServiceProvider())
-//	engine.AddDataSource(ctx, external.GetOrganizationServiceProvider())
-//	engine.AddDataSource(ctx, external.GetGradeServiceProvider())
-//	engine.AddDataSource(ctx, external.GetClassServiceProvider())
-//	engine.AddDataSource(ctx, external.GetCategoryServiceProvider())
-//	engine.AddDataSource(ctx, external.GetAgeServiceProvider())
-//}
-
-//func TestMain(m *testing.M) {
-//	config.Set(&config.Config{})
-//	if os.Getenv("env") == "HTTP" {
-//		common.Setenv(common.EnvHTTP)
-//	} else {
-//		common.Setenv(common.EnvLAMBDA)
-//	}
-//
-//	log.Debug(context.TODO(), "init api server success")
-//	server = NewServer()
-//	code := m.Run()
-//	os.Exit(code)
-//}
-
 const prefix = "/v1"
 
 func TestApprove(t *testing.T) {
@@ -127,7 +55,6 @@ SELECT `cms_contents`.`id`,dir_path FROM `cms_contents` WHERE (dir_path like '/6
 var token1 = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNjOWYxNmY1LWJmMjctNDg0YS1hMzk3LWM5MzAyOWJjZGFlNyIsImVtYWlsIjoidGVjaDFAeW9wbWFpbC5jb20iLCJleHAiOjE2NDgwMDgzNzksImlzcyI6ImtpZHNsb29wIn0.XkI6M7UdN4LhZwbMXoVMli6pO0JcI4PB9Oz6N4wRUSGHfh40UbJm2qYzVdxT3OaUpIG6UpJJRGRb-jHXK1aYcpvPdTou2AikMxqIwQuhwSVxHgL9zvDIcF0oRSdDEdYWisN_9dVS0bOOEvD1nRBQiO147eC99NvtT9hANgbe46C2irw5ysp0O-pA93CLLyQ6S6_gB3VGyXIXzW2tw2JO0kcJP965jDIDyCqcU7wZ1qnyTYeU1biDqUbDweh2p1sLI2RzoJ6y_taYJtUm7eFojQ98E2no2Airy1MB6NeHqLkld9y0xBnZja2bXQETnGnLqAqRTzarQAWCNXxCRAAoCA"
 
 func TestQueryContentsFolders(t *testing.T) {
-	//setupMilestone()
 	op := &entity.Operator{
 		OrgID:  "1d30ce69-fdaf-448c-9da4-b536e73ef8b9",
 		UserID: "cc9f16f5-bf27-484a-a397-c93029bcdae7",
