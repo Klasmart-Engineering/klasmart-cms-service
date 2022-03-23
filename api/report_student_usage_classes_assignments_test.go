@@ -9,7 +9,6 @@ import (
 )
 
 func TestGetClassesAssignmentsOverview(t *testing.T) {
-	setupMilestone()
 	request := entity.ClassesAssignmentOverViewRequest{
 		ClassIDs:  []string{"1", "2"},
 		Durations: []entity.TimeRange{},

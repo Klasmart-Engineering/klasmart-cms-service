@@ -472,6 +472,10 @@ func loadAssessmentConfig(ctx context.Context) {
 	}
 }
 
+func LoadAMSEndpointEnvConfig(ctx context.Context) {
+	config.AMS.EndPoint = assertGetEnv("ams_endpoint")
+}
+
 func loadAMSConfig(ctx context.Context) {
 	config.AMS.EndPoint = assertGetEnv("ams_endpoint")
 	publicKeyPath := os.Getenv("jwt_public_key_path") //"./jwt_public_key.pem"

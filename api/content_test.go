@@ -31,7 +31,6 @@ func TestPrint(t *testing.T) {
 }
 
 func TestQueryAuthContent(t *testing.T) {
-	setupMilestone()
 	op := initOperator("a44da070-1907-46c4-bc4c-f26ced889439", "8842b2ec-b903-46c6-b062-05920a3b7f79", "student112301@yopmail.com", "")
 	url := "/v1/contents_authed?submenu=more+featured&program_group=More+Featured+Content&order_by=-update_at&page=1&page_size=20&org_id=a44da070-1907-46c4-bc4c-f26ced889439"
 	op.OrgID = "73e33241-ecf2-40a6-a642-39b0e60fe820"
@@ -52,7 +51,7 @@ SELECT `cms_contents`.`id`,`cms_contents`.`content_type`,`cms_contents`.`content
 SELECT `cms_contents`.`id`,dir_path FROM `cms_contents` WHERE (dir_path like '/61775c746cf950261f91d12c%' or dir_path like '/61ad84533ed7a7c32a8eeb46%') and  publish_status in ('published')  and delete_at=0 ORDER BY update_at desc
 */
 
-var token1 = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNjOWYxNmY1LWJmMjctNDg0YS1hMzk3LWM5MzAyOWJjZGFlNyIsImVtYWlsIjoidGVjaDFAeW9wbWFpbC5jb20iLCJleHAiOjE2NDgwMDgzNzksImlzcyI6ImtpZHNsb29wIn0.XkI6M7UdN4LhZwbMXoVMli6pO0JcI4PB9Oz6N4wRUSGHfh40UbJm2qYzVdxT3OaUpIG6UpJJRGRb-jHXK1aYcpvPdTou2AikMxqIwQuhwSVxHgL9zvDIcF0oRSdDEdYWisN_9dVS0bOOEvD1nRBQiO147eC99NvtT9hANgbe46C2irw5ysp0O-pA93CLLyQ6S6_gB3VGyXIXzW2tw2JO0kcJP965jDIDyCqcU7wZ1qnyTYeU1biDqUbDweh2p1sLI2RzoJ6y_taYJtUm7eFojQ98E2no2Airy1MB6NeHqLkld9y0xBnZja2bXQETnGnLqAqRTzarQAWCNXxCRAAoCA"
+var token1 = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNjOWYxNmY1LWJmMjctNDg0YS1hMzk3LWM5MzAyOWJjZGFlNyIsImVtYWlsIjoidGVjaDFAeW9wbWFpbC5jb20iLCJleHAiOjE2NDgwMTE1MjAsImlzcyI6ImtpZHNsb29wIn0.I1RD6SFn1U-mNl-hBNeNrN3xi44Asyxa4bCAJV6MKX6cxzRjFLvpiuNMS8R2wQ1Aw7aD4eFM3hNX-agKnbmSuBF3rMyAu7ciE3TpHyYVajTLj9ORfkl7SmRW2c-WyoMuWbKr2wQ8qxz3uvIHc3Wljx155e4XCRCiSY4Gpqd1NXA3Qs78WQ9maGOJPUtf8cBH2UAytICfYGHrZV9Ud8EINTkX7nx6kBd45aujdhlbzrHVkh-icvOJUcatm2B6llxUGY2IKHeKYWuYKcwirgtM0UFwjyLRojbMsibHcf-9yLHXJiUff315paLip2hrY-yUWIWwd8vPiMpTanXu4SikdQ"
 
 func TestQueryContentsFolders(t *testing.T) {
 	op := &entity.Operator{
@@ -68,7 +67,6 @@ func TestQueryContentsFolders(t *testing.T) {
 }
 
 func TestQueryContents(t *testing.T) {
-	setupMilestone()
 	op := initOperator("a44da070-1907-46c4-bc4c-f26ced889439", "14494c07-0d4f-5141-9db2-15799993f448", "", "")
 	url := "/v1/contents?publish_status=published&page_size=10&content_type=1&name=&content_name=&org_id=a44da070-1907-46c4-bc4c-f26ced889439"
 	op.OrgID = "a44da070-1907-46c4-bc4c-f26ced889439"
@@ -77,7 +75,6 @@ func TestQueryContents(t *testing.T) {
 }
 
 func TestQueryContentsLessonPlan(t *testing.T) {
-	setupMilestone()
 	op := initOperator("a44da070-1907-46c4-bc4c-f26ced889439", "14494c07-0d4f-5141-9db2-15799993f448", "", "")
 	url := "/v1/contents_lesson_plans?org_id=a44da070-1907-46c4-bc4c-f26ced889439"
 	op.OrgID = "a44da070-1907-46c4-bc4c-f26ced889439"
@@ -86,7 +83,6 @@ func TestQueryContentsLessonPlan(t *testing.T) {
 }
 
 func TestQueryContentAboutLessonPlan(t *testing.T) {
-	setupMilestone()
 	op := initOperator("60c064cc-bbd8-4724-b3f6-b886dce4774f", "afdfc0d9-ada9-4e66-b225-20f956d1a399", "org1119@yopmail.com", "Bada1234")
 	url := "/v1/contents/61a8788ab0af9acacbcd456f/live/token?org_id=60c064cc-bbd8-4724-b3f6-b886dce4774f"
 	op.OrgID = "60c064cc-bbd8-4724-b3f6-b886dce4774f"
@@ -95,7 +91,6 @@ func TestQueryContentAboutLessonPlan(t *testing.T) {
 }
 
 func TestQueryContentsID(t *testing.T) {
-	setupMilestone()
 	op := initOperator("60c064cc-bbd8-4724-b3f6-b886dce4774f", "0d3686a6-bf6a-4777-a716-31ce4aa0f516", "school1221a@yopmail.com", "Bada1234")
 	url := "/v1/contents/61ad878f5ab1da1a6faf50c5?org_id=60c064cc-bbd8-4724-b3f6-b886dce4774f"
 	res := DoHttpWithOperator(http.MethodGet, op, url, "")
@@ -103,7 +98,6 @@ func TestQueryContentsID(t *testing.T) {
 }
 
 func TestSharedTooMany(t *testing.T) {
-	setupMilestone()
 	data, err := ioutil.ReadFile("/home/blt/Downloads/kidsloop_alpha_cms/body.json")
 	if err != nil {
 		t.Error(err)

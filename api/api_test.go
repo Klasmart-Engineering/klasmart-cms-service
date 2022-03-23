@@ -38,15 +38,13 @@ func TestMain(m *testing.M) {
 	config.LoadRedisEnvConfig(ctx)
 	da.InitRedis(ctx)
 
+	config.LoadAMSEndpointEnvConfig(ctx)
+
 	initCache(ctx)
 	initDataSource(ctx)
-	initAms(ctx)
+
 	server = NewServer()
 	os.Exit(m.Run())
-}
-
-func initAms(ctx context.Context) {
-	config.Get().AMS.EndPoint = os.Getenv("ams_endpoint")
 }
 
 func initCache(ctx context.Context) {
