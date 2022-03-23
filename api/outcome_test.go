@@ -213,9 +213,9 @@ func TestGetLatestOutcomesByIDs(t *testing.T) {
 }
 
 func TestRedis(t *testing.T) {
-
+	ctx := context.Background()
 	redisKey := fmt.Sprintf("%s:%s", da.RedisKeyPrefixOutcomeShortcode, "1")
-	num, err := ro.MustGetRedis(context.Background()).Incr(redisKey).Result()
+	num, err := ro.MustGetRedis(ctx).Incr(ctx, redisKey).Result()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -62,10 +62,10 @@ func (u *UserRedisDA) SetUsers(ctx context.Context, orgID string, users []*User)
 			)
 			return err
 		}
-		pipe.Set(key, string(b), u.expiration)
+		pipe.Set(ctx, key, string(b), u.expiration)
 	}
 
-	_, err := pipe.Exec()
+	_, err := pipe.Exec(ctx)
 	if err != nil {
 		log.Error(ctx, "failed to exec redis pipeline",
 			log.Err(err),
@@ -83,8 +83,8 @@ func (u *UserRedisDA) GetUsersByOrg(ctx context.Context, orgID string) ([]*User,
 	matchPattern := u.getUserMatchPattern(orgID)
 	var keys []string
 	var cursor uint64
-	iter := redisClient.Scan(cursor, matchPattern, 10).Iterator()
-	for iter.Next() {
+	iter := redisClient.Scan(ctx, cursor, matchPattern, 10).Iterator()
+	for iter.Next(ctx) {
 		keys = append(keys, iter.Val())
 	}
 
@@ -101,7 +101,7 @@ func (u *UserRedisDA) GetUsersByOrg(ctx context.Context, orgID string) ([]*User,
 		return nil, nil
 	}
 
-	result, err := redisClient.MGet(keys...).Result()
+	result, err := redisClient.MGet(ctx, keys...).Result()
 	if err != nil {
 		log.Error(ctx, "failed to mget redis",
 			log.Err(err),

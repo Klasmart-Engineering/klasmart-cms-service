@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/ro"
@@ -24,7 +24,7 @@ type ShortcodeRedis struct {
 }
 
 func (scr *ShortcodeRedis) Get(ctx context.Context, op *entity.Operator, kind string) (int, error) {
-	cursor, err := scr.client.Get(scr.cursorKey(ctx, op, kind)).Int()
+	cursor, err := scr.client.Get(ctx, scr.cursorKey(ctx, op, kind)).Int()
 	if err != nil {
 		if err.Error() != "redis: nil" {
 			log.Info(ctx, "Get: redis access failed",
@@ -39,7 +39,7 @@ func (scr *ShortcodeRedis) Get(ctx context.Context, op *entity.Operator, kind st
 }
 
 func (scr *ShortcodeRedis) Cache(ctx context.Context, op *entity.Operator, kind string, cursor int, shortcode string) error {
-	err := scr.client.Set(scr.cursorKey(ctx, op, kind), cursor, -1).Err()
+	err := scr.client.Set(ctx, scr.cursorKey(ctx, op, kind), cursor, -1).Err()
 	if err != nil {
 		log.Error(ctx, "Cache: Set cursor failed",
 			log.Err(err),
@@ -48,7 +48,7 @@ func (scr *ShortcodeRedis) Cache(ctx context.Context, op *entity.Operator, kind 
 			log.String("shortcode", shortcode))
 		return err
 	}
-	err = scr.client.Set(scr.shortcodeKey(ctx, op, kind, shortcode), shortcode, time.Hour).Err()
+	err = scr.client.Set(ctx, scr.shortcodeKey(ctx, op, kind, shortcode), shortcode, time.Hour).Err()
 	if err != nil {
 		log.Error(ctx, "Cache: Set shortcode failed",
 			log.Err(err),
@@ -61,7 +61,7 @@ func (scr *ShortcodeRedis) Cache(ctx context.Context, op *entity.Operator, kind 
 }
 
 func (scr *ShortcodeRedis) IsCached(ctx context.Context, op *entity.Operator, kind string, shortcode string) (bool, error) {
-	result, err := scr.client.Exists(scr.shortcodeKey(ctx, op, kind, shortcode)).Result()
+	result, err := scr.client.Exists(ctx, scr.shortcodeKey(ctx, op, kind, shortcode)).Result()
 	if err != nil {
 		log.Error(ctx, "IsCached: Exists failed",
 			log.Err(err),
@@ -76,7 +76,7 @@ func (scr *ShortcodeRedis) IsCached(ctx context.Context, op *entity.Operator, ki
 }
 
 func (scr *ShortcodeRedis) Remove(ctx context.Context, op *entity.Operator, kind string, shortcode string) error {
-	err := scr.client.Del(scr.shortcodeKey(ctx, op, kind, shortcode)).Err()
+	err := scr.client.Del(ctx, scr.shortcodeKey(ctx, op, kind, shortcode)).Err()
 	if err != nil {
 		log.Error(ctx, "Remove: Del failed",
 			log.Err(err),

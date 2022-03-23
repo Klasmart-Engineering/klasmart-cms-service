@@ -178,7 +178,7 @@ func VerifyCode(ctx context.Context, codeKey string, code string) (bool, error) 
 		return false, err
 	}
 	key := utils.GetHashKeyFromPlatformedString(codeKey)
-	otpSecret, err := client.Get(key).Result()
+	otpSecret, err := client.Get(ctx, key).Result()
 	if err != nil && err.Error() == "redis: nil" {
 		log.Error(ctx, "VerifyCode: redis nil", log.String("code_key", codeKey), log.String("key", key), log.Err(err))
 		return false, constant.ErrUnAuthorized
@@ -192,7 +192,7 @@ func VerifyCode(ctx context.Context, codeKey string, code string) (bool, error) 
 	baseSecret := OTPSecret(otpSecret)
 	defer func() {
 		if authPassed {
-			log.Info(ctx, "VerifyCode: defer", log.Err(client.Del(key).Err()))
+			log.Info(ctx, "VerifyCode: defer", log.Err(client.Del(ctx, key).Err()))
 		}
 	}()
 	totp := baseSecret.getTOTPFromPool(codeKey)

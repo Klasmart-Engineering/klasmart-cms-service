@@ -52,7 +52,7 @@ type Config struct {
 	NewRelic              NewRelicConfig        `json:"new_relic" yaml:"new_relic"`
 }
 
-var config *Config
+var config = &Config{}
 
 type CORSConfig struct {
 	AllowOrigins      []string `json:"allow_origins"`
@@ -196,8 +196,8 @@ func LoadEnvConfig() {
 	ctx := context.TODO()
 	config = new(Config)
 	loadStorageEnvConfig(ctx)
-	loadDBEnvConfig(ctx)
-	loadRedisEnvConfig(ctx)
+	LoadDBEnvConfig(ctx)
+	LoadRedisEnvConfig(ctx)
 	loadScheduleEnvConfig(ctx)
 	loadCryptoEnvConfig(ctx)
 	loadLiveTokenEnvConfig(ctx)
@@ -309,7 +309,7 @@ func loadStorageEnvConfig(ctx context.Context) {
 	}
 }
 
-func loadRedisEnvConfig(ctx context.Context) {
+func LoadRedisEnvConfig(ctx context.Context) {
 	openCacheStr := os.Getenv("open_cache")
 	openCache, _ := strconv.ParseBool(openCacheStr)
 	config.RedisConfig.OpenCache = openCache
@@ -367,12 +367,10 @@ func loadScheduleEnvConfig(ctx context.Context) {
 	//config.Schedule.ClassEventSecret = key
 }
 
-func loadDBEnvConfig(ctx context.Context) {
+func LoadDBEnvConfig(ctx context.Context) {
 	config.DBConfig.ConnectionString = assertGetEnv("connection_string")
-	maxOpenConnsStr := assertGetEnv("max_open_conns")
-	maxIdleConnsStr := assertGetEnv("max_idle_conns")
-	showLogStr := assertGetEnv("show_log")
-	showSQLStr := assertGetEnv("show_sql")
+	maxOpenConnsStr := os.Getenv("max_open_conns")
+	maxIdleConnsStr := os.Getenv("max_idle_conns")
 	connMaxLifetimeStr := os.Getenv("conn_max_life_time")
 	connMaxIdleTimeStr := os.Getenv("conn_max_idle_time")
 	slowThresholdStr := os.Getenv("slow_threshold")
@@ -390,20 +388,6 @@ func loadDBEnvConfig(ctx context.Context) {
 		maxIdleConns = 16
 	}
 	config.DBConfig.MaxIdleConns = maxIdleConns
-
-	showLog, err := strconv.ParseBool(showLogStr)
-	if err != nil {
-		log.Error(ctx, "Can't parse show_log", log.Err(err))
-		showLog = true
-	}
-	config.DBConfig.ShowLog = showLog
-
-	showSQL, err := strconv.ParseBool(showSQLStr)
-	if err != nil {
-		log.Error(ctx, "Can't parse show_sql", log.Err(err))
-		showSQL = true
-	}
-	config.DBConfig.ShowSQL = showSQL
 
 	connMaxLifetime, err := time.ParseDuration(connMaxLifetimeStr)
 	if err != nil {

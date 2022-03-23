@@ -429,6 +429,9 @@ func (f *FolderModel) UpdateFolder(ctx context.Context, folderID string, d entit
 		log.Error(ctx, "update folder item failed", log.Err(err), log.Any("folder", folder))
 		return err
 	}
+
+	go GetContentModel().NotifyContentOrFolderChanged(ctx)
+
 	return nil
 }
 
@@ -447,6 +450,9 @@ func (f *FolderModel) RemoveItem(ctx context.Context, fid string, operator *enti
 		if err != nil {
 			return err
 		}
+
+		go GetContentModel().NotifyContentOrFolderChanged(ctx)
+
 		return nil
 	})
 }
@@ -479,6 +485,9 @@ func (f *FolderModel) RemoveItemBulk(ctx context.Context, fids []string, operato
 				log.Strings("parentIDs", parentIDs))
 			return err
 		}
+
+		go GetContentModel().NotifyContentOrFolderChanged(ctx)
+
 		return nil
 	})
 }
@@ -502,6 +511,9 @@ func (f *FolderModel) MoveItemBulk(ctx context.Context, req entity.MoveFolderIDB
 					log.Any("req", req))
 				return err
 			}
+
+			go GetContentModel().NotifyContentOrFolderChanged(ctx)
+
 			return nil
 		})
 	})
@@ -529,6 +541,9 @@ func (f *FolderModel) MoveItem(ctx context.Context, req entity.MoveFolderRequest
 		if err != nil {
 			return err
 		}
+
+		go GetContentModel().NotifyContentOrFolderChanged(ctx)
+
 		return nil
 	})
 	if err != nil {
@@ -929,6 +944,9 @@ func (f *FolderModel) batchRepairFolderItemsCount(ctx context.Context, tx *dbo.D
 			log.Any("items", items))
 		return err
 	}
+
+	go GetContentModel().NotifyContentOrFolderChanged(ctx)
+
 	return nil
 }
 
@@ -1631,6 +1649,9 @@ func (f *FolderModel) createFolder(ctx context.Context, tx *dbo.DBContext, req e
 			return "", err
 		}
 	}
+
+	go GetContentModel().NotifyContentOrFolderChanged(ctx)
+
 	return folder.ID, nil
 }
 
@@ -1911,7 +1932,15 @@ func (f *FolderModel) BatchUpdateFolderItemCount(ctx context.Context, tx *dbo.DB
 
 func (f *FolderModel) BatchUpdateAncestorEmptyField(ctx context.Context, tx *dbo.DBContext, ids []string) error {
 	ids = utils.SliceDeduplicationExcludeEmpty(ids)
-	return f.updateEmptyField(ctx, tx, ids)
+
+	err := f.updateEmptyField(ctx, tx, ids)
+	if err != nil {
+		return err
+	}
+
+	go GetContentModel().NotifyContentOrFolderChanged(ctx)
+
+	return nil
 }
 
 func (f *FolderModel) updateMoveFolderItemCount(ctx context.Context, tx *dbo.DBContext, ids []string) error {

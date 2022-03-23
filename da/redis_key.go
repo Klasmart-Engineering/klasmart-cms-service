@@ -1,11 +1,12 @@
 package da
 
+import "gitlab.badanamu.com.cn/calmisland/ro"
+
 const (
-	RedisKeyPrefixContentCondition = "content:condition"
-	RedisKeyPrefixContentId        = "content:id"
-	RedisKeyPrefixContentLock      = "content:lock"
-	RedisKeyPrefixContentReview    = "content:review"
-	RedisKeyPrefixContentAuth      = "content:auth"
+	RedisKeyPrefixContentId     = "content:id"
+	RedisKeyPrefixContentLock   = "content:lock"
+	RedisKeyPrefixContentReview = "content:review"
+	RedisKeyPrefixContentAuth   = "content:auth"
 
 	RedisKeyPrefixScheduleID        = "schedule:id"
 	RedisKeyPrefixScheduleCondition = "schedule:condition"
@@ -38,4 +39,10 @@ const (
 	RedisKeyPrefixAssessmentItem = "assessment:item"
 
 	RedisKeyPrefixAssessmentQueryLearningSummaryTimeFilter = "assessment:query_learning_summary_time_filter"
+)
+
+var (
+	RedisKeyLazyRefreshCache            = ro.NewStringParameterKey("lazy:refresh:cache:%s")
+	RedisKeyLazyRefreshCacheLocker      = ro.NewStringParameterKey("lazy:refresh:locker:%s")
+	RedisKeyLazyRefreshCacheDataVersion = ro.NewStringParameterKey("lazy:refresh:data:version:%s")
 )
