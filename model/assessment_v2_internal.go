@@ -167,7 +167,7 @@ func (a *assessmentInternalModel) LockAssessmentContentAndOutcome(ctx context.Co
 	now := time.Now().Unix()
 
 	ags := NewAssessmentGrainSingle(ctx, op, assessment)
-	contentsFromSchedule, err := ags.SingleGetLockedContentsFromSchedule()
+	contentsFromSchedule, err := ags.getLockedContentBySchedule(schedule)
 	if err != nil {
 		return err
 	}
@@ -220,6 +220,10 @@ func (a *assessmentInternalModel) LockAssessmentContentAndOutcome(ctx context.Co
 	waitAddUserOutcomes := make([]*v2.AssessmentUserOutcome, 0)
 	assessmentUserIDs := make([]string, 0, len(assessmentUsers))
 	for _, userItem := range assessmentUsers {
+		if userItem.UserType != v2.AssessmentUserTypeStudent {
+			continue
+		}
+
 		assessmentUserIDs = append(assessmentUserIDs, userItem.ID)
 
 		for _, contentItem := range contentsFromSchedule {

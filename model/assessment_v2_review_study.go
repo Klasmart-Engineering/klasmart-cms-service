@@ -98,6 +98,9 @@ func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiff
 
 	result := make([]*v2.AssessmentDiffContentStudentsReply, 0, len(studentReviewMap))
 	for _, userItem := range assessmentUsers {
+		if userItem.UserType != v2.AssessmentUserTypeStudent {
+			continue
+		}
 		replyItem := &v2.AssessmentDiffContentStudentsReply{
 			StudentID:       userItem.UserID,
 			StudentName:     "",
