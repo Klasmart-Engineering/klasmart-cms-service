@@ -2,6 +2,7 @@ package da
 
 import (
 	"context"
+	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -14,6 +15,7 @@ type ITeacherLoadLesson interface {
 	SummaryTeacherLoadLessons(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, args *entity.TeacherLoadLessonArgs) (*entity.TeacherLoadLessonSummaryFields, error)
 	MissedLessonsListInfo(ctx context.Context, request *entity.TeacherLoadMissedLessonsRequest) (model []*entity.TeacherLoadMissedLesson, err error)
 	MissedLessonsListTotal(ctx context.Context, request *entity.TeacherLoadMissedLessonsRequest) (total int, err error)
+	GetTeacherLoadItems(ctx context.Context, op *entity.Operator, tr entity.TimeRange, teacherIDs []string) (res []*entity.TeacherLoadItem, err error)
 }
 
 func (r *ReportDA) ListTeacherLoadLessons(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, args *entity.TeacherLoadLessonArgs) ([]*entity.TeacherLoadLesson, error) {
@@ -255,6 +257,39 @@ func (r *ReportDA) MissedLessonsListTotal(ctx context.Context, request *entity.T
 			log.Err(err),
 			log.String("sql", sql),
 			log.Any("params", request))
+		return
+	}
+	return
+}
+func (r *ReportDA) GetTeacherLoadItems(ctx context.Context, op *entity.Operator, tr entity.TimeRange, teacherIDs []string) (res []*entity.TeacherLoadItem, err error) {
+	start, end, err := tr.Value(ctx)
+	if err != nil {
+		return
+	}
+	sql := `
+select 
+	auv.user_id as teacher_id,
+	count(1) as total_lessons, 
+	sum(if(auv.status_by_system='NotParticipate',1,0)) as missed_lessons
+from assessments_users_v2 auv  
+inner join assessments_v2 av on av.id =auv.assessment_id  
+inner join schedules s on s.id =av.schedule_id 
+where auv.user_type = ? 
+and auv.user_id in (?)
+and s.class_type = ? 
+and s.end_at >= ? and s.end_at < ?
+group by auv.user_id 
+`
+	args := []interface{}{
+		v2.AssessmentUserTypeTeacher,
+		teacherIDs,
+		entity.ScheduleClassTypeOnlineClass,
+		start,
+		end,
+	}
+	res = []*entity.TeacherLoadItem{}
+	err = r.QueryRawSQLTx(ctx, dbo.MustGetDB(ctx), &res, sql, args...)
+	if err != nil {
 		return
 	}
 	return
