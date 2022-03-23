@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -213,7 +212,6 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 		className = classInfos[schedule.ClassID]
 	}
 
-	// TODO assessment not support review
 	var assessmentAddReq *v2.AssessmentAddWhenCreateSchedulesReq
 	if viewData.ClassType != entity.ScheduleClassTypeTask {
 		assessmentAddReq, err = s.getAssessmentAddWhenCreateSchedulesReq(ctx, op, schedule, scheduleList, relations, className)
@@ -1196,7 +1194,28 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 		return err
 	}
 
-	// TODO if schedule type is review, invoke data service delete api
+	if schedule.IsReview {
+		deleteScheduleReviewRequest := external.DeleteScheduleReviewRequest{
+			ScheduleIDs: []string{schedule.ID},
+		}
+		resp, err := external.GetScheduleReviewServiceProvider().DeleteScheduleReview(ctx, op, deleteScheduleReviewRequest)
+		if err != nil {
+			log.Error(ctx, "external.GetScheduleReviewServiceProvider().DeleteScheduleReview error",
+				log.Err(err),
+				log.Any("deleteScheduleReviewRequest", deleteScheduleReviewRequest),
+			)
+			return err
+		}
+
+		if len(resp.Succeeded) != 1 && resp.Succeeded[0] != schedule.ID {
+			log.Error(ctx, "delete schedule review failed",
+				log.Any("resp", resp),
+				log.Any("deleteScheduleReviewRequest", deleteScheduleReviewRequest),
+			)
+			return errors.New("delete schedule review failed")
+		}
+	}
+
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		// delete schedule
 		err := s.deleteScheduleTx(ctx, tx, op, schedule, editType)
@@ -3007,13 +3026,28 @@ func (s *scheduleModel) GetScheduleRelationIDs(ctx context.Context, op *entity.O
 }
 
 func (s *scheduleModel) CheckScheduleReviewData(ctx context.Context, op *entity.Operator, request *entity.CheckScheduleReviewDataRequest) (*entity.CheckScheduleReviewDataResponse, error) {
-	// TODO implement
-	log.Debug(ctx, "CheckScheduleReviewData", log.Any("request", request))
+	checkScheduleReviewRequest := external.CheckScheduleReviewRequest{
+		TimeZoneOffset: request.TimeZoneOffset,
+		ProgramID:      request.ProgramID,
+		SubjectIDs:     request.SubjectIDs,
+		StudentIDs:     request.StudentIDs,
+		ContentStartAt: request.ContentStartAt,
+		ContentEndAt:   request.ContentEndAt,
+	}
+
+	resp, err := external.GetScheduleReviewServiceProvider().CheckScheduleReview(ctx, op, checkScheduleReviewRequest)
+	if err != nil {
+		log.Error(ctx, "external.GetScheduleReviewServiceProvider().CheckScheduleReview error",
+			log.Err(err),
+			log.Any("checkScheduleReviewRequest", checkScheduleReviewRequest))
+		return nil, err
+	}
+
 	result := &entity.CheckScheduleReviewDataResponse{}
-	for _, v := range request.StudentIDs {
+	for studentID, status := range resp.Results {
 		result.Results = append(result.Results, entity.CheckScheduleReviewDataResult{
-			StudentID: v,
-			Status:    rand.Intn(2) == 1,
+			StudentID: studentID,
+			Status:    status,
 		})
 	}
 	return result, nil

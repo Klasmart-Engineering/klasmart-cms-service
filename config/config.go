@@ -131,8 +131,9 @@ type AMSConfig struct {
 }
 
 type DataServiceConfig struct {
-	EndPoint      string `json:"endpoint" yaml:"endpoint"`
-	AuthorizedKey string `json:"authorized_key"`
+	EndPoint            string `json:"endpoint" yaml:"endpoint"`
+	AuthorizedKey       string `json:"authorized_key"`
+	PublicAuthorizedKey string `json:"public_authorized_key"`
 }
 
 type H5PServiceConfig struct {
@@ -514,7 +515,11 @@ func loadH5PServiceConfig(ctx context.Context) {
 
 func loadDataServiceConfig(ctx context.Context) {
 	// TODO assertGetEnv
-	config.DataService.EndPoint = os.Getenv("data_service_endpoint")
+	// config.DataService.EndPoint = os.Getenv("data_service_endpoint")
+	// config.DataService.AuthorizedKey = os.Getenv("data_service_api_key")
+	// config.DataService.PublicAuthorizedKey = os.Getenv("data_service_public_key")
+	config.DataService.EndPoint = "https://dev-global-adaptive-review-api.data.kidsloop.net"
+	config.DataService.AuthorizedKey = "uM72VB8WJl85tw66Ps4ri5uZJaBvxzsmF5sa0yg5"
 }
 
 func loadCORSConfig(ctx context.Context) {
