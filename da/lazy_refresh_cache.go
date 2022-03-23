@@ -49,6 +49,10 @@ func (c LazyRefreshCache) Get(ctx context.Context, request, response interface{}
 	data := &lazyRefreshCacheData{Data: response}
 	err := c.cache.Param(hash).GetObject(ctx, data)
 	if err == redis.Nil {
+		log.Debug(ctx, "lazy refresh cache miss",
+			log.String("hash", hash),
+			log.Any("requst", request))
+
 		// query cache for the first time, let's refresh it
 		err = c.refreshCache(ctx, hash, request)
 		if err != nil {
@@ -61,13 +65,14 @@ func (c LazyRefreshCache) Get(ctx context.Context, request, response interface{}
 		return err
 	}
 
-	log.Debug(ctx, "get cached data successfully",
+	log.Debug(ctx, "lazy refresh cache hit",
 		log.String("hash", hash),
 		log.Any("requst", request),
 		log.Any("data", data))
 
 	// cache refresh trigger
 	go func() {
+		ctx = utils.CloneContextWithTrace(ctx)
 		err := c.checkVersion(ctx, hash, request, data.Version)
 		if err != nil {
 			log.Warn(ctx, "check version failed", log.Err(err), log.String("hash", hash))
