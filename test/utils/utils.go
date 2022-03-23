@@ -66,7 +66,7 @@ func InitDB(ctx context.Context) {
 
 func loadDBEnvConfig(ctx context.Context) {
 	cfg := config.Get()
-	cfg.DBConfig.ConnectionString = "root:Passw0rd@tcp(127.0.0.1:3306)/kidsloop_alpha_cms?charset=utf8mb4&parseTime=True&loc=Local" //assertGetEnv("connection_string")
+	cfg.DBConfig.ConnectionString = assertGetEnv("connection_string")
 	maxOpenConnsStr := os.Getenv("max_open_conns")
 	maxIdleConnsStr := os.Getenv("max_idle_conns")
 	showLogStr := os.Getenv("show_log")
