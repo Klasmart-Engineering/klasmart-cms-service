@@ -11,6 +11,8 @@ import (
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 )
 
+const assessmentOpToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0ODAwNzc1MCwiaXNzIjoia2lkc2xvb3AifQ.OgduSwTLXyLGubPRpo0wQeKddQ41S60R3AnE4jtWwI1pPsisuKyNDWY8H81Q9v2MauEaqvTODgzGV5YvZsMHhuwVhoWZY-mceSRSV75M2gEw5LThzGrOc68NtXLA_D4_pbeWMGJd4MKEDSpAHHqslu1vSkW4g0MZzNqjYOTktvUbFQYwVf9VLQvraAV_GrmQibOWgR9D11j4OkDcp_2xIBlTjWHg74jhLkprCzLR3wSDlBkyQC37zsWums-8Ryc2C0UGuIxuvSq1qaQPl-hprUGpxo7SWWagJhQ-zAxgO5nmD5Modn908pkQ2mdy825crByWjlre8NtKINsX3KfDtw"
+
 func TestAssessmentModel_GetByID(t *testing.T) {
 	ctx := context.Background()
 	op := &entity.Operator{
@@ -18,8 +20,8 @@ func TestAssessmentModel_GetByID(t *testing.T) {
 		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 		Token:  "",
 	}
-	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0NzQxNjE3OSwiaXNzIjoia2lkc2xvb3AifQ.XIIRTlyHUTnX4DkBjunldeIi7uXr6xCrdB1iZH8t2GczfXQnRquUrnJeDMlgUEoibKFCoVT1K0yO1OmwIcYlpdZXC1nlAExqZXsmlx0DP3f2eraEuClylwwd589wLkOuCE3jHKACVUiHFvQqsp8FgjrJM5drtQ6RIwzAxy42aHynSNYKUGABzeTAabBEec_8cT9oBpG8yUauu3F_PNH2kaK_Yc7OmHiB09MJbQmXEH-U1iIPwz3SMywUA5IqM8WxOLNsPY78jD4T8HSlvuGlWm-vnIUZEFibVUY5t9DwOUZQ7LxiUGtlrEo_TihuAbB93yJZlAvz-b68L_3ibki2tg"
-	result, err := GetAssessmentModelV2().GetByID(ctx, op, "623168807b41e967998394bd")
+	op.Token = assessmentOpToken
+	result, err := GetAssessmentModelV2().GetByID(ctx, op, "62344ae15db29d3f2d1a4321")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,12 +36,12 @@ func TestAssessmentModel_Query(t *testing.T) {
 		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 		Token:  "",
 	}
-	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImUyNTY0MTM0LTU1OTAtNDU1MS1hODIzLTBkNDE1MjUzOTAzYSIsImVtYWlsIjoic2Nob29sMDNfMDFAeW9wbWFpbC5jb20iLCJleHAiOjE2NDYyOTY5ODQsImlzcyI6ImtpZHNsb29wIn0.UZGQBby6jNuHNYp5atRhNk6NQp0zYlhAqofSh7moC2aXAh9xpb0C-vCDhe_czVGp2q0354oNOb9XLa4BJGNyQLkngKvekDTRLSjDd8wjke1clDE7OA5s-PsYqROH5Sn-nHqLJ-8ezM0oeCQQO7Z7Kfa1XFiiC8HSy5jkEriTbiSNSRhDrnfLhTB2ZtwoeFS59QpVG5YNulKtbrjs2DwJieKbeXFe-rLwFZKtOzHF8mSoL64oHBcZzhQBvYzu-o5ZCCY1EGUgGi34x4MXuCRSuKUJi2zFOsIPvC0_j50DdRvxGbQqLC-f1__R825vBs8z8IUem4Zm8ZL2XTs3YWBb-Q"
+	op.Token = assessmentOpToken
 	t.Log(op)
 	result, err := GetAssessmentModelV2().Page(ctx, op, &v2.AssessmentQueryReq{
 		//QueryKey:       "org mi",
 		//QueryType:      v2.QueryTypeTeacherName,
-		AssessmentType: v2.AssessmentTypeOfflineClass,
+		AssessmentType: v2.AssessmentTypeReviewStudy,
 		OrderBy:        "-create_at",
 		Status:         "Started,Draft,Complete",
 		PageIndex:      1,
@@ -75,7 +77,7 @@ func TestAssessmentModel_DeleteByScheduleIDs(t *testing.T) {
 		UserID: "17a28338-3b88-4bac-ab15-cce3887af357", //"c57ef68d-a635-451d-b997-aebc3c29b99a",
 		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 	}
-	err := GetAssessmentModelV2().InternalDeleteByScheduleIDsTx(ctx, op, dbo.MustGetDB(ctx), []string{"6099c496e05f6e940027387c"})
+	err := GetAssessmentInternalModel().DeleteByScheduleIDsTx(ctx, op, dbo.MustGetDB(ctx), []string{"6099c496e05f6e940027387c"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,11 +122,10 @@ func TestAssessmentModel_AddWhenCreateSchedules(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = GetAssessmentModelV2().AddWhenCreateSchedules(ctx, dbo.MustGetDB(ctx), op, &v2.AssessmentAddWhenCreateSchedulesReq{
+	err = GetAssessmentInternalModel().AddWhenCreateSchedules(ctx, dbo.MustGetDB(ctx), op, &v2.AssessmentAddWhenCreateSchedulesReq{
 		RepeatScheduleIDs:    []string{"6099c496e05f6e940027387c"},
 		Users:                users,
 		AssessmentType:       assessmentType,
-		LessPlanID:           schedule.LessonPlanID,
 		ClassRosterClassName: "className",
 		ScheduleTitle:        schedule.Title,
 	})
@@ -143,7 +144,7 @@ func TestAssessmentModel_ScheduleEndClassCallback(t *testing.T) {
 
 	scheduleID := "6099c496e05f6e940027387c"
 
-	err := GetAssessmentModelV2().ScheduleEndClassCallback(ctx, op, &v2.ScheduleEndClassCallBackReq{
+	err := GetAssessmentInternalModel().ScheduleEndClassCallback(ctx, op, &v2.ScheduleEndClassCallBackReq{
 		ScheduleID: scheduleID,
 		AttendanceIDs: []string{
 			"b0ffe4a2-94fb-41b0-9e7a-8e2e51686003",
