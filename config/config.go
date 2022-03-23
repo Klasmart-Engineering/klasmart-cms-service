@@ -201,7 +201,7 @@ func LoadEnvConfig() {
 	loadScheduleEnvConfig(ctx)
 	loadCryptoEnvConfig(ctx)
 	loadLiveTokenEnvConfig(ctx)
-	loadAMSConfig(ctx)
+	LoadAMSConfig(ctx)
 	loadH5PServiceConfig(ctx)
 	loadDataServiceConfig(ctx)
 	loadTencentConfig(ctx)
@@ -472,11 +472,7 @@ func loadAssessmentConfig(ctx context.Context) {
 	}
 }
 
-func LoadAMSEndpointEnvConfig(ctx context.Context) {
-	config.AMS.EndPoint = assertGetEnv("ams_endpoint")
-}
-
-func loadAMSConfig(ctx context.Context) {
+func LoadAMSConfig(ctx context.Context) {
 	config.AMS.EndPoint = assertGetEnv("ams_endpoint")
 	publicKeyPath := os.Getenv("jwt_public_key_path") //"./jwt_public_key.pem"
 	content, err := ioutil.ReadFile(publicKeyPath)
