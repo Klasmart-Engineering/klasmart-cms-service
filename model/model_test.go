@@ -2,30 +2,32 @@ package model
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"testing"
-
-	"github.com/go-redis/redis/v8"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/test/utils"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
-	"gitlab.badanamu.com.cn/calmisland/ro"
+	"os"
+	"testing"
 )
 
-func initCache() {
-	ro.SetConfig(&redis.Options{
-		Addr:     fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
-		Password: config.Get().RedisConfig.Password,
-	})
-	//initDataSource()
-
+func TestMain(m *testing.M) {
 	ctx := context.Background()
+
+	config.LoadDBEnvConfig(ctx)
+	da.InitMySQL(ctx)
+
+	config.LoadRedisEnvConfig(ctx)
+	da.InitRedis(ctx)
+
+	initCache(ctx)
+	initDataSource(ctx)
+	os.Exit(m.Run())
+}
+
+func initCache(ctx context.Context) {
 	conf := config.Get()
 	err := kl2cache.Init(ctx,
 		kl2cache.OptEnable(conf.RedisConfig.OpenCache),
@@ -37,19 +39,8 @@ func initCache() {
 	}
 }
 
-func TestMain(m *testing.M) {
-	ctx := context.Background()
-	utils.InitConfig(ctx)
-	da.InitMySQL(ctx)
-	da.InitRedis(ctx)
-	initDataSource()
-	exitVal := m.Run()
-	os.Exit(exitVal)
-}
-
-func initDataSource() {
+func initDataSource(ctx context.Context) {
 	//init querier
-	ctx := context.Background()
 	engine := cache.GetCacheEngine()
 	engine.SetExpire(ctx, constant.MaxCacheExpire)
 	engine.OpenCache(ctx, config.Get().RedisConfig.OpenCache)

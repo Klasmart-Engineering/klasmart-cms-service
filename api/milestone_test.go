@@ -38,8 +38,8 @@ func setupMilestone() {
 		EndPoint: os.Getenv("ams_endpoint"),
 	}
 	config.Set(cfg)
-	initDB()
-	initCache()
+	//initDB()
+	//initCache()
 }
 
 func TestCreateMilestone(t *testing.T) {
