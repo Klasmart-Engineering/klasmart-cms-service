@@ -348,6 +348,8 @@ gitlab.badanamu.com.cn/calmisland/ro v0.2.4 h1:MI80e+u8BJ5+GMKbDcPmfOEb82n6S/c/p
 gitlab.badanamu.com.cn/calmisland/ro v0.2.4/go.mod h1:kwGDvWisz6Z9pf1FytrfWHS6GcxpWkePudy/wRgpgo8=
 gitlab.badanamu.com.cn/calmisland/ro v0.2.5 h1:jQuZzvoYgUs7H/AuXHDcHas9dQaqFVZLeCdo3lIMYtQ=
 gitlab.badanamu.com.cn/calmisland/ro v0.2.5/go.mod h1:kwGDvWisz6Z9pf1FytrfWHS6GcxpWkePudy/wRgpgo8=
+gitlab.badanamu.com.cn/calmisland/ro v0.2.6 h1:da0EJPKzT8nhAwreZtUIaBY67RkG5MyfeLMmCk2POzk=
+gitlab.badanamu.com.cn/calmisland/ro v0.2.6/go.mod h1:kwGDvWisz6Z9pf1FytrfWHS6GcxpWkePudy/wRgpgo8=
 go.mongodb.org/mongo-driver v1.2.0/go.mod h1:u7ryQJ+DOzQmeO7zB6MHyr8jkEQvC8vH7qLUO4lqsUM=
 go.mongodb.org/mongo-driver v1.7.1/go.mod h1:Q4oFMbo1+MSNqICAdYMlC/zSTrwCogR4R8NzkI+yfU8=
 go.mongodb.org/mongo-driver v1.8.1 h1:OZE4Wni/SJlrcmSIBRYNzunX5TKxjrTS4jKSnA99oKU=
