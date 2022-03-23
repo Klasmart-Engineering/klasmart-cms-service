@@ -76,8 +76,14 @@ type TeacherLoadLessonSummaryResponse struct {
 }
 
 type TeacherLoadOverview struct {
-	NumOfMissedLessons            int `json:"num_of_missed_lessons"`
-	NumOfTeachersCompletedAll     int `json:"num_of_teachers_completed_all"`
-	NumOfTeachersMissedSome       int `json:"num_of_teachers_missed_some"`
-	NumOfTeachersMissedFrequently int `json:"num_of_teachers_missed_frequently"`
+	NumOfMissedLessons            int64 `json:"num_of_missed_lessons"`
+	NumOfTeachersCompletedAll     int64 `json:"num_of_teachers_completed_all"`
+	NumOfTeachersMissedSome       int64 `json:"num_of_teachers_missed_some"`
+	NumOfTeachersMissedFrequently int64 `json:"num_of_teachers_missed_frequently"`
+}
+
+type TeacherLoadItem struct {
+	TeacherID     string `json:"teacher_id" gorm:"column:teacher_id" `
+	TotalLessons  int64  `json:"total_lessons" gorm:"column:total_lessons" `
+	MissedLessons int64  `json:"missed_lessons" gorm:"column:missed_lessons" `
 }

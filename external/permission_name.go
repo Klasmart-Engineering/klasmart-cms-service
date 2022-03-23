@@ -343,6 +343,10 @@ const (
 	ViewSubjects20115 PermissionName = "view_subjects_20115"
 
 	ShowAllFolder295 = "show_all_folders_295"
+
+	ReportOrganizationTeachingLoad617 = "ReportOrganizationTeachingLoad617"
+	ReportSchoolTeachingLoad618       = "ReportSchoolTeachingLoad618"
+	ReportMyTeachingLoad619           = "ReportMyTeachingLoad619"
 )
 
 type TeacherViewPermissionParams struct {
