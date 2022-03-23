@@ -656,13 +656,26 @@ func (asg *AssessmentGrain) SingleGetLockedContentsFromSchedule() ([]*v2.Assessm
 		return asg.lockedContentsFromSchedule, nil
 	}
 
-	ctx := asg.ctx
-
 	schedule, err := asg.SingleGetSchedule()
 	if err != nil {
 		return nil, err
 	}
 
+	asg.lockedContentsFromSchedule = make([]*v2.AssessmentContentView, 0)
+
+	result, err := asg.getLockedContentBySchedule(schedule)
+	if err != nil {
+		return nil, err
+	}
+
+	asg.lockedContentsFromSchedule = result
+	asg.InitRecord[SingleLockedContentSliceFromSchedule] = true
+
+	return asg.lockedContentsFromSchedule, nil
+}
+
+func (asg *AssessmentGrain) getLockedContentBySchedule(schedule *entity.Schedule) ([]*v2.AssessmentContentView, error) {
+	ctx := asg.ctx
 	contentIDs := make([]string, 0)
 	contentIDs = append(contentIDs, schedule.LiveLessonPlan.LessonPlanID)
 	for _, materialItem := range schedule.LiveLessonPlan.LessonMaterials {
@@ -701,7 +714,7 @@ func (asg *AssessmentGrain) SingleGetLockedContentsFromSchedule() ([]*v2.Assessm
 		lessPlan.FileType = contentItem.FileType
 	}
 
-	asg.lockedContentsFromSchedule = append(asg.lockedContentsFromSchedule, lessPlan)
+	result := append(asg.lockedContentsFromSchedule, lessPlan)
 
 	for _, item := range liveLessonPlan.LessonMaterials {
 		materialItem := &v2.AssessmentContentView{
@@ -714,12 +727,10 @@ func (asg *AssessmentGrain) SingleGetLockedContentsFromSchedule() ([]*v2.Assessm
 			materialItem.LatestID = contentItem.LatestID
 			materialItem.FileType = contentItem.FileType
 		}
-		asg.lockedContentsFromSchedule = append(asg.lockedContentsFromSchedule, materialItem)
+		result = append(result, materialItem)
 	}
 
-	asg.InitRecord[SingleLockedContentSliceFromSchedule] = true
-
-	return asg.lockedContentsFromSchedule, nil
+	return result, nil
 }
 
 func (asg *AssessmentGrain) SingleGetContentsFromSchedule() ([]*v2.AssessmentContentView, error) {
