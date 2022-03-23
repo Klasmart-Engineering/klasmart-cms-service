@@ -1,6 +1,8 @@
 package api
 
 import (
+	"database/sql"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -144,5 +146,33 @@ func (s *Server) listTeacherMissedLessons(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/teacher_load_overview [get]
 func (s *Server) getTeacherLoadOverview(c *gin.Context) {
-
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var err error
+	var result *entity.TeacherLoadOverview
+	defer func() {
+		switch err {
+		case nil:
+			c.JSON(http.StatusOK, result)
+		case constant.ErrInvalidArgs:
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		case constant.ErrRecordNotFound, sql.ErrNoRows:
+			c.JSON(http.StatusNotFound, L(GeneralUnknown))
+		case constant.ErrForbidden:
+			c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
+		default:
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		}
+	}()
+	teacherIDs, err := model.GetReportModel().GetTeacherIDsCanViewReports(ctx, op, external.TeacherViewPermissionParams{
+		ViewOrgReports:    external.ReportOrganizationTeachingLoad617,
+		ViewSchoolReports: external.ReportSchoolTeachingLoad618,
+		ViewMyReports:     external.ReportMyTeachingLoad619,
+	})
+	tr := entity.TimeRange(c.Query("time_range"))
+	result, err = model.GetReportTeachingLoadModel().GetTeacherLoadOverview(ctx, op, tr, teacherIDs)
+	if err != nil {
+		return
+	}
+	return
 }
