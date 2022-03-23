@@ -15,7 +15,6 @@ require (
 	github.com/hgfischer/go-otp v1.0.0
 	github.com/jinzhu/gorm v1.9.16
 	github.com/newrelic/go-agent v3.15.2+incompatible
-	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	github.com/tencentcloud/tencentcloud-sdk-go v1.0.62
 	github.com/tidwall/gjson v1.6.0
@@ -26,8 +25,8 @@ require (
 	gitlab.badanamu.com.cn/calmisland/dbo v0.4.1
 	gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13
 	gitlab.badanamu.com.cn/calmisland/imq v0.2.18
-	gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.16
-	gitlab.badanamu.com.cn/calmisland/ro v0.2.4
+	gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.20
+	gitlab.badanamu.com.cn/calmisland/ro v0.2.5
 	go.mongodb.org/mongo-driver v1.8.1
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f
@@ -68,6 +67,7 @@ require (
 	github.com/segmentio/kafka-go v0.3.6 // indirect
 	github.com/segmentio/nsq-go v1.2.4 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
+	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.7 // indirect
 	github.com/tencentyun/scf-go-lib v0.0.0-20200624065115-ba679e2ec9c9 // indirect
 	github.com/tidwall/match v1.0.1 // indirect
