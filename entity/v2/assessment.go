@@ -158,7 +158,6 @@ type AssessmentDiffContentReply struct {
 	ContentID            string                 `json:"content_id"`
 	H5PID                string                 `json:"h5p_id"`
 	ContentName          string                 `json:"content_name"`
-	ReviewerComment      string                 `json:"reviewer_comment"`
 	ContentType          AssessmentContentType  `json:"content_type" enums:"LessonPlan,LessonMaterial,Unknown"`
 	ContentSubtype       string                 `json:"content_subtype"`
 	FileType             AssessmentFileArchived `json:"file_type"  enums:"Unknown,HasChildContainer,NotChildContainer,SupportScoreStandAlone,NotSupportScoreStandAlone"`

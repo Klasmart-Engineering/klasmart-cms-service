@@ -11,7 +11,7 @@ import (
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 )
 
-const token2 = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0NzkzMDQyMiwiaXNzIjoia2lkc2xvb3AifQ.mf5HZNpmhTHMemuHx0LAq-12O_b8DZR0K3wTUoNrQ-vduAq7DchOIuLhxyqJjsOURepA1JkfSD3szfEvRIQVGNe-EJLgMun5gAWQaTV_GDhor0EyMh7H65L9f0l-QH3PGM6eKFhfIzWH7ER9LqBEDM2zWE5iiT-igRXk1UYmvd4LBS9oQlGGNrZLIv412NRwGFhmimFTKelOhKdkL3fDYHM9gJnYw-uhNFKEPD3I0SugA7UoFz_tIjKjaYsZ3IkvONhgTcpYIFALShQA1UekUnATbu4WvIon8Q7oCgVdB5G30PRwW_a3LeKTIvBc9wYZLmYDPzAPkQt4zkRVY6VmWQ"
+const assessmentOpToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0ODAwNzc1MCwiaXNzIjoia2lkc2xvb3AifQ.OgduSwTLXyLGubPRpo0wQeKddQ41S60R3AnE4jtWwI1pPsisuKyNDWY8H81Q9v2MauEaqvTODgzGV5YvZsMHhuwVhoWZY-mceSRSV75M2gEw5LThzGrOc68NtXLA_D4_pbeWMGJd4MKEDSpAHHqslu1vSkW4g0MZzNqjYOTktvUbFQYwVf9VLQvraAV_GrmQibOWgR9D11j4OkDcp_2xIBlTjWHg74jhLkprCzLR3wSDlBkyQC37zsWums-8Ryc2C0UGuIxuvSq1qaQPl-hprUGpxo7SWWagJhQ-zAxgO5nmD5Modn908pkQ2mdy825crByWjlre8NtKINsX3KfDtw"
 
 func TestAssessmentModel_GetByID(t *testing.T) {
 	ctx := context.Background()
@@ -20,8 +20,8 @@ func TestAssessmentModel_GetByID(t *testing.T) {
 		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 		Token:  "",
 	}
-	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0NzgzMTkzNiwiaXNzIjoia2lkc2xvb3AifQ.xLmWf_SDWmWxYZ8aIbn9UNNJvuFpd_6uw9YNf6dXFfOYuCwkothXeT4aRbO2jBLc4YXq-HKLk_MN9Mg4FUME36Nd2L5ofd_kuuSMHMoulA63CkZQNgnJAoSNYTnQmqxowniKHMIwFlTjOqUu99R-NUAR0ogAO-CuUl8EkS2DzvCZxPyESOuo6ci8Wy-mov4kdimfKRfzVyUTUhJakpQFU1fIDz7UjCKYmGw-K6j5C6FOUnHKhzKkN_1gxpm2t8fM20k-2eRrVux21uEDVUHYaAY9Eq5i3sO71T0oA_CyVYY2bpundYDKesjoMbChXT0U2wKvy55xfoVEaeJ81rlOag"
-	result, err := GetAssessmentModelV2().GetByID(ctx, op, "623168807b41e967998394bd")
+	op.Token = assessmentOpToken
+	result, err := GetAssessmentModelV2().GetByID(ctx, op, "62344ae15db29d3f2d1a4321")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +36,7 @@ func TestAssessmentModel_Query(t *testing.T) {
 		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 		Token:  "",
 	}
-	op.Token = token2
+	op.Token = assessmentOpToken
 	t.Log(op)
 	result, err := GetAssessmentModelV2().Page(ctx, op, &v2.AssessmentQueryReq{
 		//QueryKey:       "org mi",

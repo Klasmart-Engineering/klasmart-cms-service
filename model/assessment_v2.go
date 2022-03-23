@@ -103,9 +103,7 @@ func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *
 		return nil, err
 	}
 
-	ags := NewAssessmentsGrain(ctx, op, assessments)
-	match := GetAssessmentMatch(req.AssessmentType, ags)
-	result, err := ConvertAssessmentPageReply(assessments, match)
+	result, err := ConvertAssessmentPageReply(ctx, op, req.AssessmentType, assessments)
 	if err != nil {
 		return nil, err
 	}
@@ -129,12 +127,18 @@ func (a *assessmentModelV2) GetByID(ctx context.Context, op *entity.Operator, id
 		log.Warn(ctx, "assessment type is not support offline study", log.Err(err), log.Any("assessment", assessment))
 		return nil, nil
 	}
-	assessmentComponent := NewAssessmentDetailComponent(ctx, op, assessment)
-	result, err := assessmentComponent.ConvertDetailReply(a.getAssessmentDetailConfig(assessmentComponent, assessment.AssessmentType))
+
+	result, err := ConvertAssessmentDetailReply(ctx, op, assessment)
 	if err != nil {
-		log.Error(ctx, "ConvertPageReply error", log.Err(err))
 		return nil, err
 	}
+
+	//assessmentComponent := NewAssessmentDetailComponent(ctx, op, assessment)
+	//result, err := assessmentComponent.ConvertDetailReply(a.getAssessmentDetailConfig(assessmentComponent, assessment.AssessmentType))
+	//if err != nil {
+	//	log.Error(ctx, "ConvertPageReply error", log.Err(err))
+	//	return nil, err
+	//}
 
 	return result, nil
 }
@@ -324,25 +328,52 @@ func (a *assessmentModelV2) PageForHomePage(ctx context.Context, op *entity.Oper
 		return nil, err
 	}
 
-	assessmentComponent := NewPageComponent(ctx, op, assessments)
-	pageResult, err := assessmentComponent.ConvertPageReply(a.getAssessmentPageConfig(assessmentComponent, req.AssessmentType))
+	ag := NewAssessmentGrainMul(ctx, op, assessments)
+	assessmentUserMap, err := ag.GetAssessmentUserMap()
 	if err != nil {
-		log.Error(ctx, "ConvertPageReply error", log.Err(err))
 		return nil, err
+	}
+
+	userMap, err := ag.GetUserMap()
+	if err != nil {
+		return nil, err
+	}
+
+	assTeacherMap := make(map[string][]*entity.IDName, len(assessments))
+	for _, item := range assessments {
+		if assUserItems, ok := assessmentUserMap[item.ID]; ok {
+			for _, assUserItem := range assUserItems {
+				if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
+					continue
+				}
+				if item.AssessmentType == v2.AssessmentTypeOnlineClass &&
+					assUserItem.StatusByUser == v2.AssessmentUserStatusNotParticipate {
+					continue
+				}
+
+				if userItem, ok := userMap[assUserItem.UserID]; ok && userItem != nil {
+					assTeacherMap[item.ID] = append(assTeacherMap[item.ID], userItem)
+				}
+			}
+		}
 	}
 
 	result := &v2.ListAssessmentsResultForHomePage{
 		Total: total,
-		Items: make([]*v2.AssessmentItemForHomePage, 0, len(pageResult)),
+		Items: make([]*v2.AssessmentItemForHomePage, 0, len(assessments)),
 	}
 
-	for _, item := range pageResult {
-		result.Items = append(result.Items, &v2.AssessmentItemForHomePage{
-			ID:       item.ID,
-			Title:    item.Title,
-			Teachers: item.Teachers,
-			Status:   item.Status.ToReply(),
-		})
+	for _, item := range assessments {
+		replyItem := &v2.AssessmentItemForHomePage{
+			ID:     item.ID,
+			Title:  item.Title,
+			Status: item.Status.ToReply(),
+		}
+
+		if teachers, ok := assTeacherMap[item.ID]; ok {
+			replyItem.Teachers = teachers
+		}
+		result.Items = append(result.Items, replyItem)
 	}
 
 	return result, nil
@@ -425,96 +456,6 @@ func (a *assessmentModelV2) queryFeedbackInfo(ctx context.Context, operator *ent
 	return feedbackMap, nil
 }
 
-func (a *assessmentModelV2) getAssessmentDetailConfig(adc *AssessmentDetailComponent, assessmentType v2.AssessmentType) []AssessmentConfigFunc {
-	switch assessmentType {
-	case v2.AssessmentTypeOnlineClass:
-		return []AssessmentConfigFunc{
-			adc.apc.MatchSchedule,
-			adc.apc.MatchLessPlan,
-			adc.apc.MatchProgram,
-			adc.apc.MatchSubject,
-			adc.apc.MatchTeacher,
-			adc.apc.MatchClass,
-
-			adc.MatchOutcome,
-			adc.MatchContentsContainsRoomInfo,
-			adc.MatchStudentContainsRoomInfo,
-		}
-	case v2.AssessmentTypeOfflineClass:
-		return []AssessmentConfigFunc{
-			adc.apc.MatchSchedule,
-			adc.apc.MatchLessPlan,
-			adc.apc.MatchProgram,
-			adc.apc.MatchSubject,
-			adc.apc.MatchTeacher,
-			adc.apc.MatchClass,
-
-			adc.MatchOutcome,
-			adc.MatchContentsNotContainsRoomInfo,
-			adc.MatchStudentNotContainsRoomInfo,
-		}
-	case v2.AssessmentTypeOnlineStudy:
-		return []AssessmentConfigFunc{
-			adc.apc.MatchSchedule,
-			adc.apc.MatchLessPlan,
-			adc.apc.MatchTeacher,
-			adc.apc.MatchClass,
-			adc.apc.MatchRemainingTime,
-			adc.apc.MatchCompleteRate,
-
-			adc.MatchOutcome,
-			adc.MatchContentsContainsRoomInfo,
-			adc.MatchStudentContainsRoomInfo,
-		}
-	case v2.AssessmentTypeReviewStudy:
-		return []AssessmentConfigFunc{
-			adc.apc.MatchSchedule,
-			adc.apc.MatchTeacher,
-			adc.apc.MatchClass,
-			adc.apc.MatchCompleteRate,
-
-			adc.MatchReviewStudyStudentResult,
-		}
-	}
-
-	return nil
-}
-
-func (a *assessmentModelV2) getAssessmentPageConfig(ac *AssessmentPageComponent, assessmentType v2.AssessmentType) []AssessmentConfigFunc {
-	switch assessmentType {
-	case v2.AssessmentTypeOnlineClass, v2.AssessmentTypeOfflineClass:
-		return []AssessmentConfigFunc{
-			ac.MatchSchedule,
-			ac.MatchLessPlan,
-			ac.MatchProgram,
-			ac.MatchSubject,
-			ac.MatchTeacher,
-		}
-	case v2.AssessmentTypeOnlineStudy:
-		return []AssessmentConfigFunc{
-			ac.MatchSchedule,
-			ac.MatchLessPlan,
-			ac.MatchTeacher,
-			ac.MatchClass,
-			ac.MatchCompleteRate,
-			ac.MatchRemainingTime,
-		}
-	case v2.AssessmentTypeReviewStudy:
-		return []AssessmentConfigFunc{
-			ac.MatchSchedule,
-			ac.MatchTeacher,
-			ac.MatchClass,
-			ac.MatchCompleteRate,
-		}
-	default:
-		return []AssessmentConfigFunc{
-			ac.MatchTeacher,
-		}
-	}
-
-	return nil
-}
-
 // TODO need refactor
 func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, status v2.AssessmentStatus, req *v2.AssessmentUpdateReq) error {
 	if len(req.Students) <= 0 {
@@ -543,16 +484,15 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		return ErrAssessmentHasCompleted
 	}
 
-	detailComponent := NewAssessmentDetailComponent(ctx, op, waitUpdatedAssessment)
-
-	userIDAndUserTypeMap, err := detailComponent.GetAssessmentUserWithUserIDAndUserTypeMap()
+	ags := NewAssessmentGrainSingle(ctx, op, waitUpdatedAssessment)
+	userIDAndUserTypeMap, err := ags.GetAssessmentUserWithUserIDAndUserTypeMap()
 	if err != nil {
 		return err
 	}
 
 	waitUpdatedUsers := make([]*v2.AssessmentUser, 0)
 	for _, item := range req.Students {
-		existItem, ok := userIDAndUserTypeMap[detailComponent.getKey([]string{item.StudentID, v2.AssessmentUserTypeStudent.String()})]
+		existItem, ok := userIDAndUserTypeMap[ags.GetKey([]string{item.StudentID, v2.AssessmentUserTypeStudent.String()})]
 		if !ok {
 			log.Warn(ctx, "student not exist", log.Any("userIDAndUserTypeMap", userIDAndUserTypeMap), log.Any("reqItem", item))
 			return constant.ErrInvalidArgs
@@ -572,16 +512,16 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			waitUpdatedAssessment: waitUpdatedAssessment,
 			waitUpdatedUsers:      waitUpdatedUsers,
 			userIDAndUserTypeMap:  userIDAndUserTypeMap,
-			detailComponent:       detailComponent,
+			ag:                    ags,
 		})
 	}
 
-	scheduleContents, err := detailComponent.GetContentsFromSchedule()
+	scheduleContents, err := ags.SingleGetContentsFromSchedule()
 	if err != nil {
 		return err
 	}
 
-	assessmentContentMap, err := detailComponent.GetAssessmentContentMap()
+	assessmentContentMap, err := ags.SingleGetAssessmentContentMap()
 	if err != nil {
 		return err
 	}
@@ -635,10 +575,21 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		contentIDs = append(contentIDs, item.ContentID)
 	}
 
-	contentOutcomeIDMap, err := detailComponent.getContentOutcomeIDsMap(contentIDs)
+	contentIDs = utils.SliceDeduplication(contentIDs)
+
+	contents, err := GetContentModel().GetContentByIDListInternal(ctx, dbo.MustGetDB(ctx), contentIDs)
 	if err != nil {
+		log.Error(ctx, "toViews: GetContentModel().GetContentByIDList: get failed",
+			log.Err(err),
+			log.Strings("lesson_plan_ids", contentIDs),
+		)
 		return err
 	}
+	contentOutcomeIDMap := make(map[string][]string, len(contents))
+	for _, item := range contents {
+		contentOutcomeIDMap[item.ID] = item.OutcomeIDs
+	}
+
 	outcomeIDs := make([]string, 0)
 	for _, item := range contentOutcomeIDMap {
 		outcomeIDs = append(outcomeIDs, item...)
@@ -653,7 +604,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		outcomeMap[item.ID] = item
 	}
 
-	outcomeFromAssessmentMap, err := detailComponent.GetOutcomeFromAssessment()
+	outcomeFromAssessmentMap, err := ags.SingleGetOutcomeFromAssessment()
 	if err != nil {
 		return err
 	}
@@ -667,7 +618,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			if outcomeIDs, ok := contentOutcomeIDMap[contentItem.ContentID]; ok {
 				for _, outcomeID := range outcomeIDs {
 					if outcomeItem, ok := outcomeMap[outcomeID]; ok {
-						key := detailComponent.getKey([]string{userItem.ID, contentItem.ID, outcomeID})
+						key := ags.GetKey([]string{userItem.ID, contentItem.ID, outcomeID})
 						if _, ok := outcomeFromAssessmentMap[key]; ok {
 							continue
 						}
@@ -709,7 +660,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			continue
 		}
 		// verify student data
-		assessmentUserItem, ok := userIDAndUserTypeMap[detailComponent.getKey([]string{stuItem.StudentID, v2.AssessmentUserTypeStudent.String()})]
+		assessmentUserItem, ok := userIDAndUserTypeMap[ags.GetKey([]string{stuItem.StudentID, v2.AssessmentUserTypeStudent.String()})]
 		if !ok {
 			log.Warn(ctx, "student not exist", log.Any("userIDAndUserTypeMap", userIDAndUserTypeMap), log.Any("stuItem", stuItem))
 			return constant.ErrInvalidArgs
@@ -723,7 +674,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 						log.Warn(ctx, "student outcome status invalid", log.Any("req", req), log.Any("outcomeItem", outcomeItem))
 						return constant.ErrInvalidArgs
 					}
-					key := detailComponent.getKey([]string{assessmentUserItem.ID, assessmentContentItem.ID, outcomeItem.OutcomeID})
+					key := ags.GetKey([]string{assessmentUserItem.ID, assessmentContentItem.ID, outcomeItem.OutcomeID})
 					if outcomeFromAssessmentItem, ok := outcomeFromAssessmentMap[key]; ok {
 						outcomeFromAssessmentItem.Status = outcomeItem.Status
 						outcomeFromAssessmentItem.UpdateAt = now
@@ -847,7 +798,7 @@ type updateReviewStudyAssessmentInput struct {
 	waitUpdatedAssessment *v2.Assessment
 	waitUpdatedUsers      []*v2.AssessmentUser
 	userIDAndUserTypeMap  map[string]*v2.AssessmentUser
-	detailComponent       *AssessmentDetailComponent
+	ag                    *AssessmentGrain
 }
 
 func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op *entity.Operator, input updateReviewStudyAssessmentInput) error {
@@ -865,7 +816,7 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 			continue
 		}
 		// verify student data
-		_, ok := input.userIDAndUserTypeMap[input.detailComponent.getKey([]string{stuItem.StudentID, v2.AssessmentUserTypeStudent.String()})]
+		_, ok := input.userIDAndUserTypeMap[input.ag.GetKey([]string{stuItem.StudentID, v2.AssessmentUserTypeStudent.String()})]
 		if !ok {
 			log.Warn(ctx, "student not exist", log.Any("userIDAndUserTypeMap", input.userIDAndUserTypeMap), log.Any("stuItem", stuItem))
 			return constant.ErrInvalidArgs
