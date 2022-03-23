@@ -22,6 +22,8 @@ func TestMain(m *testing.M) {
 	config.LoadRedisEnvConfig(ctx)
 	da.InitRedis(ctx)
 
+	config.LoadAMSEndpointEnvConfig(ctx)
+
 	initCache(ctx)
 	initDataSource(ctx)
 	os.Exit(m.Run())
