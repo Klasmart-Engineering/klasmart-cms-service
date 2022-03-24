@@ -69,7 +69,7 @@ func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiff
 		return nil, err
 	}
 
-	studentReviewMap, err := o.ags.SingleGetContentsFromScheduleReview()
+	studentReviewMap, contentMap, err := o.ags.SingleGetContentsFromScheduleReview()
 	if err != nil {
 		return nil, err
 	}
@@ -141,6 +141,9 @@ func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiff
 						H5PSubID:             "",
 						RoomProvideContentID: "",
 					},
+				}
+				if contentInfo, ok := contentMap[contentItem.LessonMaterialID]; ok {
+					reviewContentReplyItem.Content.ContentSubtype = contentInfo.FileType.String()
 				}
 				if studentRoomDataItem != nil {
 					if userContentRoomData, ok := studentRoomDataItem[contentItem.LessonMaterialID]; ok {

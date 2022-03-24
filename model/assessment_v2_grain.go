@@ -974,18 +974,39 @@ func (asg *AssessmentGrain) SingleGetOutcomeFromAssessment() (map[string]*v2.Ass
 	return result, nil
 }
 
-func (asg *AssessmentGrain) SingleGetContentsFromScheduleReview() (map[string]*entity.ScheduleReview, error) {
+func (asg *AssessmentGrain) SingleGetContentsFromScheduleReview() (map[string]*entity.ScheduleReview, map[string]*entity.ContentInfoInternal, error) {
 	ctx := asg.ctx
 	op := asg.op
 
 	studentReviews, err := GetScheduleModel().GetSuccessScheduleReview(ctx, op, asg.assessment.ScheduleID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	contentIDs := make([]string, 0)
+	dedupContentID := make(map[string]struct{})
 	result := make(map[string]*entity.ScheduleReview)
 	for _, item := range studentReviews {
+		if item.LiveLessonPlan == nil {
+			continue
+		}
 		result[item.StudentID] = item
+		for _, contentItem := range item.LiveLessonPlan.LessonMaterials {
+			if _, ok := dedupContentID[contentItem.LessonMaterialID]; ok {
+				continue
+			}
+			dedupContentID[contentItem.LessonMaterialID] = struct{}{}
+			contentIDs = append(contentIDs, contentItem.LessonMaterialID)
+		}
 	}
 
-	return result, nil
+	contents, err := GetContentModel().GetContentByIDListInternal(ctx, dbo.MustGetDB(ctx), contentIDs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	contentResult := make(map[string]*entity.ContentInfoInternal, len(contents))
+	for _, item := range contents {
+		contentResult[item.ID] = item
+	}
+	return result, contentResult, nil
 }

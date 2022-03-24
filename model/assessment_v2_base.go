@@ -215,19 +215,17 @@ func ConvertAssessmentPageReply(ctx context.Context, op *entity.Operator, assess
 		completeRateMap map[string]float64
 		remainingMap    map[string]int64
 	)
-	if assessmentType == v2.AssessmentTypeOnlineStudy {
-		classMap, err = match.MatchClass()
-		if err != nil {
-			return nil, err
-		}
-		completeRateMap, err = match.MatchCompleteRate()
-		if err != nil {
-			return nil, err
-		}
-		remainingMap, err = match.MatchRemainingTime()
-		if err != nil {
-			return nil, err
-		}
+	classMap, err = match.MatchClass()
+	if err != nil {
+		return nil, err
+	}
+	completeRateMap, err = match.MatchCompleteRate()
+	if err != nil {
+		return nil, err
+	}
+	remainingMap, err = match.MatchRemainingTime()
+	if err != nil {
+		return nil, err
 	}
 
 	result := make([]*v2.AssessmentQueryReply, len(assessments))

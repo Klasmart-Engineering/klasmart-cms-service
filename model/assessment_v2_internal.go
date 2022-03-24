@@ -70,7 +70,8 @@ func (a *assessmentInternalModel) ScheduleEndClassCallback(ctx context.Context, 
 
 	if assessment.AssessmentType != v2.AssessmentTypeOnlineClass &&
 		assessment.AssessmentType != v2.AssessmentTypeOfflineClass &&
-		assessment.AssessmentType != v2.AssessmentTypeOnlineStudy {
+		assessment.AssessmentType != v2.AssessmentTypeOnlineStudy &&
+		assessment.AssessmentType != v2.AssessmentTypeReviewStudy {
 		log.Warn(ctx, "not support this assessment type", log.Any("assessment", assessment), log.Any("req", req))
 		return constant.ErrInvalidArgs
 	}
@@ -117,6 +118,9 @@ func (a *assessmentInternalModel) AddWhenCreateSchedules(ctx context.Context, tx
 		}
 		if req.AssessmentType == v2.AssessmentTypeOfflineStudy {
 			assessmentItem.Status = v2.AssessmentStatusNotApplicable
+		}
+		if req.AssessmentType == v2.AssessmentTypeReviewStudy {
+			assessmentItem.Status = v2.AssessmentStatusPending
 		}
 
 		assessments[i] = assessmentItem
@@ -377,12 +381,9 @@ func (a *assessmentInternalModel) endClassCallbackUpdateAssessment(ctx context.C
 				return err
 			}
 
-			if assessment.AssessmentType == v2.AssessmentTypeOnlineClass ||
-				assessment.AssessmentType == v2.AssessmentTypeOnlineStudy {
-				err := assessmentV2.GetAssessmentUserDA().UpdateStatusTx(ctx, dbo.MustGetDB(ctx), attendanceCondition, v2.AssessmentUserStatusParticipate)
-				if err != nil {
-					return err
-				}
+			err = assessmentV2.GetAssessmentUserDA().UpdateStatusTx(ctx, dbo.MustGetDB(ctx), attendanceCondition, v2.AssessmentUserStatusParticipate)
+			if err != nil {
+				return err
 			}
 
 			return nil
@@ -493,12 +494,12 @@ func (a *assessmentInternalModel) UpdateWhenReviewScheduleSuccess(ctx context.Co
 		return err
 	}
 
-	if assessment.AssessmentType != v2.AssessmentTypeReviewStudy || assessment.Status != v2.AssessmentStatusNotStarted {
+	if assessment.AssessmentType != v2.AssessmentTypeReviewStudy || assessment.Status != v2.AssessmentStatusPending {
 		log.Warn(ctx, "assessment is not review study or sleep status", log.Any("assessment", assessment))
 		return nil
 	}
 
-	assessment.Status = v2.AssessmentStatusStarted
+	assessment.Status = v2.AssessmentStatusNotStarted
 	// update create time when schedule ready
 	assessment.CreateAt = time.Now().Unix()
 

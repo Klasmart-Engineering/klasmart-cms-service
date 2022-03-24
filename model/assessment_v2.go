@@ -710,18 +710,25 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 	}
 
 	if waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeOnlineClass ||
-		waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeOnlineStudy {
-		// update student comment
-		if len(newComments) > 0 {
-			if _, err := external.GetH5PRoomCommentServiceProvider().BatchAdd(ctx, op, newComments); err != nil {
-				log.Warn(ctx, "set student comment error", log.Err(err), log.Any("newComments", newComments))
-			}
-		}
+		waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeOnlineStudy ||
+		waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeReviewStudy {
 
-		// update student score
-		if len(newScores) > 0 {
-			if _, err := external.GetH5PRoomScoreServiceProvider().BatchSet(ctx, op, newScores); err != nil {
-				log.Warn(ctx, "set student score error", log.Err(err), log.Any("newScores", newScores))
+		if waitUpdatedAssessment.Status == v2.AssessmentStatusStarted ||
+			waitUpdatedAssessment.Status == v2.AssessmentStatusInDraft {
+			// update student comment
+			if len(newComments) > 0 {
+				if _, err := external.GetH5PRoomCommentServiceProvider().BatchAdd(ctx, op, newComments); err != nil {
+					log.Warn(ctx, "set student comment error", log.Err(err), log.Any("newComments", newComments))
+					return err
+				}
+			}
+
+			// update student score
+			if len(newScores) > 0 {
+				if _, err := external.GetH5PRoomScoreServiceProvider().BatchSet(ctx, op, newScores); err != nil {
+					log.Warn(ctx, "set student score error", log.Err(err), log.Any("newScores", newScores))
+					return err
+				}
 			}
 		}
 	}
@@ -846,16 +853,21 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 	}
 
 	// update student comment
-	if len(newComments) > 0 {
-		if _, err := external.GetH5PRoomCommentServiceProvider().BatchAdd(ctx, op, newComments); err != nil {
-			log.Warn(ctx, "set student comment error", log.Err(err), log.Any("newComments", newComments))
+	if input.waitUpdatedAssessment.Status == v2.AssessmentStatusStarted ||
+		input.waitUpdatedAssessment.Status == v2.AssessmentStatusInDraft {
+		if len(newComments) > 0 {
+			if _, err := external.GetH5PRoomCommentServiceProvider().BatchAdd(ctx, op, newComments); err != nil {
+				log.Warn(ctx, "set student comment error", log.Err(err), log.Any("newComments", newComments))
+				return err
+			}
 		}
-	}
 
-	// update student score
-	if len(newScores) > 0 {
-		if _, err := external.GetH5PRoomScoreServiceProvider().BatchSet(ctx, op, newScores); err != nil {
-			log.Warn(ctx, "set student score error", log.Err(err), log.Any("newScores", newScores))
+		// update student score
+		if len(newScores) > 0 {
+			if _, err := external.GetH5PRoomScoreServiceProvider().BatchSet(ctx, op, newScores); err != nil {
+				log.Warn(ctx, "set student score error", log.Err(err), log.Any("newScores", newScores))
+				return err
+			}
 		}
 	}
 
