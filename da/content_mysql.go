@@ -48,6 +48,7 @@ func (s *CombineConditions) GetConditions() ([]string, []interface{}) {
 func (s *CombineConditions) GetPager() *dbo.Pager {
 	return s.SourceCondition.GetPager()
 }
+
 func (s *CombineConditions) GetOrderBy() string {
 	return s.SourceCondition.GetOrderBy()
 }

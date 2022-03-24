@@ -2,9 +2,7 @@ package da
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/go-redis/redis/v8"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -30,10 +28,6 @@ func InitMySQL(ctx context.Context) {
 }
 
 func InitRedis(ctx context.Context) {
-	ro.SetConfig(&redis.Options{
-		Addr:     fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
-		Password: config.Get().RedisConfig.Password,
-	})
-
+	ro.SetConfig(config.Get().RedisConfig.Option)
 	ro.MustGetRedis(ctx)
 }

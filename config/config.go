@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -10,7 +11,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-
+	"github.com/go-redis/redis/v8"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
@@ -64,10 +65,17 @@ type CryptoConfig struct {
 }
 
 type RedisConfig struct {
-	OpenCache bool   `yaml:"open_cache"`
-	Host      string `yaml:"host"`
-	Port      int    `yaml:"port"`
-	Password  string `yaml:"password" json:"-"`
+	OpenCache bool `yaml:"open_cache"`
+	// DEPRECATED
+	// will remove in future, please use Option instead
+	Host string `yaml:"host"`
+	// DEPRECATED
+	// will remove in future, please use Option instead
+	Port int `yaml:"port"`
+	// DEPRECATED
+	// will remove in future, please use Option instead
+	Password string         `yaml:"password" json:"-"`
+	Option   *redis.Options `yaml:"option" json:"-"`
 }
 
 type DBConfig struct {
@@ -310,10 +318,35 @@ func loadStorageEnvConfig(ctx context.Context) {
 }
 
 func LoadRedisEnvConfig(ctx context.Context) {
-	openCacheStr := os.Getenv("open_cache")
-	openCache, _ := strconv.ParseBool(openCacheStr)
+	openCache, _ := strconv.ParseBool(os.Getenv("open_cache"))
 	config.RedisConfig.OpenCache = openCache
-	// if openCache {
+	redisURL := os.Getenv("redis_url")
+	if redisURL != "" {
+		// new config
+		option, err := redis.ParseURL(redisURL)
+		if err != nil {
+			log.Panic(ctx, "redis url invalid", log.Err(err), log.String("url", redisURL))
+		}
+
+		log.Debug(ctx, "redis url parsed", log.Any("option", option))
+		config.RedisConfig.Option = option
+
+		lastIndex := strings.LastIndex(option.Addr, ":")
+		if lastIndex >= 0 {
+			config.RedisConfig.Host = option.Addr[:lastIndex]
+			port, err := strconv.Atoi(option.Addr[lastIndex+1:])
+			if err != nil {
+				config.RedisConfig.Port = 6379
+			} else {
+				config.RedisConfig.Port = port
+			}
+			config.RedisConfig.Password = option.Password
+		}
+
+		return
+	}
+
+	// old config
 	host := assertGetEnv("redis_host")
 	portStr := assertGetEnv("redis_port")
 	password := os.Getenv("redis_password")
@@ -325,7 +358,11 @@ func LoadRedisEnvConfig(ctx context.Context) {
 	}
 	config.RedisConfig.Port = port
 	config.RedisConfig.Password = password
-	// }
+
+	config.RedisConfig.Option = &redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", host, port),
+		Password: password,
+	}
 }
 
 func loadScheduleEnvConfig(ctx context.Context) {

@@ -6,16 +6,16 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 	"testing"
 
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 const operatorOrgID = "92db7ddd-1f23-4f64-bd47-94f6d34a50c0"
@@ -59,6 +59,7 @@ func TestContentModel_CreateContent(t *testing.T) {
 }
 
 func setupConfig() {
+	ctx := context.Background()
 	cfg := config.Get()
 	if cfg == nil {
 		cfg = &config.Config{}
@@ -80,7 +81,7 @@ func setupConfig() {
 		EndPoint: os.Getenv("ams_endpoint"),
 	}
 	config.Set(cfg)
-	initCache()
+	initCache(ctx)
 }
 
 var token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTY0MzE4NTM3NiwiaXNzIjoia2lkc2xvb3AifQ.JTmAeYhLSPP3GgdmbDQF96dy3DPW_JgQyR7x4UD_2Db0biZ3TglFRRpCAaPEFW3b1KhR0KIFNwfnPzlnFdsnrsCbz_ZIP9GIHx8YLZMcS6GlYZp-WnDAchvqfccO3ljxGdzZ1IkYzZN8B5WD8aaWUonVyU8InWZiw2zR3TXD9ep8YGa9K5JZNx3UeDXNJ_cjwskCFizV4jv2q0sxMieb3qQ5lor_zJwkq13eqeOpvZBJaHznLrSJgjY8ASz4oUO2ZCadl1dKVFYDf2qFXNvRTeYURTs0cvPa9c9tb9H6j6vmExVeYnO9aJPr7NEIpRAByGJUTk5Ci-Uqx3rQglpsjA"
