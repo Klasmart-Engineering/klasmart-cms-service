@@ -334,7 +334,7 @@ func LoadRedisEnvConfig(ctx context.Context) {
 		lastIndex := strings.LastIndex(option.Addr, ":")
 		if lastIndex >= 0 {
 			config.RedisConfig.Host = option.Addr[:lastIndex]
-			port, err := strconv.Atoi(option.Addr[lastIndex:])
+			port, err := strconv.Atoi(option.Addr[lastIndex+1:])
 			if err != nil {
 				config.RedisConfig.Port = 6379
 			} else {
