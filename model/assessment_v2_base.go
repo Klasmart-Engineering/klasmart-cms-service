@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
@@ -146,6 +147,7 @@ func (o *BaseAssessment) summaryRoomScores(userMapFromRoomMap map[string]*RoomUs
 		}
 	}
 
+	log.Debug(o.ag.ctx, "summary score info", log.Any("contentSummaryTotalScoreMap", contentSummaryTotalScoreMap), log.Any("roomUserSummaryScoreMap", roomUserSummaryScoreMap))
 	return contentSummaryTotalScoreMap, roomUserSummaryScoreMap
 }
 

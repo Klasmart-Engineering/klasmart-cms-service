@@ -391,17 +391,23 @@ func (o *OnlineClassAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 				userOutcomeReplyItem := &v2.AssessmentStudentResultOutcomeReply{
 					OutcomeID: outcomeID,
 				}
-				if userOutcome != nil {
-					userOutcomeReplyItem.Status = userOutcome.Status
-				} else {
-					if outcomeInfo, ok := outcomeMapFromContent[outcomeID]; !ok {
-						continue
+				if o.ag.assessment.Status == v2.AssessmentStatusInDraft ||
+					o.ag.assessment.Status == v2.AssessmentStatusComplete {
+					if userOutcome != nil {
+						userOutcomeReplyItem.Status = userOutcome.Status
 					} else {
-						if outcomeInfo.Assumed || studentContentScore >= outcomeInfo.ScoreThreshold {
-							userOutcomeReplyItem.Status = v2.AssessmentUserOutcomeStatusAchieved
-						} else {
-							userOutcomeReplyItem.Status = v2.AssessmentUserOutcomeStatusUnknown
-						}
+						userOutcomeReplyItem.Status = v2.AssessmentUserOutcomeStatusUnknown
+					}
+				} else {
+					outcomeInfo, ok := outcomeMapFromContent[outcomeID]
+					if !ok {
+						log.Warn(ctx, "outcome not found in content", log.Any("outcomeMapFromContent", outcomeMapFromContent), log.String("outcomeID", outcomeID))
+						continue
+					}
+					if outcomeInfo.Assumed || studentContentScore >= outcomeInfo.ScoreThreshold {
+						userOutcomeReplyItem.Status = v2.AssessmentUserOutcomeStatusAchieved
+					} else {
+						userOutcomeReplyItem.Status = v2.AssessmentUserOutcomeStatusUnknown
 					}
 				}
 
