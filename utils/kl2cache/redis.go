@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -120,6 +121,7 @@ func (r *redisProvider) getWithOutCache(ctx context.Context, key Key, val interf
 }
 
 func (r *redisProvider) getWithCache(ctx context.Context, key Key, val interface{}, fGetData innerFuncGet) (innerPanic bool, err error) {
+	start := time.Now()
 	var buf []byte
 	s, err := r.Client.Get(ctx, key.Key()).Result()
 	switch err {
@@ -128,12 +130,14 @@ func (r *redisProvider) getWithCache(ctx context.Context, key Key, val interface
 			"got data from redis",
 			log.Any("key", key.Key()),
 			log.Any("val", s),
+			log.Duration("duration", time.Since(start)),
 		)
 		buf = []byte(s)
 	case redis.Nil:
 		log.Info(ctx,
 			"miss cache from redis,call fGetData",
 			log.Any("key", key.Key()),
+			log.Duration("duration", time.Since(start)),
 		)
 		err = nil
 		var val1 interface{}
@@ -154,7 +158,10 @@ func (r *redisProvider) getWithCache(ctx context.Context, key Key, val interface
 			return
 		}
 	default:
-		log.Error(ctx, "get value from redis failed", log.Err(err), log.Any("key", key))
+		log.Error(ctx, "get value from redis failed",
+			log.Err(err),
+			log.Any("key", key),
+			log.Duration("duration", time.Since(start)))
 		return
 	}
 
@@ -252,15 +259,27 @@ func (r *redisProvider) batchGetWithCache(ctx context.Context, keys []Key, val i
 	for _, key := range keys {
 		keyStrArr = append(keyStrArr, key.Key())
 	}
+
+	start := time.Now()
 	rsCached, err := r.Client.MGet(ctx, keyStrArr...).Result()
 	if err == redis.Nil {
-		log.Info(ctx, "redis mget got redis.Nil", log.Any("keys", keyStrArr), log.Err(err))
+		log.Info(ctx, "redis mget got redis.Nil",
+			log.Any("keys", keyStrArr),
+			log.Err(err),
+			log.Duration("duration", time.Since(start)))
 		err = nil
 	}
 	if err != nil {
-		log.Error(ctx, "redis mget failed", log.Err(err), log.Any("keys", keyStrArr))
+		log.Error(ctx, "redis mget failed",
+			log.Err(err),
+			log.Any("keys", keyStrArr),
+			log.Duration("duration", time.Since(start)))
 		return
 	}
+
+	log.Debug(ctx, "redis mget successfully",
+		log.Any("keys", keyStrArr),
+		log.Duration("duration", time.Since(start)))
 
 	valStrArr := make([]string, 0, len(keys))
 	missed := make([]Key, 0, len(keys))
@@ -307,15 +326,23 @@ func (r *redisProvider) batchGetWithCache(ctx context.Context, keys []Key, val i
 			}
 			valStrArr = append(valStrArr, s)
 		}
+
+		start := time.Now()
 		_, err = pipe.Exec(ctx)
 		if err != nil {
 			log.Error(ctx,
 				"set redis caches failed",
 				log.Err(err),
 				log.Any("rsGot", rsGot),
+				log.Duration("duration", time.Since(start)),
 			)
 			return
 		}
+
+		log.Debug(ctx,
+			"set redis caches successfully",
+			log.Any("rsGot", rsGot),
+			log.Duration("duration", time.Since(start)))
 	}
 
 	valStr := "[" + strings.Join(valStrArr, ",") + "]"
