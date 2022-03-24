@@ -394,6 +394,8 @@ type ContentInternalConditionRequest struct {
 	IDs          []string `json:"ids"`
 	OrgID        string   `json:"org_id"`
 	ContentType  int      `json:"content_type"`
+	CreateAtLe   int      `json:"create_at_le"`
+	CreateAtGe   int      `json:"create_at_ge"`
 	PlanID       string   `json:"plan_id"`
 	DataSourceID string   `json:"source_id"`
 	ScheduleID   string   `json:"schedule_id"`

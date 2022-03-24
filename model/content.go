@@ -2258,6 +2258,8 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 		Org:            condition.OrgID,
 		ContentType:    contentTypes,
 		DataSourceID:   condition.DataSourceID,
+		CreateAtLe:     condition.CreateAtLe,
+		CreateAtGe:     condition.CreateAtGe,
 		IncludeDeleted: true,
 	}
 	total, data, err := da.GetContentDA().SearchContent(ctx, tx, cdt)
