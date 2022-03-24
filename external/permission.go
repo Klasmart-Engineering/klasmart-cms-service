@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"text/template"
+	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -471,19 +472,23 @@ func (s AmsPermissionService) getOrganizationPermissionCache(ctx context.Context
 	pipe := redisClient.TxPipeline()
 	exist := pipe.Exists(ctx, key)
 	r := pipe.HMGet(ctx, key, fields...)
+
+	start := time.Now()
 	_, err := pipe.Exec(ctx)
 	if err != nil {
 		log.Error(ctx, "failed to exec redis pipeline",
 			log.Err(err),
 			log.String("key", key),
 			log.Strings("fields", fields),
+			log.Duration("duration", time.Since(start)),
 		)
 		return nil, err
 	}
 
 	log.Debug(ctx, "redis pipeline exec result",
 		log.Any("exist", exist.Val()),
-		log.Any("result", r.Val()))
+		log.Any("result", r.Val()),
+		log.Duration("duration", time.Since(start)))
 
 	// key not exist
 	if exist.Val() == int64(0) {
@@ -528,19 +533,23 @@ func (s AmsPermissionService) setOrganizationPermissionCache(ctx context.Context
 
 	hmsetResult := pipe.HMSet(ctx, key, fields)
 	expireResult := pipe.Expire(ctx, key, config.Get().User.PermissionCacheExpiration)
+
+	start := time.Now()
 	_, err := pipe.Exec(ctx)
 	if err != nil {
 		log.Error(ctx, "failed to exec redis pipeline",
 			log.Err(err),
 			log.String("key", key),
 			log.Any("fields", fields),
-			log.Duration("expiration", config.Get().User.PermissionCacheExpiration))
+			log.Duration("expiration", config.Get().User.PermissionCacheExpiration),
+			log.Duration("duration", time.Since(start)))
 		return err
 	}
 
 	log.Debug(ctx, "redis pipeline exec result",
 		log.Any("hmsetResult", hmsetResult.Val()),
-		log.Any("expireResult", expireResult.Val()))
+		log.Any("expireResult", expireResult.Val()),
+		log.Duration("duration", time.Since(start)))
 
 	return nil
 }
