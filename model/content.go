@@ -162,8 +162,6 @@ type IContentModel interface {
 	GetContentByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentInfoInternal, error)
 	GetContentsSubContentsMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*entity.ContentInfoInternal, error)
 	GetLatestContentIDMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) (map[string]string, error)
-
-	NotifyContentOrFolderChanged(ctx context.Context)
 }
 
 func (cm *ContentModel) GetSpecifiedLessonPlan(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, planID string, materialIDs []string, withAP bool) (*entity.ContentInfoWithDetails, error) {
@@ -859,8 +857,6 @@ func (cm *ContentModel) CreateContent(ctx context.Context, c entity.CreateConten
 			}
 		}
 
-		go cm.NotifyContentOrFolderChanged(ctx)
-
 		return pid, nil
 	})
 	if cid == nil {
@@ -943,8 +939,6 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 		}
 	}
 
-	go cm.NotifyContentOrFolderChanged(ctx)
-
 	da.GetContentRedis().CleanContentCache(ctx, []string{cid})
 	return nil
 }
@@ -1015,8 +1009,6 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 			}
 		}
 	}
-
-	go cm.NotifyContentOrFolderChanged(ctx)
 
 	da.GetContentRedis().CleanContentCache(ctx, []string{cid, content.SourceID})
 	return nil
@@ -1165,10 +1157,6 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 		}
 	}
 
-	if len(contents) > 0 {
-		go cm.NotifyContentOrFolderChanged(ctx)
-	}
-
 	da.GetContentRedis().CleanContentCache(ctx, updateIDs)
 	return err
 }
@@ -1209,8 +1197,6 @@ func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, c
 	if err != nil {
 		return err
 	}
-
-	go cm.NotifyContentOrFolderChanged(ctx)
 
 	da.GetContentRedis().CleanContentCache(ctx, []string{cid, content.SourceID})
 	return nil
@@ -1350,8 +1336,6 @@ func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DB
 		return ErrInvalidContentType
 	}
 
-	go cm.NotifyContentOrFolderChanged(ctx)
-
 	da.GetContentRedis().CleanContentCache(ctx, []string{content.ID, content.SourceID})
 	return nil
 }
@@ -1416,10 +1400,6 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 			log.Strings("ids", ids),
 			log.String("uid", user.UserID))
 		return err
-	}
-
-	if len(contents) > 0 {
-		go cm.NotifyContentOrFolderChanged(ctx)
 	}
 
 	da.GetContentRedis().CleanContentCache(ctx, deletedIDs)
@@ -1610,8 +1590,6 @@ func (cm *ContentModel) DeleteContent(ctx context.Context, tx *dbo.DBContext, ci
 		return err
 	}
 
-	go cm.NotifyContentOrFolderChanged(ctx)
-
 	da.GetContentRedis().CleanContentCache(ctx, []string{cid, content.SourceID})
 	return nil
 }
@@ -1689,8 +1667,6 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 			log.Strings("VisibilitySettings", contentVisibilitySettings.VisibilitySettings))
 		return "", ErrInvalidContentData
 	}
-
-	go cm.NotifyContentOrFolderChanged(ctx)
 
 	da.GetContentRedis().CleanContentCache(ctx, []string{id, obj.ID})
 	return id, nil
@@ -3993,13 +3969,6 @@ func (cm *ContentModel) GetLatestContentIDMapByIDListInternal(ctx context.Contex
 	}
 
 	return resp, nil
-}
-
-func (cm *ContentModel) NotifyContentOrFolderChanged(ctx context.Context) {
-	err := da.GetContentDA().NotifyContentOrFolderChanged(ctx)
-	if err != nil {
-		log.Warn(ctx, "notify content or folder changed failed", log.Err(err))
-	}
 }
 
 var (
