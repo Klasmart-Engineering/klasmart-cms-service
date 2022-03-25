@@ -72,17 +72,17 @@ func (c LazyRefreshCache) Get(ctx context.Context, request, response interface{}
 
 	// cache refresh trigger
 	go func() {
-		ctx = utils.CloneContextWithTrace(ctx)
+		ctxClone := utils.CloneContextWithTrace(ctx)
 
 		defer func() {
 			if err1 := recover(); err1 != nil {
-				log.Error(ctx, "async refresh cache panic", log.Any("recover error", err1))
+				log.Error(ctxClone, "async refresh cache panic", log.Any("recover error", err1))
 			}
 		}()
 
-		err := c.asyncRefreshCache(ctx, hash, request, data.Version)
+		err := c.asyncRefreshCache(ctxClone, hash, request, data.Version)
 		if err != nil {
-			log.Warn(ctx, "async refresh cache failed", log.Err(err), log.String("hash", hash))
+			log.Warn(ctxClone, "async refresh cache failed", log.Err(err), log.String("hash", hash))
 		}
 	}()
 
