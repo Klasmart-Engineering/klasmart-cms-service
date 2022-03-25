@@ -394,6 +394,8 @@ type ContentInternalConditionRequest struct {
 	IDs          []string `json:"ids"`
 	OrgID        string   `json:"org_id"`
 	ContentType  int      `json:"content_type"`
+	CreateAtLe   int      `json:"create_at_le"`
+	CreateAtGe   int      `json:"create_at_ge"`
 	PlanID       string   `json:"plan_id"`
 	DataSourceID string   `json:"source_id"`
 	ScheduleID   string   `json:"schedule_id"`
@@ -541,12 +543,12 @@ type FolderContentInfoWithDetailsResponse struct {
 }
 
 type ContentSimplifiedList struct {
-	Total             int                             `json:"total"`
-	ContentList       []*ContentSimplified            `json:"list"`
-	StudentContentMap []*ScheduleReviewStudentContent `json:"student_content_map"`
+	Total             int                       `json:"total"`
+	ContentList       []*ContentSimplified      `json:"list"`
+	StudentContentMap []*ScheduleStudentContent `json:"student_content_map"`
 }
 
-type ScheduleReviewStudentContent struct {
+type ScheduleStudentContent struct {
 	StudentID  string   `json:"student_id"`
 	ContentIDs []string `json:"content_ids"`
 }

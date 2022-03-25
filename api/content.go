@@ -892,6 +892,8 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 // @Param org_id query string false "search content under the organization"
 // @Param content_ids query string false "search content id list, separated by commas"
 // @Param content_type query int false "search content type, 1 for materials & 2 for plans"
+// @Param create_at_le query int false "search content create_at less"
+// @Param create_at_ge query int false "search content create_at greater"
 // @Param plan_id query string false "search materials from lesson_plan"
 // @Param schedule_id query string false "search student content map under the schedule review"
 // @Param source_id query string false "search content by source id"
@@ -981,10 +983,15 @@ func (s *Server) queryContentInternalCondition(c *gin.Context) entity.ContentInt
 		contentIDs = strings.Split(strings.TrimSpace(contentIDsStr), constant.StringArraySeparator)
 	}
 	contentType, _ := strconv.Atoi(c.Query("content_type"))
+	createAtLe, _ := strconv.Atoi(c.Query("create_at_le"))
+	createAtGe, _ := strconv.Atoi(c.Query("create_at_ge"))
+
 	return entity.ContentInternalConditionRequest{
 		IDs:          contentIDs,
 		OrgID:        c.Query("org_id"),
 		ContentType:  contentType,
+		CreateAtLe:   createAtLe,
+		CreateAtGe:   createAtGe,
 		PlanID:       c.Query("plan_id"),
 		DataSourceID: c.Query("source_id"),
 		ScheduleID:   c.Query("schedule_id"),

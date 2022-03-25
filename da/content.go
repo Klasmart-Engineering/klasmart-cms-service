@@ -102,6 +102,9 @@ type ContentCondition struct {
 
 	DataSourceID string `json:"data_source_id"`
 
+	CreateAtLe int `json:"create_at_le"`
+	CreateAtGe int `json:"create_at_ge"`
+
 	JoinUserIDList []string `json:"join_user_id_list"`
 	IncludeDeleted bool
 }
@@ -224,6 +227,18 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		condition := " org = ? "
 		conditions = append(conditions, condition)
 		params = append(params, s.Org)
+	}
+
+	if s.CreateAtLe > 0 {
+		condition := " create_at < ? "
+		conditions = append(conditions, condition)
+		params = append(params, s.CreateAtLe)
+	}
+
+	if s.CreateAtGe > 0 {
+		condition := " create_at > ? "
+		conditions = append(conditions, condition)
+		params = append(params, s.CreateAtGe)
 	}
 
 	if !s.IncludeDeleted {
