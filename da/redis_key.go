@@ -42,7 +42,6 @@ const (
 )
 
 var (
-	RedisKeyLazyRefreshCache            = ro.NewStringParameterKey("lazy:refresh:cache:%s")
-	RedisKeyLazyRefreshCacheLocker      = ro.NewStringParameterKey("lazy:refresh:locker:%s")
-	RedisKeyLazyRefreshCacheDataVersion = ro.NewStringParameterKey("lazy:refresh:data:version:%s")
+	RedisKeyLazyRefreshCache       = ro.NewStringParameterKey("content:folder:query:cache:%s")
+	RedisKeyLazyRefreshCacheLocker = ro.NewStringParameterKey("content:folder:query:locker:%s")
 )

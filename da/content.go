@@ -34,7 +34,6 @@ type IContentDA interface {
 	BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error
 
 	GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error)
-	NotifyContentOrFolderChanged(ctx context.Context) error
 }
 
 var (
@@ -49,7 +48,11 @@ func GetContentDA() IContentDA {
 			mysqlDA: new(ContentMySQLDA),
 		}
 
-		cache, err := NewLazyRefreshCache("ContentsAndFolders", time.Minute, da.queryContentsAndFolders)
+		cache, err := NewLazyRefreshCache(&LazyRefreshCacheOption{
+			CacheKey:        RedisKeyLazyRefreshCache,
+			LockerKey:       RedisKeyLazyRefreshCacheLocker,
+			RefreshDuration: time.Minute,
+			RawQuery:        da.queryContentsAndFolders})
 		if err != nil {
 			log.Panic(context.Background(), "create content and folder cache failed", log.Err(err))
 		}
@@ -166,10 +169,6 @@ func (c ContentDA) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContex
 
 func (c ContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error) {
 	return c.mysqlDA.GetLessonPlansCanSchedule(ctx, op, cond, condOrgContent, programGroups)
-}
-
-func (c ContentDA) NotifyContentOrFolderChanged(ctx context.Context) error {
-	return c.contentFolderCache.SetDataVersion(ctx, time.Now().UnixNano())
 }
 
 type contentFolderRequest struct {

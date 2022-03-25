@@ -24,27 +24,26 @@ func TestLazyRefreshCache_Get(t *testing.T) {
 
 	cast := time.Second * 1
 
-	cache, _ := NewLazyRefreshCache("test1", time.Second*5, func(ctx context.Context, input interface{}) (interface{}, error) {
-		condition := input.(*request)
+	cache, _ := NewLazyRefreshCache(&LazyRefreshCacheOption{
+		CacheKey:        RedisKeyLazyRefreshCache,
+		LockerKey:       RedisKeyLazyRefreshCacheLocker,
+		RefreshDuration: time.Second * 5,
+		RawQuery: func(ctx context.Context, input interface{}) (interface{}, error) {
+			condition := input.(*request)
 
-		// time cast
-		time.Sleep(cast)
-		return &response{
-			AAA: condition.A,
-			BBB: condition.B.Int64,
-		}, nil
-	})
+			// time cast
+			time.Sleep(cast)
+			return &response{
+				AAA: condition.A,
+				BBB: condition.B.Int64,
+			}, nil
+		}})
 
 	request1 := &request{A: "abc", B: sql.NullInt64{Int64: 3, Valid: true}}
 	response1 := &response{}
 	err := cache.Get(ctx, request1, response1)
 	if err != nil && err != redis.Nil {
 		t.Errorf("get cache data failed due to %v", err)
-	}
-
-	err = cache.SetDataVersion(ctx, time.Now().Unix())
-	if err != nil {
-		t.Errorf("set cache data version failed due to %v", err)
 	}
 
 	time.Sleep(cast)
@@ -79,16 +78,20 @@ func BenchmarkLazyRefreshCache_Get(b *testing.B) {
 
 	cast := time.Second * 1
 
-	cache, _ := NewLazyRefreshCache("test1", time.Second*5, func(ctx context.Context, input interface{}) (interface{}, error) {
-		condition := input.(*request)
+	cache, _ := NewLazyRefreshCache(&LazyRefreshCacheOption{
+		CacheKey:        RedisKeyLazyRefreshCache,
+		LockerKey:       RedisKeyLazyRefreshCacheLocker,
+		RefreshDuration: time.Second * 5,
+		RawQuery: func(ctx context.Context, input interface{}) (interface{}, error) {
+			condition := input.(*request)
 
-		// time cast
-		time.Sleep(cast)
-		return &response{
-			AAA: condition.A,
-			BBB: condition.B.Int64,
-		}, nil
-	})
+			// time cast
+			time.Sleep(cast)
+			return &response{
+				AAA: condition.A,
+				BBB: condition.B.Int64,
+			}, nil
+		}})
 
 	request1 := &request{A: "abc", B: sql.NullInt64{Int64: 3, Valid: true}}
 	response1 := &response{}
@@ -96,11 +99,6 @@ func BenchmarkLazyRefreshCache_Get(b *testing.B) {
 	// if err != nil && err != redis.Nil {
 	// 	b.Errorf("get cache data failed due to %v", err)
 	// }
-
-	err := cache.SetDataVersion(ctx, time.Now().Unix())
-	if err != nil {
-		b.Errorf("set cache data version failed due to %v", err)
-	}
 
 	want := &response{
 		AAA: request1.A,

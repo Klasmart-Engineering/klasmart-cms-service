@@ -430,8 +430,6 @@ func (f *FolderModel) UpdateFolder(ctx context.Context, folderID string, d entit
 		return err
 	}
 
-	go GetContentModel().NotifyContentOrFolderChanged(ctx)
-
 	return nil
 }
 
@@ -450,8 +448,6 @@ func (f *FolderModel) RemoveItem(ctx context.Context, fid string, operator *enti
 		if err != nil {
 			return err
 		}
-
-		go GetContentModel().NotifyContentOrFolderChanged(ctx)
 
 		return nil
 	})
@@ -486,8 +482,6 @@ func (f *FolderModel) RemoveItemBulk(ctx context.Context, fids []string, operato
 			return err
 		}
 
-		go GetContentModel().NotifyContentOrFolderChanged(ctx)
-
 		return nil
 	})
 }
@@ -511,8 +505,6 @@ func (f *FolderModel) MoveItemBulk(ctx context.Context, req entity.MoveFolderIDB
 					log.Any("req", req))
 				return err
 			}
-
-			go GetContentModel().NotifyContentOrFolderChanged(ctx)
 
 			return nil
 		})
@@ -541,8 +533,6 @@ func (f *FolderModel) MoveItem(ctx context.Context, req entity.MoveFolderRequest
 		if err != nil {
 			return err
 		}
-
-		go GetContentModel().NotifyContentOrFolderChanged(ctx)
 
 		return nil
 	})
@@ -944,8 +934,6 @@ func (f *FolderModel) batchRepairFolderItemsCount(ctx context.Context, tx *dbo.D
 			log.Any("items", items))
 		return err
 	}
-
-	go GetContentModel().NotifyContentOrFolderChanged(ctx)
 
 	return nil
 }
@@ -1650,8 +1638,6 @@ func (f *FolderModel) createFolder(ctx context.Context, tx *dbo.DBContext, req e
 		}
 	}
 
-	go GetContentModel().NotifyContentOrFolderChanged(ctx)
-
 	return folder.ID, nil
 }
 
@@ -1937,8 +1923,6 @@ func (f *FolderModel) BatchUpdateAncestorEmptyField(ctx context.Context, tx *dbo
 	if err != nil {
 		return err
 	}
-
-	go GetContentModel().NotifyContentOrFolderChanged(ctx)
 
 	return nil
 }
