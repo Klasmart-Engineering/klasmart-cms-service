@@ -543,12 +543,12 @@ type FolderContentInfoWithDetailsResponse struct {
 }
 
 type ContentSimplifiedList struct {
-	Total             int                             `json:"total"`
-	ContentList       []*ContentSimplified            `json:"list"`
-	StudentContentMap []*ScheduleReviewStudentContent `json:"student_content_map"`
+	Total             int                       `json:"total"`
+	ContentList       []*ContentSimplified      `json:"list"`
+	StudentContentMap []*ScheduleStudentContent `json:"student_content_map"`
 }
 
-type ScheduleReviewStudentContent struct {
+type ScheduleStudentContent struct {
 	StudentID  string   `json:"student_id"`
 	ContentIDs []string `json:"content_ids"`
 }
