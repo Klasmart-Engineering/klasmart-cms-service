@@ -21,6 +21,7 @@ type LazyRefreshCacheOption struct {
 func (o LazyRefreshCacheOption) Validate() error {
 	if o.CacheKey == nil ||
 		o.LockerKey == nil ||
+		o.CacheKey == o.LockerKey ||
 		o.RefreshDuration == 0 ||
 		o.RawQuery == nil {
 		return constant.ErrInvalidArgs
@@ -95,7 +96,7 @@ func (c LazyRefreshCache) Get(ctx context.Context, request, response interface{}
 
 func (c LazyRefreshCache) refreshCache(ctx context.Context, hash string, request interface{}) error {
 	// get locker before refresh cache
-	return c.option.CacheKey.Param(hash).GetLocker(ctx, c.option.RefreshDuration, func(ctx context.Context) error {
+	return c.option.LockerKey.Param(hash).GetLocker(ctx, c.option.RefreshDuration, func(ctx context.Context) error {
 		response, err := c.option.RawQuery(ctx, request)
 		if err != nil {
 			return err
