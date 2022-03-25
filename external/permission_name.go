@@ -173,6 +173,10 @@ var AllPermissionNames = []PermissionName{
 	ViewSubjects20115,
 
 	ShowAllFolder295,
+
+	ReportOrganizationTeachingLoad617,
+	ReportSchoolTeachingLoad618,
+	ReportMyTeachingLoad619,
 }
 
 // Important: If you add a new permission, you must also add it to the AllPermissionNames
