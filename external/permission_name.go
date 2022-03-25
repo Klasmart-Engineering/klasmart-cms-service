@@ -348,9 +348,9 @@ const (
 
 	ShowAllFolder295 = "show_all_folders_295"
 
-	ReportOrganizationTeachingLoad617 = "ReportOrganizationTeachingLoad617"
-	ReportSchoolTeachingLoad618       = "ReportSchoolTeachingLoad618"
-	ReportMyTeachingLoad619           = "ReportMyTeachingLoad619"
+	ReportOrganizationTeachingLoad617 = "report_organization_teaching_load_617"
+	ReportSchoolTeachingLoad618       = "report_school_teaching_load_618"
+	ReportMyTeachingLoad619           = "report_my_teaching_load_619"
 )
 
 type TeacherViewPermissionParams struct {
