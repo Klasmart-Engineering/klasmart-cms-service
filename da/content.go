@@ -3,7 +3,6 @@ package da
 import (
 	"context"
 	"sync"
-	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -49,9 +48,8 @@ func GetContentDA() IContentDA {
 		}
 
 		cache, err := NewLazyRefreshCache(&LazyRefreshCacheOption{
-			CacheKey:        RedisKeyLazyRefreshCache,
-			LockerKey:       RedisKeyLazyRefreshCacheLocker,
-			RefreshDuration: time.Minute,
+			RedisKeyPrefix:  RedisKeyPrefixContentFolderQuery,
+			RefreshDuration: constant.ContentFolderQueryRefreshDuration,
 			RawQuery:        da.queryContentsAndFolders})
 		if err != nil {
 			log.Panic(context.Background(), "create content and folder cache failed", log.Err(err))

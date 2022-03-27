@@ -161,3 +161,7 @@ const (
 	DBDefaultConnMaxLifetime = 4 * time.Hour
 	DBDefaultSlowThreshold   = 200 * time.Millisecond
 )
+
+const (
+	ContentFolderQueryRefreshDuration = time.Minute
+)

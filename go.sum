@@ -338,8 +338,8 @@ gitlab.badanamu.com.cn/calmisland/imq v0.2.18/go.mod h1:XT8W2EF64qASU6WQu4IoWGgz
 gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.20 h1:YpJts4NL4cQ+LIqXnsq2hbv4dta5dv6enfZcUo8C5+8=
 gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.20/go.mod h1:vpP+Eq3NOncbQfIP4kauKx/GJ+5WRbeP5VQQbtJxIyo=
 gitlab.badanamu.com.cn/calmisland/ro v0.2.0/go.mod h1:kwGDvWisz6Z9pf1FytrfWHS6GcxpWkePudy/wRgpgo8=
-gitlab.badanamu.com.cn/calmisland/ro v0.2.7 h1:TsHPiyvere/UpDxpyIE3k6oQ2jrrBVeioqzALpI8aFM=
-gitlab.badanamu.com.cn/calmisland/ro v0.2.7/go.mod h1:kwGDvWisz6Z9pf1FytrfWHS6GcxpWkePudy/wRgpgo8=
+gitlab.badanamu.com.cn/calmisland/ro v0.2.8 h1:NhbKE3tywBQShdDK0bceYOYvcRklsZdh2XU6RNRNwOo=
+gitlab.badanamu.com.cn/calmisland/ro v0.2.8/go.mod h1:kwGDvWisz6Z9pf1FytrfWHS6GcxpWkePudy/wRgpgo8=
 go.mongodb.org/mongo-driver v1.2.0/go.mod h1:u7ryQJ+DOzQmeO7zB6MHyr8jkEQvC8vH7qLUO4lqsUM=
 go.mongodb.org/mongo-driver v1.7.1/go.mod h1:Q4oFMbo1+MSNqICAdYMlC/zSTrwCogR4R8NzkI+yfU8=
 go.mongodb.org/mongo-driver v1.8.1 h1:OZE4Wni/SJlrcmSIBRYNzunX5TKxjrTS4jKSnA99oKU=
