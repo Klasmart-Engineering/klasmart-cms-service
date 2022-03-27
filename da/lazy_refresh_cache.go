@@ -41,8 +41,8 @@ func NewLazyRefreshCache(option *LazyRefreshCacheOption) (*LazyRefreshCache, err
 
 	return &LazyRefreshCache{
 		option:    option,
-		cacheKey:  ro.NewStringParameterKey(option.RedisKeyPrefix + ":cache"),
-		lockerKey: ro.NewStringParameterKey(option.RedisKeyPrefix + ":locker"),
+		cacheKey:  ro.NewStringParameterKey(option.RedisKeyPrefix + ":cache:%s"),
+		lockerKey: ro.NewStringParameterKey(option.RedisKeyPrefix + ":locker:%s"),
 	}, nil
 }
 
