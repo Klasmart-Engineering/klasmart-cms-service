@@ -26,7 +26,7 @@ require (
 	gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13
 	gitlab.badanamu.com.cn/calmisland/imq v0.2.18
 	gitlab.badanamu.com.cn/calmisland/kidsloop-cache v0.0.20
-	gitlab.badanamu.com.cn/calmisland/ro v0.2.7
+	gitlab.badanamu.com.cn/calmisland/ro v0.2.8
 	go.mongodb.org/mongo-driver v1.8.1
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f
