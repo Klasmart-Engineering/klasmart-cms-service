@@ -48,8 +48,7 @@ func GetContentDA() IContentDA {
 		}
 
 		cache, err := NewLazyRefreshCache(&LazyRefreshCacheOption{
-			CacheKey:        RedisKeyLazyRefreshCache,
-			LockerKey:       RedisKeyLazyRefreshCacheLocker,
+			RedisKeyPrefix:  RedisKeyPrefixContentFolderQuery,
 			RefreshDuration: constant.ContentFolderQueryRefreshDuration,
 			RawQuery:        da.queryContentsAndFolders})
 		if err != nil {

@@ -12,16 +12,13 @@ import (
 )
 
 type LazyRefreshCacheOption struct {
-	CacheKey        *ro.StringParameterKey
-	LockerKey       *ro.StringParameterKey
+	RedisKeyPrefix  string
 	RefreshDuration time.Duration
 	RawQuery        func(ctx context.Context, request interface{}) (interface{}, error)
 }
 
 func (o LazyRefreshCacheOption) Validate() error {
-	if o.CacheKey == nil ||
-		o.LockerKey == nil ||
-		o.CacheKey == o.LockerKey ||
+	if o.RedisKeyPrefix == "" ||
 		o.RefreshDuration == 0 ||
 		o.RawQuery == nil {
 		return constant.ErrInvalidArgs
@@ -31,7 +28,9 @@ func (o LazyRefreshCacheOption) Validate() error {
 }
 
 type LazyRefreshCache struct {
-	option *LazyRefreshCacheOption
+	option    *LazyRefreshCacheOption
+	cacheKey  *ro.StringParameterKey
+	lockerKey *ro.StringParameterKey
 }
 
 func NewLazyRefreshCache(option *LazyRefreshCacheOption) (*LazyRefreshCache, error) {
@@ -40,7 +39,11 @@ func NewLazyRefreshCache(option *LazyRefreshCacheOption) (*LazyRefreshCache, err
 		return nil, err
 	}
 
-	return &LazyRefreshCache{option: option}, nil
+	return &LazyRefreshCache{
+		option:    option,
+		cacheKey:  ro.NewStringParameterKey(option.RedisKeyPrefix + ":cache"),
+		lockerKey: ro.NewStringParameterKey(option.RedisKeyPrefix + ":locker"),
+	}, nil
 }
 
 func (c LazyRefreshCache) Get(ctx context.Context, request, response interface{}) error {
@@ -52,7 +55,7 @@ func (c LazyRefreshCache) Get(ctx context.Context, request, response interface{}
 	log.Debug(ctx, "request hash", log.String("hash", hash), log.Any("request", request))
 
 	// get data and version from cache
-	err := c.option.CacheKey.Param(hash).GetObject(ctx, response)
+	err := c.cacheKey.Param(hash).GetObject(ctx, response)
 	if err == redis.Nil {
 		log.Debug(ctx, "lazy refresh cache miss",
 			log.String("hash", hash),
@@ -64,7 +67,7 @@ func (c LazyRefreshCache) Get(ctx context.Context, request, response interface{}
 			return err
 		}
 
-		err = c.option.CacheKey.Param(hash).GetObject(ctx, response)
+		err = c.cacheKey.Param(hash).GetObject(ctx, response)
 	}
 	if err != nil {
 		return err
@@ -96,12 +99,12 @@ func (c LazyRefreshCache) Get(ctx context.Context, request, response interface{}
 
 func (c LazyRefreshCache) refreshCache(ctx context.Context, hash string, request interface{}) error {
 	// get locker before refresh cache
-	return c.option.LockerKey.Param(hash).GetLocker(ctx, c.option.RefreshDuration, func(ctx context.Context) error {
+	return c.lockerKey.Param(hash).GetLocker(ctx, c.option.RefreshDuration, func(ctx context.Context) error {
 		response, err := c.option.RawQuery(ctx, request)
 		if err != nil {
 			return err
 		}
 
-		return c.option.CacheKey.Param(hash).SetObject(ctx, response, 0)
+		return c.cacheKey.Param(hash).SetObject(ctx, response, 0)
 	})
 }
