@@ -466,3 +466,7 @@ func (o *OnlineClassAssessment) appendContent(roomContent *RoomContent, material
 		o.appendContent(item, materialItem, result, replyItem.Number, i+1)
 	}
 }
+
+func (o *OnlineClassAssessment) MatchAnyOneAttempted() (bool, error) {
+	return o.base.MatchAnyOneAttempted()
+}

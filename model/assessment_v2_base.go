@@ -17,6 +17,7 @@ type IAssessmentMatch interface {
 	MatchClass() (map[string]*entity.IDName, error)
 	MatchCompleteRate() (map[string]float64, error)
 	MatchRemainingTime() (map[string]int64, error)
+	MatchAnyOneAttempted() (bool, error)
 
 	MatchOutcomes() (map[string]*v2.AssessmentOutcomeReply, error)
 	MatchContents() ([]*v2.AssessmentContentReply, error)
@@ -48,6 +49,15 @@ func NewBaseAssessment(ag *AssessmentGrain) BaseAssessment {
 
 type BaseAssessment struct {
 	ag *AssessmentGrain
+}
+
+func (o *BaseAssessment) MatchAnyOneAttempted() (bool, error) {
+	roomDataMap, err := o.ag.GetRoomData()
+	if err != nil {
+		return false, err
+	}
+	_, ok := roomDataMap[o.ag.assessment.ScheduleID]
+	return ok, nil
 }
 
 func (o *BaseAssessment) MatchClass() (map[string]*entity.IDName, error) {
@@ -325,6 +335,11 @@ func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, asse
 		return nil, err
 	}
 
+	isAnyOneAttempted, err := match.MatchAnyOneAttempted()
+	if err != nil {
+		return nil, err
+	}
+
 	result := &v2.AssessmentDetailReply{
 		ID:           assessment.ID,
 		Title:        assessment.Title,
@@ -351,6 +366,7 @@ func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, asse
 	result.Contents = contents
 	result.Students = students
 	result.CompleteRate = completeRateMap[assessment.ID]
+	result.IsAnyOneAttempted = isAnyOneAttempted
 
 	for _, item := range outcomeMap {
 		result.Outcomes = append(result.Outcomes, item)
@@ -447,6 +463,14 @@ func NewEmptyAssessment() IAssessmentMatch {
 }
 
 type EmptyAssessment struct{}
+
+func (o EmptyAssessment) MatchAnyOneAttempted() (bool, error) {
+	return false, nil
+}
+
+//func (o EmptyAssessment) MatchAnyOneAttempted() (bool, error) {
+//	return false, nil
+//}
 
 func (o EmptyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiffContentStudentsReply, error) {
 	return make([]*v2.AssessmentDiffContentStudentsReply, 0), nil

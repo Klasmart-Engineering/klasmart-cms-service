@@ -304,3 +304,7 @@ func (o *OnlineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 
 	return result, nil
 }
+
+func (o *OnlineStudyAssessment) MatchAnyOneAttempted() (bool, error) {
+	return o.base.MatchAnyOneAttempted()
+}
