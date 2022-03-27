@@ -149,7 +149,7 @@ func (c ContentDA) queryContentsAndFolders(ctx context.Context, condition interf
 		return nil, constant.ErrInvalidArgs
 	}
 
-	total, records, err := c.mysqlDA.SearchFolderContentUnsafe(ctx, request.Tx, request.Condition1, request.Condition2)
+	total, records, err := c.mysqlDA.SearchFolderContentUnsafe(ctx, dbo.MustGetDB(ctx), request.Condition1, request.Condition2)
 	if err != nil {
 		return nil, err
 	}
