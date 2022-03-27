@@ -127,7 +127,6 @@ func (c ContentDA) SearchFolderContentUnsafe(ctx context.Context, tx *dbo.DBCont
 	}
 
 	request := &contentFolderRequest{
-		Tx:         tx,
 		Condition1: condition1,
 		Condition2: condition2,
 	}
@@ -170,7 +169,6 @@ func (c ContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Ope
 }
 
 type contentFolderRequest struct {
-	Tx         *dbo.DBContext
 	Condition1 dbo.Conditions
 	Condition2 *FolderCondition
 }
