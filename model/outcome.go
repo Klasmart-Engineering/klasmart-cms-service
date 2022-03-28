@@ -1832,6 +1832,7 @@ func (ocm OutcomeModel) UpdateOutcome(data *entity.Outcome, oc *entity.Outcome) 
 	oc.Shortcode = data.Shortcode
 	oc.Sets = data.Sets
 	oc.UpdateAt = time.Now().Unix()
+	oc.ScoreThreshold = data.ScoreThreshold
 }
 
 func (ocm OutcomeModel) Clone(op *entity.Operator, oc *entity.Outcome) entity.Outcome {
@@ -1860,9 +1861,10 @@ func (ocm OutcomeModel) Clone(op *entity.Operator, oc *entity.Outcome) entity.Ou
 		LatestID:      oc.LatestID,
 		Sets:          oc.Sets,
 
-		Version:  1,
-		SourceID: oc.ID,
-		Assumed:  oc.Assumed,
+		Version:        1,
+		SourceID:       oc.ID,
+		Assumed:        oc.Assumed,
+		ScoreThreshold: oc.ScoreThreshold,
 
 		CreateAt: now,
 		UpdateAt: now,
@@ -1928,10 +1930,11 @@ func (o OutcomeModel) transformToPublishedOutcomeView(ctx context.Context, opera
 	outcomeIDs := make([]string, len(outcomes))
 	for i, outcome := range outcomes {
 		result[i] = &PublishedOutcomeView{
-			OutcomeID:   outcome.ID,
-			OutcomeName: outcome.Name,
-			Shortcode:   outcome.Shortcode,
-			Assumed:     outcome.Assumed,
+			OutcomeID:      outcome.ID,
+			OutcomeName:    outcome.Name,
+			Shortcode:      outcome.Shortcode,
+			Assumed:        outcome.Assumed,
+			ScoreThreshold: outcome.ScoreThreshold,
 			// init zero value
 			Sets:           []*OutcomeSetCreateView{},
 			ProgramIDs:     []string{},
@@ -2035,17 +2038,18 @@ func (o OutcomeModel) transformToOutcomeView(ctx context.Context, operator *enti
 
 	for i, outcome := range outcomes {
 		result[i] = &OutcomeView{
-			OutcomeID:     outcome.ID,
-			AncestorID:    outcome.AncestorID,
-			OutcomeName:   outcome.Name,
-			Shortcode:     outcome.Shortcode,
-			Assumed:       outcome.Assumed,
-			LockedBy:      outcome.LockedBy,
-			AuthorID:      outcome.AuthorID,
-			AuthorName:    outcome.AuthorName,
-			PublishStatus: string(outcome.PublishStatus),
-			CreatedAt:     outcome.CreateAt,
-			UpdatedAt:     outcome.UpdateAt,
+			OutcomeID:      outcome.ID,
+			AncestorID:     outcome.AncestorID,
+			OutcomeName:    outcome.Name,
+			Shortcode:      outcome.Shortcode,
+			Assumed:        outcome.Assumed,
+			LockedBy:       outcome.LockedBy,
+			AuthorID:       outcome.AuthorID,
+			AuthorName:     outcome.AuthorName,
+			PublishStatus:  string(outcome.PublishStatus),
+			CreatedAt:      outcome.CreateAt,
+			UpdatedAt:      outcome.UpdateAt,
+			ScoreThreshold: outcome.ScoreThreshold,
 
 			// init zero value
 			LockedLocation: []string{},
@@ -2287,6 +2291,7 @@ func (o OutcomeModel) transformToOutcomeDetailView(ctx context.Context, operator
 		Grade:          []Grade{},
 		Sets:           []*OutcomeSetCreateView{},
 		Milestones:     []*Milestone{},
+		ScoreThreshold: outcome.ScoreThreshold,
 	}
 
 	if outcome.HasLocked() {

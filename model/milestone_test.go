@@ -95,3 +95,12 @@ func TestMilestoneModel_Update(t *testing.T) {
 	// }
 	// fmt.Println("ok")
 }
+
+func TestUnmarshal(t *testing.T) {
+	aa := "{\"source\":\"https://badanamu-app-web.s3.ap-northeast-2.amazonaws.com/steam/science_104_spottheanimals/index.html?ID=10402\",\"input_source\":100}"
+	md := new(MaterialData)
+	md.Unmarshal(context.Background(), aa)
+	fmt.Println(md)
+
+	md.Validate(context.Background(), 1)
+}

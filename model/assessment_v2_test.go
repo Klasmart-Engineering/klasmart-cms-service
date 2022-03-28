@@ -11,6 +11,8 @@ import (
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 )
 
+const assessmentOpToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0ODAwNzc1MCwiaXNzIjoia2lkc2xvb3AifQ.OgduSwTLXyLGubPRpo0wQeKddQ41S60R3AnE4jtWwI1pPsisuKyNDWY8H81Q9v2MauEaqvTODgzGV5YvZsMHhuwVhoWZY-mceSRSV75M2gEw5LThzGrOc68NtXLA_D4_pbeWMGJd4MKEDSpAHHqslu1vSkW4g0MZzNqjYOTktvUbFQYwVf9VLQvraAV_GrmQibOWgR9D11j4OkDcp_2xIBlTjWHg74jhLkprCzLR3wSDlBkyQC37zsWums-8Ryc2C0UGuIxuvSq1qaQPl-hprUGpxo7SWWagJhQ-zAxgO5nmD5Modn908pkQ2mdy825crByWjlre8NtKINsX3KfDtw"
+
 func TestAssessmentModel_GetByID(t *testing.T) {
 	ctx := context.Background()
 	op := &entity.Operator{
@@ -18,8 +20,8 @@ func TestAssessmentModel_GetByID(t *testing.T) {
 		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 		Token:  "",
 	}
-	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0NTQzNzYzMiwiaXNzIjoia2lkc2xvb3AifQ.j7UGDogT1KYeOU--OnB37PsakQ44gcYBDt5D3fBSyBz9ipIzGvtP4wm5Jnv05SJv5ZF8dbmK7WKmGRBtFqCPlO_HHmrdooE562I4Y4IBVwolKsWzET7N3j_fcJUNvUhC6qzBcI3acrbmJBwaYR3DGjeODziR9ENu-Afhz8boSQvgNmiETjhPlxVg5c1N1nHFbjiO6qDRXFG469_jYZZNZBGGYxeOhAJH4NyTCvOwDiyW7SwAk3GZJj0S73ImOmhtiqz4bLFtvnaRR3uukFw6EqoWAPSGsw6RI1eu3kgTJXMQsYitOP72vZA23RGFQTJ68eDWDU9Lr5NFEIl2-ingUA"
-	result, err := GetAssessmentModelV2().GetByID(ctx, op, "6114e9c1c83d392dc61e14ad")
+	op.Token = assessmentOpToken
+	result, err := GetAssessmentModelV2().GetByID(ctx, op, "62344ae15db29d3f2d1a4321")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,14 +36,14 @@ func TestAssessmentModel_Query(t *testing.T) {
 		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 		Token:  "",
 	}
-	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0MzA5NjQ3NCwiaXNzIjoia2lkc2xvb3AifQ.DSaYgvLCgIt_jwKfyyTFKk7JaJCzrK5yATmxhWtDIX9GJ0XS-zKhhqJfhjoij7GkzHWYJX9gF5iEb1UF4oviow8rndfMD1zOB5JkWa9SHEbmG7Q-kxmv1huBi0UmAdQN7Auvqrmrqc69rMRT_ckgmGKlckfunm_eFyaFjXN44re5tO5XPOWNw2g5kBF9oj-T1VHvhfbaueIWUTqysvvAnT_LtiENaCnyAWEJTnjj5kxttR6lTQJ_6REKWC4901OL6_VcjtuavffQDSc3uLturtst_JA9sgk1bUeQmAkGrzq3x2r1I5QRXmG7JMhFDqJDj7l_AXXf3NIhUzBOt_PVxQ"
+	op.Token = assessmentOpToken
 	t.Log(op)
 	result, err := GetAssessmentModelV2().Page(ctx, op, &v2.AssessmentQueryReq{
 		//QueryKey:       "org mi",
 		//QueryType:      v2.QueryTypeTeacherName,
-		AssessmentType: v2.AssessmentTypeOnlineClass,
+		AssessmentType: v2.AssessmentTypeReviewStudy,
 		OrderBy:        "-create_at",
-		Status:         "NotStared,Started,Draft,Complete",
+		Status:         "Started,Draft,Complete",
 		PageIndex:      1,
 		PageSize:       10,
 	})
@@ -55,12 +57,13 @@ func TestAssessmentModel_Query(t *testing.T) {
 func TestAssessmentModel_StatisticsCount(t *testing.T) {
 	ctx := context.Background()
 	op := &entity.Operator{
-		UserID: "17a28338-3b88-4bac-ab15-cce3887af357", //"c57ef68d-a635-451d-b997-aebc3c29b99a",
-		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
+		UserID: "afdfc0d9-ada9-4e66-b225-20f956d1a399",
+		OrgID:  "60c064cc-bbd8-4724-b3f6-b886dce4774f",
+		Token:  "",
 	}
-	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE3YTI4MzM4LTNiODgtNGJhYy1hYjE1LWNjZTM4ODdhZjM1NyIsImVtYWlsIjoib3JnbWlAeW9wbWFpbC5jb20iLCJleHAiOjE2Mzk5ODczODcsImlzcyI6ImtpZHNsb29wIn0.KZmDx445-P1g2YL7goVhTB1eXef-w1AWGwptVuroe2zy3-xoeVRHZ197vp2Yq_JMRKZ5PVbsd6clsgj6mg92FkUNxvFowhcy4EIB-UwO_6OG-ZO3yt5O9maGsHag7RovN9hRa1dBamAX9SgxSdBtCq7w4y6nEaS9IljN6AOWXLxP0Ued3v2dLoKHdAxSn1hzwdlh1e-baYvor_Cvne7CpRWoP8l7mGY85QofskS5UqYsbP-cvoJesh_HFh_Wq2p0r-YQCsx1PZAICSElNh5-5rt41_XfbVf5GntWkqk899CRN6QtGRmORxVBTTHcUD_KnhDyr2u0x2sFB-3mkavVWw"
+	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0NTc3ODIyNiwiaXNzIjoia2lkc2xvb3AifQ.pAQe9Iu0k7GCX_YW26rCqRHPpdBAEKRzL23qkVjdbpJzVLBSn7brep3JzIjqioA3OEx53JZ7JzaVnv7dAvabr4CIPtJwxdIvtM6RB0UfzcDTI0qSfEpAr-TVLvw2oomxwnt7YOEd3xRr-V7B-T9l0auGOdStJwWNG60q1gdwpg9t6q9KIqAlAuyUDIOthsUi7-sT-jPoZtpXV9Riog0pilEqqejo5y3wYE6U5Xu5tIupYbikpAPdsA1DCY4T5KC06j4ao1YEdumjGEbC2YUOS__THbEq-69R5Fgv1RiuL98nQESAmrGE0TItNEk0Bf1rhRNcC0xzxTukr-WgIP4Zqw"
 
-	result, err := GetAssessmentModelV2().StatisticsCount(ctx, op, &v2.StatisticsCountReq{Status: "NotStared,Started,Draft,Complete"})
+	result, err := GetAssessmentModelV2().StatisticsCount(ctx, op, &v2.StatisticsCountReq{Status: ""})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +77,7 @@ func TestAssessmentModel_DeleteByScheduleIDs(t *testing.T) {
 		UserID: "17a28338-3b88-4bac-ab15-cce3887af357", //"c57ef68d-a635-451d-b997-aebc3c29b99a",
 		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 	}
-	err := GetAssessmentModelV2().DeleteByScheduleIDsTx(ctx, op, dbo.MustGetDB(ctx), []string{"6099c496e05f6e940027387c"})
+	err := GetAssessmentInternalModel().DeleteByScheduleIDsTx(ctx, op, dbo.MustGetDB(ctx), []string{"6099c496e05f6e940027387c"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,15 +118,14 @@ func TestAssessmentModel_AddWhenCreateSchedules(t *testing.T) {
 		}
 	}
 
-	assessmentType, err := v2.GetAssessmentTypeByScheduleType(ctx, schedule.ClassType, schedule.IsHomeFun)
+	assessmentType, err := v2.GetAssessmentTypeByScheduleType(ctx, v2.GetAssessmentTypeByScheduleTypeInput{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = GetAssessmentModelV2().AddWhenCreateSchedules(ctx, dbo.MustGetDB(ctx), op, &v2.AssessmentAddWhenCreateSchedulesReq{
+	err = GetAssessmentInternalModel().AddWhenCreateSchedules(ctx, dbo.MustGetDB(ctx), op, &v2.AssessmentAddWhenCreateSchedulesReq{
 		RepeatScheduleIDs:    []string{"6099c496e05f6e940027387c"},
 		Users:                users,
 		AssessmentType:       assessmentType,
-		LessPlanID:           schedule.LessonPlanID,
 		ClassRosterClassName: "className",
 		ScheduleTitle:        schedule.Title,
 	})
@@ -142,7 +144,7 @@ func TestAssessmentModel_ScheduleEndClassCallback(t *testing.T) {
 
 	scheduleID := "6099c496e05f6e940027387c"
 
-	err := GetAssessmentModelV2().ScheduleEndClassCallback(ctx, op, &v2.ScheduleEndClassCallBackReq{
+	err := GetAssessmentInternalModel().ScheduleEndClassCallback(ctx, op, &v2.ScheduleEndClassCallBackReq{
 		ScheduleID: scheduleID,
 		AttendanceIDs: []string{
 			"b0ffe4a2-94fb-41b0-9e7a-8e2e51686003",
@@ -175,4 +177,55 @@ func TestLiveRoomEventBus_PubEndClass(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestPageForHomePage(t *testing.T) {
+	ctx := context.Background()
+	op := &entity.Operator{
+		UserID: "afdfc0d9-ada9-4e66-b225-20f956d1a399",
+		OrgID:  "60c064cc-bbd8-4724-b3f6-b886dce4774f",
+		Token:  "",
+	}
+	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0NTc3OTEyNywiaXNzIjoia2lkc2xvb3AifQ.JiGubGqmjyfnYSCfIGtuHC8UK6j_BARb3NiltW_LrA5wBchjtysscn0aiECFPDD_r7eTQkxJaT-Ywb8_NQJ1YpRB2ShhyWOd2e-mrPmPaJ9_LJjq1uURAjJVi21wFuh4F1gl8qhi03UnHRBw8Lwo8I1oQmrpuy4JrCGJHaPK8o4nZMNOA0BeKV61kCWmqI3INPjACSboavYsYKfBnt0PlN6IukleccT_Ho_E9uzoLvRzGLbsGJIF7dSQ7KExBF3-WPLEz9jpJwDqFNiVctfP79FWlGZFITZyyopCx2DsG3pFrrL835JA3S1MfGNy9MzLCq6Gz9qrHSnT6ER-SvhDBA"
+
+	result, err := GetAssessmentModelV2().PageForHomePage(ctx, op, &v2.AssessmentQueryReq{
+		//QueryKey:       "org mi",
+		//QueryType:      v2.QueryTypeTeacherName,
+		//AssessmentType: v2.AssessmentTypeOnlineClass,
+		//OrderBy:        "-create_at",
+		Status:    "Complete",
+		PageIndex: 1,
+		PageSize:  5,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(result)
+}
+
+func TestQueryTeacherFeedback(t *testing.T) {
+	ctx := context.Background()
+	op := &entity.Operator{
+		UserID: "afdfc0d9-ada9-4e66-b225-20f956d1a399",
+		OrgID:  "60c064cc-bbd8-4724-b3f6-b886dce4774f",
+		Token:  "",
+	}
+	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFlYTBlNDk0LWU1NmYtNDE3ZS05OWE3LTgxNzc0Yzg3OWJmOCIsImVtYWlsIjoic3R1MDJfMDAxQHlvcG1haWwuY29tIiwiZXhwIjoxNjQ2MTIxNDQ2LCJpc3MiOiJraWRzbG9vcCJ9.IMXxYAIB-eH1es1dS4xD5WOTLG6lkhcJGo6Kp3qEYaeO6ivcHOjNiq7bZwnK-QuU-kv2qeWUwZ0uQHFTnJ7CupL8KGB-fye2nn1I1sPZ4VL_eSWiyYG8rV4zXEukTEm3EmIGMN_TvCIkloRYFqq9_PWfYxc1pu8wBRPHbzU0hZwtDcUweuLLvkCev4LAJoaHI0DlvfrJ6NK0GVGI-p2ROf2219kPuHwd-1RVR91jHNwzRejFi1Y3eft-olU04aPg5mwEvGk3E-2SC8zzuXi9EE_FrcAzPpU5kuhTXMZh1LHdFGlI2Ws9slX-LOKga-rt5-Qsk-xUaE9vj2eQBTWtqA"
+
+	total, result, err := GetAssessmentModelV2().QueryTeacherFeedback(ctx, op, &v2.StudentQueryAssessmentConditions{
+		OrgID:     "f27efd10-000e-4542-bef2-0ccda39b93d3",
+		StudentID: "aea0e494-e56f-417e-99a7-81774c879bf8",
+		ClassType: "home_fun_study",
+		OrderBy:   "-complete_at",
+		Page:      1,
+		PageSize:  5,
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(total)
+	t.Log(result)
 }

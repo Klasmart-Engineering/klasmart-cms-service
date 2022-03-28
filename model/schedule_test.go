@@ -12,6 +12,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/test/utils"
 )
 
 func TestAdd(t *testing.T) {
@@ -172,4 +173,62 @@ func TestGetScheduleRelationIDs(t *testing.T) {
 	t.Log(result.ClassRosterStudentIDs)
 	t.Log(result.ParticipantTeacherIDs)
 	t.Log(result.ParticipantStudentIDs)
+}
+
+func TestQueryScheduleTimeView(t *testing.T) {
+	ctx := context.TODO()
+	token := "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjRhMGNjZWU0LTA4MmItNDM5OC05NzMxLWEyNTUwNDE2MzkzNCIsImVtYWlsIjoidGVjaDFAeW9wbWFpbC5jb20iLCJleHAiOjE2NDY4OTk3MTMsImlzcyI6ImtpZHNsb29wIn0.jWnYDCzhs4Ec34rTpn9nLUXP5zCJE2ufS9dgh-IkGtKxMEqzMlm3Io69mrC_ZcmALQoM4UhlGa82dmDKOUDl3tpIJ5U0uwwe8u7slBTjBj-C8EnjZxTlzsfwpzU3mK9gB_J3l4UaWO1tb5cOwyU17BAXWhPN4cfN5G8VmQaQOSt1uc4uts9L_DHdV_clwMHSVEIQF5ZWlisr0k6iDDFRr_k2CaxkVibFK2ZP49WJhj6Iv0qPBqSNXbBRg3HCbid9a1jtMb9ywAx0FDsWPdtI_ms9I5IlTXXjBh7hcPvs2jjjPPFWDLxbR8o_JiTK2aEJDwlrNm3F55TwhwlTofO_mA"
+	orgID := "92db7ddd-1f23-4f64-bd47-94f6d34a50c0"
+	op := utils.InitOperator(ctx, token, orgID)
+	query := &entity.ScheduleTimeViewListRequest{
+		ViewType: "month",
+		TimeAt:   1638316800,
+	}
+	count, result, err := GetScheduleModel().QueryScheduleTimeView(ctx, query, op, time.Local)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(count)
+	t.Log(result)
+}
+
+func TestUpdateScheduleReviewStatus(t *testing.T) {
+	ctx := context.TODO()
+	request := &entity.UpdateScheduleReviewStatusRequest{
+		ScheduleID: "614091d5e8155193e489a9ba",
+		StandardResults: []entity.ScheduleReviewSucceededResult{
+			{
+				StudentID:  "1234",
+				ContentIDs: []string{"6157fd712ea559a89469450f", "61403312d85e5b1126bba790"},
+			},
+			{
+				StudentID:  "12345",
+				ContentIDs: []string{"6139ac5da9af6131f7331e69"},
+			},
+		},
+		FailedResults: []entity.ScheduleReviewFailedResult{
+			{
+				StudentID: "123456",
+				Reason:    "failed",
+			},
+		},
+	}
+
+	err := GetScheduleModel().UpdateScheduleReviewStatus(ctx, request)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestGetSuccessScheduleReview(t *testing.T) {
+	ctx := context.TODO()
+
+	scheduleReviews, err := GetScheduleModel().GetSuccessScheduleReview(ctx, &entity.Operator{}, "614091d5e8155193e489a9ba")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range scheduleReviews {
+		t.Log(v)
+	}
 }

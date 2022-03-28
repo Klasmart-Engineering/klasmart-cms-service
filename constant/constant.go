@@ -10,6 +10,7 @@ const (
 	TableNameSchedule           = "schedules"
 	TableNameScheduleFeedback   = "schedules_feedbacks"
 	TableNameScheduleRelation   = "schedules_relations"
+	TableNameScheduleReview     = "schedules_reviews"
 	TableNameFeedbackAssignment = "feedbacks_assignments"
 
 	TableNameClassType   = "class_types"
@@ -45,6 +46,8 @@ var (
 	ErrSqlBuilderFailed   = errors.New("sql builder failed")
 	ErrAmsHttpFailed      = errors.New("ams http failed")
 	ErrBadUsageOfKl2Cache = errors.New("bad usage of kl2cache see log for detail")
+	ErrAssertFailed       = errors.New("assert failed")
+	ErrAmsDataFailed      = errors.New("ams data failed")
 )
 
 const (
@@ -122,7 +125,7 @@ const (
 
 const (
 	ScheduleAllowEditTime   = 5 * time.Minute
-	ScheduleAllowGoLiveTime = 15 * time.Minute
+	ScheduleAllowGoLiveTime = 5 * time.Minute
 )
 
 const (
@@ -150,7 +153,8 @@ const (
 )
 
 const (
-	UserDefaultCacheExpiration = 4 * time.Hour
+	UserDefaultCacheExpiration           = 4 * time.Hour
+	UserPermissionDefaultCacheExpiration = 15 * time.Minute
 )
 
 const (

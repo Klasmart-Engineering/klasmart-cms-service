@@ -1,14 +1,13 @@
 package external
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
 	"text/template"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
-
-	"go.uber.org/zap/buffer"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	cl "gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -273,7 +272,7 @@ func (s AmsOrganizationService) GetNameByOrganizationOrSchool(ctx context.Contex
 		log.Error(ctx, "temp error", log.String("raw", raw), log.Err(err))
 		return nil, err
 	}
-	buf := buffer.Buffer{}
+	buf := bytes.Buffer{}
 	err = temp.Execute(&buf, _ids)
 	if err != nil {
 		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))

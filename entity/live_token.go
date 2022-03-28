@@ -46,6 +46,7 @@ const (
 type LiveTokenInfo struct {
 	Name       string          `json:"name,omitempty"`
 	ScheduleID string          `json:"schedule_id,omitempty"`
+	IsReview   bool            `json:"is_review"`
 	UserID     string          `json:"user_id,omitempty"`
 	Type       LiveTokenType   `json:"type"`
 	Teacher    bool            `json:"teacher"`

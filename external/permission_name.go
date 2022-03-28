@@ -6,6 +6,180 @@ func (p PermissionName) String() string {
 	return string(p)
 }
 
+var AllPermissionNames = []PermissionName{
+	CreateContentPage201,
+	UnpublishedContentPage202,
+	PendingContentPage203,
+	PublishedContentPage204,
+	ArchivedContentPage205,
+
+	ViewMyUnpublishedContent210,
+
+	ViewMyPending212,
+	ViewOrgPending213,
+	ViewMyPublished214,
+	ViewOrgPublished215,
+	ViewMyArchived216,
+	ViewOrgArchived217,
+	ViewMySchoolPublished218,
+
+	CreateLessonMaterial220,
+	CreateLessonPlan221,
+	CreateMySchoolsContent223,
+	CreateAllSchoolsContent224,
+	ViewMySchoolPending225,
+	ViewMySchoolArchived226,
+	ViewAllSchoolsPublished227,
+	ViewAllSchoolsPending228,
+	ViewAllSchoolsArchived229,
+
+	EditMyUnpublishedContent230,
+	EditMyPublishedContent234,
+	EditOrgPublishedContent235,
+	EditLessonMaterialMetadataAndContent236,
+	EditLessonPlanMetadata237,
+	EditLessonPlanContent238,
+
+	DeleteMyUnpublishedContent240,
+	DeleteMySchoolsPending241,
+	RemoveMySchoolsPublished242,
+	DeleteMySchoolsArchived243,
+	DeleteAllSchoolsPending244,
+	RemoveAllSchoolsPublished245,
+	DeleteAllSchoolsArchived246,
+	EditMySchoolsPublished247,
+	EditAllSchoolsPublished249,
+
+	DeleteMyPending251,
+	DeleteOrgPendingContent252,
+	DeleteOrgArchivedContent253,
+	RemoveOrgPublishedContent254,
+
+	ApprovePendingContent271,
+	RejectPendingContent272,
+	ArchivePublishedContent273,
+	RepublishArchivedContent274,
+	DeleteArchivedContent275,
+
+	AssociateLearningOutcomes284,
+	CreateFolder289,
+
+	FullContentMmanagement294,
+
+	PublishFeaturedContentForAllHub,
+	PublishFeaturedContentForAllOrgsHub,
+	PublishFeaturedContentForSpecificOrgsHub,
+
+	CreateAssetPage301,
+	CreateAsset320,
+	DeleteAsset340,
+
+	ScheduleViewOrgCalendar,
+	ScheduleViewSchoolCalendar,
+	ScheduleViewMyCalendar,
+	ScheduleViewPendingCalendar,
+	ScheduleCreateEvent,
+	ScheduleCreateMyEvent,
+	ScheduleCreateMySchoolEvent,
+	ScheduleCreateReviewEvent,
+	ScheduleCreateLiveCalendarEvents,
+	ScheduleCreateClassCalendarEvents,
+	ScheduleCreateStudyCalendarEvents,
+	ScheduleCreateHomefunCalendarEvents,
+
+	ScheduleEditEvent,
+	ScheduleDeleteEvent,
+	LiveClassTeacher,
+	LiveClassStudent,
+
+	ViewLearningOutcomePage,
+	ViewMyUnpublishedLearningOutcome,
+	ViewOrgUnpublishedLearningOutcome,
+	ViewMyPendingLearningOutcome,
+	ViewOrgPendingLearningOutcome,
+	ViewPublishedLearningOutcome,
+	CreateLearningOutcome,
+	EditMyUnpublishedLearningOutcome,
+	EditOrgUnpublishedLearningOutcome,
+	EditPublishedLearningOutcome,
+	DeleteMyUnpublishedLearningOutcome,
+	DeleteOrgUnpublishedLearningOutcome,
+	DeleteMyPendingLearningOutcome,
+	DeleteOrgPendingLearningOutcome,
+	DeletePublishedLearningOutcome,
+	ApprovePendingLearningOutcome,
+	RejectPendingLearningOutcome,
+
+	ReportTeacherReports603,
+	ReportViewReports610,
+	ReportLearningOutcomesInCategories616,
+
+	ReportViewMySchoolReports611,
+	ReportSchoolsSkillsTaught641,
+	ReportSchoolsClassAchievements647,
+
+	ReportViewMyOrganizationsReports612,
+	ReportOrganizationsSkillsTaught640,
+	ReportOrganizationsClassAchievements646,
+
+	ReportViewMyReports614,
+	ReportMySkillsTaught642,
+	ReportMyClassAchievments648,
+
+	Assessments400,
+	AssessmentPage406,
+	AssessmentViewCompletedAssessments414,
+	AssessmentViewInProgressAssessments415,
+	AssessmentEditAttendanceForInProgressAssessment438,
+	AssessmentEditInProgressAssessment439,
+	AssessmentViewOrgCompletedAssessments424,
+	AssessmentViewOrgInProgressAssessments425,
+	AssessmentViewSchoolCompletedAssessments426,
+	AssessmentViewSchoolInProgressAssessments427,
+	AssessmentViewTeacherFeedback670,
+
+	ViewUnPublishedMilestone,
+	ViewPublishedMilestone,
+	CreateMilestone,
+	ViewMyUnpublishedMilestone,
+	ViewMyPendingMilestone,
+	EditUnpublishedMilestone,
+	EditPublishedMilestone,
+	DeleteUnpublishedMilestone,
+	DeletePublishedMilestone,
+	ViewPendingMilestone,
+	EditMyUnpublishedMilestone,
+	DeleteMyUnpublishedMilestone,
+	DeleteOrgPendingMilestone,
+	DeleteMyPendingMilestone,
+	ApprovePendingMilestone,
+	RejectPendingMilestone,
+
+	LearningSummaryReport,
+	ReportLearningSummaryStudent,
+	ReportLearningSummaryTeacher,
+	ReportLearningSummarySchool,
+	ReportLearningSummmaryOrg,
+	ReportStudentProgressReportView,
+	ReportStudentProgressReportOrganization,
+	ReportStudentProgressReportSchool,
+	ReportStudentProgressReportTeacher,
+	ReportStudentProgressReportStudent,
+	ReportOrganizationStudentUsage,
+	ReportSchoolStudentUsage,
+	ReportTeacherStudentUsage,
+
+	ViewProgram20111,
+	ViewSubjects20115,
+
+	ShowAllFolder295,
+
+	ReportOrganizationTeachingLoad617,
+	ReportSchoolTeachingLoad618,
+	ReportMyTeachingLoad619,
+}
+
+// Important: If you add a new permission, you must also add it to the AllPermissionNames
 const (
 	CreateContentPage201      PermissionName = "create_content_page_201"
 	UnpublishedContentPage202 PermissionName = "unpublished_content_page_202"
@@ -77,9 +251,11 @@ const (
 	ScheduleViewOrgCalendar             PermissionName = "view_org_calendar_511"
 	ScheduleViewSchoolCalendar          PermissionName = "view_school_calendar_512"
 	ScheduleViewMyCalendar              PermissionName = "view_my_calendar_510"
+	ScheduleViewPendingCalendar         PermissionName = "view_pending_calendar_events_513"
 	ScheduleCreateEvent                 PermissionName = "create_event_520"
 	ScheduleCreateMyEvent               PermissionName = "create_my_schedule_events_521"
 	ScheduleCreateMySchoolEvent         PermissionName = "create_my_schools_schedule_events_522"
+	ScheduleCreateReviewEvent           PermissionName = "create_review_calendar_events_523"
 	ScheduleCreateLiveCalendarEvents    PermissionName = "create_live_calendar_events_524"
 	ScheduleCreateClassCalendarEvents   PermissionName = "create_class_calendar_events_525"
 	ScheduleCreateStudyCalendarEvents   PermissionName = "create_study_calendar_events_526"
@@ -171,6 +347,10 @@ const (
 	ViewSubjects20115 PermissionName = "view_subjects_20115"
 
 	ShowAllFolder295 = "show_all_folders_295"
+
+	ReportOrganizationTeachingLoad617 = "report_organization_teaching_load_617"
+	ReportSchoolTeachingLoad618       = "report_school_teaching_load_618"
+	ReportMyTeachingLoad619           = "report_my_teaching_load_619"
 )
 
 type TeacherViewPermissionParams struct {

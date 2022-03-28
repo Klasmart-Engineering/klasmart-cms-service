@@ -84,7 +84,7 @@ type SubContentsWithName struct {
 	ID         string      `json:"id"`
 	Name       string      `json:"name"`
 	Data       ContentData `json:"data"`
-	OutcomeIDs []string    `json:"outcome_i_ds"`
+	OutcomeIDs []string    `json:"outcome_ids"`
 }
 
 type IContentModel interface {
@@ -121,7 +121,7 @@ type IContentModel interface {
 	SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 
-	SearchSimplifyContentInternal(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentInternalConditionRequest) (int, []*entity.ContentSimplified, error)
+	SearchSimplifyContentInternal(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentInternalConditionRequest) (*entity.ContentSimplifiedList, error)
 
 	GetContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	GetVisibleContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
@@ -158,9 +158,9 @@ type IContentModel interface {
 
 	GetSpecifiedLessonPlan(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, planID string, materialIDs []string, withAP bool) (*entity.ContentInfoWithDetails, error)
 
-	GetContentNameByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
-	GetContentsSubContentsMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*SubContentsWithName, error)
-	GetLatestContentIDByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error)
+	GetContentByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentInfoInternal, error)
+	GetContentsSubContentsMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*entity.ContentInfoInternal, error)
+	GetLatestContentIDMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) (map[string]string, error)
 }
 
 func (cm *ContentModel) GetSpecifiedLessonPlan(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, planID string, materialIDs []string, withAP bool) (*entity.ContentInfoWithDetails, error) {
@@ -2194,15 +2194,77 @@ func (cm *ContentModel) CountUserFolderContent(ctx context.Context, tx *dbo.DBCo
 	return total, nil
 }
 
-func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentInternalConditionRequest) (int, []*entity.ContentSimplified, error) {
-	//get material ids from plan if condition contains plan id
+func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentInternalConditionRequest) (*entity.ContentSimplifiedList, error) {
+	// search content by schedule id
+	var schedule *entity.Schedule
+	var scheduleReviews []*entity.ScheduleReview
+	if condition.ScheduleID != "" {
+		scheduleCondition := &entity.ScheduleQueryCondition{
+			IDs: entity.NullStrings{
+				Strings: []string{condition.ScheduleID},
+				Valid:   true,
+			},
+		}
+		schedules, err := GetScheduleModel().QueryUnsafe(ctx, scheduleCondition)
+		if err != nil {
+			log.Error(ctx, "GetScheduleModel().QueryUnsafe error",
+				log.Err(err),
+				log.Any("scheduleCondition", scheduleCondition))
+			return nil, err
+		}
+		if len(schedules) == 0 {
+			log.Error(ctx, "schedule not found",
+				log.Err(err),
+				log.Any("scheduleCondition", scheduleCondition))
+			return nil, constant.ErrRecordNotFound
+		}
+
+		schedule = schedules[0]
+
+		// review schedule query all student's content
+		if schedule.IsReview {
+			scheduleReviews, err = da.GetScheduleReviewDA().GetScheduleReviewsByScheduleID(ctx, dbo.MustGetDB(ctx), schedule.ID)
+			if err != nil {
+				log.Error(ctx, "search schedule review student content failed",
+					log.Err(err),
+					log.String("scheduleID", schedule.ID))
+				return nil, err
+			}
+			for _, scheduleReview := range scheduleReviews {
+				if scheduleReview.LiveLessonPlan != nil {
+					for _, lessonMaterial := range scheduleReview.LiveLessonPlan.LessonMaterials {
+						condition.IDs = append(condition.IDs, lessonMaterial.LessonMaterialID)
+					}
+				}
+			}
+		} else {
+			// locked schedule query snapshot content
+			if schedule.IsLockedLessonPlan() {
+				for _, v := range schedule.LiveLessonPlan.LessonMaterials {
+					condition.IDs = append(condition.IDs, v.LessonMaterialID)
+				}
+			} else {
+				condition.PlanID = schedule.LessonPlanID
+			}
+		}
+
+		// if schedule id exists, but there is no associated content, return empty
+		if condition.IDs == nil && condition.PlanID == "" {
+			return &entity.ContentSimplifiedList{
+				Total:       0,
+				ContentList: []*entity.ContentSimplified{},
+			}, nil
+		}
+	}
+
+	// get material ids from plan if condition contains plan id
 	if condition.PlanID != "" {
 		plan, err := da.GetContentDA().GetContentByID(ctx, tx, condition.PlanID)
 		if err != nil {
 			log.Error(ctx, "get plan failed", log.Err(err),
 				log.String("plan_id", condition.PlanID),
 				log.Any("condition", condition))
-			return 0, nil, err
+			return nil, err
 		}
 		if plan.LatestID != "" && plan.LatestID != plan.ID {
 			plan, err = da.GetContentDA().GetContentByID(ctx, tx, plan.LatestID)
@@ -2210,20 +2272,20 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 				log.Error(ctx, "get latest plan failed", log.Err(err),
 					log.Any("plan", plan),
 					log.Any("condition", condition))
-				return 0, nil, err
+				return nil, err
 			}
 		}
 		if plan.ContentType != entity.ContentTypePlan {
 			log.Error(ctx, "content data parse failed",
 				log.Any("plan", plan))
-			return 0, nil, ErrInvalidContentType
+			return nil, ErrInvalidContentType
 		}
 		cd, err := cm.CreateContentData(ctx, entity.ContentTypePlan, plan.Data)
 		if err != nil {
 			log.Error(ctx, "content data parse failed",
 				log.Err(err),
 				log.Any("plan", plan))
-			return 0, nil, err
+			return nil, err
 		}
 		err = cd.PrepareVersion(ctx)
 		if err != nil {
@@ -2232,7 +2294,7 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 				log.Any("cd", cd),
 				log.Any("plan", plan),
 				log.Any("condition", condition))
-			return 0, nil, err
+			return nil, err
 		}
 		planData, ok := cd.(*LessonData)
 		if !ok {
@@ -2240,12 +2302,13 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 				log.Any("obj", cd),
 				log.String("data", plan.Data),
 			)
-			return 0, nil, ErrInvalidContentType
+			return nil, ErrInvalidContentType
 		}
 		materialIDs := planData.SubContentIDs(ctx)
 		//Add material IDs
 		condition.IDs = append(condition.IDs, materialIDs...)
 	}
+
 	contentTypes := []int{condition.ContentType}
 	if condition.ContentType == 0 {
 		contentTypes = []int{entity.ContentTypeMaterial, entity.ContentTypePlan}
@@ -2258,6 +2321,8 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 		Org:            condition.OrgID,
 		ContentType:    contentTypes,
 		DataSourceID:   condition.DataSourceID,
+		CreateAtLe:     condition.CreateAtLe,
+		CreateAtGe:     condition.CreateAtGe,
 		IncludeDeleted: true,
 	}
 	total, data, err := da.GetContentDA().SearchContent(ctx, tx, cdt)
@@ -2265,14 +2330,39 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 		log.Error(ctx, "search content internal failed",
 			log.Err(err),
 			log.Any("condition", cdt))
-		return 0, nil, err
+		return nil, err
 	}
+	contentIDs := make([]string, len(data))
 	res := make([]*entity.ContentSimplified, len(data))
 	for i := range data {
 		res[i] = data[i].ToContentSimplified()
+		contentIDs[i] = data[i].ID
 	}
 
-	return total, res, nil
+	var studentContentMap []*entity.ScheduleStudentContent
+	// get schedule review student content map
+	if schedule != nil && schedule.IsReview {
+		for _, scheduleReview := range scheduleReviews {
+			studentContentIDs := []string{}
+			if scheduleReview.LiveLessonPlan != nil {
+				for _, lessonMaterial := range scheduleReview.LiveLessonPlan.LessonMaterials {
+					if utils.ContainsString(contentIDs, lessonMaterial.LessonMaterialID) {
+						studentContentIDs = append(studentContentIDs, lessonMaterial.LessonMaterialID)
+					}
+				}
+			}
+			studentContentMap = append(studentContentMap, &entity.ScheduleStudentContent{
+				StudentID:  scheduleReview.StudentID,
+				ContentIDs: studentContentIDs,
+			})
+		}
+	}
+
+	return &entity.ContentSimplifiedList{
+		Total:             total,
+		ContentList:       res,
+		StudentContentMap: studentContentMap,
+	}, nil
 }
 
 func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error) {
@@ -3593,20 +3683,26 @@ func (cm *ContentModel) convertFolderContent(ctx context.Context, objs []*entity
 	return ret
 }
 
-func (cm *ContentModel) GetContentNameByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error) {
+func (cm *ContentModel) GetContentByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentInfoInternal, error) {
 	if len(cids) < 1 {
 		return nil, nil
 	}
-	resp := make([]*entity.ContentName, 0)
+	resp := make([]*entity.ContentInfoInternal, 0)
 
 	nid, cachedContent := da.GetContentRedis().GetContentCacheByIDList(ctx, cids)
 	for i := range cachedContent {
-		resp = append(resp, &entity.ContentName{
+		fileType, err := cm.parseFileType(ctx, cachedContent[i].ContentType, cachedContent[i].Data)
+		if err != nil {
+			log.Error(ctx, "parse file type error", log.Err(err), log.Any("content", cachedContent[i]))
+			return nil, err
+		}
+		resp = append(resp, &entity.ContentInfoInternal{
 			ID:          cachedContent[i].ID,
 			Name:        cachedContent[i].Name,
 			ContentType: cachedContent[i].ContentType,
 			LatestID:    cachedContent[i].LatestID,
 			OutcomeIDs:  cachedContent[i].Outcomes,
+			FileType:    fileType,
 		})
 	}
 	if len(nid) < 1 {
@@ -3629,18 +3725,42 @@ func (cm *ContentModel) GetContentNameByIDListInternal(ctx context.Context, tx *
 		if data[i].LatestID == "" {
 			latestID = data[i].ID
 		}
-		resp = append(resp, &entity.ContentName{
+		fileType, err := cm.parseFileType(ctx, data[i].ContentType, data[i].Data)
+		if err != nil {
+			log.Error(ctx, "parse file type error", log.Err(err), log.Any("content", data[i]))
+			return nil, err
+		}
+		resp = append(resp, &entity.ContentInfoInternal{
 			ID:          data[i].ID,
 			Name:        data[i].Name,
 			ContentType: data[i].ContentType,
 			LatestID:    latestID,
 			OutcomeIDs:  cm.parseContentOutcomes(ctx, data[i]),
+			FileType:    fileType,
 		})
 	}
 	return resp, nil
 }
 
-func (cm *ContentModel) GetContentsSubContentsMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*SubContentsWithName, error) {
+func (cm *ContentModel) parseFileType(ctx context.Context, contentType entity.ContentType, dataStr string) (entity.FileType, error) {
+	data, err := cm.CreateContentData(ctx, contentType, dataStr)
+	if err != nil {
+		log.Error(ctx, "get lesson material source map: create content data failed",
+			log.Err(err),
+			log.Any("contentType", contentType),
+			log.String("dataStr", dataStr),
+		)
+		return 0, err
+	}
+
+	if v, ok := data.(*MaterialData); ok {
+		return v.FileType, nil
+	}
+
+	return 0, nil
+}
+
+func (cm *ContentModel) GetContentsSubContentsMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*entity.ContentInfoInternal, error) {
 	objs, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
 		IncludeDeleted: true,
 		IDS: entity.NullStrings{
@@ -3652,7 +3772,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDListInternal(ctx context.Co
 		log.Error(ctx, "can't read content", log.Err(err), log.Strings("cids", cids))
 		return nil, err
 	}
-	contentInfoMap := make(map[string][]*SubContentsWithName)
+	contentInfoMap := make(map[string][]*entity.ContentInfoInternal)
 	for _, obj := range objs {
 		cd, err := cm.CreateContentData(ctx, obj.ContentType, obj.Data)
 		if err != nil {
@@ -3674,27 +3794,25 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDListInternal(ctx context.Co
 				log.Error(ctx, "can't prepare version for sub contents", log.Err(err), log.Any("content", content))
 				return nil, err
 			}
-			err = v.PrepareResult(ctx, tx, content, user, false)
+			err = v.PrepareResult(ctx, tx, content, user, true)
 			if err != nil {
 				log.Error(ctx, "can't get sub contents", log.Err(err), log.Any("content", content))
 				return nil, err
 			}
-			ret := make([]*SubContentsWithName, 0)
+			ret := make([]*entity.ContentInfoInternal, 0)
 			v.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 				if l.Material != nil {
-					cd0, err := cm.CreateContentData(ctx, l.Material.ContentType, l.Material.Data)
+					fileType, err := cm.parseFileType(ctx, l.Material.ContentType, l.Material.Data)
 					if err != nil {
-						log.Error(ctx, "can't parse sub content data",
-							log.Err(err),
-							log.Any("lesson", l),
-							log.Any("subContent", l.Material))
 						return
 					}
-					ret = append(ret, &SubContentsWithName{
-						ID:         l.Material.ID,
-						Name:       l.Material.Name,
-						Data:       cd0,
-						OutcomeIDs: l.Material.Outcomes,
+					ret = append(ret, &entity.ContentInfoInternal{
+						ID:          l.Material.ID,
+						Name:        l.Material.Name,
+						ContentType: l.Material.ContentType,
+						OutcomeIDs:  l.Material.Outcomes,
+						LatestID:    l.Material.ID,
+						FileType:    fileType,
 					})
 				}
 			})
@@ -3702,24 +3820,28 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDListInternal(ctx context.Co
 		case *MaterialData:
 			//若不存在子内容，则返回当前内容
 			//if sub contents is not exists, return current content
-			ret := []*SubContentsWithName{
+			ret := []*entity.ContentInfoInternal{
 				{
-					ID:         obj.ID,
-					Name:       obj.Name,
-					Data:       v,
-					OutcomeIDs: cm.parseContentOutcomes(ctx, obj),
+					ID:          obj.ID,
+					Name:        obj.Name,
+					ContentType: obj.ContentType,
+					OutcomeIDs:  cm.parseContentOutcomes(ctx, obj),
+					LatestID:    obj.ID,
+					FileType:    v.FileType,
 				},
 			}
 			contentInfoMap[obj.ID] = ret
 		case *AssetsData:
 			//若不存在子内容，则返回当前内容
 			//if sub contents is not exists, return current content
-			ret := []*SubContentsWithName{
+			ret := []*entity.ContentInfoInternal{
 				{
-					ID:         obj.ID,
-					Name:       obj.Name,
-					Data:       v,
-					OutcomeIDs: cm.parseContentOutcomes(ctx, obj),
+					ID:          obj.ID,
+					Name:        obj.Name,
+					ContentType: obj.ContentType,
+					OutcomeIDs:  cm.parseContentOutcomes(ctx, obj),
+					LatestID:    obj.ID,
+					FileType:    v.FileType,
 				},
 			}
 			contentInfoMap[obj.ID] = ret
@@ -3729,11 +3851,11 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDListInternal(ctx context.Co
 	return contentInfoMap, nil
 }
 
-func (cm *ContentModel) GetLatestContentIDByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error) {
+func (cm *ContentModel) GetLatestContentIDMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) (map[string]string, error) {
 	if len(cids) < 1 {
 		return nil, nil
 	}
-	resp := make([]string, 0, len(cids))
+	resp := make(map[string]string)
 	data, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
 		IncludeDeleted: true,
 		IDS: entity.NullStrings{
@@ -3745,13 +3867,14 @@ func (cm *ContentModel) GetLatestContentIDByIDListInternal(ctx context.Context, 
 		log.Error(ctx, "can't search content", log.Err(err), log.Strings("cids", cids))
 		return nil, ErrReadContentFailed
 	}
-	for _, item := range data {
-		if item.LatestID != "" {
-			resp = append(resp, item.LatestID)
-		} else {
-			resp = append(resp, item.ID)
+	for i := range data {
+		latestID := data[i].LatestID
+		if data[i].LatestID == "" {
+			latestID = data[i].ID
 		}
+		resp[data[i].ID] = latestID
 	}
+
 	return resp, nil
 }
 

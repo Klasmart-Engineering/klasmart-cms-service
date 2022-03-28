@@ -109,7 +109,7 @@ func (s AmsUserService) GetUserCount(ctx context.Context, op *entity.Operator, c
 		var condIDs []interface{}
 		for _, id := range cond.ClassIDs.Strings {
 			condIDs = append(condIDs, map[string]interface{}{
-				"classID": map[string]interface{}{
+				"classId": map[string]interface{}{
 					"operator": "eq",
 					"value":    id,
 				},
@@ -195,7 +195,24 @@ func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator,
 	log.Info(ctx, "BatchGet user success",
 		log.Strings("ids", uuids),
 		log.Any("res", res))
-	return res, nil
+
+	resultMap := make(map[string]*NullableUser)
+	for i := range res {
+		resultMap[res[i].StringID()] = res[i]
+	}
+	newResult := make([]*NullableUser, 0, len(ids))
+	for i := range ids {
+		obj := resultMap[ids[i]]
+		if obj == nil {
+			obj = &NullableUser{
+				Valid: false,
+				StrID: ids[i],
+			}
+		}
+		newResult = append(newResult, obj)
+	}
+
+	return newResult, nil
 }
 
 func (s AmsUserService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
@@ -236,6 +253,16 @@ func (s AmsUserService) QueryByIDs(ctx context.Context, ids []string, options ..
 	users := make([]cache.Object, 0, len(data))
 	for index := range ids {
 		user := data[fmt.Sprintf("q%d", indexMapping[index])]
+		if user == nil {
+			continue
+		}
+		// user service no longer provides username. So we need to construct
+		// the username based on the given name and family name, so that no other
+		// places need to be modified
+		if user != nil && user.Name == "" && user.FamilyName != "" && user.GivenName != "" {
+			user.Name = user.GivenName + " " + user.FamilyName
+		}
+
 		users = append(users, &NullableUser{
 			Valid: user != nil,
 			User:  user,

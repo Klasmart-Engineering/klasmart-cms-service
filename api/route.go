@@ -92,6 +92,7 @@ func (s Server) registeRoute() {
 		schedules.POST("/schedules_time_view/dates", s.mustLogin, s.postScheduledDates)
 		schedules.POST("/schedules_time_view", s.mustLogin, s.postScheduleTimeView)
 		schedules.POST("/schedules_time_view/list", s.mustLogin, s.getScheduleTimeViewList)
+		schedules.POST("/schedules/review/check_data", s.mustLogin, s.checkScheduleReviewData)
 	}
 	scheduleFeedback := s.engine.Group("/v1/schedules_feedbacks")
 	{
@@ -117,6 +118,7 @@ func (s Server) registeRoute() {
 		// home page
 		assessments.GET("/assessments_summary", s.mustLogin, s.getAssessmentsSummary)
 		assessments.GET("/assessments_for_student", s.mustLogin, s.getStudentAssessments)
+		assessments.GET("/assessments", s.mustLogin, s.queryAssessments)
 	}
 
 	reports := s.engine.Group("/v1")
@@ -135,11 +137,13 @@ func (s Server) registeRoute() {
 		reports.POST("/reports/teacher_load/lessons_summary", s.mustLogin, s.summaryTeacherLoadLessons)
 		reports.POST("/reports/teacher_load/assignments", s.mustLogin, s.getTeacherLoadReportOfAssignment)
 		reports.POST("/reports/teacher_load/missed_lessons", s.mustLogin, s.listTeacherMissedLessons)
+		reports.GET("/reports/teacher_load_overview", s.mustLogin, s.getTeacherLoadOverview)
 
 		reports.GET("/reports/learning_summary/time_filter", s.mustLogin, s.queryLearningSummaryTimeFilter)
 		reports.GET("/reports/learning_summary/live_classes", s.mustLogin, s.queryLiveClassesSummary)
 		reports.GET("/reports/learning_summary/assignments", s.mustLogin, s.queryAssignmentsSummary)
 		reports.GET("/reports/learner_weekly_overview", s.mustLogin, s.getLearnerWeeklyReportOverview)
+		reports.GET("/reports/learner_monthly_overview", s.mustLogin, s.getLearnerMonthlyReportOverview)
 
 		reports.GET("/reports/student_usage/organization_registration", s.mustLogin, s.getStudentUsageOrganizationRegistration)
 		reports.POST("/reports/student_usage/class_registration", s.mustLogin, s.getStudentUsageClassRegistration)
@@ -318,6 +322,8 @@ func (s Server) registeRoute() {
 		internal.GET("/contents", s.mustLoginWithoutOrgID, s.queryContentInternal)
 		internal.GET("/schedules", s.mustLoginWithoutOrgID, s.queryScheduleInternal)
 		internal.GET("/schedules/:id/relation_ids", s.mustLoginWithoutOrgID, s.queryScheduleRelationIDsInternal)
+		// TODO no authorization
+		internal.POST("/schedules/update_review_status", s.updateScheduleReviewStatus)
 	}
 }
 

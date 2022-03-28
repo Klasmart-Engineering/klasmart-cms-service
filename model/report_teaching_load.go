@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"sort"
 	"sync"
 	"time"
@@ -16,6 +17,7 @@ import (
 
 type IReportTeachingLoadModel interface {
 	ListTeachingLoadReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.ReportListTeachingLoadArgs) (*entity.ReportListTeachingLoadResult, error)
+	GetTeacherLoadOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, teacherIDs []string) (res *entity.TeacherLoadOverview, err error)
 }
 
 var (
@@ -145,4 +147,29 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 	sort.Sort(entity.ReportListTeachingLoadItemsSortByTeacherName(r.Items))
 
 	return &r, nil
+}
+
+func (m *reportTeachingLoadModel) GetTeacherLoadOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, teacherIDs []string) (res *entity.TeacherLoadOverview, err error) {
+	res = &entity.TeacherLoadOverview{}
+	items, err := da.GetReportDA().GetTeacherLoadItems(ctx, op, tr, teacherIDs)
+	if err != nil {
+		return
+	}
+
+	for _, item := range items {
+		if item.TotalLessons == 0 {
+			continue
+		}
+		attendedPercent := (float64(item.TotalLessons) - float64(item.MissedLessons)) / float64(item.TotalLessons)
+		switch {
+		case attendedPercent == 1:
+			res.NumOfTeachersCompletedAll++
+		case attendedPercent >= 0.8 && attendedPercent < 1:
+			res.NumOfTeachersMissedSome++
+		default:
+			res.NumOfTeachersMissedFrequently++
+		}
+		res.NumOfMissedLessons += item.MissedLessons
+	}
+	return
 }

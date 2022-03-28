@@ -892,7 +892,10 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 // @Param org_id query string false "search content under the organization"
 // @Param content_ids query string false "search content id list, separated by commas"
 // @Param content_type query int false "search content type, 1 for materials & 2 for plans"
+// @Param create_at_le query int false "search content create_at less"
+// @Param create_at_ge query int false "search content create_at greater"
 // @Param plan_id query string false "search materials from lesson_plan"
+// @Param schedule_id query string false "search student content map under the schedule review"
 // @Param source_id query string false "search content by source id"
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
 // @Param page_size query int false "content list page size"
@@ -906,13 +909,10 @@ func (s *Server) queryContentInternal(c *gin.Context) {
 	ctx := c.Request.Context()
 	condition := s.queryContentInternalCondition(c)
 
-	total, content, err := model.GetContentModel().SearchSimplifyContentInternal(ctx, dbo.MustGetDB(ctx), &condition)
+	result, err := model.GetContentModel().SearchSimplifyContentInternal(ctx, dbo.MustGetDB(ctx), &condition)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, &entity.ContentSimplifiedList{
-			Total:       total,
-			ContentList: content,
-		})
+		c.JSON(http.StatusOK, result)
 	default:
 		s.defaultErrorHandler(c, err)
 	}
@@ -983,12 +983,18 @@ func (s *Server) queryContentInternalCondition(c *gin.Context) entity.ContentInt
 		contentIDs = strings.Split(strings.TrimSpace(contentIDsStr), constant.StringArraySeparator)
 	}
 	contentType, _ := strconv.Atoi(c.Query("content_type"))
+	createAtLe, _ := strconv.Atoi(c.Query("create_at_le"))
+	createAtGe, _ := strconv.Atoi(c.Query("create_at_ge"))
+
 	return entity.ContentInternalConditionRequest{
 		IDs:          contentIDs,
 		OrgID:        c.Query("org_id"),
 		ContentType:  contentType,
+		CreateAtLe:   createAtLe,
+		CreateAtGe:   createAtGe,
 		PlanID:       c.Query("plan_id"),
 		DataSourceID: c.Query("source_id"),
+		ScheduleID:   c.Query("schedule_id"),
 	}
 }
 

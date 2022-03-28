@@ -43,6 +43,7 @@ func InitConfig(ctx context.Context) {
 	loadDBEnvConfig(ctx)
 	loadAMSConfig()
 	loadAssessmentServiceConfig()
+	loadDataServiceConfig()
 
 	log.Debug(ctx, "load config success",
 		log.Any("config", config.Get()))
@@ -112,10 +113,17 @@ func assertGetEnv(key string) string {
 
 func loadAMSConfig() {
 	cfg := config.Get()
-	cfg.AMS.EndPoint = os.Getenv("ams_endpoint")
+	cfg.AMS.EndPoint = "https://api.alpha.kidsloop.net/user/" //os.Getenv("ams_endpoint")
 }
 
 func loadAssessmentServiceConfig() {
 	cfg := config.Get()
-	cfg.H5P.EndPoint = os.Getenv("h5p_endpoint")
+	cfg.H5P.EndPoint = "https://api.alpha.kidsloop.net/assessment/graphql/" //os.Getenv("h5p_endpoint")
+}
+
+func loadDataServiceConfig() {
+	cfg := config.Get()
+	cfg.DataService.EndPoint = os.Getenv("data_service_endpoint")
+	cfg.DataService.AuthorizedKey = os.Getenv("data_service_api_key")
+	cfg.DataService.PublicAuthorizedKey = os.Getenv("data_service_public_key")
 }

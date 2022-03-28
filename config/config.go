@@ -41,6 +41,7 @@ type Config struct {
 	Assessment            AssessmentConfig      `yaml:"assessment_config"`
 	AMS                   AMSConfig             `json:"ams" yaml:"ams"`
 	H5P                   H5PServiceConfig      `json:"h5p" yaml:"h5p"`
+	DataService           DataServiceConfig     `json:"data_service" yaml:"data_service"`
 	KidsLoopRegion        string                `json:"kidsloop_region" yaml:"kidsloop_region"`
 	TencentConfig         TencentConfig         `json:"tencent" yaml:"tencent"`
 	KidsloopCNLoginConfig KidsloopCNLoginConfig `json:"kidsloop_cn" yaml:"kidsloop_cn"`
@@ -105,9 +106,10 @@ type CDNConfig struct {
 }
 
 type ScheduleConfig struct {
-	MaxRepeatYear    int           `json:"max_repeat_year" yaml:"max_repeat_year"`
-	CacheExpiration  time.Duration `yaml:"cache_expiration"`
-	ClassEventSecret interface{}   `json:"class_event_secret"`
+	ReviewTypeEnabled bool          `json:"review_type_enabled" yaml:"review_type_enabled"`
+	MaxRepeatYear     int           `json:"max_repeat_year" yaml:"max_repeat_year"`
+	CacheExpiration   time.Duration `yaml:"cache_expiration"`
+	ClassEventSecret  interface{}   `json:"class_event_secret"`
 }
 
 type LiveTokenConfig struct {
@@ -126,6 +128,12 @@ type AMSConfig struct {
 	EndPoint       string      `json:"endpoint" yaml:"endpoint"`
 	TokenVerifyKey interface{} `json:"-" yaml:"token_verify_key"`
 	AuthorizedKey  string      `json:"authorized_key"`
+}
+
+type DataServiceConfig struct {
+	EndPoint            string `json:"endpoint" yaml:"endpoint"`
+	AuthorizedKey       string `json:"authorized_key"`
+	PublicAuthorizedKey string `json:"public_authorized_key"`
 }
 
 type H5PServiceConfig struct {
@@ -157,7 +165,8 @@ type TencentSmsConfig struct {
 }
 
 type UserConfig struct {
-	CacheExpiration time.Duration `json:"cache_expiration" yaml:"cache_expiration"`
+	CacheExpiration           time.Duration `json:"cache_expiration" yaml:"cache_expiration"`
+	PermissionCacheExpiration time.Duration `json:"permission_cache_expiration" yaml:"permission_cache_expiration"`
 }
 
 type ReportConfig struct {
@@ -195,6 +204,7 @@ func LoadEnvConfig() {
 	loadLiveTokenEnvConfig(ctx)
 	loadAMSConfig(ctx)
 	loadH5PServiceConfig(ctx)
+	loadDataServiceConfig(ctx)
 	loadTencentConfig(ctx)
 	loadKidsloopCNLoginConfig(ctx)
 	loadAssessmentConfig(ctx)
@@ -320,6 +330,15 @@ func loadRedisEnvConfig(ctx context.Context) {
 }
 
 func loadScheduleEnvConfig(ctx context.Context) {
+	reviewTypeEnabledStr := os.Getenv("schedule_review_type_enabled")
+	reviewTypeEnabled, err := strconv.ParseBool(reviewTypeEnabledStr)
+	if err != nil {
+		log.Warn(ctx, "parse env schedule_review_type_enabled failed",
+			log.Err(err),
+			log.String("schedule_review_type_enabled", reviewTypeEnabledStr))
+	}
+	config.Schedule.ReviewTypeEnabled = reviewTypeEnabled
+
 	maxRepeatYearStr := strings.TrimSpace(os.Getenv("max_repeat_year"))
 	if maxRepeatYearStr == "" {
 		config.Schedule.MaxRepeatYear = 2
@@ -494,6 +513,15 @@ func loadH5PServiceConfig(ctx context.Context) {
 	}
 }
 
+func loadDataServiceConfig(ctx context.Context) {
+	// TODO assertGetEnv
+	// config.DataService.EndPoint = os.Getenv("data_service_endpoint")
+	// config.DataService.AuthorizedKey = os.Getenv("data_service_api_key")
+	// config.DataService.PublicAuthorizedKey = os.Getenv("data_service_public_key")
+	config.DataService.EndPoint = "https://dev-global-adaptive-review-api.data.kidsloop.net"
+	config.DataService.AuthorizedKey = "uM72VB8WJl85tw66Ps4ri5uZJaBvxzsmF5sa0yg5"
+}
+
 func loadCORSConfig(ctx context.Context) {
 	config.CORS.AllowOrigins = strings.Split(os.Getenv("cors_domain_list"), ",")
 	config.CORS.AllowFileProtocol, _ = strconv.ParseBool(os.Getenv("cors_allow_file_protocol"))
@@ -505,6 +533,13 @@ func loadUserConfig(ctx context.Context) {
 		config.User.CacheExpiration = constant.UserDefaultCacheExpiration
 	} else {
 		config.User.CacheExpiration = cacheExpiration
+	}
+
+	permissionCacheExpiration, err := time.ParseDuration(os.Getenv("user_permission_cache_expiration"))
+	if err != nil {
+		config.User.PermissionCacheExpiration = constant.UserPermissionDefaultCacheExpiration
+	} else {
+		config.User.PermissionCacheExpiration = permissionCacheExpiration
 	}
 }
 

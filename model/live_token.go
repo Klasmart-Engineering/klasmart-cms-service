@@ -11,6 +11,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -80,6 +81,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		UserID:     op.UserID,
 		Type:       tokenType, //entity.LiveTokenTypeLive,
 		RoomID:     scheduleID,
+		IsReview:   schedule.IsReview,
 		ClassType:  classType,
 		OrgID:      op.OrgID,
 		ScheduleID: schedule.ID,
@@ -109,6 +111,32 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 	// task and homefun study not support live token
 	if schedule.ClassType == entity.ScheduleClassTypeTask || (schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun) {
 		liveTokenInfo.Materials = make([]*entity.LiveMaterial, 0)
+	} else if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsReview {
+		// review schedule live token
+		scheduleReview, err := da.GetScheduleReviewDA().GetScheduleReviewByScheduleIDAndStudentID(ctx, dbo.MustGetDB(ctx), scheduleID, op.UserID)
+		if err != nil {
+			log.Error(ctx, "da.GetScheduleReviewDA().GetScheduleReviewByScheduleIDAndStudentID error",
+				log.Err(err),
+				log.Any("op", op),
+				log.String("scheduleID", scheduleID),
+				log.Any("tokenType", tokenType))
+			return "", err
+		}
+		if scheduleReview.ReviewStatus != entity.ScheduleReviewStatusSuccess {
+			log.Error(ctx, "review lesson plan not ready", log.Any("scheduleReview", scheduleReview))
+			return "", errors.New("review lesson plan not ready")
+		}
+
+		liveTokenInfo.Materials, err = s.convertToLiveMaterial(ctx, op, scheduleID, tokenType, scheduleReview.LiveLessonPlan.LessonMaterials)
+		if err != nil {
+			log.Error(ctx, "s.convertToLiveMaterial error",
+				log.Err(err),
+				log.Any("op", op),
+				log.String("scheduleID", scheduleID),
+				log.Any("tokenType", tokenType),
+				log.Any("liveLessonMaterials", scheduleReview.LiveLessonPlan.LessonMaterials))
+			return "", err
+		}
 	} else {
 		// anyone has attempted live
 		if schedule.IsLockedLessonPlan() {
@@ -201,7 +229,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 			}
 			schedule.LiveLessonPlan = scheduleLiveLessonPlan
 
-			if err := GetAssessmentModelV2().LockAssessmentContentAndOutcome(ctx, op, schedule.Schedule); err != nil {
+			if err := GetAssessmentInternalModel().LockAssessmentContentAndOutcome(ctx, op, schedule.Schedule); err != nil {
 				log.Error(ctx, "assessment lock content version error", log.Any("schedule", schedule), log.Err(err))
 				return "", err
 			}
@@ -418,6 +446,8 @@ func (s *liveTokenModel) GetMaterials(ctx context.Context, op *entity.Operator, 
 			materialItem.TypeName = entity.MaterialTypeVideo
 		case entity.FileTypeH5p, entity.FileTypeH5pExtend:
 			materialItem.TypeName = entity.MaterialTypeH5P
+		//case entity.FileTypeBadanamuAppToWeb:
+		//	materialItem.TypeName = entity.MaterialTypeH5P
 		case entity.FileTypeDocument:
 			log.Debug(ctx, "content material doc type", log.Any("op", op), log.Any("content", item))
 			//if mData.Source.Ext() != constant.LiveTokenDocumentPDF {
@@ -434,6 +464,8 @@ func (s *liveTokenModel) GetMaterials(ctx context.Context, op *entity.Operator, 
 			materialItem.URL = fmt.Sprintf("/h5pextend/index.html?org_id=%s&content_id=%s&schedule_id=%s&type=%s#/live-h5p", op.OrgID, item.ID, input.ScheduleID, input.TokenType)
 		case entity.FileTypeH5p:
 			materialItem.URL = fmt.Sprintf("/h5p/play/%v", mData.Source)
+		//case entity.FileTypeBadanamuAppToWeb:
+		//	materialItem.URL = fmt.Sprintf("%v", mData.Source)
 		default:
 			sourcePath, err := mData.Source.ConvertToPath(ctx)
 			if err != nil {
@@ -512,6 +544,8 @@ func (s *liveTokenModel) convertToLiveMaterial(ctx context.Context, op *entity.O
 			liveMaterial.TypeName = entity.MaterialTypeVideo
 		case entity.FileTypeH5p, entity.FileTypeH5pExtend:
 			liveMaterial.TypeName = entity.MaterialTypeH5P
+		//case entity.FileTypeBadanamuAppToWeb:
+		//	liveMaterial.TypeName = entity.MaterialTypeH5P
 		case entity.FileTypeDocument:
 			log.Debug(ctx, "content material doc type", log.Any("MaterialData", m))
 			liveMaterial.TypeName = entity.MaterialTypeH5P
@@ -526,6 +560,8 @@ func (s *liveTokenModel) convertToLiveMaterial(ctx context.Context, op *entity.O
 				op.OrgID, material.ID, scheduleID, tokenType)
 		case entity.FileTypeH5p:
 			liveMaterial.URL = fmt.Sprintf("/h5p/play/%v", m.Source)
+		//case entity.FileTypeBadanamuAppToWeb:
+		//	liveMaterial.URL = fmt.Sprintf("%v", m.Source)
 		default:
 			sourcePath, err := m.Source.ConvertToPath(ctx)
 			if err != nil {
