@@ -14,7 +14,7 @@ type ITeacherLoadLesson interface {
 	SummaryTeacherLoadLessons(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, args *entity.TeacherLoadLessonArgs) (*entity.TeacherLoadLessonSummaryFields, error)
 	MissedLessonsListInfo(ctx context.Context, request *entity.TeacherLoadMissedLessonsRequest) (model []*entity.TeacherLoadMissedLesson, err error)
 	MissedLessonsListTotal(ctx context.Context, request *entity.TeacherLoadMissedLessonsRequest) (total int, err error)
-	GetTeacherLoadItems(ctx context.Context, op *entity.Operator, tr entity.TimeRange, teacherIDs []string) (res []*entity.TeacherLoadItem, err error)
+	GetTeacherLoadItems(ctx context.Context, op *entity.Operator, tr entity.TimeRange, teacherIDs []string, classIDs []string) (res []*entity.TeacherLoadItem, err error)
 }
 
 func (r *ReportDA) ListTeacherLoadLessons(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, args *entity.TeacherLoadLessonArgs) ([]*entity.TeacherLoadLesson, error) {
@@ -270,7 +270,7 @@ func (r *ReportDA) MissedLessonsListTotal(ctx context.Context, request *entity.T
 	}
 	return
 }
-func (r *ReportDA) GetTeacherLoadItems(ctx context.Context, op *entity.Operator, tr entity.TimeRange, teacherIDs []string) (res []*entity.TeacherLoadItem, err error) {
+func (r *ReportDA) GetTeacherLoadItems(ctx context.Context, op *entity.Operator, tr entity.TimeRange, teacherIDs []string, classIDs []string) (res []*entity.TeacherLoadItem, err error) {
 	start, end, err := tr.Value(ctx)
 	if err != nil {
 		return
@@ -283,6 +283,7 @@ select
 from assessments_users_v2 auv  
 inner join assessments_v2 av on av.id =auv.assessment_id  
 inner join schedules s on s.id =av.schedule_id 
+inner join schedules_relations sr on sr.schedule_id = s.id  and sr.relation_type = ? and sr.relation_id in (?)
 where auv.user_type = ? 
 and auv.user_id in (?)
 and s.class_type in (?,?) 
@@ -291,6 +292,8 @@ and av.org_id = ?
 group by auv.user_id 
 `
 	args := []interface{}{
+		entity.ScheduleRelationTypeClassRosterClass,
+		classIDs,
 		v2.AssessmentUserTypeTeacher,
 		teacherIDs,
 		entity.ScheduleClassTypeOnlineClass,
