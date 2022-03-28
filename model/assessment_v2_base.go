@@ -56,8 +56,8 @@ func (o *BaseAssessment) MatchAnyOneAttempted() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	_, ok := roomDataMap[o.ag.assessment.ScheduleID]
-	return ok, nil
+	roomData, ok := roomDataMap[o.ag.assessment.ScheduleID]
+	return ok && len(roomData) > 0, nil
 }
 
 func (o *BaseAssessment) MatchClass() (map[string]*entity.IDName, error) {
