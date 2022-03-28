@@ -27,7 +27,7 @@ type RoomUserInfo struct {
 	Results []*RoomUserResults
 }
 type RoomInfo struct {
-	Initialized  bool
+	//Initialized  bool
 	Contents     []*RoomContent
 	UserRoomInfo []*RoomUserInfo
 }

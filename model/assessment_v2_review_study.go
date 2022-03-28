@@ -33,6 +33,10 @@ type ReviewStudyAssessment struct {
 	action AssessmentMatchAction
 }
 
+func (o *ReviewStudyAssessment) MatchAnyOneAttempted() (bool, error) {
+	return o.base.MatchAnyOneAttempted()
+}
+
 func (o *ReviewStudyAssessment) MatchSchedule() (map[string]*entity.Schedule, error) {
 	return o.base.MatchSchedule()
 }

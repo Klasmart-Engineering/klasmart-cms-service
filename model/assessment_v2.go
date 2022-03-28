@@ -709,28 +709,16 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		newComments = append(newComments, &newComment)
 	}
 
-	if waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeOnlineClass ||
-		waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeOnlineStudy ||
-		waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeReviewStudy {
-
-		if waitUpdatedAssessment.Status == v2.AssessmentStatusStarted ||
-			waitUpdatedAssessment.Status == v2.AssessmentStatusInDraft {
-			// update student comment
-			if len(newComments) > 0 {
-				if _, err := external.GetH5PRoomCommentServiceProvider().BatchAdd(ctx, op, newComments); err != nil {
-					log.Warn(ctx, "set student comment error", log.Err(err), log.Any("newComments", newComments))
-					return err
-				}
-			}
-
-			// update student score
-			if len(newScores) > 0 {
-				if _, err := external.GetH5PRoomScoreServiceProvider().BatchSet(ctx, op, newScores); err != nil {
-					log.Warn(ctx, "set student score error", log.Err(err), log.Any("newScores", newScores))
-					return err
-				}
-			}
-		}
+	// update student comment
+	err = a.updateStudentCommentAndScore(ctx, op, &updateStudentCommentAndScoreInput{
+		assessmentType: waitUpdatedAssessment.AssessmentType,
+		scheduleID:     waitUpdatedAssessment.ScheduleID,
+		newScores:      newScores,
+		newComments:    newComments,
+		ag:             ags,
+	})
+	if err != nil {
+		return err
 	}
 
 	waitUpdatedAssessment.UpdateAt = now
@@ -799,6 +787,38 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 	return nil
 }
 
+type updateStudentCommentAndScoreInput struct {
+	assessmentType v2.AssessmentType
+	scheduleID     string
+	newScores      []*external.H5PSetScoreRequest
+	newComments    []*external.H5PAddRoomCommentRequest
+	ag             *AssessmentGrain
+}
+
+func (a *assessmentModelV2) updateStudentCommentAndScore(ctx context.Context, op *entity.Operator, input *updateStudentCommentAndScoreInput) error {
+	match := GetAssessmentDetailMatch(input.assessmentType, input.ag)
+	isAnyoneAttempted, _ := match.MatchAnyOneAttempted()
+	if !isAnyoneAttempted {
+		return nil
+	}
+	if len(input.newComments) > 0 {
+		if _, err := external.GetH5PRoomCommentServiceProvider().BatchAdd(ctx, op, input.newComments); err != nil {
+			log.Warn(ctx, "set student comment error", log.Err(err), log.Any("newComments", input.newComments))
+			return err
+		}
+	}
+
+	// update student score
+	if len(input.newScores) > 0 {
+		if _, err := external.GetH5PRoomScoreServiceProvider().BatchSet(ctx, op, input.newScores); err != nil {
+			log.Warn(ctx, "set student score error", log.Err(err), log.Any("newScores", input.newScores))
+			return err
+		}
+	}
+
+	return nil
+}
+
 type updateReviewStudyAssessmentInput struct {
 	status                v2.AssessmentStatus
 	req                   *v2.AssessmentUpdateReq
@@ -853,22 +873,15 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 	}
 
 	// update student comment
-	if input.waitUpdatedAssessment.Status == v2.AssessmentStatusStarted ||
-		input.waitUpdatedAssessment.Status == v2.AssessmentStatusInDraft {
-		if len(newComments) > 0 {
-			if _, err := external.GetH5PRoomCommentServiceProvider().BatchAdd(ctx, op, newComments); err != nil {
-				log.Warn(ctx, "set student comment error", log.Err(err), log.Any("newComments", newComments))
-				return err
-			}
-		}
-
-		// update student score
-		if len(newScores) > 0 {
-			if _, err := external.GetH5PRoomScoreServiceProvider().BatchSet(ctx, op, newScores); err != nil {
-				log.Warn(ctx, "set student score error", log.Err(err), log.Any("newScores", newScores))
-				return err
-			}
-		}
+	err := a.updateStudentCommentAndScore(ctx, op, &updateStudentCommentAndScoreInput{
+		assessmentType: v2.AssessmentTypeReviewStudy,
+		scheduleID:     input.waitUpdatedAssessment.ScheduleID,
+		newScores:      newScores,
+		newComments:    newComments,
+		ag:             input.ag,
+	})
+	if err != nil {
+		return err
 	}
 
 	now := time.Now().Unix()
@@ -878,7 +891,7 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 		input.waitUpdatedAssessment.CompleteAt = now
 	}
 
-	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		if _, err := assessmentV2.GetAssessmentDA().UpdateTx(ctx, tx, input.waitUpdatedAssessment); err != nil {
 			return err
 		}
