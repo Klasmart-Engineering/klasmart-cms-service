@@ -812,7 +812,7 @@ func (a *assessmentModelV2) updateStudentCommentAndScore(ctx context.Context, op
 	if len(input.newScores) > 0 {
 		if _, err := external.GetH5PRoomScoreServiceProvider().BatchSet(ctx, op, input.newScores); err != nil {
 			log.Warn(ctx, "set student score error", log.Err(err), log.Any("newScores", input.newScores))
-			return err
+			return nil
 		}
 	}
 
