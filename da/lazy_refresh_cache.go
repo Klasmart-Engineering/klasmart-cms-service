@@ -13,12 +13,14 @@ import (
 
 type LazyRefreshCacheOption struct {
 	RedisKeyPrefix  string
+	Expiration      time.Duration
 	RefreshDuration time.Duration
 	RawQuery        func(ctx context.Context, request interface{}) (interface{}, error)
 }
 
 func (o LazyRefreshCacheOption) Validate() error {
 	if o.RedisKeyPrefix == "" ||
+		(o.Expiration > 0 && o.Expiration < o.RefreshDuration) ||
 		o.RefreshDuration == 0 ||
 		o.RawQuery == nil {
 		return constant.ErrInvalidArgs
@@ -109,6 +111,6 @@ func (c LazyRefreshCache) refreshCache(ctx context.Context, hash string, request
 			return err
 		}
 
-		return c.cacheKey.Param(hash).SetObject(ctx, response, 0)
+		return c.cacheKey.Param(hash).SetObject(ctx, response, c.option.Expiration)
 	})
 }
