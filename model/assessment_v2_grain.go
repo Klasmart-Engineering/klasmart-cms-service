@@ -571,6 +571,66 @@ func (asg *AssessmentGrain) IsNeedConvertLatestContent() (bool, error) {
 	return false, nil
 }
 
+func (asg *AssessmentGrain) ConvertContentOutcome(contents []*v2.AssessmentContentView) error {
+	ctx := asg.ctx
+	op := asg.op
+
+	contentOutcomes, err := assessmentV2.GetAssessmentUserOutcomeDA().GetContentOutcomeByAssessmentID(ctx, asg.assessment.ID)
+	if err != nil {
+		return err
+	}
+
+	if len(contentOutcomes) <= 0 {
+		outcomeIDs := make([]string, 0)
+		dedup := make(map[string]struct{})
+		for _, contentItem := range contents {
+			for _, outcomeID := range contentItem.OutcomeIDs {
+				if outcomeID == "" {
+					continue
+				}
+
+				if _, ok := dedup[outcomeID]; !ok {
+					outcomeIDs = append(outcomeIDs, outcomeID)
+				}
+			}
+		}
+
+		latestOutcomeMap, _, err := GetOutcomeModel().GetLatestOutcomes(ctx, op, dbo.MustGetDB(ctx), outcomeIDs)
+		if err != nil {
+			return err
+		}
+
+		for _, contentItem := range contents {
+			newOutcomeIDMap := make(map[string]struct{})
+			for _, outcomeID := range contentItem.OutcomeIDs {
+				if latestOutcomeItem, ok := latestOutcomeMap[outcomeID]; ok {
+					newOutcomeIDMap[latestOutcomeItem.ID] = struct{}{}
+				}
+			}
+
+			contentItem.OutcomeIDs = make([]string, 0, len(newOutcomeIDMap))
+			for key, _ := range newOutcomeIDMap {
+				contentItem.OutcomeIDs = append(contentItem.OutcomeIDs, key)
+			}
+		}
+	} else {
+		contentOutcomeMap := make(map[string][]string)
+		for _, item := range contentOutcomes {
+			if item.OutcomeID != "" {
+				contentOutcomeMap[item.ContentID] = append(contentOutcomeMap[item.ContentID], item.OutcomeID)
+			}
+		}
+
+		for _, contentItem := range contents {
+			if outcomeIDs, ok := contentOutcomeMap[contentItem.ID]; ok {
+				contentItem.OutcomeIDs = outcomeIDs
+			}
+		}
+	}
+
+	return nil
+}
+
 func (asg *AssessmentGrain) SingleGetLatestContentsFromSchedule() ([]*v2.AssessmentContentView, error) {
 	if asg.InitRecord[SingleLatestContentSliceFromSchedule] {
 		return asg.latestContentsFromSchedule, nil
@@ -632,6 +692,7 @@ func (asg *AssessmentGrain) SingleGetLatestContentsFromSchedule() ([]*v2.Assessm
 		asg.latestContentsFromSchedule = append(asg.latestContentsFromSchedule, subContentItem)
 	}
 
+	asg.ConvertContentOutcome(asg.latestContentsFromSchedule)
 	asg.InitRecord[SingleLatestContentSliceFromSchedule] = true
 
 	return asg.latestContentsFromSchedule, nil
@@ -734,11 +795,28 @@ func (asg *AssessmentGrain) getLockedContentBySchedule(schedule *entity.Schedule
 }
 
 func (asg *AssessmentGrain) SingleGetContentsFromSchedule() ([]*v2.AssessmentContentView, error) {
+	var result []*v2.AssessmentContentView
+	var err error
 	if ok, _ := asg.IsNeedConvertLatestContent(); ok {
-		return asg.SingleGetLatestContentsFromSchedule()
+		result, err = asg.SingleGetLatestContentsFromSchedule()
 	} else {
-		return asg.SingleGetLockedContentsFromSchedule()
+		result, err = asg.SingleGetLockedContentsFromSchedule()
 	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(result) <= 0 {
+		return nil, err
+	}
+
+	err = asg.ConvertContentOutcome(result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (asg *AssessmentGrain) SingleGetOutcomeMapFromContent() (map[string]*entity.Outcome, error) {
@@ -819,7 +897,7 @@ func (asg *AssessmentGrain) SingleGetAssessmentContentMap() (map[string]*v2.Asse
 			return nil, err
 		}
 
-		for newID, oldID := range latestContentIDMap {
+		for oldID, newID := range latestContentIDMap {
 			result[newID] = assessmentContentMap[oldID]
 		}
 	} else {

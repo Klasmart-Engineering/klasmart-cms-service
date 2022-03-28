@@ -96,12 +96,12 @@ func assertGetEnv(key string) string {
 
 func loadAMSConfig() {
 	cfg := config.Get()
-	cfg.AMS.EndPoint = "https://api.alpha.kidsloop.net/user/" //os.Getenv("ams_endpoint")
+	cfg.AMS.EndPoint = os.Getenv("ams_endpoint")
 }
 
 func loadAssessmentServiceConfig() {
 	cfg := config.Get()
-	cfg.H5P.EndPoint = "https://api.alpha.kidsloop.net/assessment/graphql/" //os.Getenv("h5p_endpoint")
+	cfg.H5P.EndPoint = os.Getenv("h5p_endpoint")
 }
 
 func loadDataServiceConfig() {

@@ -211,14 +211,9 @@ func (a *assessmentInternalModel) LockAssessmentContentAndOutcome(ctx context.Co
 	}
 
 	outcomeIDs = utils.SliceDeduplicationExcludeEmpty(outcomeIDs)
-	outcomes, err := GetOutcomeModel().GetByIDs(ctx, op, dbo.MustGetDB(ctx), outcomeIDs)
+	latestOutcomeMap, _, err := GetOutcomeModel().GetLatestOutcomes(ctx, op, dbo.MustGetDB(ctx), outcomeIDs)
 	if err != nil {
 		return err
-	}
-
-	outcomeMap := make(map[string]*entity.Outcome)
-	for _, item := range outcomes {
-		outcomeMap[item.ID] = item
 	}
 
 	waitAddUserOutcomes := make([]*v2.AssessmentUserOutcome, 0)
@@ -232,19 +227,19 @@ func (a *assessmentInternalModel) LockAssessmentContentAndOutcome(ctx context.Co
 
 		for _, contentItem := range contentsFromSchedule {
 			if assessmentContent, ok := assessmentContentMap[contentItem.ID]; ok {
-				for _, outcomeID := range contentItem.OutcomeIDs {
-					if outcomeItem, ok := outcomeMap[outcomeID]; ok {
+				for _, oldOutcomeID := range contentItem.OutcomeIDs {
+					if latestOutcomeItem, ok := latestOutcomeMap[oldOutcomeID]; ok {
 						userOutcomeItem := &v2.AssessmentUserOutcome{
 							ID:                  utils.NewID(),
 							AssessmentUserID:    userItem.ID,
 							AssessmentContentID: assessmentContent.ID,
-							OutcomeID:           outcomeID,
+							OutcomeID:           latestOutcomeItem.ID,
 							Status:              v2.AssessmentUserOutcomeStatusUnknown,
 							CreateAt:            now,
 							UpdateAt:            0,
 							DeleteAt:            0,
 						}
-						if outcomeItem.Assumed {
+						if latestOutcomeItem.Assumed {
 							userOutcomeItem.Status = v2.AssessmentUserOutcomeStatusAchieved
 						}
 

@@ -17,10 +17,36 @@ import (
 type IAssessmentUserOutcomeDA interface {
 	dbo.DataAccesser
 	DeleteByAssessmentUserIDsTx(ctx context.Context, tx *dbo.DBContext, assessmentUserIDs []string) error
+	GetContentOutcomeByAssessmentID(ctx context.Context, assessmentID string) ([]*AssessmentContentOutcomeDBView, error)
 }
 
 type assessmentUserOutcomeDA struct {
 	dbo.BaseDA
+}
+
+type AssessmentContentOutcomeDBView struct {
+	ContentID string `gorm:"content_id"`
+	OutcomeID string `gorm:"outcome_id"`
+}
+
+func (a *assessmentUserOutcomeDA) GetContentOutcomeByAssessmentID(ctx context.Context, assessmentID string) ([]*AssessmentContentOutcomeDBView, error) {
+	tx := dbo.MustGetDB(ctx)
+	tx.ResetCondition()
+
+	sql := `
+SELECT  assessments_contents_v2.content_id,assessments_users_outcomes_v2.outcome_id FROM assessments_contents_v2
+left join assessments_users_outcomes_v2 on assessments_contents_v2.id = assessments_users_outcomes_v2.assessment_content_id
+where assessments_contents_v2.assessment_id = ?
+group by assessments_contents_v2.content_id,assessments_users_outcomes_v2.outcome_id
+`
+	var result = make([]*AssessmentContentOutcomeDBView, 0)
+	err := tx.Raw(sql, assessmentID).Scan(&result).Error
+	if err != nil {
+		log.Error(ctx, "get content outcome from assessment error", log.Err(err), log.String("assessmentID", assessmentID))
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (a *assessmentUserOutcomeDA) DeleteByAssessmentUserIDsTx(ctx context.Context, tx *dbo.DBContext, assessmentUserIDs []string) error {
