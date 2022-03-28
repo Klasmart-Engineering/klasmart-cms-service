@@ -10,7 +10,6 @@ import (
 
 func TestCreateOutcomeSet(t *testing.T) {
 	orgID := "8a31ebab-b879-4790-af99-ee4941a778b3"
-	setupMilestone()
 	op := initOperator(orgID, "", "", "")
 	req := model.OutcomeSetCreateView{
 		SetName: "math",

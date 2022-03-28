@@ -3,14 +3,15 @@ package da
 import (
 	"context"
 	"encoding/json"
+	"strings"
+	"sync"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/ro"
-	"strings"
-	"sync"
-	"time"
 )
 
 type IAssessmentRedisDA interface {
@@ -109,7 +110,7 @@ func (da *baseAssessmentRedisDA) getCache(ctx context.Context, key string) (stri
 	if !da.enableCache() {
 		return "", nil
 	}
-	redisResult := ro.MustGetRedis(ctx).Get(key)
+	redisResult := ro.MustGetRedis(ctx).Get(ctx, key)
 	if err := redisResult.Err(); err != nil {
 		log.Error(ctx, "get cache: get failed from redis",
 			log.Err(err),
@@ -124,7 +125,7 @@ func (da *baseAssessmentRedisDA) setCache(ctx context.Context, key string, value
 	if !da.enableCache() {
 		return nil
 	}
-	if err := ro.MustGetRedis(ctx).Set(key, value, expiration).Err(); err != nil {
+	if err := ro.MustGetRedis(ctx).Set(ctx, key, value, expiration).Err(); err != nil {
 		log.Error(ctx, "set cache: set redis value failed",
 			log.Err(err),
 			log.String("key", key),
@@ -139,7 +140,7 @@ func (da *baseAssessmentRedisDA) cleanCache(ctx context.Context, key string) err
 	if !da.enableCache() {
 		return nil
 	}
-	if err := ro.MustGetRedis(ctx).Del(key).Err(); err != nil {
+	if err := ro.MustGetRedis(ctx).Del(ctx, key).Err(); err != nil {
 		log.Error(ctx, "clean cache: del failed by redis",
 			log.Err(err),
 			log.String("key", key),

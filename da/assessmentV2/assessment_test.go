@@ -70,7 +70,7 @@ func TestAdd(t *testing.T) {
 func TestGetAssessmentUserResultDBView(t *testing.T) {
 	ctx := context.Background()
 	testUtils.InitConfig(ctx)
-	testUtils.InitDB(ctx)
+	da.InitMySQL(ctx)
 	total, result, err := GetAssessmentUserResultDA().GetAssessmentUserResultDBView(ctx, &AssessmentUserResultDBViewCondition{
 		UserIDs: entity.NullStrings{
 			Strings: []string{"aea0e494-e56f-417e-99a7-81774c879bf8"},

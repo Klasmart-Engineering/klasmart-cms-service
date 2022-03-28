@@ -9,10 +9,12 @@ import (
 	"strings"
 	"sync"
 	"text/template"
+	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"gitlab.badanamu.com.cn/calmisland/ro"
@@ -428,7 +430,7 @@ func (s AmsPermissionService) getOrganizationPermission(ctx context.Context, ope
 		return permissionMap, nil
 	}
 
-	if err == ro.ErrKeyNotExist {
+	if err == constant.ErrRedisKeyNotExist {
 		// TODO maybe cache breakdown
 		// query user all permissions
 		permissionMap, err := s.hasOrganizationPermissions(ctx, operator, AllPermissionNames)
@@ -468,25 +470,29 @@ func (s AmsPermissionService) getOrganizationPermissionCache(ctx context.Context
 
 	redisClient := ro.MustGetRedis(ctx)
 	pipe := redisClient.TxPipeline()
-	exist := pipe.Exists(key)
-	r := pipe.HMGet(key, fields...)
-	_, err := pipe.Exec()
+	exist := pipe.Exists(ctx, key)
+	r := pipe.HMGet(ctx, key, fields...)
+
+	start := time.Now()
+	_, err := pipe.Exec(ctx)
 	if err != nil {
 		log.Error(ctx, "failed to exec redis pipeline",
 			log.Err(err),
 			log.String("key", key),
 			log.Strings("fields", fields),
+			log.Duration("duration", time.Since(start)),
 		)
 		return nil, err
 	}
 
 	log.Debug(ctx, "redis pipeline exec result",
 		log.Any("exist", exist.Val()),
-		log.Any("result", r.Val()))
+		log.Any("result", r.Val()),
+		log.Duration("duration", time.Since(start)))
 
 	// key not exist
 	if exist.Val() == int64(0) {
-		return nil, ro.ErrKeyNotExist
+		return nil, constant.ErrRedisKeyNotExist
 	}
 
 	result := make(map[PermissionName]bool, len(permissionNames))
@@ -525,21 +531,25 @@ func (s AmsPermissionService) setOrganizationPermissionCache(ctx context.Context
 	redisClient := ro.MustGetRedis(ctx)
 	pipe := redisClient.TxPipeline()
 
-	hmsetResult := pipe.HMSet(key, fields)
-	expireResult := pipe.Expire(key, config.Get().User.PermissionCacheExpiration)
-	_, err := pipe.Exec()
+	hmsetResult := pipe.HMSet(ctx, key, fields)
+	expireResult := pipe.Expire(ctx, key, config.Get().User.PermissionCacheExpiration)
+
+	start := time.Now()
+	_, err := pipe.Exec(ctx)
 	if err != nil {
 		log.Error(ctx, "failed to exec redis pipeline",
 			log.Err(err),
 			log.String("key", key),
 			log.Any("fields", fields),
-			log.Duration("expiration", config.Get().User.PermissionCacheExpiration))
+			log.Duration("expiration", config.Get().User.PermissionCacheExpiration),
+			log.Duration("duration", time.Since(start)))
 		return err
 	}
 
 	log.Debug(ctx, "redis pipeline exec result",
 		log.Any("hmsetResult", hmsetResult.Val()),
-		log.Any("expireResult", expireResult.Val()))
+		log.Any("expireResult", expireResult.Val()),
+		log.Duration("duration", time.Since(start)))
 
 	return nil
 }

@@ -21,7 +21,7 @@ type contentCondition struct {
 	IDs []string
 }
 
-func (cd *DBContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error) {
+func (cd *ContentMySQLDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error) {
 	lps = []*entity.LessonPlanForSchedule{}
 	if len(cond.ProgramIDs) == 0 {
 		return
@@ -191,7 +191,7 @@ from (
 	return
 }
 
-func (cd *DBContentDA) PageRawSQL(ctx context.Context, values interface{}, orderBy, sql string, pager dbo.Pager, args ...interface{}) (count int, err error) {
+func (cd *ContentMySQLDA) PageRawSQL(ctx context.Context, values interface{}, orderBy, sql string, pager dbo.Pager, args ...interface{}) (count int, err error) {
 	log.Info(ctx, "start PageRawSQL",
 		log.Any("sql", sql),
 		log.Any("orderBy", orderBy),

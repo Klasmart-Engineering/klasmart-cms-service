@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -10,7 +11,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-
+	"github.com/go-redis/redis/v8"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
@@ -52,7 +53,7 @@ type Config struct {
 	NewRelic              NewRelicConfig        `json:"new_relic" yaml:"new_relic"`
 }
 
-var config *Config
+var config = &Config{}
 
 type CORSConfig struct {
 	AllowOrigins      []string `json:"allow_origins"`
@@ -64,10 +65,17 @@ type CryptoConfig struct {
 }
 
 type RedisConfig struct {
-	OpenCache bool   `yaml:"open_cache"`
-	Host      string `yaml:"host"`
-	Port      int    `yaml:"port"`
-	Password  string `yaml:"password" json:"-"`
+	OpenCache bool `yaml:"open_cache"`
+	// DEPRECATED
+	// will remove in future, please use Option instead
+	Host string `yaml:"host"`
+	// DEPRECATED
+	// will remove in future, please use Option instead
+	Port int `yaml:"port"`
+	// DEPRECATED
+	// will remove in future, please use Option instead
+	Password string         `yaml:"password" json:"-"`
+	Option   *redis.Options `yaml:"option" json:"-"`
 }
 
 type DBConfig struct {
@@ -197,12 +205,12 @@ func LoadEnvConfig() {
 	ctx := context.TODO()
 	config = new(Config)
 	loadStorageEnvConfig(ctx)
-	loadDBEnvConfig(ctx)
-	loadRedisEnvConfig(ctx)
+	LoadDBEnvConfig(ctx)
+	LoadRedisEnvConfig(ctx)
 	loadScheduleEnvConfig(ctx)
 	loadCryptoEnvConfig(ctx)
 	loadLiveTokenEnvConfig(ctx)
-	loadAMSConfig(ctx)
+	LoadAMSConfig(ctx)
 	loadH5PServiceConfig(ctx)
 	loadDataServiceConfig(ctx)
 	loadTencentConfig(ctx)
@@ -310,11 +318,36 @@ func loadStorageEnvConfig(ctx context.Context) {
 	}
 }
 
-func loadRedisEnvConfig(ctx context.Context) {
-	openCacheStr := os.Getenv("open_cache")
-	openCache, _ := strconv.ParseBool(openCacheStr)
+func LoadRedisEnvConfig(ctx context.Context) {
+	openCache, _ := strconv.ParseBool(os.Getenv("open_cache"))
 	config.RedisConfig.OpenCache = openCache
-	// if openCache {
+	redisURL := os.Getenv("redis_url")
+	if redisURL != "" {
+		// new config
+		option, err := redis.ParseURL(redisURL)
+		if err != nil {
+			log.Panic(ctx, "redis url invalid", log.Err(err), log.String("url", redisURL))
+		}
+
+		log.Debug(ctx, "redis url parsed", log.Any("option", option))
+		config.RedisConfig.Option = option
+
+		lastIndex := strings.LastIndex(option.Addr, ":")
+		if lastIndex >= 0 {
+			config.RedisConfig.Host = option.Addr[:lastIndex]
+			port, err := strconv.Atoi(option.Addr[lastIndex+1:])
+			if err != nil {
+				config.RedisConfig.Port = 6379
+			} else {
+				config.RedisConfig.Port = port
+			}
+			config.RedisConfig.Password = option.Password
+		}
+
+		return
+	}
+
+	// old config
 	host := assertGetEnv("redis_host")
 	portStr := assertGetEnv("redis_port")
 	password := os.Getenv("redis_password")
@@ -326,7 +359,11 @@ func loadRedisEnvConfig(ctx context.Context) {
 	}
 	config.RedisConfig.Port = port
 	config.RedisConfig.Password = password
-	// }
+
+	config.RedisConfig.Option = &redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", host, port),
+		Password: password,
+	}
 }
 
 func loadScheduleEnvConfig(ctx context.Context) {
@@ -368,12 +405,10 @@ func loadScheduleEnvConfig(ctx context.Context) {
 	//config.Schedule.ClassEventSecret = key
 }
 
-func loadDBEnvConfig(ctx context.Context) {
+func LoadDBEnvConfig(ctx context.Context) {
 	config.DBConfig.ConnectionString = assertGetEnv("connection_string")
-	maxOpenConnsStr := assertGetEnv("max_open_conns")
-	maxIdleConnsStr := assertGetEnv("max_idle_conns")
-	showLogStr := assertGetEnv("show_log")
-	showSQLStr := assertGetEnv("show_sql")
+	maxOpenConnsStr := os.Getenv("max_open_conns")
+	maxIdleConnsStr := os.Getenv("max_idle_conns")
 	connMaxLifetimeStr := os.Getenv("conn_max_life_time")
 	connMaxIdleTimeStr := os.Getenv("conn_max_idle_time")
 	slowThresholdStr := os.Getenv("slow_threshold")
@@ -391,20 +426,6 @@ func loadDBEnvConfig(ctx context.Context) {
 		maxIdleConns = 16
 	}
 	config.DBConfig.MaxIdleConns = maxIdleConns
-
-	showLog, err := strconv.ParseBool(showLogStr)
-	if err != nil {
-		log.Error(ctx, "Can't parse show_log", log.Err(err))
-		showLog = true
-	}
-	config.DBConfig.ShowLog = showLog
-
-	showSQL, err := strconv.ParseBool(showSQLStr)
-	if err != nil {
-		log.Error(ctx, "Can't parse show_sql", log.Err(err))
-		showSQL = true
-	}
-	config.DBConfig.ShowSQL = showSQL
 
 	connMaxLifetime, err := time.ParseDuration(connMaxLifetimeStr)
 	if err != nil {
@@ -489,7 +510,7 @@ func loadAssessmentConfig(ctx context.Context) {
 	}
 }
 
-func loadAMSConfig(ctx context.Context) {
+func LoadAMSConfig(ctx context.Context) {
 	config.AMS.EndPoint = assertGetEnv("ams_endpoint")
 	publicKeyPath := os.Getenv("jwt_public_key_path") //"./jwt_public_key.pem"
 	content, err := ioutil.ReadFile(publicKeyPath)
