@@ -157,10 +157,11 @@ func (m *reportTeachingLoadModel) GetTeacherLoadOverview(ctx context.Context, op
 	}
 
 	for _, item := range items {
+		if item.TotalLessons == 0 {
+			continue
+		}
 		attendedPercent := (float64(item.TotalLessons) - float64(item.MissedLessons)) / float64(item.TotalLessons)
 		switch {
-		case attendedPercent == 0:
-			continue
 		case attendedPercent == 1:
 			res.NumOfTeachersCompletedAll++
 		case attendedPercent >= 0.8 && attendedPercent < 1:
