@@ -1536,7 +1536,7 @@ func (s *Server) checkScheduleReviewData(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules/update_review_status [post]
+// @Router /internal/schedules/update_review_status [post]
 func (s *Server) updateScheduleReviewStatus(c *gin.Context) {
 	ctx := c.Request.Context()
 

@@ -44,27 +44,39 @@ type AssessmentItemForHomePage struct {
 }
 
 type AssessmentQueryReply struct {
-	ID         string           `json:"id"`
-	Title      string           `json:"title"`
+	// all type
+	ID     string           `json:"id"`
+	Title  string           `json:"title"`
+	Status AssessmentStatus `json:"status"`
+
+	// onlineClass,offlineClass,OnlineStudy
+	LessonPlan *entity.IDName `json:"lesson_plan"`
+
+	// onlineClass,offlineClass,OnlineStudy,ReviewStudy
+	Teachers []*entity.IDName `json:"teachers"`
+
+	// onlineClass,offlineClass,OnlineStudy
+	CompleteAt int64 `json:"complete_at"`
+
+	// onlineClass,offlineClass
 	Program    *entity.IDName   `json:"program"`
 	Subjects   []*entity.IDName `json:"subjects"`
-	Teachers   []*entity.IDName `json:"teachers"`
 	ClassEndAt int64            `json:"class_end_at"`
-	CompleteAt int64            `json:"complete_at"`
-	Status     AssessmentStatus `json:"status"`
-	LessonPlan *entity.IDName   `json:"lesson_plan"`
 
-	ClassInfo     *entity.IDName `json:"class_info"`
-	DueAt         int64          `json:"due_at"`
-	CompleteRate  float64        `json:"complete_rate"`
-	RemainingTime int64          `json:"remaining_time"`
+	// OnlineStudy,ReviewStudy
+	ClassInfo    *entity.IDName `json:"class_info"`
+	DueAt        int64          `json:"due_at"`
+	CompleteRate float64        `json:"complete_rate"`
+
+	// OnlineStudy
+	RemainingTime int64 `json:"remaining_time"`
 }
 
 type AssessmentAddWhenCreateSchedulesReq struct {
-	RepeatScheduleIDs    []string
-	Users                []*AssessmentUserReq
-	AssessmentType       AssessmentType
-	LessPlanID           string
+	RepeatScheduleIDs []string
+	Users             []*AssessmentUserReq
+	AssessmentType    AssessmentType
+	//LessPlanID           string
 	ClassRosterClassName string
 	ScheduleTitle        string
 }
@@ -102,25 +114,57 @@ type ScheduleEndClassCallBackResp struct {
 }
 
 type AssessmentDetailReply struct {
-	ID            string           `json:"id"`
-	Title         string           `json:"title"`
-	Status        AssessmentStatus `json:"status"`
-	RoomID        string           `json:"room_id"`
-	Class         *entity.IDName   `json:"class"`
-	Teachers      []*entity.IDName `json:"teachers"`
-	Program       *entity.IDName   `json:"program"`
-	Subjects      []*entity.IDName `json:"subjects"`
-	ClassEndAt    int64            `json:"class_end_at"`
-	ClassLength   int              `json:"class_length"`
-	RemainingTime int64            `json:"remaining_time"`
-	CompleteAt    int64            `json:"complete_at"`
-	ScheduleTitle string           `json:"schedule_title"`
-	ScheduleDueAt int64            `json:"schedule_due_at"`
-	CompleteRate  float64          `json:"complete_rate"`
+	ID                string           `json:"id"`
+	Title             string           `json:"title"`
+	Status            AssessmentStatus `json:"status"`
+	RoomID            string           `json:"room_id"`
+	Class             *entity.IDName   `json:"class"`
+	Teachers          []*entity.IDName `json:"teachers"`
+	Program           *entity.IDName   `json:"program"`
+	Subjects          []*entity.IDName `json:"subjects"`
+	ClassEndAt        int64            `json:"class_end_at"`
+	ClassLength       int              `json:"class_length"`
+	RemainingTime     int64            `json:"remaining_time"`
+	CompleteAt        int64            `json:"complete_at"`
+	ScheduleTitle     string           `json:"schedule_title"`
+	ScheduleDueAt     int64            `json:"schedule_due_at"`
+	CompleteRate      float64          `json:"complete_rate"`
+	IsAnyOneAttempted bool             `json:"is_anyone_attempted"`
 
-	Outcomes []*AssessmentOutcomeReply `json:"outcomes"`
-	Contents []*AssessmentContentReply `json:"contents"`
-	Students []*AssessmentStudentReply `json:"students"`
+	Outcomes []*AssessmentOutcomeReply `json:"outcomes,omitempty"`
+	Contents []*AssessmentContentReply `json:"contents,omitempty"`
+	Students []*AssessmentStudentReply `json:"students,omitempty"`
+
+	DiffContentStudents []*AssessmentDiffContentStudentsReply `json:"diff_content_students,omitempty"`
+}
+
+type AssessmentDiffContentStudentsReply struct {
+	StudentID       string                           `json:"student_id"`
+	StudentName     string                           `json:"student_name"`
+	Status          AssessmentUserStatus             `json:"status" enums:"Participate,NotParticipate"`
+	ReviewerComment string                           `json:"reviewer_comment"`
+	Results         []*DiffContentStudentResultReply `json:"results"`
+}
+
+type DiffContentStudentResultReply struct {
+	Answer    string                     `json:"answer"`
+	Score     float64                    `json:"score"`
+	Attempted bool                       `json:"attempted"`
+	Content   AssessmentDiffContentReply `json:"content"`
+}
+
+type AssessmentDiffContentReply struct {
+	Number               string                 `json:"number"`
+	ParentID             string                 `json:"parent_id"`
+	ContentID            string                 `json:"content_id"`
+	H5PID                string                 `json:"h5p_id"`
+	ContentName          string                 `json:"content_name"`
+	ContentType          AssessmentContentType  `json:"content_type" enums:"LessonPlan,LessonMaterial,Unknown"`
+	ContentSubtype       string                 `json:"content_subtype"`
+	FileType             AssessmentFileArchived `json:"file_type"  enums:"Unknown,HasChildContainer,NotChildContainer,SupportScoreStandAlone,NotSupportScoreStandAlone"`
+	MaxScore             float64                `json:"max_score"`
+	H5PSubID             string                 `json:"h5p_sub_id"`
+	RoomProvideContentID string                 `json:"-"`
 }
 
 type AssessmentStudentReply struct {
@@ -170,6 +214,7 @@ type AssessmentOutcomeReply struct {
 	Assumed            bool                          `json:"assumed"`
 	AssignedToLessPlan bool                          `json:"-"`
 	AssignedToMaterial bool                          `json:"-"`
+	ScoreThreshold     float32                       `json:"score_threshold"`
 	//StudentIDs  []string                      `json:"student_ids"`
 }
 

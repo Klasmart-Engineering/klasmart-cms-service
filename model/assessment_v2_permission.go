@@ -65,32 +65,13 @@ func (c *AssessmentPermission) SearchAllPermissions(ctx context.Context, op *ent
 	}
 	c.OrgPermission.Status.Valid = len(c.OrgPermission.Status.Strings) > 0
 	if c.OrgPermission.Status.Valid {
+		log.Debug(ctx, "user has org permission", log.Any("OrgPermission", c.OrgPermission))
 		return nil
 	}
 
 	// school permission
-	schools, err := external.GetSchoolServiceProvider().GetByOperator(ctx, op)
-	if err != nil {
-		return err
-	}
-	var schoolIDs = make([]string, len(schools))
-	for i, school := range schools {
-		schoolIDs[i] = school.ID
-	}
 	c.SchoolPermission = AssessmentSchoolPermission{}
-	schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, op, schoolIDs)
-	if err != nil {
-		return err
-	}
-	var teacherMap = make(map[string]struct{})
-	for _, teachers := range schoolID2TeachersMap {
-		for _, teacher := range teachers {
-			if _, ok := teacherMap[teacher.ID]; ok {
-				continue
-			}
-			c.SchoolPermission.UserIDs = append(c.SchoolPermission.UserIDs, teacher.ID)
-		}
-	}
+
 	if permissionMap[external.AssessmentViewSchoolCompletedAssessments426] {
 		c.allowStatusComplete = true
 		c.SchoolPermission.Status.Strings = append(c.SchoolPermission.Status.Strings, completeStatus...)
@@ -101,15 +82,33 @@ func (c *AssessmentPermission) SearchAllPermissions(ctx context.Context, op *ent
 	}
 	c.SchoolPermission.Status.Valid = len(c.SchoolPermission.Status.Strings) > 0
 
-	if permissionMap[external.AssessmentViewCompletedAssessments414] {
-		c.allowStatusComplete = true
-	}
-	if permissionMap[external.AssessmentViewInProgressAssessments415] {
-		c.allowStatusInProgress = true
-	}
-
 	if c.SchoolPermission.Status.Valid {
-		return nil
+		schools, err := external.GetSchoolServiceProvider().GetByOperator(ctx, op)
+		if err != nil {
+			return err
+		}
+		var schoolIDs = make([]string, len(schools))
+		for i, school := range schools {
+			schoolIDs[i] = school.ID
+		}
+		schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, op, schoolIDs)
+		if err != nil {
+			return err
+		}
+		var teacherMap = make(map[string]struct{})
+		for _, teachers := range schoolID2TeachersMap {
+			for _, teacher := range teachers {
+				if _, ok := teacherMap[teacher.ID]; ok {
+					continue
+				}
+				c.SchoolPermission.UserIDs = append(c.SchoolPermission.UserIDs, teacher.ID)
+				teacherMap[teacher.ID] = struct{}{}
+			}
+		}
+
+		log.Debug(ctx, "user has school permission", log.Any("SchoolPermission", c.SchoolPermission))
+
+		//return nil
 	}
 
 	// self permission
@@ -126,11 +125,12 @@ func (c *AssessmentPermission) SearchAllPermissions(ctx context.Context, op *ent
 	}
 	c.MyPermission.Status.Valid = len(c.MyPermission.Status.Strings) > 0
 
-	log.Debug(ctx, "permission checker", log.Any("permissionMap", permissionMap), log.Any("permissionResult", c))
-
 	if !c.allowStatusComplete && !c.allowStatusInProgress {
+		log.Warn(ctx, "user has no permission", log.Any("permissionMap", permissionMap), log.Any("permissionResult", c))
 		return constant.ErrForbidden
 	}
+
+	log.Debug(ctx, "user has my permission", log.Any("MyPermission", c.MyPermission))
 
 	return nil
 }

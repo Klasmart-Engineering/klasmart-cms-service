@@ -2199,7 +2199,69 @@ func (cm *ContentModel) CountUserFolderContent(ctx context.Context, tx *dbo.DBCo
 }
 
 func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentInternalConditionRequest) (*entity.ContentSimplifiedList, error) {
-	//get material ids from plan if condition contains plan id
+	// search content by schedule id
+	var schedule *entity.Schedule
+	var scheduleReviews []*entity.ScheduleReview
+	if condition.ScheduleID != "" {
+		scheduleCondition := &entity.ScheduleQueryCondition{
+			IDs: entity.NullStrings{
+				Strings: []string{condition.ScheduleID},
+				Valid:   true,
+			},
+		}
+		schedules, err := GetScheduleModel().QueryUnsafe(ctx, scheduleCondition)
+		if err != nil {
+			log.Error(ctx, "GetScheduleModel().QueryUnsafe error",
+				log.Err(err),
+				log.Any("scheduleCondition", scheduleCondition))
+			return nil, err
+		}
+		if len(schedules) == 0 {
+			log.Error(ctx, "schedule not found",
+				log.Err(err),
+				log.Any("scheduleCondition", scheduleCondition))
+			return nil, constant.ErrRecordNotFound
+		}
+
+		schedule = schedules[0]
+
+		// review schedule query all student's content
+		if schedule.IsReview {
+			scheduleReviews, err = da.GetScheduleReviewDA().GetScheduleReviewsByScheduleID(ctx, dbo.MustGetDB(ctx), schedule.ID)
+			if err != nil {
+				log.Error(ctx, "search schedule review student content failed",
+					log.Err(err),
+					log.String("scheduleID", schedule.ID))
+				return nil, err
+			}
+			for _, scheduleReview := range scheduleReviews {
+				if scheduleReview.LiveLessonPlan != nil {
+					for _, lessonMaterial := range scheduleReview.LiveLessonPlan.LessonMaterials {
+						condition.IDs = append(condition.IDs, lessonMaterial.LessonMaterialID)
+					}
+				}
+			}
+		} else {
+			// locked schedule query snapshot content
+			if schedule.IsLockedLessonPlan() {
+				for _, v := range schedule.LiveLessonPlan.LessonMaterials {
+					condition.IDs = append(condition.IDs, v.LessonMaterialID)
+				}
+			} else {
+				condition.PlanID = schedule.LessonPlanID
+			}
+		}
+
+		// if schedule id exists, but there is no associated content, return empty
+		if condition.IDs == nil && condition.PlanID == "" {
+			return &entity.ContentSimplifiedList{
+				Total:       0,
+				ContentList: []*entity.ContentSimplified{},
+			}, nil
+		}
+	}
+
+	// get material ids from plan if condition contains plan id
 	if condition.PlanID != "" {
 		plan, err := da.GetContentDA().GetContentByID(ctx, tx, condition.PlanID)
 		if err != nil {
@@ -2250,6 +2312,7 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 		//Add material IDs
 		condition.IDs = append(condition.IDs, materialIDs...)
 	}
+
 	contentTypes := []int{condition.ContentType}
 	if condition.ContentType == 0 {
 		contentTypes = []int{entity.ContentTypeMaterial, entity.ContentTypePlan}
@@ -2262,6 +2325,8 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 		Org:            condition.OrgID,
 		ContentType:    contentTypes,
 		DataSourceID:   condition.DataSourceID,
+		CreateAtLe:     condition.CreateAtLe,
+		CreateAtGe:     condition.CreateAtGe,
 		IncludeDeleted: true,
 	}
 	total, data, err := da.GetContentDA().SearchContent(ctx, tx, cdt)
@@ -2278,16 +2343,9 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 		contentIDs[i] = data[i].ID
 	}
 
-	var studentContentMap []*entity.ScheduleReviewStudentContent
+	var studentContentMap []*entity.ScheduleStudentContent
 	// get schedule review student content map
-	if condition.ScheduleID != "" {
-		scheduleReviews, err := da.GetScheduleReviewDA().GetScheduleReviewsByScheduleID(ctx, dbo.MustGetDB(ctx), condition.ScheduleID)
-		if err != nil {
-			log.Error(ctx, "search schedule review student content failed",
-				log.Err(err),
-				log.String("scheduleID", condition.ScheduleID))
-			return nil, err
-		}
+	if schedule != nil && schedule.IsReview {
 		for _, scheduleReview := range scheduleReviews {
 			studentContentIDs := []string{}
 			if scheduleReview.LiveLessonPlan != nil {
@@ -2297,7 +2355,7 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 					}
 				}
 			}
-			studentContentMap = append(studentContentMap, &entity.ScheduleReviewStudentContent{
+			studentContentMap = append(studentContentMap, &entity.ScheduleStudentContent{
 				StudentID:  scheduleReview.StudentID,
 				ContentIDs: studentContentIDs,
 			})

@@ -173,6 +173,10 @@ var AllPermissionNames = []PermissionName{
 	ViewSubjects20115,
 
 	ShowAllFolder295,
+
+	ReportOrganizationTeachingLoad617,
+	ReportSchoolTeachingLoad618,
+	ReportMyTeachingLoad619,
 }
 
 // Important: If you add a new permission, you must also add it to the AllPermissionNames
@@ -343,6 +347,10 @@ const (
 	ViewSubjects20115 PermissionName = "view_subjects_20115"
 
 	ShowAllFolder295 = "show_all_folders_295"
+
+	ReportOrganizationTeachingLoad617 = "report_organization_teaching_load_617"
+	ReportSchoolTeachingLoad618       = "report_school_teaching_load_618"
+	ReportMyTeachingLoad619           = "report_my_teaching_load_619"
 )
 
 type TeacherViewPermissionParams struct {

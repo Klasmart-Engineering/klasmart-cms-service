@@ -44,7 +44,7 @@ func GetLiveRoomEventBusModel() ILiveRoomEventBus {
 			bus: utils.NewAsyncEventBus(),
 		}
 
-		bus.SubEndClass(GetAssessmentModelV2().ScheduleEndClassCallback)
+		bus.SubEndClass(GetAssessmentInternalModel().ScheduleEndClassCallback)
 		bus.SubEndClass(GetClassesAssignmentsModel().CreateRecord)
 
 		_liveRoomBusModel = bus
