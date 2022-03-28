@@ -163,5 +163,5 @@ const (
 )
 
 const (
-	ContentFolderQueryRefreshDuration = time.Minute
+	ContentFolderQueryCacheRefreshDuration = time.Minute
 )

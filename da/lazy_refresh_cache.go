@@ -51,11 +51,15 @@ func (c LazyRefreshCache) Get(ctx context.Context, request, response interface{}
 		return nil
 	}
 
-	hash := utils.Hash(request)
+	hash, err := utils.Hash(request)
+	if err != nil {
+		log.Warn(ctx, "caculate request hash failed", log.Err(err), log.Any("request", request))
+		return err
+	}
 	log.Debug(ctx, "request hash", log.String("hash", hash), log.Any("request", request))
 
 	// get data and version from cache
-	err := c.cacheKey.Param(hash).GetObject(ctx, response)
+	err = c.cacheKey.Param(hash).GetObject(ctx, response)
 	if err == redis.Nil {
 		log.Debug(ctx, "lazy refresh cache miss",
 			log.String("hash", hash),

@@ -49,7 +49,7 @@ func GetContentDA() IContentDA {
 
 		cache, err := NewLazyRefreshCache(&LazyRefreshCacheOption{
 			RedisKeyPrefix:  RedisKeyPrefixContentFolderQuery,
-			RefreshDuration: constant.ContentFolderQueryRefreshDuration,
+			RefreshDuration: constant.ContentFolderQueryCacheRefreshDuration,
 			RawQuery:        da.queryContentsAndFolders})
 		if err != nil {
 			log.Panic(context.Background(), "create content and folder cache failed", log.Err(err))

@@ -2,17 +2,26 @@ package utils
 
 import (
 	"crypto/sha1"
-	"encoding/gob"
 	"encoding/hex"
+	"encoding/json"
 )
 
-func Hash(obj interface{}) string {
-	return hex.EncodeToString(HashBytes(obj))
+func Hash(obj interface{}) (string, error) {
+	hash, err := HashBytes(obj)
+	if err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(hash), nil
 }
 
-func HashBytes(obj interface{}) []byte {
+func HashBytes(obj interface{}) ([]byte, error) {
 	// sha1 is enough
 	h := sha1.New()
-	gob.NewEncoder(h).Encode(obj)
-	return h.Sum(nil)
+	err := json.NewEncoder(h).Encode(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	return h.Sum(nil), nil
 }
