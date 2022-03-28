@@ -276,16 +276,19 @@ inner join assessments_v2 av on av.id =auv.assessment_id
 inner join schedules s on s.id =av.schedule_id 
 where auv.user_type = ? 
 and auv.user_id in (?)
-and s.class_type = ? 
+and s.class_type in (?,?) 
 and s.end_at >= ? and s.end_at < ?
+and av.org_id = ?
 group by auv.user_id 
 `
 	args := []interface{}{
 		v2.AssessmentUserTypeTeacher,
 		teacherIDs,
 		entity.ScheduleClassTypeOnlineClass,
+		entity.ScheduleClassTypeOfflineClass,
 		start,
 		end,
+		op.OrgID,
 	}
 	res = []*entity.TeacherLoadItem{}
 	err = r.QueryRawSQLTx(ctx, dbo.MustGetDB(ctx), &res, sql, args...)
