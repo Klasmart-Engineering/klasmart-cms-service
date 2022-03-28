@@ -518,7 +518,6 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			}
 			userRoomData[item.User.UserID] = item.Scores
 		}
-
 	}
 
 	if waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeReviewStudy {
@@ -830,7 +829,7 @@ func (a *assessmentModelV2) updateStudentCommentAndScore(ctx context.Context, op
 	if len(input.newScores) > 0 {
 		if _, err := external.GetH5PRoomScoreServiceProvider().BatchSet(ctx, op, input.newScores); err != nil {
 			log.Warn(ctx, "set student score error", log.Err(err), log.Any("newScores", input.newScores))
-			return nil
+			return err
 		}
 	}
 
