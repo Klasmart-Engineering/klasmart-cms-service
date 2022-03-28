@@ -86,19 +86,19 @@ group by teacher_id;
 func (r *ReportDA) SummaryTeacherLoadLessons(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, args *entity.TeacherLoadLessonArgs) (*entity.TeacherLoadLessonSummaryFields, error) {
 	sql := `
 select
-    count(if(is_attended=1 and class_type=? 1, null)) as live_completed_count,
-    sum(if(is_attended=1 and class_type=? duration, 0)) as live_completed_duration,
+    count(if(is_attended=1 and class_type=?, 1, null)) as live_completed_count,
+    sum(if(is_attended=1 and class_type=?, duration, 0)) as live_completed_duration,
     count(if(is_attended=1 and class_type=?, 1, null)) as in_class_completed_count,
     sum(if(is_attended=1 and class_type=?, duration, 0)) as in_class_completed_duration,
-    count(if(is_attended=0 and class_type=? 1, null)) as live_missed_count,
-    sum(if(is_attended=0 and class_type=? duration, 0)) as live_missed_duration,
+    count(if(is_attended=0 and class_type=?, 1, null)) as live_missed_count,
+    sum(if(is_attended=0 and class_type=?, duration, 0)) as live_missed_duration,
     count(if(is_attended=0 and class_type=?, 1, null)) as in_class_missed_count,
     sum(if(is_attended=0 and class_type=?, duration, 0)) as in_class_missed_duration
 from (
      select DISTINCT 
 			auv.user_id as teacher_id,
 			av.schedule_id ,
-			s.end_at -s.start_at as duratopn,
+			s.end_at -s.start_at as duration,
 			s.class_type ,
 			if(auv.status_by_system = ?,1,0) as is_attended 
 	from assessments_users_v2 auv 
