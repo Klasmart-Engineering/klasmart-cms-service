@@ -216,6 +216,11 @@ func (a *assessmentInternalModel) LockAssessmentContentAndOutcome(ctx context.Co
 		return err
 	}
 
+	log.Debug(ctx, "latestOutcomeMap data",
+		log.Any("latestOutcomeMap", latestOutcomeMap),
+		log.Strings("old outcomeIDs", outcomeIDs),
+		log.Any("contentsFromSchedule", contentsFromSchedule))
+
 	waitAddUserOutcomes := make([]*v2.AssessmentUserOutcome, 0)
 	assessmentUserIDs := make([]string, 0, len(assessmentUsers))
 	for _, userItem := range assessmentUsers {
