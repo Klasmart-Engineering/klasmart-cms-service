@@ -123,6 +123,9 @@ func (o *BaseAssessment) summaryRoomScores(userMapFromRoomMap map[string]*RoomUs
 	contentSummaryTotalScoreMap := make(map[string]float64)
 	contentMap := make(map[string]*v2.AssessmentContentReply)
 	for _, content := range contentsReply {
+		if content.IgnoreCalculateScore {
+			continue
+		}
 		contentID := content.ContentID
 		if content.ContentType == v2.AssessmentContentTypeUnknown {
 			contentID = content.ParentID
@@ -143,6 +146,9 @@ func (o *BaseAssessment) summaryRoomScores(userMapFromRoomMap map[string]*RoomUs
 			roomUserResultMap[key] = resultItem
 
 			if contentItem, ok := contentMap[resultItem.RoomContentID]; ok {
+				if contentItem.IgnoreCalculateScore {
+					continue
+				}
 				contentID := contentItem.ContentID
 				if contentItem.ContentType == v2.AssessmentContentTypeUnknown {
 					contentID = contentItem.ParentID
