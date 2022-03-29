@@ -157,10 +157,6 @@ func (o *OfflineClassAssessment) MatchStudents(contents []*v2.AssessmentContentR
 			continue
 		}
 
-		if item.StatusBySystem == v2.AssessmentUserStatusNotParticipate {
-			continue
-		}
-
 		studentInfo, ok := userMap[item.UserID]
 		if !ok {
 			log.Warn(ctx, "not found user info from user service", log.Any("item", item), log.Any("userMap", userMap))
