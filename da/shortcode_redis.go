@@ -39,7 +39,7 @@ func (scr *ShortcodeRedis) Get(ctx context.Context, op *entity.Operator, kind st
 }
 
 func (scr *ShortcodeRedis) Cache(ctx context.Context, op *entity.Operator, kind string, cursor int, shortcode string) error {
-	err := scr.client.Set(ctx, scr.cursorKey(ctx, op, kind), cursor, -1).Err()
+	err := scr.client.Set(ctx, scr.cursorKey(ctx, op, kind), cursor, 0).Err()
 	if err != nil {
 		log.Error(ctx, "Cache: Set cursor failed",
 			log.Err(err),
