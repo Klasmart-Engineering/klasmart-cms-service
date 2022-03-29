@@ -251,7 +251,8 @@ func (o *OnlineClassAssessment) MatchContents() ([]*v2.AssessmentContentReply, e
 			}
 
 			if len(roomContentItem.Children) > 0 {
-				contentReplyItem.MaxScore = 0
+				//contentReplyItem.MaxScore = 0
+				contentReplyItem.IgnoreCalculateScore = true
 				contentReplyItem.FileType = v2.AssessmentFileTypeHasChildContainer
 				result = append(result, contentReplyItem)
 

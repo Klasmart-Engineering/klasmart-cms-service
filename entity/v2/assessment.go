@@ -131,9 +131,9 @@ type AssessmentDetailReply struct {
 	CompleteRate      float64          `json:"complete_rate"`
 	IsAnyOneAttempted bool             `json:"is_anyone_attempted"`
 
-	Outcomes []*AssessmentOutcomeReply `json:"outcomes,omitempty"`
-	Contents []*AssessmentContentReply `json:"contents,omitempty"`
-	Students []*AssessmentStudentReply `json:"students,omitempty"`
+	Outcomes []*AssessmentOutcomeReply `json:"outcomes"`
+	Contents []*AssessmentContentReply `json:"contents"`
+	Students []*AssessmentStudentReply `json:"students"`
 
 	DiffContentStudents []*AssessmentDiffContentStudentsReply `json:"diff_content_students,omitempty"`
 }
@@ -203,7 +203,7 @@ type AssessmentContentReply struct {
 	MaxScore             float64                 `json:"max_score"`
 	H5PSubID             string                  `json:"h5p_sub_id"`
 	RoomProvideContentID string                  `json:"-"`
-
+	IgnoreCalculateScore bool                    `json:"-"`
 	//LatestID string `json:"latest_id"`
 }
 
