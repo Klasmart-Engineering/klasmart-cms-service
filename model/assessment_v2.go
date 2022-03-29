@@ -528,6 +528,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			waitUpdatedUsers:      waitUpdatedUsers,
 			userIDAndUserTypeMap:  userIDAndUserTypeMap,
 			ag:                    ags,
+			userRoomData:          userRoomData,
 		})
 	}
 
@@ -843,6 +844,7 @@ type updateReviewStudyAssessmentInput struct {
 	waitUpdatedUsers      []*v2.AssessmentUser
 	userIDAndUserTypeMap  map[string]*v2.AssessmentUser
 	ag                    *AssessmentGrain
+	userRoomData          map[string][]*external.H5PUserContentScore
 }
 
 func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op *entity.Operator, input updateReviewStudyAssessmentInput) error {
@@ -869,14 +871,16 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 		for _, stuResult := range stuItem.Results {
 			if contentItem, ok := contentReqMap[stuResult.ContentID]; ok {
 				if contentItem.ParentID != "" {
-					newScore := &external.H5PSetScoreRequest{
-						RoomID:       input.waitUpdatedAssessment.ScheduleID,
-						StudentID:    stuItem.StudentID,
-						ContentID:    contentItem.ParentID,
-						SubContentID: contentItem.ContentID,
-						Score:        stuResult.Score,
+					if _, ok := input.userRoomData[stuItem.StudentID]; ok {
+						newScore := &external.H5PSetScoreRequest{
+							RoomID:       input.waitUpdatedAssessment.ScheduleID,
+							StudentID:    stuItem.StudentID,
+							ContentID:    contentItem.ParentID,
+							SubContentID: contentItem.ContentID,
+							Score:        stuResult.Score,
+						}
+						newScores = append(newScores, newScore)
 					}
-					newScores = append(newScores, newScore)
 				}
 			}
 		}
