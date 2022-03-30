@@ -125,7 +125,7 @@ const (
 
 const (
 	ScheduleAllowEditTime   = 5 * time.Minute
-	ScheduleAllowGoLiveTime = 5 * time.Minute
+	ScheduleAllowGoLiveTime = 15 * time.Minute
 )
 
 const (
