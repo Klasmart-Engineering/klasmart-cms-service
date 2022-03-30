@@ -223,7 +223,7 @@ func (o *OfflineClassAssessment) MatchStudents(contents []*v2.AssessmentContentR
 				userOutcomeReplyItem := &v2.AssessmentStudentResultOutcomeReply{
 					OutcomeID: outcomeID,
 				}
-				if userOutcome != nil {
+				if userOutcome != nil && userOutcome.Status != "" {
 					userOutcomeReplyItem.Status = userOutcome.Status
 				} else {
 					if outcomeInfo, ok := outcomeMapFromContent[outcomeID]; ok && outcomeInfo.Assumed {
