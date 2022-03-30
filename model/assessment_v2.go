@@ -704,17 +704,15 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 				}
 			}
 			if contentItem, ok := contentReqMap[stuResult.ContentID]; ok {
-				if contentItem.ParentID != "" {
-					if _, ok := userRoomData[stuItem.StudentID]; ok {
-						newScore := &external.H5PSetScoreRequest{
-							RoomID:       waitUpdatedAssessment.ScheduleID,
-							StudentID:    stuItem.StudentID,
-							ContentID:    contentItem.ParentID,
-							SubContentID: contentItem.ContentID,
-							Score:        stuResult.Score,
-						}
-						newScores = append(newScores, newScore)
+				if _, ok := userRoomData[stuItem.StudentID]; ok {
+					newScore := &external.H5PSetScoreRequest{
+						RoomID:       waitUpdatedAssessment.ScheduleID,
+						StudentID:    stuItem.StudentID,
+						ContentID:    contentItem.ParentID,
+						SubContentID: contentItem.ContentID,
+						Score:        stuResult.Score,
 					}
+					newScores = append(newScores, newScore)
 				}
 			}
 		}
@@ -870,17 +868,15 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 
 		for _, stuResult := range stuItem.Results {
 			if contentItem, ok := contentReqMap[stuResult.ContentID]; ok {
-				if contentItem.ParentID != "" {
-					if _, ok := input.userRoomData[stuItem.StudentID]; ok {
-						newScore := &external.H5PSetScoreRequest{
-							RoomID:       input.waitUpdatedAssessment.ScheduleID,
-							StudentID:    stuItem.StudentID,
-							ContentID:    contentItem.ParentID,
-							SubContentID: contentItem.ContentID,
-							Score:        stuResult.Score,
-						}
-						newScores = append(newScores, newScore)
+				if _, ok := input.userRoomData[stuItem.StudentID]; ok {
+					newScore := &external.H5PSetScoreRequest{
+						RoomID:       input.waitUpdatedAssessment.ScheduleID,
+						StudentID:    stuItem.StudentID,
+						ContentID:    contentItem.ParentID,
+						SubContentID: contentItem.ContentID,
+						Score:        stuResult.Score,
 					}
+					newScores = append(newScores, newScore)
 				}
 			}
 		}
