@@ -430,6 +430,8 @@ func (f *FolderModel) UpdateFolder(ctx context.Context, folderID string, d entit
 		return err
 	}
 
+	GetContentModel().CleanCache(ctx)
+
 	return nil
 }
 
@@ -448,6 +450,8 @@ func (f *FolderModel) RemoveItem(ctx context.Context, fid string, operator *enti
 		if err != nil {
 			return err
 		}
+
+		GetContentModel().CleanCache(ctx)
 
 		return nil
 	})
@@ -482,6 +486,8 @@ func (f *FolderModel) RemoveItemBulk(ctx context.Context, fids []string, operato
 			return err
 		}
 
+		GetContentModel().CleanCache(ctx)
+
 		return nil
 	})
 }
@@ -505,6 +511,8 @@ func (f *FolderModel) MoveItemBulk(ctx context.Context, req entity.MoveFolderIDB
 					log.Any("req", req))
 				return err
 			}
+
+			GetContentModel().CleanCache(ctx)
 
 			return nil
 		})
@@ -533,6 +541,8 @@ func (f *FolderModel) MoveItem(ctx context.Context, req entity.MoveFolderRequest
 		if err != nil {
 			return err
 		}
+
+		GetContentModel().CleanCache(ctx)
 
 		return nil
 	})
@@ -1637,6 +1647,8 @@ func (f *FolderModel) createFolder(ctx context.Context, tx *dbo.DBContext, req e
 			return "", err
 		}
 	}
+
+	GetContentModel().CleanCache(ctx)
 
 	return folder.ID, nil
 }

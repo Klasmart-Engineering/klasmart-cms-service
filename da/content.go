@@ -33,6 +33,8 @@ type IContentDA interface {
 	BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error
 
 	GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error)
+
+	CleanCache(ctx context.Context)
 }
 
 var (
@@ -167,6 +169,13 @@ func (c ContentDA) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContex
 
 func (c ContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error) {
 	return c.mysqlDA.GetLessonPlansCanSchedule(ctx, op, cond, condOrgContent, programGroups)
+}
+
+func (c ContentDA) CleanCache(ctx context.Context) {
+	err := c.contentFolderCache.Clean(ctx)
+	if err != nil {
+		log.Warn(ctx, "clean content folder cache failed", log.Err(err))
+	}
 }
 
 type contentFolderRequest struct {
