@@ -195,6 +195,40 @@ func (m *assessmentLiveRoom) getUserResultInfo(ctx context.Context, userScores *
 	return userScoresTree, nil
 }
 
+func (m *assessmentLiveRoom) AllowEditScoreContent(ctx context.Context, roomData []*external.H5PUserScores) (map[string]bool, error) {
+	result := make(map[string]bool)
+
+	contentMap := make(map[string]struct{})
+	for _, item := range roomData {
+		if item.User == nil {
+			log.Warn(ctx, "room user data is null", log.Any("roomDataItem", item))
+			continue
+		}
+
+		if len(item.Scores) <= 0 {
+			log.Warn(ctx, "room user scores data is null", log.Any("roomDataItem", item))
+			continue
+		}
+
+		for _, scoreItem := range item.Scores {
+			if scoreItem.Content == nil {
+				log.Warn(ctx, "room user scores about content data is null", log.Any("roomDataItem", item))
+				continue
+			}
+			contentKey := scoreItem.Content.GetInternalID()
+			if _, ok := contentMap[contentKey]; !ok {
+				if canSetScoreMap[scoreItem.Content.Type] {
+					result[contentKey] = true
+				}
+
+				contentMap[contentKey] = struct{}{}
+			}
+		}
+	}
+
+	return result, nil
+}
+
 func (m *assessmentLiveRoom) getRoomResultInfo(ctx context.Context, roomData []*external.H5PUserScores) (*RoomInfo, error) {
 	result := &RoomInfo{
 		Contents:     make([]*RoomContent, 0),
@@ -374,6 +408,12 @@ func (m *assessmentLiveRoom) batchGetRoomCommentMap(ctx context.Context, operato
 		log.Strings("room_ids", roomIDs),
 	)
 	return result, nil
+}
+
+var canSetScoreMap = map[string]bool{
+	"Essay":         true,
+	"AudioRecorder": true,
+	"SpeakTheWords": true,
 }
 
 var canScoringMap = map[string]bool{
