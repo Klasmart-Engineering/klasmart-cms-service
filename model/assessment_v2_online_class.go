@@ -256,7 +256,7 @@ func (o *OnlineClassAssessment) MatchContents() ([]*v2.AssessmentContentReply, e
 				result = append(result, contentReplyItem)
 
 				for i, child := range roomContentItem.Children {
-					o.appendContent(child, item, &result, contentReplyItem.Number, i+1)
+					o.appendContent(child, contentReplyItem, &result, contentReplyItem.Number, i+1)
 				}
 			} else {
 				result = append(result, contentReplyItem)
@@ -435,14 +435,14 @@ func (o *OnlineClassAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 	return result, nil
 }
 
-func (o *OnlineClassAssessment) appendContent(roomContent *RoomContent, materialItem *v2.AssessmentContentView, result *[]*v2.AssessmentContentReply, prefix string, index int) {
+func (o *OnlineClassAssessment) appendContent(roomContent *RoomContent, materialItem *v2.AssessmentContentReply, result *[]*v2.AssessmentContentReply, prefix string, index int) {
 	replyItem := &v2.AssessmentContentReply{
 		Number:               fmt.Sprintf("%s-%d", prefix, index),
-		ParentID:             materialItem.ID,
+		ParentID:             materialItem.ContentID,
 		ContentID:            roomContent.ID,
-		ContentName:          materialItem.Name,
+		ContentName:          materialItem.ContentName,
 		ReviewerComment:      "",
-		Status:               v2.AssessmentContentStatusCovered,
+		Status:               materialItem.Status,
 		OutcomeIDs:           materialItem.OutcomeIDs,
 		ContentType:          v2.AssessmentContentTypeUnknown,
 		ContentSubtype:       roomContent.SubContentType,
