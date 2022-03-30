@@ -520,6 +520,11 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		}
 	}
 
+	canSetScoreContentMap, err := getAssessmentLiveRoom().AllowEditScoreContent(ctx, userScores)
+	if err != nil {
+		return err
+	}
+
 	if waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeReviewStudy {
 		return a.updateReviewStudyAssessment(ctx, op, updateReviewStudyAssessmentInput{
 			status:                status,
@@ -705,14 +710,16 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			}
 			if contentItem, ok := contentReqMap[stuResult.ContentID]; ok {
 				if _, ok := userRoomData[stuItem.StudentID]; ok {
-					newScore := &external.H5PSetScoreRequest{
-						RoomID:       waitUpdatedAssessment.ScheduleID,
-						StudentID:    stuItem.StudentID,
-						ContentID:    contentItem.ParentID,
-						SubContentID: contentItem.ContentID,
-						Score:        stuResult.Score,
+					if _, ok := canSetScoreContentMap[contentItem.ContentID]; ok {
+						newScore := &external.H5PSetScoreRequest{
+							RoomID:       waitUpdatedAssessment.ScheduleID,
+							StudentID:    stuItem.StudentID,
+							ContentID:    contentItem.ParentID,
+							SubContentID: contentItem.ContentID,
+							Score:        stuResult.Score,
+						}
+						newScores = append(newScores, newScore)
 					}
-					newScores = append(newScores, newScore)
 				}
 			}
 		}
