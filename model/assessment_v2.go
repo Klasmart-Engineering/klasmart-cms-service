@@ -534,6 +534,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			userIDAndUserTypeMap:  userIDAndUserTypeMap,
 			ag:                    ags,
 			userRoomData:          userRoomData,
+			canSetScoreContentMap: canSetScoreContentMap,
 		})
 	}
 
@@ -712,12 +713,18 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 				if _, ok := userRoomData[stuItem.StudentID]; ok {
 					if _, ok := canSetScoreContentMap[contentItem.ContentID]; ok {
 						newScore := &external.H5PSetScoreRequest{
-							RoomID:       waitUpdatedAssessment.ScheduleID,
-							StudentID:    stuItem.StudentID,
-							ContentID:    contentItem.ParentID,
-							SubContentID: contentItem.ContentID,
-							Score:        stuResult.Score,
+							RoomID:    waitUpdatedAssessment.ScheduleID,
+							StudentID: stuItem.StudentID,
+							Score:     stuResult.Score,
 						}
+
+						if contentItem.ParentID == "" {
+							newScore.ContentID = contentItem.ContentID
+						} else {
+							newScore.ContentID = contentItem.ParentID
+							newScore.SubContentID = contentItem.ContentID
+						}
+
 						newScores = append(newScores, newScore)
 					}
 				}
@@ -850,6 +857,7 @@ type updateReviewStudyAssessmentInput struct {
 	userIDAndUserTypeMap  map[string]*v2.AssessmentUser
 	ag                    *AssessmentGrain
 	userRoomData          map[string][]*external.H5PUserContentScore
+	canSetScoreContentMap map[string]bool
 }
 
 func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op *entity.Operator, input updateReviewStudyAssessmentInput) error {
@@ -876,14 +884,22 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 		for _, stuResult := range stuItem.Results {
 			if contentItem, ok := contentReqMap[stuResult.ContentID]; ok {
 				if _, ok := input.userRoomData[stuItem.StudentID]; ok {
-					newScore := &external.H5PSetScoreRequest{
-						RoomID:       input.waitUpdatedAssessment.ScheduleID,
-						StudentID:    stuItem.StudentID,
-						ContentID:    contentItem.ParentID,
-						SubContentID: contentItem.ContentID,
-						Score:        stuResult.Score,
+					if _, ok := input.canSetScoreContentMap[contentItem.ContentID]; ok {
+						newScore := &external.H5PSetScoreRequest{
+							RoomID:    input.waitUpdatedAssessment.ScheduleID,
+							StudentID: stuItem.StudentID,
+							Score:     stuResult.Score,
+						}
+
+						if contentItem.ParentID == "" {
+							newScore.ContentID = contentItem.ContentID
+						} else {
+							newScore.ContentID = contentItem.ParentID
+							newScore.SubContentID = contentItem.ContentID
+						}
+
+						newScores = append(newScores, newScore)
 					}
-					newScores = append(newScores, newScore)
 				}
 			}
 		}
