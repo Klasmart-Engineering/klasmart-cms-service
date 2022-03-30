@@ -195,10 +195,14 @@ func (m *assessmentLiveRoom) getUserResultInfo(ctx context.Context, userScores *
 	return userScoresTree, nil
 }
 
-func (m *assessmentLiveRoom) AllowEditScoreContent(ctx context.Context, roomData []*external.H5PUserScores) (map[string]bool, error) {
-	result := make(map[string]bool)
+type LiveRoomContentForEditScore struct {
+	Type string
+}
 
-	contentMap := make(map[string]struct{})
+func (m *assessmentLiveRoom) AllowEditScoreContent(ctx context.Context, roomData []*external.H5PUserScores) (map[string]bool, error) {
+	contentMap := make(map[string]*LiveRoomContentForEditScore)
+
+	contentMaxScoreMap := make(map[string]float64)
 	for _, item := range roomData {
 		if item.User == nil {
 			log.Warn(ctx, "room user data is null", log.Any("roomDataItem", item))
@@ -217,15 +221,31 @@ func (m *assessmentLiveRoom) AllowEditScoreContent(ctx context.Context, roomData
 			}
 			contentKey := scoreItem.Content.GetInternalID()
 			if _, ok := contentMap[contentKey]; !ok {
-				if canSetScoreMap[scoreItem.Content.Type] {
-					result[contentKey] = true
-				}
+				contentMap[contentKey] = &LiveRoomContentForEditScore{Type: scoreItem.Content.Type}
+				contentMaxScoreMap[contentKey] = 0
+			}
 
-				contentMap[contentKey] = struct{}{}
+			if scoreItem.Score != nil {
+				if len(scoreItem.Score.Answers) > 0 {
+					if contentMaxScoreMap[contentKey] < scoreItem.Score.Answers[0].MaximumPossibleScore {
+						contentMaxScoreMap[contentKey] = scoreItem.Score.Answers[0].MaximumPossibleScore
+					}
+				}
 			}
 		}
 	}
 
+	result := make(map[string]bool)
+	for key, contentItem := range contentMap {
+		if maxScore, ok := contentMaxScoreMap[key]; ok && maxScore > 0 && canSetScoreMap[contentItem.Type] {
+			result[key] = true
+		}
+	}
+
+	log.Debug(ctx, "can set score info",
+		log.Any("contentMap", contentMap),
+		log.Any("contentMaxScoreMap", contentMaxScoreMap),
+		log.Any("result", result))
 	return result, nil
 }
 
