@@ -123,6 +123,8 @@ func (c LazyRefreshCache) refreshCache(ctx context.Context, hash string, request
 }
 
 func (c LazyRefreshCache) Clean(ctx context.Context) error {
+	log.Debug(ctx, "clean lazy refresh cache", log.String("prefix", c.option.RedisKeyPrefix))
+
 	// get keys
 	hashes, err := c.keySet.SMembers(ctx)
 	if err != nil {
@@ -135,9 +137,7 @@ func (c LazyRefreshCache) Clean(ctx context.Context) error {
 
 	keys := make([]string, 0, len(hashes)*2)
 	for _, hash := range hashes {
-		keys = append(keys, c.cacheKey.Param(hash).Key.Key(),
-			c.lockerKey.Param(hash).Key.Key(),
-		)
+		keys = append(keys, c.cacheKey.Param(hash).Key.Key(), c.lockerKey.Param(hash).Key.Key())
 	}
 
 	client := ro.MustGetRedis(ctx)
@@ -147,5 +147,12 @@ func (c LazyRefreshCache) Clean(ctx context.Context) error {
 		return err
 	}
 
-	return c.keySet.Del(ctx)
+	err = c.keySet.Del(ctx)
+	if err != nil {
+		return err
+	}
+
+	log.Debug(ctx, "clean lazy refresh cache successfully", log.Strings("keys", keys))
+
+	return nil
 }

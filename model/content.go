@@ -508,6 +508,8 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 		return ErrUpdateContentFailed
 	}
 
+	log.Debug(ctx, "update source content successfully", log.Any("content", sourceContent))
+
 	//更新所有latestID为sourceContent的Content
 	//Update all sourceContent latestID fields
 	oldContents, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
@@ -528,6 +530,8 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 			log.Error(ctx, "update old content failed", log.Err(err), log.String("OldID", oldContents[i].ID))
 			return ErrUpdateContentFailed
 		}
+
+		log.Debug(ctx, "update old content successfully", log.Any("content", oldContents[i]))
 
 		oldContentIDs[i] = oldContents[i].ID
 	}
