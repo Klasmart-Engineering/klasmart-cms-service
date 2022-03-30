@@ -33,6 +33,7 @@ type LazyRefreshCache struct {
 	option    *LazyRefreshCacheOption
 	cacheKey  *ro.StringParameterKey
 	lockerKey *ro.StringParameterKey
+	keySet    *ro.SetKey
 }
 
 func NewLazyRefreshCache(option *LazyRefreshCacheOption) (*LazyRefreshCache, error) {
@@ -45,6 +46,7 @@ func NewLazyRefreshCache(option *LazyRefreshCacheOption) (*LazyRefreshCache, err
 		option:    option,
 		cacheKey:  ro.NewStringParameterKey(option.RedisKeyPrefix + ":cache:%s"),
 		lockerKey: ro.NewStringParameterKey(option.RedisKeyPrefix + ":locker:%s"),
+		keySet:    ro.NewSetKey(option.RedisKeyPrefix + ":key"),
 	}, nil
 }
 
@@ -111,6 +113,39 @@ func (c LazyRefreshCache) refreshCache(ctx context.Context, hash string, request
 			return err
 		}
 
-		return c.cacheKey.Param(hash).SetObject(ctx, response, c.option.Expiration)
+		err = c.cacheKey.Param(hash).SetObject(ctx, response, c.option.Expiration)
+		if err != nil {
+			return err
+		}
+
+		return c.keySet.SAdd(ctx, hash)
 	})
+}
+
+func (c LazyRefreshCache) Clean(ctx context.Context) error {
+	// get keys
+	hashes, err := c.keySet.SMembers(ctx)
+	if err != nil {
+		return err
+	}
+
+	if len(hashes) == 0 {
+		return nil
+	}
+
+	keys := make([]string, 0, len(hashes)*2)
+	for _, hash := range hashes {
+		keys = append(keys, c.cacheKey.Param(hash).Key.Key(),
+			c.lockerKey.Param(hash).Key.Key(),
+		)
+	}
+
+	client := ro.MustGetRedis(ctx)
+	err = client.Del(ctx, keys...).Err()
+	if err != nil {
+		log.Warn(ctx, "batch delete keys failed", log.Err(err), log.Strings("keys", keys))
+		return err
+	}
+
+	return c.keySet.Del(ctx)
 }

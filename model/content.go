@@ -162,6 +162,8 @@ type IContentModel interface {
 	GetContentByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentInfoInternal, error)
 	GetContentsSubContentsMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*entity.ContentInfoInternal, error)
 	GetLatestContentIDMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) (map[string]string, error)
+
+	CleanCache(ctx context.Context)
 }
 
 func (cm *ContentModel) GetSpecifiedLessonPlan(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, planID string, materialIDs []string, withAP bool) (*entity.ContentInfoWithDetails, error) {
@@ -1011,6 +1013,8 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	da.GetContentRedis().CleanContentCache(ctx, []string{cid, content.SourceID})
+	cm.CleanCache(ctx)
+
 	return nil
 }
 
@@ -1158,6 +1162,7 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 	}
 
 	da.GetContentRedis().CleanContentCache(ctx, updateIDs)
+	cm.CleanCache(ctx)
 	return err
 }
 
@@ -1199,6 +1204,8 @@ func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, c
 	}
 
 	da.GetContentRedis().CleanContentCache(ctx, []string{cid, content.SourceID})
+	cm.CleanCache(ctx)
+
 	return nil
 }
 
@@ -1337,6 +1344,8 @@ func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DB
 	}
 
 	da.GetContentRedis().CleanContentCache(ctx, []string{content.ID, content.SourceID})
+	cm.CleanCache(ctx)
+
 	return nil
 }
 func (cm *ContentModel) DeleteContentBulkTx(ctx context.Context, ids []string, user *entity.Operator) error {
@@ -1403,6 +1412,8 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 	}
 
 	da.GetContentRedis().CleanContentCache(ctx, deletedIDs)
+	cm.CleanCache(ctx)
+
 	return nil
 }
 
@@ -1591,6 +1602,8 @@ func (cm *ContentModel) DeleteContent(ctx context.Context, tx *dbo.DBContext, ci
 	}
 
 	da.GetContentRedis().CleanContentCache(ctx, []string{cid, content.SourceID})
+	cm.CleanCache(ctx)
+
 	return nil
 }
 
@@ -1669,6 +1682,8 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 	}
 
 	da.GetContentRedis().CleanContentCache(ctx, []string{id, obj.ID})
+	cm.CleanCache(ctx)
+
 	return id, nil
 }
 
@@ -4027,6 +4042,10 @@ func (cm *ContentModel) GetLatestContentIDMapByIDListInternal(ctx context.Contex
 	}
 
 	return resp, nil
+}
+
+func (cm *ContentModel) CleanCache(ctx context.Context) {
+	da.GetContentDA().CleanCache(ctx)
 }
 
 var (
