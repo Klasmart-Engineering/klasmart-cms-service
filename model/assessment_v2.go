@@ -457,6 +457,8 @@ func (a *assessmentModelV2) queryFeedbackInfo(ctx context.Context, operator *ent
 }
 
 // TODO need refactor
+
+// TODO need refactor
 func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, status v2.AssessmentStatus, req *v2.AssessmentUpdateReq) error {
 	if len(req.Students) <= 0 {
 		log.Warn(ctx, "students is empty", log.Any("req", req))
@@ -589,12 +591,18 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 	for _, item := range waitAddContentMap {
 		waitAddContents = append(waitAddContents, item)
 	}
+	allAssessmentContents := append(waitUpdateContents, waitAddContents...)
+
+	// outcome
+	contentOutcomeIDMap := make(map[string][]string, len(scheduleContents))
+	for _, item := range scheduleContents {
+		contentOutcomeIDMap[item.ID] = item.OutcomeIDs
+	}
 
 	outcomeIDs := make([]string, 0)
 	for _, item := range scheduleContents {
 		outcomeIDs = append(outcomeIDs, item.OutcomeIDs...)
 	}
-
 	outcomeIDs = utils.SliceDeduplicationExcludeEmpty(outcomeIDs)
 	outcomes, err := GetOutcomeModel().GetByIDs(ctx, op, dbo.MustGetDB(ctx), outcomeIDs)
 	if err != nil {
@@ -615,28 +623,29 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		if userItem.UserType == v2.AssessmentUserTypeTeacher {
 			continue
 		}
-		for _, contentItem := range scheduleContents {
-			for _, outcomeID := range contentItem.OutcomeIDs {
-				if outcomeItem, ok := outcomeMap[outcomeID]; ok {
-					key := ags.GetKey([]string{userItem.ID, contentItem.ID, outcomeID})
-					if _, ok := outcomeFromAssessmentMap[key]; ok {
-						continue
-					}
-					waitAddOutcomeItem := &v2.AssessmentUserOutcome{
-						ID:                  utils.NewID(),
-						AssessmentUserID:    userItem.ID,
-						AssessmentContentID: contentItem.ID,
-						OutcomeID:           outcomeID,
-						CreateAt:            now,
-					}
-					if outcomeItem.Assumed {
-						waitAddOutcomeItem.Status = v2.AssessmentUserOutcomeStatusAchieved
-					}
+		for _, contentItem := range allAssessmentContents {
+			if outcomeIDs, ok := contentOutcomeIDMap[contentItem.ContentID]; ok {
+				for _, outcomeID := range outcomeIDs {
+					if outcomeItem, ok := outcomeMap[outcomeID]; ok {
+						key := ags.GetKey([]string{userItem.ID, contentItem.ID, outcomeID})
+						if _, ok := outcomeFromAssessmentMap[key]; ok {
+							continue
+						}
+						waitAddOutcomeItem := &v2.AssessmentUserOutcome{
+							ID:                  utils.NewID(),
+							AssessmentUserID:    userItem.ID,
+							AssessmentContentID: contentItem.ID,
+							OutcomeID:           outcomeID,
+							CreateAt:            now,
+						}
+						if outcomeItem.Assumed {
+							waitAddOutcomeItem.Status = v2.AssessmentUserOutcomeStatusAchieved
+						}
 
-					waitAddAssessmentOutcomeMap[key] = waitAddOutcomeItem
+						waitAddAssessmentOutcomeMap[key] = waitAddOutcomeItem
+					}
 				}
 			}
-
 		}
 	}
 
@@ -649,9 +658,9 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		contentReqMap[item.ContentID] = item
 	}
 
-	allAssessmentContentMap := make(map[string]*v2.AssessmentContentView)
-	for _, item := range scheduleContents {
-		allAssessmentContentMap[item.ID] = item
+	allAssessmentContentMap := make(map[string]*v2.AssessmentContent)
+	for _, item := range allAssessmentContents {
+		allAssessmentContentMap[item.ContentID] = item
 	}
 	waitUpdateAssessmentOutcomes := make([]*v2.AssessmentUserOutcome, 0)
 
