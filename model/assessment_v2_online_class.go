@@ -241,7 +241,7 @@ func (o *OnlineClassAssessment) MatchContents() ([]*v2.AssessmentContentReply, e
 			contentReplyItem.H5PSubID = roomContentItem.SubContentID
 
 			if roomContentItem.FileType == external.FileTypeH5P {
-				if canScoringMap[roomContentItem.SubContentType] {
+				if roomContentItem.MaxScore > 0 {
 					contentReplyItem.FileType = v2.AssessmentFileTypeSupportScoreStandAlone
 				} else {
 					contentReplyItem.FileType = v2.AssessmentFileTypeNotSupportScoreStandAlone
@@ -251,7 +251,6 @@ func (o *OnlineClassAssessment) MatchContents() ([]*v2.AssessmentContentReply, e
 			}
 
 			if len(roomContentItem.Children) > 0 {
-				//contentReplyItem.MaxScore = 0
 				contentReplyItem.IgnoreCalculateScore = true
 				contentReplyItem.FileType = v2.AssessmentFileTypeHasChildContainer
 				result = append(result, contentReplyItem)
@@ -456,7 +455,7 @@ func (o *OnlineClassAssessment) appendContent(roomContent *RoomContent, material
 	}
 
 	if roomContent.FileType == external.FileTypeH5P {
-		if canScoringMap[roomContent.SubContentType] || roomContent.MaxScore > 0 {
+		if roomContent.MaxScore > 0 {
 			replyItem.FileType = v2.AssessmentFileTypeSupportScoreStandAlone
 		} else {
 			replyItem.FileType = v2.AssessmentFileTypeNotSupportScoreStandAlone

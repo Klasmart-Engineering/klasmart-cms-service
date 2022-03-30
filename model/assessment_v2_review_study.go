@@ -214,7 +214,7 @@ func (o *ReviewStudyAssessment) appendStudentScore(roomContent *UserRoomInfo, ma
 	}
 
 	if roomContent.FileType == external.FileTypeH5P {
-		if canScoringMap[roomContent.SubContentType] || roomContent.MaxScore > 0 {
+		if roomContent.MaxScore > 0 {
 			replyItem.Content.FileType = v2.AssessmentFileTypeSupportScoreStandAlone
 		} else {
 			replyItem.Content.FileType = v2.AssessmentFileTypeNotSupportScoreStandAlone
