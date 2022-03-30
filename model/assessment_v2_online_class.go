@@ -394,7 +394,7 @@ func (o *OnlineClassAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 				}
 				if o.ag.assessment.Status == v2.AssessmentStatusInDraft ||
 					o.ag.assessment.Status == v2.AssessmentStatusComplete {
-					if userOutcome != nil {
+					if userOutcome != nil && userOutcome.Status != "" {
 						userOutcomeReplyItem.Status = userOutcome.Status
 					} else {
 						userOutcomeReplyItem.Status = v2.AssessmentUserOutcomeStatusUnknown
