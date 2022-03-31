@@ -46,6 +46,10 @@ type IAssessmentOfflineStudyModel interface {
 
 func (a *assessmentOfflineStudyModel) GetUserResult(ctx context.Context, op *entity.Operator, scheduleIDs []string, userIDs []string) (map[string][]*v2.AssessmentUserResultDBView, error) {
 	_, userResults, err := assessmentV2.GetAssessmentUserResultDA().GetAssessmentUserResultDBView(ctx, &assessmentV2.AssessmentUserResultDBViewCondition{
+		OrgID: sql.NullString{
+			String: op.OrgID,
+			Valid:  true,
+		},
 		ScheduleIDs: entity.NullStrings{
 			Strings: scheduleIDs,
 			Valid:   true,
@@ -69,6 +73,10 @@ func (a *assessmentOfflineStudyModel) GetUserResult(ctx context.Context, op *ent
 
 func (a *assessmentOfflineStudyModel) IsAnyOneCompleteByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]bool, error) {
 	_, userResults, err := assessmentV2.GetAssessmentUserResultDA().GetAssessmentUserResultDBView(ctx, &assessmentV2.AssessmentUserResultDBViewCondition{
+		OrgID: sql.NullString{
+			String: op.OrgID,
+			Valid:  true,
+		},
 		ScheduleIDs: entity.NullStrings{
 			Strings: scheduleIDs,
 			Valid:   true,
@@ -379,9 +387,6 @@ func (a *assessmentOfflineStudyModel) UserSubmitOfflineStudy(ctx context.Context
 	}
 
 	assessment := assessments[0]
-	if assessment.Status == v2.AssessmentStatusComplete {
-		return ErrOfflineStudyHasCompleted
-	}
 
 	var assessmentUsers []*v2.AssessmentUser
 	assessmentUserCond := &assessmentV2.AssessmentUserCondition{
@@ -485,6 +490,10 @@ func (a *assessmentOfflineStudyModel) UserSubmitOfflineStudy(ctx context.Context
 		})
 	} else {
 		userResult := userResults[0]
+		if userResult.Status == v2.UserResultProcessStatusComplete {
+			log.Warn(ctx, "user offline assessment is complete", log.Any("req", req))
+			return ErrOfflineStudyHasCompleted
+		}
 		userResult.StudentFeedbackID = req.FeedbackID
 		userResult.UpdateAt = time.Now().Unix()
 		_, err = assessmentV2.GetAssessmentUserResultDA().Update(ctx, userResult)

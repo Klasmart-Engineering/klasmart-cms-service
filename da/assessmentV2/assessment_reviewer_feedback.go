@@ -55,8 +55,10 @@ where
 	wheres = append(wheres, "t3.assessment_type = ?")
 	params = append(params, v2.AssessmentTypeOfflineStudy.String())
 
-	wheres = append(wheres, "t3.org_id = ?")
-	params = append(params, condition.OrgID.String)
+	if condition.OrgID.Valid {
+		wheres = append(wheres, "t3.org_id = ?")
+		params = append(params, condition.OrgID.String)
+	}
 
 	if condition.UserIDs.Valid {
 		wheres = append(wheres, "t2.user_id in (?)")
