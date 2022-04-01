@@ -183,8 +183,10 @@ func (m *assessmentLiveRoom) getUserResultInfo(ctx context.Context, userScores *
 		if resultItem.SubContentID == "" {
 			if resultItem.H5PID == "" {
 				resultItem.TreeID = resultItem.MaterialID
+			} else {
+				resultItem.TreeID = resultItem.H5PID
 			}
-			resultItem.TreeID = resultItem.H5PID
+
 		}
 
 		result = append(result, resultItem)
