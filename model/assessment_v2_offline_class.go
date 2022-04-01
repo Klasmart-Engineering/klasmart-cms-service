@@ -53,40 +53,7 @@ func (o *OfflineClassAssessment) MatchSubject() (map[string][]*entity.IDName, er
 }
 
 func (o *OfflineClassAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
-	assessmentUserMap, err := o.ags.GetAssessmentUserMap()
-	if err != nil {
-		return nil, err
-	}
-
-	userMap, err := o.ags.GetUserMap()
-	if err != nil {
-		return nil, err
-	}
-
-	result := make(map[string][]*entity.IDName, len(o.ags.assessments))
-	for _, item := range o.ags.assessments {
-		if assUserItems, ok := assessmentUserMap[item.ID]; ok {
-			for _, assUserItem := range assUserItems {
-				if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
-					continue
-				}
-				//if assUserItem.StatusBySystem == v2.AssessmentUserStatusNotParticipate {
-				//	continue
-				//}
-				resultItem := &entity.IDName{
-					ID:   assUserItem.UserID,
-					Name: "",
-				}
-
-				if userItem, ok := userMap[assUserItem.UserID]; ok && userItem != nil {
-					resultItem.Name = userItem.Name
-				}
-				result[item.ID] = append(result[item.ID], resultItem)
-			}
-		}
-	}
-
-	return result, nil
+	return o.base.MatchTeacher()
 }
 
 func (o *OfflineClassAssessment) MatchClass() (map[string]*entity.IDName, error) {

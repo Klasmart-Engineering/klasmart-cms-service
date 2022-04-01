@@ -119,6 +119,41 @@ func (o *BaseAssessment) MatchLessPlan() (map[string]*v2.AssessmentContentView, 
 	return result, nil
 }
 
+func (o *BaseAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
+	assessmentUserMap, err := o.ag.GetAssessmentUserMap()
+	if err != nil {
+		return nil, err
+	}
+
+	userMap, err := o.ag.GetUserMap()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string][]*entity.IDName, len(o.ag.assessments))
+	for _, item := range o.ag.assessments {
+		if assUserItems, ok := assessmentUserMap[item.ID]; ok {
+			for _, assUserItem := range assUserItems {
+				if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
+					continue
+				}
+
+				resultItem := &entity.IDName{
+					ID:   assUserItem.UserID,
+					Name: "",
+				}
+
+				if userItem, ok := userMap[assUserItem.UserID]; ok && userItem != nil {
+					resultItem.Name = userItem.Name
+				}
+				result[item.ID] = append(result[item.ID], resultItem)
+			}
+		}
+	}
+
+	return result, nil
+}
+
 func (o *BaseAssessment) summaryRoomScores(userMapFromRoomMap map[string]*RoomUserInfo, contentsReply []*v2.AssessmentContentReply) (map[string]float64, map[string]float64) {
 	contentSummaryTotalScoreMap := make(map[string]float64)
 	contentMap := make(map[string]*v2.AssessmentContentReply)
