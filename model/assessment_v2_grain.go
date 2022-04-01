@@ -445,9 +445,7 @@ func (ags *AssessmentGrain) GetRoomData() (map[string][]*external.H5PUserScores,
 
 	scheduleIDs := make([]string, 0, len(ags.assessments))
 	for _, item := range scheduleMap {
-		if item.LessonPlanID != "" {
-			scheduleIDs = append(scheduleIDs, item.ID)
-		}
+		scheduleIDs = append(scheduleIDs, item.ID)
 	}
 
 	roomDataMap, err := external.GetH5PRoomScoreServiceProvider().BatchGet(ctx, op, scheduleIDs)
