@@ -100,6 +100,8 @@ func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiff
 		}
 	}
 
+	log.Debug(ctx, "student room data", log.Any("studentRoomDataMap", studentRoomDataMap))
+
 	result := make([]*v2.AssessmentDiffContentStudentsReply, 0, len(studentReviewMap))
 	for _, userItem := range assessmentUsers {
 		if userItem.UserType != v2.AssessmentUserTypeStudent {
@@ -123,7 +125,10 @@ func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiff
 				continue
 			}
 
-			studentRoomDataItem, _ := studentRoomDataMap[userItem.UserID]
+			studentRoomDataItem, ok := studentRoomDataMap[userItem.UserID]
+			if !ok {
+				log.Warn(ctx, "not found user room data", log.String("userID", userItem.UserID), log.Any("studentRoomDataMap", studentRoomDataMap))
+			}
 
 			index := 0
 			for _, contentItem := range studentReviewItem.LiveLessonPlan.LessonMaterials {
