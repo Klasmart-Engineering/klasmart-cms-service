@@ -145,6 +145,7 @@ func (m *assessmentLiveRoom) getUserResultInfo(ctx context.Context, userScores *
 		log.Warn(ctx, "room user scores data is null", log.Any("userScores", userScores))
 		return nil, constant.ErrInvalidArgs
 	}
+	userInfo := userScores.User
 
 	for _, scoreItem := range userScores.Scores {
 		if scoreItem.Content == nil {
@@ -153,7 +154,7 @@ func (m *assessmentLiveRoom) getUserResultInfo(ctx context.Context, userScores *
 		}
 
 		resultItem := &UserRoomInfo{
-			UserID:         scoreItem.User.UserID,
+			UserID:         userInfo.UserID,
 			Seen:           scoreItem.Seen,
 			ParentID:       scoreItem.Content.ParentID,
 			SubContentID:   scoreItem.Content.SubContentID,
