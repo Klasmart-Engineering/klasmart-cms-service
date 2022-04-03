@@ -642,6 +642,7 @@ func (asg *AssessmentGrain) SingleGetLatestContentsFromSchedule() ([]*v2.Assessm
 		return nil, err
 	}
 
+	// convert to latest lesson plan
 	latestLessPlanIDMap, err := GetContentModel().GetLatestContentIDMapByIDListInternal(ctx, dbo.MustGetDB(ctx), []string{schedule.LessonPlanID})
 	if err != nil {
 		return nil, err
@@ -652,22 +653,24 @@ func (asg *AssessmentGrain) SingleGetLatestContentsFromSchedule() ([]*v2.Assessm
 		return nil, constant.ErrRecordNotFound
 	}
 
+	// get lesson plan info
 	latestLessPlans, err := GetContentModel().GetContentByIDListInternal(ctx, dbo.MustGetDB(ctx), []string{latestLessPlanID})
 	if err != nil {
 		return nil, err
 	}
 	if len(latestLessPlans) <= 0 {
+		log.Warn(ctx, "not found content info", log.String("latestLessPlanID", latestLessPlanID), log.Any("schedule", schedule))
 		return nil, constant.ErrRecordNotFound
 	}
 
+	// get material in lesson plan
 	subContentsMap, err := GetContentModel().GetContentsSubContentsMapByIDListInternal(ctx, dbo.MustGetDB(ctx), []string{latestLessPlanID}, op)
 	if err != nil {
 		return nil, err
 	}
 
+	// filling lesson plan
 	latestLessPlan := latestLessPlans[0]
-	subContents := subContentsMap[latestLessPlan.ID]
-
 	lessPlan := &v2.AssessmentContentView{
 		ID:          latestLessPlan.ID,
 		Name:        latestLessPlan.Name,
@@ -678,7 +681,13 @@ func (asg *AssessmentGrain) SingleGetLatestContentsFromSchedule() ([]*v2.Assessm
 	}
 	asg.latestContentsFromSchedule = append(asg.latestContentsFromSchedule, lessPlan)
 
+	// filling material
+	dedupMap := make(map[string]struct{})
+	subContents := subContentsMap[latestLessPlan.ID]
 	for _, item := range subContents {
+		if _, ok := dedupMap[item.ID]; ok {
+			continue
+		}
 		subContentItem := &v2.AssessmentContentView{
 			ID:          item.ID,
 			Name:        item.Name,
@@ -688,9 +697,15 @@ func (asg *AssessmentGrain) SingleGetLatestContentsFromSchedule() ([]*v2.Assessm
 			FileType:    item.FileType,
 		}
 		asg.latestContentsFromSchedule = append(asg.latestContentsFromSchedule, subContentItem)
+		dedupMap[item.ID] = struct{}{}
 	}
 
-	asg.ConvertContentOutcome(asg.latestContentsFromSchedule)
+	// convert content outcome to latest outcome
+	err = asg.ConvertContentOutcome(asg.latestContentsFromSchedule)
+	if err != nil {
+		return nil, err
+	}
+
 	asg.InitRecord[SingleLatestContentSliceFromSchedule] = true
 
 	return asg.latestContentsFromSchedule, nil
@@ -735,13 +750,26 @@ func (asg *AssessmentGrain) SingleGetLockedContentsFromSchedule() ([]*v2.Assessm
 
 func (asg *AssessmentGrain) getLockedContentBySchedule(schedule *entity.Schedule) ([]*v2.AssessmentContentView, error) {
 	ctx := asg.ctx
+
+	if !schedule.IsLockedLessonPlan() {
+		log.Warn(ctx, "schedule not locked lesson plan", log.Any("schedule", schedule))
+		return nil, constant.ErrInvalidArgs
+	}
+
+	dedupMap := make(map[string]struct{})
+
+	// Extract and deduplicate contentID
 	contentIDs := make([]string, 0)
 	contentIDs = append(contentIDs, schedule.LiveLessonPlan.LessonPlanID)
 	for _, materialItem := range schedule.LiveLessonPlan.LessonMaterials {
+		if _, ok := dedupMap[materialItem.LessonMaterialID]; ok {
+			continue
+		}
 		contentIDs = append(contentIDs, materialItem.LessonMaterialID)
+		dedupMap[materialItem.LessonMaterialID] = struct{}{}
 	}
 
-	contentIDs = utils.SliceDeduplication(contentIDs)
+	// get content info
 	contents, err := GetContentModel().GetContentByIDListInternal(ctx, dbo.MustGetDB(ctx), contentIDs)
 	if err != nil {
 		log.Error(ctx, "toViews: GetContentModel().GetContentByIDList: get failed",
@@ -750,11 +778,14 @@ func (asg *AssessmentGrain) getLockedContentBySchedule(schedule *entity.Schedule
 		)
 		return nil, err
 	}
+
+	// Extract content outcomes
 	contentOutcomeIDsMap := make(map[string][]string, len(contents))
 	for _, item := range contents {
 		contentOutcomeIDsMap[item.ID] = item.OutcomeIDs
 	}
 
+	// convert to content map
 	contentInfoMap := make(map[string]*entity.ContentInfoInternal, len(contents))
 	for _, item := range contents {
 		contentInfoMap[item.ID] = item
@@ -762,6 +793,7 @@ func (asg *AssessmentGrain) getLockedContentBySchedule(schedule *entity.Schedule
 
 	liveLessonPlan := schedule.LiveLessonPlan
 
+	// filling lesson plan
 	lessPlan := &v2.AssessmentContentView{
 		ID:          liveLessonPlan.LessonPlanID,
 		Name:        liveLessonPlan.LessonPlanName,
@@ -775,6 +807,7 @@ func (asg *AssessmentGrain) getLockedContentBySchedule(schedule *entity.Schedule
 
 	result := append(asg.lockedContentsFromSchedule, lessPlan)
 
+	// filling lesson material
 	for _, item := range liveLessonPlan.LessonMaterials {
 		materialItem := &v2.AssessmentContentView{
 			ID:          item.LessonMaterialID,
