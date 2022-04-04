@@ -705,7 +705,6 @@ func (asg *AssessmentGrain) SingleGetLatestContentsFromSchedule() ([]*v2.Assessm
 	if err != nil {
 		return nil, err
 	}
-
 	asg.InitRecord[SingleLatestContentSliceFromSchedule] = true
 
 	return asg.latestContentsFromSchedule, nil
@@ -906,9 +905,6 @@ func (asg *AssessmentGrain) SingleGetAssessmentContentMap() (map[string]*v2.Asse
 			Valid:  true,
 		},
 	}, &assessmentContents)
-	if err != nil {
-		return nil, err
-	}
 	if err != nil {
 		return nil, err
 	}

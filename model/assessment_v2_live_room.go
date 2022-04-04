@@ -16,12 +16,6 @@ func getAssessmentLiveRoom() *assessmentLiveRoom {
 	return &assessmentLiveRoom{}
 }
 
-//type AssessmentMaterialData struct {
-//	LatestID string
-//	FileType entity.FileType
-//	//Source   SourceID
-//}
-
 type RoomUserInfo struct {
 	UserID  string
 	Results []*RoomUserResults
@@ -491,33 +485,4 @@ var canScoringMap = map[string]bool{
 	"TrueFalse":                    true,
 	"TwitterUserFeed":              false,
 	"ThreeImage":                   false,
-}
-
-type TreeEntity interface {
-	GetID() string
-	GetParentID() string
-	AppendChild(item interface{})
-}
-
-func GetTree(treeArray []TreeEntity) []TreeEntity {
-	tag := make(map[int]bool)
-	tag2 := make(map[string]bool)
-	result := make([]TreeEntity, 0)
-
-	for i := 0; i < len(treeArray); i++ {
-		for j := 0; j < len(treeArray); j++ {
-			if !tag[j] && treeArray[i].GetID() == treeArray[j].GetParentID() {
-				tag[j] = true
-				treeArray[i].AppendChild(treeArray[j])
-				tag2[treeArray[j].GetID()] = true
-			}
-		}
-	}
-
-	for _, item := range treeArray {
-		if !tag2[item.GetID()] {
-			result = append(result, item)
-		}
-	}
-	return result
 }

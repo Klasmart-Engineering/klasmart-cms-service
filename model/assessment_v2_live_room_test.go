@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"testing"
 )
@@ -515,4 +516,22 @@ func TestGetContent(t *testing.T) {
 	}
 
 	t.Log(studentRoomDataMap)
+}
+
+func TestAssessmentExternalService_ContentsToTree(t *testing.T) {
+	ctx := context.Background()
+	testOperator := &entity.Operator{
+		UserID: "afdfc0d9-ada9-4e66-b225-20f956d1a399",
+		OrgID:  "60c064cc-bbd8-4724-b3f6-b886dce4774f", // Badanamu HQ
+		Token:  "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ2NTNmODgwLWI5MjAtNDM1Zi04ZjJkLTk4YjVkNDYyMWViOCIsImVtYWlsIjoic2Nob29sXzAzMDMyOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0OTAwMDY0NiwiaXNzIjoia2lkc2xvb3AifQ.WUct7kaH3cpmMj2QDqeVvUpE9vVrBafUPa0LjcTsQ2oQKPOsZ4hucATKdFnWJvBEdZ5NgEi55uH7_crR5tCCz5C2-c3Y9pnNy9A_-AHrl9sPEfrBAH3pOIFQDhT5e8sQ5A6CYtcGt2xKYGfWM-GrRMrN0ChvzeTYPtEAevgdfXLwACQzy1Y4LDBoq7XAnZv5D8Lcc6Omww54cQCQvJe8ho1umBII1Wl0Cd_-R8-UycGMvNzXH1KfimnyPncNtz8WbEGaYPImUfi0OaOmkOQAIDwyaGdpuSply70_iQk1E0NRPvQkbbgUDDP-Q4nB4B3arptSABI6YFKzkwNpgYVmYg",
+	}
+	roomInfo, err := external.GetAssessmentServiceProvider().GetRoomInfoByRoomID(ctx, testOperator, "62454aee4c6e70e130530dbc")
+	if err != nil {
+		t.Error(err)
+	}
+	result, err := GetAssessmentExternalService().ContentsToTree(ctx, roomInfo.ScoresByContent)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(result)
 }
