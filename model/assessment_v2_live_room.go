@@ -4,203 +4,270 @@ import (
 	"context"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
 
-type assessmentLiveRoom struct {
+type AssessmentExternalService struct {
 }
 
-func getAssessmentLiveRoom() *assessmentLiveRoom {
-	return &assessmentLiveRoom{}
+func GetAssessmentExternalService() *AssessmentExternalService {
+	return &AssessmentExternalService{}
 }
 
-type RoomUserInfo struct {
-	UserID  string
-	Results []*RoomUserResults
-}
-type RoomInfo struct {
-	//Initialized  bool
-	Contents     []*RoomContent
-	UserRoomInfo []*RoomUserInfo
-}
-type RoomContent struct {
-	ID             string
-	Number         string
-	ParentID       string
-	SubContentID   string
-	SubContentType string
-	FileType       external.FileType
-	H5PID          string
-	MaxScore       float64
-	MaterialID     string
-	Children       []*RoomContent
-
-	LatestID string
-}
-type RoomUserResults struct {
-	Score  float64
-	Answer string
-	//MaximumPossibleScore float64
-	Seen          bool
-	RoomContentID string
+var canSetScoreMap = map[string]bool{
+	"Essay":         true,
+	"AudioRecorder": true,
+	"SpeakTheWords": true,
 }
 
-func (rc *RoomContent) GetID() string {
-	if rc.SubContentID == "" {
-		if rc.H5PID == "" {
-			return rc.MaterialID
+type RoomContentTree struct {
+	TreeID          string
+	TreeParentID    string
+	ContentUniqueID string
+
+	Number   string
+	MaxScore float64
+	//LatestID     string
+
+	external.H5PContent
+	Children []*RoomContentTree
+}
+
+func (rc *RoomContentTree) GetID() string {
+	return rc.TreeID
+}
+func (rc *RoomContentTree) GetParentID() string {
+	return rc.TreeParentID
+}
+func (rc *RoomContentTree) AppendChild(item interface{}) {
+	rc.Children = append(rc.Children, item.(*RoomContentTree))
+}
+
+func (aes *AssessmentExternalService) ParseTreeID(content *external.H5PContent) string {
+	if content.ParentID == "" {
+		return fmt.Sprintf("%s:%s", content.ContentID, content.H5PID)
+	} else {
+		return fmt.Sprintf("%s:%s", content.ContentID, content.SubContentID)
+	}
+}
+
+func (aes *AssessmentExternalService) ParseParentID(content *external.H5PContent) string {
+	if content.ParentID != "" {
+		return fmt.Sprintf("%s:%s", content.ContentID, content.ParentID)
+	}
+
+	return content.ParentID
+}
+
+func (aes *AssessmentExternalService) ParseContentUniqueID(content *external.H5PContent) string {
+	if content.ParentID == "" {
+		return content.ContentID
+	} else {
+		return fmt.Sprintf("%s:%s", content.ContentID, content.SubContentID)
+	}
+}
+
+type RoomUserScore struct {
+	ContentUniqueID string
+	Score           float64
+	Seen            bool
+	Answer          string
+}
+
+func (aes *AssessmentExternalService) StudentScores(ctx context.Context, userScores []*external.H5PUserScores) (map[string][]*RoomUserScore, []*RoomContentTree, error) {
+	userScoreMap := make(map[string][]*RoomUserScore, len(userScores))
+	contentMaxScoreMap := make(map[string]float64)
+	contents := make([]*RoomContentTree, 0)
+
+	for _, userScoreItem := range userScores {
+		if userScoreItem.User == nil {
+			log.Warn(ctx, "user is nil", log.Any("userScoreItem", userScoreItem))
+			continue
 		}
-		return rc.H5PID
+		if len(userScoreItem.Scores) <= 0 {
+			continue
+		}
+
+		for _, scoreItem := range userScoreItem.Scores {
+			if scoreItem.Score == nil {
+				log.Warn(ctx, "user score item is nil", log.String("userID", userScoreItem.User.UserID), log.Any("scoreItem", scoreItem))
+				continue
+			}
+
+			if scoreItem.Content == nil {
+				log.Warn(ctx, "user content is nil", log.String("userID", userScoreItem.User.UserID), log.Any("scoreItem", scoreItem))
+				continue
+			}
+
+			contentUniqueID := aes.ParseContentUniqueID(scoreItem.Content)
+
+			if _, ok := contentMaxScoreMap[contentUniqueID]; !ok {
+				resultItem := &RoomContentTree{
+					TreeID:          aes.ParseTreeID(scoreItem.Content),
+					TreeParentID:    aes.ParseParentID(scoreItem.Content),
+					ContentUniqueID: aes.ParseContentUniqueID(scoreItem.Content),
+					H5PContent: external.H5PContent{
+						ParentID:     scoreItem.Content.ParentID,
+						ContentID:    scoreItem.Content.ContentID,
+						Name:         scoreItem.Content.Name,
+						Type:         scoreItem.Content.Type,
+						FileType:     scoreItem.Content.FileType,
+						H5PID:        scoreItem.Content.H5PID,
+						SubContentID: scoreItem.Content.SubContentID,
+					},
+					Children: nil,
+				}
+				contents = append(contents, resultItem)
+				contentMaxScoreMap[contentUniqueID] = 0
+			}
+
+			userScoreResultItem := &RoomUserScore{
+				ContentUniqueID: contentUniqueID,
+				Seen:            scoreItem.Seen,
+			}
+
+			if len(scoreItem.TeacherScores) > 0 {
+				userScoreResultItem.Score = scoreItem.TeacherScores[len(scoreItem.TeacherScores)-1].Score
+			} else if len(scoreItem.Score.Scores) > 0 {
+				userScoreResultItem.Score = scoreItem.Score.Scores[0]
+			} else {
+				userScoreResultItem.Score = 0
+			}
+
+			if len(scoreItem.Score.Answers) > 0 {
+				userScoreResultItem.Answer = scoreItem.Score.Answers[0].Answer
+				if contentMaxScoreMap[userScoreResultItem.ContentUniqueID] < scoreItem.Score.Answers[0].MaximumPossibleScore {
+					contentMaxScoreMap[userScoreResultItem.ContentUniqueID] = scoreItem.Score.Answers[0].MaximumPossibleScore
+				}
+			}
+
+			userScoreMap[userScoreItem.User.UserID] = append(userScoreMap[userScoreItem.User.UserID], userScoreResultItem)
+		}
 	}
-	return rc.SubContentID
-}
-func (rc *RoomContent) GetParentID() string {
-	return rc.ParentID
-}
-func (rc *RoomContent) AppendChild(item interface{}) {
-	rc.Children = append(rc.Children, item.(*RoomContent))
+
+	tree := aes.deconstructUserRoomInfo(contents)
+	//aes.setUserRoomItemNumber(tree, "")
+
+	for _, item := range contents {
+		item.MaxScore = contentMaxScoreMap[item.ContentUniqueID]
+	}
+
+	return userScoreMap, tree, nil
 }
 
-func (m *assessmentLiveRoom) Deconstruct(contents []*RoomContent) []*RoomContent {
-	data := make([]TreeEntity, len(contents))
-	for i, item := range contents {
-		data[i] = item
+func (aes *AssessmentExternalService) StudentCommentMap(ctx context.Context, teacherComments []*external.H5PTeacherCommentsByStudent) (map[string]string, error) {
+	result := make(map[string]string)
+
+	for _, commentItem := range teacherComments {
+		if commentItem.User == nil {
+			log.Warn(ctx, "user is nil", log.Any("commentItem", commentItem))
+			continue
+		}
+
+		if len(commentItem.TeacherComments) <= 0 {
+			continue
+		}
+
+		latestComment := commentItem.TeacherComments[len(commentItem.TeacherComments)-1]
+
+		if latestComment == nil {
+			continue
+		}
+
+		result[commentItem.User.UserID] = latestComment.Comment
 	}
 
-	treeData := GetTree(data)
-	result := make([]*RoomContent, 0)
-	for _, item := range treeData {
-		result = append(result, item.(*RoomContent))
-	}
-
-	return result
+	return result, nil
 }
-func (m *assessmentLiveRoom) DeconstructUserRoomInfo(userRoomInfos []*UserRoomInfo) []*UserRoomInfo {
+
+func (aes *AssessmentExternalService) setUserRoomItemNumber(userRoomInfos []*RoomContentTree, prefix string) {
+	for i, lm := range userRoomInfos {
+		if len(prefix) > 0 {
+			lm.Number = fmt.Sprintf("%s-%d", prefix, i+1)
+		} else {
+			lm.Number = fmt.Sprintf("%d", i+1)
+		}
+		if len(lm.Children) > 0 {
+			aes.setUserRoomItemNumber(lm.Children, lm.Number)
+		}
+	}
+}
+
+func (aes *AssessmentExternalService) deconstructUserRoomInfo(userRoomInfos []*RoomContentTree) []*RoomContentTree {
 	data := make([]TreeEntity, len(userRoomInfos))
 	for i, item := range userRoomInfos {
 		data[i] = item
 	}
 
 	treeData := GetTree(data)
-	result := make([]*UserRoomInfo, 0)
+	result := make([]*RoomContentTree, 0)
 	for _, item := range treeData {
-		result = append(result, item.(*UserRoomInfo))
+		result = append(result, item.(*RoomContentTree))
 	}
 
 	return result
 }
 
-type UserRoomInfo struct {
-	UserID string
-	Score  float64
-	Answer string
-	Seen   bool
+func (aes *AssessmentExternalService) calcRoomCompleteRate(ctx context.Context, userScores []*external.H5PUserScores, studentCount int) float64 {
+	attemptedCount := 0
+	contentCount := 0
+	contentMap := make(map[string]struct{})
 
-	TreeID         string
-	ParentID       string
-	Number         string
-	SubContentID   string
-	SubContentType string
-	FileType       external.FileType
-	H5PID          string
-	MaxScore       float64
-	MaterialID     string
-	Children       []*UserRoomInfo
-}
-
-func (rc *UserRoomInfo) GetID() string {
-	return rc.TreeID
-}
-func (rc *UserRoomInfo) GetParentID() string {
-	return rc.ParentID
-}
-func (rc *UserRoomInfo) AppendChild(item interface{}) {
-	rc.Children = append(rc.Children, item.(*UserRoomInfo))
-}
-
-func (m *assessmentLiveRoom) getUserResultInfo(ctx context.Context, userScores *external.H5PUserScores) ([]*UserRoomInfo, error) {
-	result := make([]*UserRoomInfo, 0)
-
-	if userScores == nil {
-		log.Warn(ctx, "user scores data is null")
-		return result, nil
-	}
-
-	//contentMap := make(map[string]float64)
-
-	if userScores.User == nil {
-		log.Warn(ctx, "room user data is null", log.Any("userScores", userScores))
-		return nil, constant.ErrInvalidArgs
-	}
-
-	if len(userScores.Scores) <= 0 {
-		log.Warn(ctx, "room user scores data is null", log.Any("userScores", userScores))
-		return nil, constant.ErrInvalidArgs
-	}
-	userInfo := userScores.User
-
-	for _, scoreItem := range userScores.Scores {
-		if scoreItem.Content == nil {
-			log.Warn(ctx, "room user scores about content data is null", log.Any("scoreItem", scoreItem))
+	for _, item := range userScores {
+		if item.User == nil {
 			continue
 		}
 
-		resultItem := &UserRoomInfo{
-			UserID:         userInfo.UserID,
-			Seen:           scoreItem.Seen,
-			ParentID:       scoreItem.Content.ParentID,
-			SubContentID:   scoreItem.Content.SubContentID,
-			SubContentType: scoreItem.Content.Type,
-			H5PID:          scoreItem.Content.H5PID,
-			MaterialID:     scoreItem.Content.ContentID,
-			MaxScore:       scoreItem.Score.Max,
-			FileType:       scoreItem.Content.FileType,
-		}
-		if scoreItem.Score != nil {
-			if len(scoreItem.TeacherScores) > 0 {
-				resultItem.Score = scoreItem.TeacherScores[len(scoreItem.TeacherScores)-1].Score
-			} else if len(scoreItem.Score.Scores) > 0 {
-				resultItem.Score = scoreItem.Score.Scores[0]
-			}
-
-			if len(scoreItem.Score.Answers) > 0 {
-				resultItem.Answer = scoreItem.Score.Answers[0].Answer
-				if resultItem.MaxScore < scoreItem.Score.Answers[0].MaximumPossibleScore {
-					resultItem.MaxScore = scoreItem.Score.Answers[0].MaximumPossibleScore
-				}
-			}
+		if len(item.Scores) <= 0 {
+			continue
 		}
 
-		resultItem.TreeID = resultItem.SubContentID
-		if resultItem.SubContentID == "" {
-			if resultItem.H5PID == "" {
-				resultItem.TreeID = resultItem.MaterialID
-			} else {
-				resultItem.TreeID = resultItem.H5PID
+		for _, scoreItem := range item.Scores {
+			if scoreItem.Content == nil {
+				continue
 			}
 
+			contentKey := aes.ParseTreeID(scoreItem.Content)
+			if _, ok := contentMap[contentKey]; !ok {
+				contentCount++
+				contentMap[contentKey] = struct{}{}
+			}
+			if scoreItem.Seen {
+				attemptedCount++
+			}
 		}
-
-		result = append(result, resultItem)
 	}
 
-	userScoresTree := getAssessmentLiveRoom().DeconstructUserRoomInfo(result)
-	m.setUserRoomItemNumber(userScoresTree, "")
+	var result float64
 
-	return userScoresTree, nil
+	total := float64(studentCount * contentCount)
+	if total > 0 {
+		result = float64(attemptedCount) / total
+
+		if result > 1 {
+			log.Warn(ctx, "calcRoomCompleteRate greater than 1",
+				log.Int("studentCount", studentCount),
+				log.Int("contentCount", contentCount),
+				log.Int("attemptedCount", attemptedCount),
+			)
+
+			result = 1
+		}
+	}
+
+	return result
 }
 
-type LiveRoomContentForEditScore struct {
-	Type string
+type AllowEditScoreContent struct {
+	ContentID    string
+	SubContentID string
 }
 
-func (m *assessmentLiveRoom) AllowEditScoreContent(ctx context.Context, roomData []*external.H5PUserScores) (map[string]bool, error) {
-	contentMap := make(map[string]*LiveRoomContentForEditScore)
+func (aes *AssessmentExternalService) AllowEditScoreContent(ctx context.Context, userScores []*external.H5PUserScores) (map[string]*AllowEditScoreContent, error) {
+	contentMap := make(map[string]*external.H5PContent)
 
 	contentMaxScoreMap := make(map[string]float64)
-	for _, item := range roomData {
+	for _, item := range userScores {
 		if item.User == nil {
 			log.Warn(ctx, "room user data is null", log.Any("roomDataItem", item))
 			continue
@@ -216,9 +283,9 @@ func (m *assessmentLiveRoom) AllowEditScoreContent(ctx context.Context, roomData
 				log.Warn(ctx, "room user scores about content data is null", log.Any("roomDataItem", item))
 				continue
 			}
-			contentKey := scoreItem.Content.GetInternalID()
+			contentKey := aes.ParseContentUniqueID(scoreItem.Content)
 			if _, ok := contentMap[contentKey]; !ok {
-				contentMap[contentKey] = &LiveRoomContentForEditScore{Type: scoreItem.Content.Type}
+				contentMap[contentKey] = scoreItem.Content
 				contentMaxScoreMap[contentKey] = 0
 			}
 
@@ -232,10 +299,13 @@ func (m *assessmentLiveRoom) AllowEditScoreContent(ctx context.Context, roomData
 		}
 	}
 
-	result := make(map[string]bool)
+	result := make(map[string]*AllowEditScoreContent)
 	for key, contentItem := range contentMap {
 		if maxScore, ok := contentMaxScoreMap[key]; ok && maxScore > 0 && canSetScoreMap[contentItem.Type] {
-			result[key] = true
+			result[key] = &AllowEditScoreContent{
+				ContentID:    contentItem.ContentID,
+				SubContentID: contentItem.SubContentID,
+			}
 		}
 	}
 
@@ -246,243 +316,31 @@ func (m *assessmentLiveRoom) AllowEditScoreContent(ctx context.Context, roomData
 	return result, nil
 }
 
-func (m *assessmentLiveRoom) getRoomResultInfo(ctx context.Context, roomData []*external.H5PUserScores) (*RoomInfo, error) {
-	result := &RoomInfo{
-		Contents:     make([]*RoomContent, 0),
-		UserRoomInfo: make([]*RoomUserInfo, 0),
-	}
-
-	if roomData == nil {
-		log.Warn(ctx, "room data is null")
-		return result, nil
-	}
-
-	contentMap := make(map[string]float64)
-
-	for _, item := range roomData {
-		if item.User == nil {
-			log.Warn(ctx, "room user data is null", log.Any("roomDataItem", item))
-			continue
-		}
-
-		if len(item.Scores) <= 0 {
-			log.Warn(ctx, "room user scores data is null", log.Any("roomDataItem", item))
-			continue
-		}
-		userItem := &RoomUserInfo{
-			UserID:  item.User.UserID,
-			Results: make([]*RoomUserResults, 0),
-		}
-
-		for _, scoreItem := range item.Scores {
-			if scoreItem.Content == nil {
-				log.Warn(ctx, "room user scores about content data is null", log.Any("roomDataItem", item))
-				continue
-			}
-			contentKey := scoreItem.Content.GetInternalID()
-			if _, ok := contentMap[contentKey]; !ok {
-				roomContentItem := &RoomContent{
-					ID:             contentKey, //scoreItem.Content.GetInternalID(),
-					ParentID:       scoreItem.Content.ParentID,
-					SubContentID:   scoreItem.Content.SubContentID,
-					SubContentType: scoreItem.Content.Type,
-					H5PID:          scoreItem.Content.H5PID,
-					MaterialID:     scoreItem.Content.ContentID,
-					MaxScore:       scoreItem.Score.Max,
-					FileType:       scoreItem.Content.FileType,
-				}
-				result.Contents = append(result.Contents, roomContentItem)
-				contentMap[contentKey] = 0
-			}
-
-			userResultItem := &RoomUserResults{
-				Seen: scoreItem.Seen,
-			}
-			if scoreItem.Score != nil {
-				userResultItem.RoomContentID = contentKey
-				if len(scoreItem.TeacherScores) > 0 {
-					userResultItem.Score = scoreItem.TeacherScores[len(scoreItem.TeacherScores)-1].Score
-				} else if len(scoreItem.Score.Scores) > 0 {
-					userResultItem.Score = scoreItem.Score.Scores[0]
-				}
-
-				if len(scoreItem.Score.Answers) > 0 {
-					userResultItem.Answer = scoreItem.Score.Answers[0].Answer
-					if contentMap[contentKey] < scoreItem.Score.Answers[0].MaximumPossibleScore {
-						contentMap[contentKey] = scoreItem.Score.Answers[0].MaximumPossibleScore
-					}
-				}
-			}
-
-			userItem.Results = append(userItem.Results, userResultItem)
-		}
-
-		result.UserRoomInfo = append(result.UserRoomInfo, userItem)
-	}
-
-	for _, item := range result.Contents {
-		item.MaxScore = contentMap[item.ID]
-	}
-
-	contentTree := getAssessmentLiveRoom().Deconstruct(result.Contents)
-	m.setContentNumber(contentTree, "")
-	result.Contents = contentTree
-
-	return result, nil
+type TreeEntity interface {
+	GetID() string
+	GetParentID() string
+	AppendChild(item interface{})
 }
 
-func (m *assessmentLiveRoom) calcRoomCompleteRate(roomData []*external.H5PUserScores, studentCount int) float64 {
-	attemptedCount := 0
-	contentCount := 0
-	contentMap := make(map[string]struct{})
+func GetTree(treeArray []TreeEntity) []TreeEntity {
+	tag := make(map[int]bool)
+	tag2 := make(map[string]bool)
+	result := make([]TreeEntity, 0)
 
-	for _, item := range roomData {
-		if item.User == nil {
-			continue
-		}
-
-		if len(item.Scores) <= 0 {
-			continue
-		}
-
-		for _, scoreItem := range item.Scores {
-			if scoreItem.Content == nil {
-				continue
+	for i := 0; i < len(treeArray); i++ {
+		for j := 0; j < len(treeArray); j++ {
+			if !tag[j] && treeArray[i].GetID() == treeArray[j].GetParentID() {
+				tag[j] = true
+				treeArray[i].AppendChild(treeArray[j])
+				tag2[treeArray[j].GetID()] = true
 			}
-
-			contentKey := scoreItem.Content.GetInternalID()
-			if _, ok := contentMap[contentKey]; !ok {
-				contentCount++
-				contentMap[contentKey] = struct{}{}
-			}
-			if scoreItem.Seen {
-				attemptedCount++
-			}
-
 		}
 	}
 
-	total := float64(studentCount * contentCount)
-	if total > 0 {
-		return float64(attemptedCount) / total
-	}
-
-	return 0
-}
-
-func (m *assessmentLiveRoom) setContentNumber(treedLessonMaterials []*RoomContent, prefix string) {
-	for i, lm := range treedLessonMaterials {
-		if len(prefix) > 0 {
-			lm.Number = fmt.Sprintf("%s-%d", prefix, i+1)
-		} else {
-			lm.Number = fmt.Sprintf("%d", i+1)
-		}
-		if len(lm.Children) > 0 {
-			m.setContentNumber(lm.Children, lm.Number)
+	for _, item := range treeArray {
+		if !tag2[item.GetID()] {
+			result = append(result, item)
 		}
 	}
-}
-
-func (m *assessmentLiveRoom) setUserRoomItemNumber(userRoomInfos []*UserRoomInfo, prefix string) {
-	for i, lm := range userRoomInfos {
-		if len(prefix) > 0 {
-			lm.Number = fmt.Sprintf("%s-%d", prefix, i+1)
-		} else {
-			lm.Number = fmt.Sprintf("%d", i+1)
-		}
-		if len(lm.Children) > 0 {
-			m.setUserRoomItemNumber(lm.Children, lm.Number)
-		}
-	}
-}
-
-func (m *assessmentLiveRoom) batchGetRoomCommentMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]map[string]string, error) {
-	result := make(map[string]map[string]string)
-	commentMap, err := external.GetH5PRoomCommentServiceProvider().BatchGet(ctx, operator, roomIDs)
-	if err != nil {
-		log.Warn(ctx, "batch get room comment map failed",
-			log.Strings("room_ids", roomIDs),
-			log.Any("operator", operator),
-		)
-
-		return result, nil
-	}
-
-	for roomID, users := range commentMap {
-		result[roomID] = make(map[string]string, len(users))
-		for _, u := range users {
-			if len(u.TeacherComments) <= 0 {
-				continue
-			}
-
-			latestComment := u.TeacherComments[len(u.TeacherComments)-1]
-
-			result[roomID][latestComment.Student.UserID] = latestComment.Comment
-		}
-	}
-	log.Debug(ctx, "batch get room comment map",
-		log.Any("result", result),
-		log.Strings("room_ids", roomIDs),
-	)
-	return result, nil
-}
-
-var canSetScoreMap = map[string]bool{
-	"Essay":         true,
-	"AudioRecorder": true,
-	"SpeakTheWords": true,
-}
-
-var canScoringMap = map[string]bool{
-	"Accordion":                    false,
-	"AdvancedBlanks":               true,
-	"AdventCalendar":               false,
-	"Agamotto":                     false,
-	"ArithmeticQuiz":               true,
-	"Audio":                        false,
-	"AudioRecorder":                false,
-	"BookMaker":                    false,
-	"BranchingScenario":            true,
-	"Chart":                        false,
-	"Collage":                      false,
-	"Column":                       true,
-	"CoursePresentationKID":        true,
-	"Dialogcards":                  false,
-	"Dictation":                    true,
-	"DocumentationTool":            false,
-	"DragQuestion":                 true,
-	"DragText":                     true,
-	"Essay":                        true,
-	"Blanks":                       true,
-	"ImageMultipleHotspotQuestion": true,
-	"ImageHotspotQuestion":         true,
-	"FindTheWords":                 true,
-	"Flashcards":                   true,
-	"GuessTheAnswer":               false,
-	"IFrameEmbed":                  false,
-	"ImageHotspots":                false,
-	"ImagePair":                    true,
-	"ImageSequencing":              true,
-	"ImageJuxtaposition":           false,
-	"ImageSlider":                  false,
-	"ImpressPresentation":          false,
-	"InteractiveBook":              true,
-	"InteractiveVideo":             true,
-	"JigsawPuzzleKID":              true,
-	"KewArCode":                    false,
-	"MarkTheWords":                 true,
-	"MemoryGame":                   true,
-	"MultiChoice":                  true,
-	"PersonalityQuiz":              false,
-	"Questionnaire":                false,
-	"QuestionSet":                  true,
-	"Shape":                        false,
-	"SingleChoiceSet":              true,
-	"SpeakTheWords":                true,
-	"SpeqkTheWordsSet":             true,
-	"Summary":                      true,
-	"Timeline":                     false,
-	"TrueFalse":                    true,
-	"TwitterUserFeed":              false,
-	"ThreeImage":                   false,
+	return result
 }

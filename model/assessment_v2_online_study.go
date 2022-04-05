@@ -75,6 +75,8 @@ func (o *OnlineStudyAssessment) MatchClass() (map[string]*entity.IDName, error) 
 }
 
 func (o *OnlineStudyAssessment) MatchCompleteRate() (map[string]float64, error) {
+	ctx := o.ag.ctx
+
 	assessmentUserMap, err := o.ag.GetAssessmentUserMap()
 	if err != nil {
 		return nil, err
@@ -89,7 +91,7 @@ func (o *OnlineStudyAssessment) MatchCompleteRate() (map[string]float64, error) 
 		}
 	}
 
-	roomDataMap, err := o.ag.GetRoomData()
+	roomDataMap, err := o.ag.GetRoomStudentScoresAndComments()
 	if err != nil {
 		return nil, err
 	}
@@ -97,8 +99,7 @@ func (o *OnlineStudyAssessment) MatchCompleteRate() (map[string]float64, error) 
 	result := make(map[string]float64)
 	for _, item := range o.ag.assessments {
 		if roomData, ok := roomDataMap[item.ScheduleID]; ok {
-			result[item.ID] = getAssessmentLiveRoom().
-				calcRoomCompleteRate(roomData, studentCount[item.ID])
+			result[item.ID] = GetAssessmentExternalService().calcRoomCompleteRate(ctx, roomData.ScoresByUser, studentCount[item.ID])
 		}
 	}
 
@@ -165,14 +166,9 @@ func (o *OnlineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 		return nil, err
 	}
 
-	roomInfo, err := o.ag.SingleGetRoomData()
+	userScoreMap, _, err := o.ag.SingleGetRoomData()
 	if err != nil {
 		return nil, err
-	}
-
-	userMapFromRoomMap := make(map[string]*RoomUserInfo, len(roomInfo.UserRoomInfo))
-	for _, item := range roomInfo.UserRoomInfo {
-		userMapFromRoomMap[item.UserID] = item
 	}
 
 	userMap, err := o.ag.GetUserMap()
@@ -180,18 +176,18 @@ func (o *OnlineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 		return nil, err
 	}
 
-	roomUserResultMap := make(map[string]*RoomUserResults)
-	for _, item := range userMapFromRoomMap {
-		for _, resultItem := range item.Results {
+	roomUserResultMap := make(map[string]*RoomUserScore)
+	for userID, scores := range userScoreMap {
+		for _, resultItem := range scores {
 			key := o.ag.GetKey([]string{
-				item.UserID,
-				resultItem.RoomContentID,
+				userID,
+				resultItem.ContentUniqueID,
 			})
 			roomUserResultMap[key] = resultItem
 		}
 	}
 
-	contentScoreMap, studentScoreMap := o.base.summaryRoomScores(userMapFromRoomMap, contentsReply)
+	contentScoreMap, studentScoreMap := o.base.summaryRoomScores(userScoreMap, contentsReply)
 
 	contentMapFromAssessment, err := o.ag.SingleGetAssessmentContentMap()
 	if err != nil {

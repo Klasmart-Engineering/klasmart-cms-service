@@ -2,15 +2,13 @@ package model
 
 import (
 	"context"
-	"encoding/json"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"testing"
 )
 
 func TestGetContent(t *testing.T) {
-	ctx := context.Background()
+	//ctx := context.Background()
 
 	jsonData := `
 {
@@ -478,44 +476,7 @@ func TestGetContent(t *testing.T) {
   }
 }
 `
-	data := map[string]*struct {
-		ScoresByUser []*external.H5PUserScores `json:"scoresByUser"`
-	}{}
-
-	type Response struct {
-		Data interface{} `json:"data,omitempty"`
-		//Errors external.ClErrors    `json:"errors,omitempty"`
-	}
-
-	resp := &Response{
-		Data: &data,
-	}
-	err := json.Unmarshal([]byte(jsonData), resp)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(data)
-	roomData := data["q13"].ScoresByUser
-
-	studentRoomDataMap := make(map[string]map[string]*UserRoomInfo)
-	for _, item := range roomData {
-		if item.User == nil {
-			log.Warn(ctx, "room user data is empty")
-			continue
-		}
-
-		userScoresTree, err := getAssessmentLiveRoom().getUserResultInfo(ctx, item)
-		if err != nil {
-			continue
-		}
-
-		studentRoomDataMap[item.User.UserID] = make(map[string]*UserRoomInfo)
-		for _, userScoreItem := range userScoresTree {
-			studentRoomDataMap[item.User.UserID][userScoreItem.MaterialID] = userScoreItem
-		}
-	}
-
-	t.Log(studentRoomDataMap)
+	t.Log(jsonData)
 }
 
 func TestAssessmentExternalService_ContentsToTree(t *testing.T) {
@@ -523,15 +484,16 @@ func TestAssessmentExternalService_ContentsToTree(t *testing.T) {
 	testOperator := &entity.Operator{
 		UserID: "afdfc0d9-ada9-4e66-b225-20f956d1a399",
 		OrgID:  "60c064cc-bbd8-4724-b3f6-b886dce4774f", // Badanamu HQ
-		Token:  "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ2NTNmODgwLWI5MjAtNDM1Zi04ZjJkLTk4YjVkNDYyMWViOCIsImVtYWlsIjoic2Nob29sXzAzMDMyOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0OTAwMDY0NiwiaXNzIjoia2lkc2xvb3AifQ.WUct7kaH3cpmMj2QDqeVvUpE9vVrBafUPa0LjcTsQ2oQKPOsZ4hucATKdFnWJvBEdZ5NgEi55uH7_crR5tCCz5C2-c3Y9pnNy9A_-AHrl9sPEfrBAH3pOIFQDhT5e8sQ5A6CYtcGt2xKYGfWM-GrRMrN0ChvzeTYPtEAevgdfXLwACQzy1Y4LDBoq7XAnZv5D8Lcc6Omww54cQCQvJe8ho1umBII1Wl0Cd_-R8-UycGMvNzXH1KfimnyPncNtz8WbEGaYPImUfi0OaOmkOQAIDwyaGdpuSply70_iQk1E0NRPvQkbbgUDDP-Q4nB4B3arptSABI6YFKzkwNpgYVmYg",
+		Token:  "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ2NTNmODgwLWI5MjAtNDM1Zi04ZjJkLTk4YjVkNDYyMWViOCIsImVtYWlsIjoic2Nob29sXzAzMDMyOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0OTA3OTI4MCwiaXNzIjoia2lkc2xvb3AifQ.uk1nBxFRcFVU20dwN5uVS3_4Oot6Jktppup-sEvOuye0Jf3_hZ4Do6H8_bsLpCTTpM4fKOididI9NZCtAZUxKQGB8-d2nEJd_wr5U-QE2tyOgCAPwcftP9Ra9J8jhDQGz30YuVO_-ieEnHcTxMaINIfaM0DUEpSgzLxcnn83xBFTTvGfT4CRGx5npfKoYMBDXqaFnUSfrHovLSc5cDvsoDveZ5xUEY4oy99Yc5MuPCmXdxTbygPdCiUn2dvUwUe5xWxC9kgk_4kJZsE8qbs9MQ1V4kK1jebpw9G6_O7fdldv2b5Aqh6lHDb2C8wEXjDCnu7U_RUf94foLXxeYtCmMQ",
 	}
-	roomInfo, err := external.GetAssessmentServiceProvider().GetRoomInfoByRoomID(ctx, testOperator, "62454aee4c6e70e130530dbc")
+	roomInfo, err := external.GetAssessmentServiceProvider().GetScoresWithCommentsByRoomIDs(ctx, testOperator, []string{"62454aee4c6e70e130530dbc"})
 	if err != nil {
 		t.Error(err)
 	}
-	result, err := GetAssessmentExternalService().ContentsToTree(ctx, roomInfo.ScoresByContent)
+	userScoresMap, contentTree, err := GetAssessmentExternalService().StudentScores(ctx, roomInfo["62454aee4c6e70e130530dbc"].ScoresByUser)
 	if err != nil {
 		t.Error(err)
 	}
-	t.Log(result)
+	t.Log(userScoresMap)
+	t.Log(contentTree)
 }
