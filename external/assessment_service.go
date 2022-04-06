@@ -14,7 +14,6 @@ import (
 
 type AssessmentServiceProvider interface {
 	GetScoresWithCommentsByRoomIDs(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]*RoomInfo, error)
-	//GetScoresByRoomIDs(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string][]*H5PUserScores, error)
 	SetScoreAndComment(ctx context.Context, operator *entity.Operator, scores []*SetScoreAndComment) error
 }
 
