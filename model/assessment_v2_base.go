@@ -52,12 +52,12 @@ type BaseAssessment struct {
 }
 
 func (o *BaseAssessment) MatchAnyOneAttempted() (bool, error) {
-	roomDataMap, err := o.ag.GetRoomData()
+	roomDataMap, err := o.ag.GetRoomStudentScoresAndComments()
 	if err != nil {
 		return false, err
 	}
 	roomData, ok := roomDataMap[o.ag.assessment.ScheduleID]
-	return ok && len(roomData) > 0, nil
+	return ok && roomData != nil && len(roomData.ScoresByUser) > 0, nil
 }
 
 func (o *BaseAssessment) MatchClass() (map[string]*entity.IDName, error) {
@@ -137,7 +137,9 @@ func (o *BaseAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
 				if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
 					continue
 				}
-
+				//if assUserItem.StatusBySystem == v2.AssessmentUserStatusNotParticipate {
+				//	continue
+				//}
 				resultItem := &entity.IDName{
 					ID:   assUserItem.UserID,
 					Name: "",
@@ -154,7 +156,7 @@ func (o *BaseAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
 	return result, nil
 }
 
-func (o *BaseAssessment) summaryRoomScores(userMapFromRoomMap map[string]*RoomUserInfo, contentsReply []*v2.AssessmentContentReply) (map[string]float64, map[string]float64) {
+func (o *BaseAssessment) summaryRoomScores(userScoreMap map[string][]*RoomUserScore, contentsReply []*v2.AssessmentContentReply) (map[string]float64, map[string]float64) {
 	contentSummaryTotalScoreMap := make(map[string]float64)
 	contentMap := make(map[string]*v2.AssessmentContentReply)
 	for _, content := range contentsReply {
@@ -167,20 +169,20 @@ func (o *BaseAssessment) summaryRoomScores(userMapFromRoomMap map[string]*RoomUs
 		}
 		contentSummaryTotalScoreMap[contentID] = contentSummaryTotalScoreMap[contentID] + content.MaxScore
 
-		contentMap[content.RoomProvideContentID] = content
+		contentMap[content.ContentID] = content
 	}
 
-	roomUserResultMap := make(map[string]*RoomUserResults)
+	roomUserResultMap := make(map[string]*RoomUserScore)
 	roomUserSummaryScoreMap := make(map[string]float64)
-	for _, item := range userMapFromRoomMap {
-		for _, resultItem := range item.Results {
+	for userID, scores := range userScoreMap {
+		for _, resultItem := range scores {
 			key := o.ag.GetKey([]string{
-				item.UserID,
-				resultItem.RoomContentID,
+				userID,
+				resultItem.ContentUniqueID,
 			})
 			roomUserResultMap[key] = resultItem
 
-			if contentItem, ok := contentMap[resultItem.RoomContentID]; ok {
+			if contentItem, ok := contentMap[resultItem.ContentUniqueID]; ok {
 				if contentItem.IgnoreCalculateScore {
 					continue
 				}
@@ -190,7 +192,7 @@ func (o *BaseAssessment) summaryRoomScores(userMapFromRoomMap map[string]*RoomUs
 				}
 
 				key2 := o.ag.GetKey([]string{
-					item.UserID,
+					userID,
 					contentID,
 				})
 				roomUserSummaryScoreMap[key2] = roomUserSummaryScoreMap[key2] + resultItem.Score

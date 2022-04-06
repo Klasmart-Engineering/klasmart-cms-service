@@ -457,8 +457,6 @@ func (a *assessmentModelV2) queryFeedbackInfo(ctx context.Context, operator *ent
 }
 
 // TODO need refactor
-
-// TODO need refactor
 func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, status v2.AssessmentStatus, req *v2.AssessmentUpdateReq) error {
 	if len(req.Students) <= 0 {
 		log.Warn(ctx, "students is empty", log.Any("req", req))
@@ -507,24 +505,30 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		waitUpdatedUsers = append(waitUpdatedUsers, existItem)
 	}
 
-	roomData, err := ags.GetRoomData()
+	roomDataMap, err := ags.GetRoomStudentScoresAndComments()
 	if err != nil {
 		return err
 	}
-	userScores, hasScore := roomData[waitUpdatedAssessment.ScheduleID]
+	roomData, hasScore := roomDataMap[waitUpdatedAssessment.ScheduleID]
 	userRoomData := make(map[string][]*external.H5PUserContentScore)
+	canSetScoreContentMap := make(map[string]*AllowEditScoreContent)
+	studentCommentMap := make(map[string]string)
 	if hasScore {
-		for _, item := range userScores {
+		for _, item := range roomData.ScoresByUser {
 			if item.User == nil {
 				continue
 			}
 			userRoomData[item.User.UserID] = item.Scores
 		}
-	}
 
-	canSetScoreContentMap, err := getAssessmentLiveRoom().AllowEditScoreContent(ctx, userScores)
-	if err != nil {
-		return err
+		canSetScoreContentMap, err = GetAssessmentExternalService().AllowEditScoreContent(ctx, roomData.ScoresByUser)
+		if err != nil {
+			return err
+		}
+		studentCommentMap, err = GetAssessmentExternalService().StudentCommentMap(ctx, roomData.TeacherCommentsByStudent)
+		if err != nil {
+			return err
+		}
 	}
 
 	if waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeReviewStudy {
@@ -537,6 +541,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			ag:                    ags,
 			userRoomData:          userRoomData,
 			canSetScoreContentMap: canSetScoreContentMap,
+			studentCommentMap:     studentCommentMap,
 		})
 	}
 
@@ -698,19 +703,15 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			}
 			if contentItem, ok := contentReqMap[stuResult.ContentID]; ok {
 				if _, ok := userRoomData[stuItem.StudentID]; ok {
-					if _, ok := canSetScoreContentMap[contentItem.ContentID]; ok {
+					if canSetScoreContentItem, ok := canSetScoreContentMap[contentItem.ContentID]; ok {
 						newScore := &external.H5PSetScoreRequest{
 							RoomID:    waitUpdatedAssessment.ScheduleID,
 							StudentID: stuItem.StudentID,
 							Score:     stuResult.Score,
 						}
 
-						if contentItem.ParentID == "" {
-							newScore.ContentID = contentItem.ContentID
-						} else {
-							newScore.ContentID = contentItem.ParentID
-							newScore.SubContentID = contentItem.ContentID
-						}
+						newScore.ContentID = canSetScoreContentItem.ContentID
+						newScore.SubContentID = canSetScoreContentItem.SubContentID
 
 						newScores = append(newScores, newScore)
 					}
@@ -718,12 +719,21 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			}
 		}
 
-		newComment := external.H5PAddRoomCommentRequest{
-			RoomID:    waitUpdatedAssessment.ScheduleID,
-			StudentID: stuItem.StudentID,
-			Comment:   stuItem.ReviewerComment,
+		if stuComment, ok := studentCommentMap[stuItem.StudentID]; ok && stuComment != stuItem.ReviewerComment {
+			newComment := external.H5PAddRoomCommentRequest{
+				RoomID:    waitUpdatedAssessment.ScheduleID,
+				StudentID: stuItem.StudentID,
+				Comment:   stuItem.ReviewerComment,
+			}
+			newComments = append(newComments, &newComment)
+		} else if stuItem.ReviewerComment != "" {
+			newComment := external.H5PAddRoomCommentRequest{
+				RoomID:    waitUpdatedAssessment.ScheduleID,
+				StudentID: stuItem.StudentID,
+				Comment:   stuItem.ReviewerComment,
+			}
+			newComments = append(newComments, &newComment)
 		}
-		newComments = append(newComments, &newComment)
 	}
 
 	// update student comment
@@ -844,7 +854,8 @@ type updateReviewStudyAssessmentInput struct {
 	userIDAndUserTypeMap  map[string]*v2.AssessmentUser
 	ag                    *AssessmentGrain
 	userRoomData          map[string][]*external.H5PUserContentScore
-	canSetScoreContentMap map[string]bool
+	canSetScoreContentMap map[string]*AllowEditScoreContent
+	studentCommentMap     map[string]string
 }
 
 func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op *entity.Operator, input updateReviewStudyAssessmentInput) error {
@@ -871,19 +882,15 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 		for _, stuResult := range stuItem.Results {
 			if contentItem, ok := contentReqMap[stuResult.ContentID]; ok {
 				if _, ok := input.userRoomData[stuItem.StudentID]; ok {
-					if _, ok := input.canSetScoreContentMap[contentItem.ContentID]; ok {
+					if canSetScoreContentItem, ok := input.canSetScoreContentMap[contentItem.ContentID]; ok {
 						newScore := &external.H5PSetScoreRequest{
 							RoomID:    input.waitUpdatedAssessment.ScheduleID,
 							StudentID: stuItem.StudentID,
 							Score:     stuResult.Score,
 						}
 
-						if contentItem.ParentID == "" {
-							newScore.ContentID = contentItem.ContentID
-						} else {
-							newScore.ContentID = contentItem.ParentID
-							newScore.SubContentID = contentItem.ContentID
-						}
+						newScore.ContentID = canSetScoreContentItem.ContentID
+						newScore.SubContentID = canSetScoreContentItem.SubContentID
 
 						newScores = append(newScores, newScore)
 					}
@@ -891,12 +898,21 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 			}
 		}
 
-		newComment := external.H5PAddRoomCommentRequest{
-			RoomID:    input.waitUpdatedAssessment.ScheduleID,
-			StudentID: stuItem.StudentID,
-			Comment:   stuItem.ReviewerComment,
+		if stuComment, ok := input.studentCommentMap[stuItem.StudentID]; ok && stuComment != stuItem.ReviewerComment {
+			newComment := external.H5PAddRoomCommentRequest{
+				RoomID:    input.waitUpdatedAssessment.ScheduleID,
+				StudentID: stuItem.StudentID,
+				Comment:   stuItem.ReviewerComment,
+			}
+			newComments = append(newComments, &newComment)
+		} else if stuItem.ReviewerComment != "" {
+			newComment := external.H5PAddRoomCommentRequest{
+				RoomID:    input.waitUpdatedAssessment.ScheduleID,
+				StudentID: stuItem.StudentID,
+				Comment:   stuItem.ReviewerComment,
+			}
+			newComments = append(newComments, &newComment)
 		}
-		newComments = append(newComments, &newComment)
 	}
 
 	// update student comment

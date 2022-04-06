@@ -205,18 +205,17 @@ func (o *OnlineClassAssessment) MatchContents() ([]*v2.AssessmentContentReply, e
 	index := 0
 	for _, item := range libraryContents {
 		contentReplyItem := &v2.AssessmentContentReply{
-			Number:               "0",
-			ParentID:             "",
-			ContentID:            item.ID,
-			ContentName:          item.Name,
-			Status:               v2.AssessmentContentStatusCovered,
-			ContentType:          item.ContentType,
-			FileType:             v2.AssessmentFileTypeNotChildSubContainer,
-			MaxScore:             0,
-			ReviewerComment:      "",
-			OutcomeIDs:           item.OutcomeIDs,
-			RoomProvideContentID: "",
-			ContentSubtype:       item.FileType.String(),
+			Number:          "0",
+			ParentID:        "",
+			ContentID:       item.ID,
+			ContentName:     item.Name,
+			Status:          v2.AssessmentContentStatusCovered,
+			ContentType:     item.ContentType,
+			FileType:        v2.AssessmentFileTypeNotChildSubContainer,
+			MaxScore:        0,
+			ReviewerComment: "",
+			OutcomeIDs:      item.OutcomeIDs,
+			ContentSubtype:  item.FileType.String(),
 		}
 
 		if item.ContentType == v2.AssessmentContentTypeLessonPlan {
@@ -234,11 +233,11 @@ func (o *OnlineClassAssessment) MatchContents() ([]*v2.AssessmentContentReply, e
 		}
 
 		if roomContentItem, ok := roomContentMap[item.ID]; ok {
-			contentReplyItem.ContentSubtype = roomContentItem.SubContentType
+			contentReplyItem.ContentSubtype = roomContentItem.Type
 			contentReplyItem.H5PID = roomContentItem.H5PID
 			contentReplyItem.MaxScore = roomContentItem.MaxScore
-			contentReplyItem.RoomProvideContentID = roomContentItem.ID
 			contentReplyItem.H5PSubID = roomContentItem.SubContentID
+			contentReplyItem.RoomProvideContentID = roomContentItem.ContentUniqueID
 
 			if roomContentItem.FileType == external.FileTypeH5P {
 				if roomContentItem.MaxScore > 0 {
@@ -256,6 +255,10 @@ func (o *OnlineClassAssessment) MatchContents() ([]*v2.AssessmentContentReply, e
 				result = append(result, contentReplyItem)
 
 				for i, child := range roomContentItem.Children {
+					if child.SubContentID == "" {
+						log.Warn(o.ag.ctx, "sub content id is empty", log.Any("contentItem", item))
+						continue
+					}
 					o.appendContent(child, contentReplyItem, &result, contentReplyItem.Number, i+1)
 				}
 			} else {
@@ -292,14 +295,9 @@ func (o *OnlineClassAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 		return nil, err
 	}
 
-	roomInfo, err := o.ag.SingleGetRoomData()
+	userScoresMap, _, err := o.ag.SingleGetRoomData()
 	if err != nil {
 		return nil, err
-	}
-
-	userMapFromRoomMap := make(map[string]*RoomUserInfo, len(roomInfo.UserRoomInfo))
-	for _, item := range roomInfo.UserRoomInfo {
-		userMapFromRoomMap[item.UserID] = item
 	}
 
 	userMap, err := o.ag.GetUserMap()
@@ -307,18 +305,18 @@ func (o *OnlineClassAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 		return nil, err
 	}
 
-	roomUserResultMap := make(map[string]*RoomUserResults)
-	for _, item := range userMapFromRoomMap {
-		for _, resultItem := range item.Results {
+	roomUserResultMap := make(map[string]*RoomUserScore)
+	for userID, scores := range userScoresMap {
+		for _, scoreItem := range scores {
 			key := o.ag.GetKey([]string{
-				item.UserID,
-				resultItem.RoomContentID,
+				userID,
+				scoreItem.ContentUniqueID,
 			})
-			roomUserResultMap[key] = resultItem
+			roomUserResultMap[key] = scoreItem
 		}
 	}
 
-	contentScoreMap, studentScoreMap := o.base.summaryRoomScores(userMapFromRoomMap, contentsReply)
+	contentScoreMap, studentScoreMap := o.base.summaryRoomScores(userScoresMap, contentsReply)
 
 	contentMapFromAssessment, err := o.ag.SingleGetAssessmentContentMap()
 	if err != nil {
@@ -435,23 +433,22 @@ func (o *OnlineClassAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 	return result, nil
 }
 
-func (o *OnlineClassAssessment) appendContent(roomContent *RoomContent, materialItem *v2.AssessmentContentReply, result *[]*v2.AssessmentContentReply, prefix string, index int) {
+func (o *OnlineClassAssessment) appendContent(roomContent *RoomContentTree, materialItem *v2.AssessmentContentReply, result *[]*v2.AssessmentContentReply, prefix string, index int) {
 	replyItem := &v2.AssessmentContentReply{
 		Number:               fmt.Sprintf("%s-%d", prefix, index),
 		ParentID:             materialItem.ContentID,
-		ContentID:            roomContent.ID,
+		ContentID:            roomContent.ContentUniqueID,
 		ContentName:          materialItem.ContentName,
 		ReviewerComment:      "",
 		Status:               materialItem.Status,
 		OutcomeIDs:           materialItem.OutcomeIDs,
 		ContentType:          v2.AssessmentContentTypeUnknown,
-		ContentSubtype:       roomContent.SubContentType,
+		ContentSubtype:       roomContent.Type,
 		FileType:             v2.AssessmentFileTypeNotUnknown,
 		MaxScore:             roomContent.MaxScore,
 		H5PID:                roomContent.H5PID,
-		RoomProvideContentID: roomContent.ID,
 		H5PSubID:             roomContent.SubContentID,
-		//LatestID:       materialItem.LatestID,
+		RoomProvideContentID: roomContent.ContentUniqueID,
 	}
 
 	if roomContent.FileType == external.FileTypeH5P {
@@ -464,6 +461,10 @@ func (o *OnlineClassAssessment) appendContent(roomContent *RoomContent, material
 
 	*result = append(*result, replyItem)
 	for i, item := range roomContent.Children {
+		if item.SubContentID == "" {
+			log.Warn(o.ag.ctx, "sub content id is empty", log.Any("contentItem", item))
+			continue
+		}
 		o.appendContent(item, materialItem, result, replyItem.Number, i+1)
 	}
 }

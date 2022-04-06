@@ -78,7 +78,7 @@ type H5PTeacherScore struct {
 // 	teacherScores: [TeacherScore!]!
 // }
 type H5PUserContentScore struct {
-	User          *H5PUser           `json:"user"`
+	//User          *H5PUser           `json:"user"`
 	Content       *H5PContent        `json:"content"`
 	Score         *H5PScore          `json:"score"`
 	Seen          bool               `json:"seen"`
