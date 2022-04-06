@@ -204,7 +204,6 @@ type AssessmentContentReply struct {
 	H5PSubID             string                  `json:"h5p_sub_id"`
 	RoomProvideContentID string                  `json:"-"`
 	IgnoreCalculateScore bool                    `json:"-"`
-	//LatestID string `json:"latest_id"`
 }
 
 type AssessmentOutcomeReply struct {

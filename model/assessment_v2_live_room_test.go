@@ -2,14 +2,13 @@ package model
 
 import (
 	"context"
-	"encoding/json"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"testing"
 )
 
 func TestGetContent(t *testing.T) {
-	ctx := context.Background()
+	//ctx := context.Background()
 
 	jsonData := `
 {
@@ -477,42 +476,24 @@ func TestGetContent(t *testing.T) {
   }
 }
 `
-	data := map[string]*struct {
-		ScoresByUser []*external.H5PUserScores `json:"scoresByUser"`
-	}{}
+	t.Log(jsonData)
+}
 
-	type Response struct {
-		Data interface{} `json:"data,omitempty"`
-		//Errors external.ClErrors    `json:"errors,omitempty"`
+func TestAssessmentExternalService_ContentsToTree(t *testing.T) {
+	ctx := context.Background()
+	testOperator := &entity.Operator{
+		UserID: "afdfc0d9-ada9-4e66-b225-20f956d1a399",
+		OrgID:  "60c064cc-bbd8-4724-b3f6-b886dce4774f", // Badanamu HQ
+		Token:  "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ2NTNmODgwLWI5MjAtNDM1Zi04ZjJkLTk4YjVkNDYyMWViOCIsImVtYWlsIjoic2Nob29sXzAzMDMyOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0OTA3OTI4MCwiaXNzIjoia2lkc2xvb3AifQ.uk1nBxFRcFVU20dwN5uVS3_4Oot6Jktppup-sEvOuye0Jf3_hZ4Do6H8_bsLpCTTpM4fKOididI9NZCtAZUxKQGB8-d2nEJd_wr5U-QE2tyOgCAPwcftP9Ra9J8jhDQGz30YuVO_-ieEnHcTxMaINIfaM0DUEpSgzLxcnn83xBFTTvGfT4CRGx5npfKoYMBDXqaFnUSfrHovLSc5cDvsoDveZ5xUEY4oy99Yc5MuPCmXdxTbygPdCiUn2dvUwUe5xWxC9kgk_4kJZsE8qbs9MQ1V4kK1jebpw9G6_O7fdldv2b5Aqh6lHDb2C8wEXjDCnu7U_RUf94foLXxeYtCmMQ",
 	}
-
-	resp := &Response{
-		Data: &data,
-	}
-	err := json.Unmarshal([]byte(jsonData), resp)
+	roomInfo, err := external.GetAssessmentServiceProvider().GetScoresWithCommentsByRoomIDs(ctx, testOperator, []string{"62454aee4c6e70e130530dbc"})
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
-	t.Log(data)
-	roomData := data["q13"].ScoresByUser
-
-	studentRoomDataMap := make(map[string]map[string]*UserRoomInfo)
-	for _, item := range roomData {
-		if item.User == nil {
-			log.Warn(ctx, "room user data is empty")
-			continue
-		}
-
-		userScoresTree, err := getAssessmentLiveRoom().getUserResultInfo(ctx, item)
-		if err != nil {
-			continue
-		}
-
-		studentRoomDataMap[item.User.UserID] = make(map[string]*UserRoomInfo)
-		for _, userScoreItem := range userScoresTree {
-			studentRoomDataMap[item.User.UserID][userScoreItem.MaterialID] = userScoreItem
-		}
+	userScoresMap, contentTree, err := GetAssessmentExternalService().StudentScores(ctx, roomInfo["62454aee4c6e70e130530dbc"].ScoresByUser)
+	if err != nil {
+		t.Error(err)
 	}
-
-	t.Log(studentRoomDataMap)
+	t.Log(userScoresMap)
+	t.Log(contentTree)
 }

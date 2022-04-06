@@ -65,7 +65,7 @@ type AssessmentMulGrainItem struct {
 	subjectMap           map[string]*entity.IDName             // subjectID
 	classMap             map[string]*entity.IDName             // classID
 	userMap              map[string]*entity.IDName             // userID
-	liveRoomMap          map[string][]*external.H5PUserScores  // roomID
+	liveRoomMap          map[string]*external.RoomInfo         // roomID
 	lessPlanMap          map[string]*v2.AssessmentContentView  // lessPlanID
 
 	assessmentUsers []*v2.AssessmentUser
@@ -78,7 +78,7 @@ type AssessmentSingleGrainItem struct {
 	latestContentsFromSchedule []*v2.AssessmentContentView
 	lockedContentsFromSchedule []*v2.AssessmentContentView
 	contentMapFromAssessment   map[string]*v2.AssessmentContent     // key:contentID
-	contentMapFromLiveRoom     map[string]*RoomContent              // key: contentID
+	contentMapFromLiveRoom     map[string]*RoomContentTree          // key: contentID
 	commentResultMap           map[string]string                    // userID
 	outcomeMapFromAssessment   map[string]*v2.AssessmentUserOutcome // key: AssessmentUserID+AssessmentContentID+OutcomeID
 }
@@ -430,7 +430,7 @@ func (ags *AssessmentGrain) GetUserMap() (map[string]*entity.IDName, error) {
 	return ags.userMap, nil
 }
 
-func (ags *AssessmentGrain) GetRoomData() (map[string][]*external.H5PUserScores, error) {
+func (ags *AssessmentGrain) GetRoomStudentScoresAndComments() (map[string]*external.RoomInfo, error) {
 	if ags.InitRecord[GrainLiveRoomMap] {
 		return ags.liveRoomMap, nil
 	}
@@ -448,11 +448,11 @@ func (ags *AssessmentGrain) GetRoomData() (map[string][]*external.H5PUserScores,
 		scheduleIDs = append(scheduleIDs, item.ID)
 	}
 
-	roomDataMap, err := external.GetH5PRoomScoreServiceProvider().BatchGet(ctx, op, scheduleIDs)
+	roomDataMap, err := external.GetAssessmentServiceProvider().GetScoresWithCommentsByRoomIDs(ctx, op, scheduleIDs)
 	if err != nil {
 		log.Warn(ctx, "external service error",
 			log.Err(err), log.Strings("scheduleIDs", scheduleIDs), log.Any("op", ags.op))
-		ags.liveRoomMap = make(map[string][]*external.H5PUserScores)
+		ags.liveRoomMap = make(map[string]*external.RoomInfo)
 	} else {
 		ags.liveRoomMap = roomDataMap
 	}
@@ -642,6 +642,7 @@ func (asg *AssessmentGrain) SingleGetLatestContentsFromSchedule() ([]*v2.Assessm
 		return nil, err
 	}
 
+	// convert to latest lesson plan
 	latestLessPlanIDMap, err := GetContentModel().GetLatestContentIDMapByIDListInternal(ctx, dbo.MustGetDB(ctx), []string{schedule.LessonPlanID})
 	if err != nil {
 		return nil, err
@@ -652,22 +653,24 @@ func (asg *AssessmentGrain) SingleGetLatestContentsFromSchedule() ([]*v2.Assessm
 		return nil, constant.ErrRecordNotFound
 	}
 
+	// get lesson plan info
 	latestLessPlans, err := GetContentModel().GetContentByIDListInternal(ctx, dbo.MustGetDB(ctx), []string{latestLessPlanID})
 	if err != nil {
 		return nil, err
 	}
 	if len(latestLessPlans) <= 0 {
+		log.Warn(ctx, "not found content info", log.String("latestLessPlanID", latestLessPlanID), log.Any("schedule", schedule))
 		return nil, constant.ErrRecordNotFound
 	}
 
+	// get material in lesson plan
 	subContentsMap, err := GetContentModel().GetContentsSubContentsMapByIDListInternal(ctx, dbo.MustGetDB(ctx), []string{latestLessPlanID}, op)
 	if err != nil {
 		return nil, err
 	}
 
+	// filling lesson plan
 	latestLessPlan := latestLessPlans[0]
-	subContents := subContentsMap[latestLessPlan.ID]
-
 	lessPlan := &v2.AssessmentContentView{
 		ID:          latestLessPlan.ID,
 		Name:        latestLessPlan.Name,
@@ -678,7 +681,13 @@ func (asg *AssessmentGrain) SingleGetLatestContentsFromSchedule() ([]*v2.Assessm
 	}
 	asg.latestContentsFromSchedule = append(asg.latestContentsFromSchedule, lessPlan)
 
+	// filling material
+	dedupMap := make(map[string]struct{})
+	subContents := subContentsMap[latestLessPlan.ID]
 	for _, item := range subContents {
+		if _, ok := dedupMap[item.ID]; ok {
+			continue
+		}
 		subContentItem := &v2.AssessmentContentView{
 			ID:          item.ID,
 			Name:        item.Name,
@@ -688,9 +697,14 @@ func (asg *AssessmentGrain) SingleGetLatestContentsFromSchedule() ([]*v2.Assessm
 			FileType:    item.FileType,
 		}
 		asg.latestContentsFromSchedule = append(asg.latestContentsFromSchedule, subContentItem)
+		dedupMap[item.ID] = struct{}{}
 	}
 
-	asg.ConvertContentOutcome(asg.latestContentsFromSchedule)
+	// convert content outcome to latest outcome
+	err = asg.ConvertContentOutcome(asg.latestContentsFromSchedule)
+	if err != nil {
+		return nil, err
+	}
 	asg.InitRecord[SingleLatestContentSliceFromSchedule] = true
 
 	return asg.latestContentsFromSchedule, nil
@@ -735,13 +749,26 @@ func (asg *AssessmentGrain) SingleGetLockedContentsFromSchedule() ([]*v2.Assessm
 
 func (asg *AssessmentGrain) getLockedContentBySchedule(schedule *entity.Schedule) ([]*v2.AssessmentContentView, error) {
 	ctx := asg.ctx
+
+	if !schedule.IsLockedLessonPlan() {
+		log.Warn(ctx, "schedule not locked lesson plan", log.Any("schedule", schedule))
+		return nil, constant.ErrInvalidArgs
+	}
+
+	dedupMap := make(map[string]struct{})
+
+	// Extract and deduplicate contentID
 	contentIDs := make([]string, 0)
 	contentIDs = append(contentIDs, schedule.LiveLessonPlan.LessonPlanID)
 	for _, materialItem := range schedule.LiveLessonPlan.LessonMaterials {
+		if _, ok := dedupMap[materialItem.LessonMaterialID]; ok {
+			continue
+		}
 		contentIDs = append(contentIDs, materialItem.LessonMaterialID)
+		dedupMap[materialItem.LessonMaterialID] = struct{}{}
 	}
 
-	contentIDs = utils.SliceDeduplication(contentIDs)
+	// get content info
 	contents, err := GetContentModel().GetContentByIDListInternal(ctx, dbo.MustGetDB(ctx), contentIDs)
 	if err != nil {
 		log.Error(ctx, "toViews: GetContentModel().GetContentByIDList: get failed",
@@ -750,11 +777,14 @@ func (asg *AssessmentGrain) getLockedContentBySchedule(schedule *entity.Schedule
 		)
 		return nil, err
 	}
+
+	// Extract content outcomes
 	contentOutcomeIDsMap := make(map[string][]string, len(contents))
 	for _, item := range contents {
 		contentOutcomeIDsMap[item.ID] = item.OutcomeIDs
 	}
 
+	// convert to content map
 	contentInfoMap := make(map[string]*entity.ContentInfoInternal, len(contents))
 	for _, item := range contents {
 		contentInfoMap[item.ID] = item
@@ -762,6 +792,7 @@ func (asg *AssessmentGrain) getLockedContentBySchedule(schedule *entity.Schedule
 
 	liveLessonPlan := schedule.LiveLessonPlan
 
+	// filling lesson plan
 	lessPlan := &v2.AssessmentContentView{
 		ID:          liveLessonPlan.LessonPlanID,
 		Name:        liveLessonPlan.LessonPlanName,
@@ -775,6 +806,7 @@ func (asg *AssessmentGrain) getLockedContentBySchedule(schedule *entity.Schedule
 
 	result := append(asg.lockedContentsFromSchedule, lessPlan)
 
+	// filling lesson material
 	for _, item := range liveLessonPlan.LessonMaterials {
 		materialItem := &v2.AssessmentContentView{
 			ID:          item.LessonMaterialID,
@@ -876,9 +908,6 @@ func (asg *AssessmentGrain) SingleGetAssessmentContentMap() (map[string]*v2.Asse
 	if err != nil {
 		return nil, err
 	}
-	if err != nil {
-		return nil, err
-	}
 
 	result := make(map[string]*v2.AssessmentContent)
 	if ok, _ := asg.IsNeedConvertLatestContent(); ok {
@@ -911,7 +940,7 @@ func (asg *AssessmentGrain) SingleGetAssessmentContentMap() (map[string]*v2.Asse
 	return result, nil
 }
 
-func (asg *AssessmentGrain) SingleGetContentMapFromLiveRoom() (map[string]*RoomContent, error) {
+func (asg *AssessmentGrain) SingleGetContentMapFromLiveRoom() (map[string]*RoomContentTree, error) {
 	ctx := asg.ctx
 	//op := adc.op
 
@@ -919,32 +948,33 @@ func (asg *AssessmentGrain) SingleGetContentMapFromLiveRoom() (map[string]*RoomC
 		return asg.contentMapFromLiveRoom, nil
 	}
 
-	roomInfo, err := asg.SingleGetRoomData()
+	_, roomContents, err := asg.SingleGetRoomData()
 	if err != nil {
 		return nil, err
 	}
 
-	result := make(map[string]*RoomContent, len(roomInfo.Contents))
+	result := make(map[string]*RoomContentTree, len(roomContents))
 	if ok, _ := asg.IsNeedConvertLatestContent(); ok {
-		oldContentIDs := make([]string, len(roomInfo.Contents))
-		oldContentMap := make(map[string]*RoomContent)
-		for i, item := range roomInfo.Contents {
-			oldContentIDs[i] = item.MaterialID
-			oldContentMap[item.MaterialID] = item
+		oldContentIDs := make([]string, len(roomContents))
+		for i, item := range roomContents {
+			if item.TreeParentID == "" {
+				oldContentIDs[i] = item.ContentID
+			}
 		}
 
+		oldContentIDs = utils.SliceDeduplicationExcludeEmpty(oldContentIDs)
 		latestContentIDMap, err := GetContentModel().GetLatestContentIDMapByIDListInternal(ctx, dbo.MustGetDB(ctx), oldContentIDs)
 		if err != nil {
 			log.Error(ctx, "GetLatestContentIDMapByIDList error", log.Err(err), log.Strings("oldContentIDs", oldContentIDs))
 			return nil, err
 		}
 
-		for _, item := range roomInfo.Contents {
-			result[latestContentIDMap[item.MaterialID]] = item
+		for _, item := range roomContents {
+			result[latestContentIDMap[item.ContentID]] = item
 		}
 	} else {
-		for _, item := range roomInfo.Contents {
-			result[item.MaterialID] = item
+		for _, item := range roomContents {
+			result[item.ContentID] = item
 		}
 	}
 
@@ -954,26 +984,21 @@ func (asg *AssessmentGrain) SingleGetContentMapFromLiveRoom() (map[string]*RoomC
 	return result, nil
 }
 
-func (asg *AssessmentGrain) SingleGetRoomData() (*RoomInfo, error) {
+func (asg *AssessmentGrain) SingleGetRoomData() (map[string][]*RoomUserScore, []*RoomContentTree, error) {
 	ctx := asg.ctx
 	//op := adc.op
 
-	roomDataMap, err := asg.GetRoomData()
+	roomDataMap, err := asg.GetRoomStudentScoresAndComments()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	roomData, ok := roomDataMap[asg.assessment.ScheduleID]
 	if !ok {
 		log.Warn(ctx, "not found room data", log.Any("roomDataMap", roomDataMap), log.Any("assessment", asg.assessment))
-		return new(RoomInfo), nil
+		return make(map[string][]*RoomUserScore), nil, nil
 	}
 
-	roomResultInfo, err := getAssessmentLiveRoom().getRoomResultInfo(ctx, roomData)
-	if err != nil {
-		return nil, err
-	}
-
-	return roomResultInfo, nil
+	return GetAssessmentExternalService().StudentScores(ctx, roomData.ScoresByUser)
 }
 
 func (asg *AssessmentGrain) SingleGetCommentResultMap() (map[string]string, error) {
@@ -982,17 +1007,29 @@ func (asg *AssessmentGrain) SingleGetCommentResultMap() (map[string]string, erro
 	}
 
 	ctx := asg.ctx
-	op := asg.op
+	//op := asg.op
 
 	asg.commentResultMap = make(map[string]string)
 
-	commentResults, err := getAssessmentLiveRoom().batchGetRoomCommentMap(ctx, op, []string{asg.assessment.ScheduleID})
+	studentRoomInfoMap, err := asg.GetRoomStudentScoresAndComments()
 	if err != nil {
-		log.Error(asg.ctx, "get assessment comment from live room error", log.Err(err), log.String("scheduleID", asg.assessment.ScheduleID))
-	} else {
-		if commentItem, ok := commentResults[asg.assessment.ScheduleID]; ok && commentItem != nil {
-			asg.commentResultMap = commentItem
+		return nil, err
+	}
+	studentRoomInfo, ok := studentRoomInfoMap[asg.assessment.ScheduleID]
+	if !ok {
+		return asg.commentResultMap, nil
+	}
+
+	for _, item := range studentRoomInfo.TeacherCommentsByStudent {
+		if item.User == nil {
+			log.Warn(ctx, "get user comment error,user is empty", log.Any("studentRoomInfo", studentRoomInfo))
 		}
+		if len(item.TeacherComments) <= 0 {
+			continue
+		}
+		latestComment := item.TeacherComments[len(item.TeacherComments)-1]
+
+		asg.commentResultMap[item.User.UserID] = latestComment.Comment
 	}
 
 	asg.InitRecord[SingleUserCommentResultMap] = true
