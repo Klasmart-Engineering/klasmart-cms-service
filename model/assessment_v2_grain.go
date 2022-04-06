@@ -778,47 +778,25 @@ func (asg *AssessmentGrain) getLockedContentBySchedule(schedule *entity.Schedule
 		return nil, err
 	}
 
-	// Extract content outcomes
-	contentOutcomeIDsMap := make(map[string][]string, len(contents))
-	for _, item := range contents {
-		contentOutcomeIDsMap[item.ID] = item.OutcomeIDs
-	}
-
 	// convert to content map
-	contentInfoMap := make(map[string]*entity.ContentInfoInternal, len(contents))
-	for _, item := range contents {
-		contentInfoMap[item.ID] = item
-	}
-
-	liveLessonPlan := schedule.LiveLessonPlan
-
-	// filling lesson plan
-	lessPlan := &v2.AssessmentContentView{
-		ID:          liveLessonPlan.LessonPlanID,
-		Name:        liveLessonPlan.LessonPlanName,
-		ContentType: v2.AssessmentContentTypeLessonPlan,
-		OutcomeIDs:  contentOutcomeIDsMap[liveLessonPlan.LessonPlanID],
-	}
-	if contentItem, ok := contentInfoMap[liveLessonPlan.LessonPlanID]; ok {
-		lessPlan.LatestID = contentItem.LatestID
-		lessPlan.FileType = contentItem.FileType
-	}
-
-	result := append(asg.lockedContentsFromSchedule, lessPlan)
-
-	// filling lesson material
-	for _, item := range liveLessonPlan.LessonMaterials {
-		materialItem := &v2.AssessmentContentView{
-			ID:          item.LessonMaterialID,
-			Name:        item.LessonMaterialName,
-			ContentType: v2.AssessmentContentTypeLessonMaterial,
-			OutcomeIDs:  contentOutcomeIDsMap[item.LessonMaterialID],
+	result := make([]*v2.AssessmentContentView, len(contents))
+	for i, item := range contents {
+		resultItem := &v2.AssessmentContentView{
+			ID:         item.ID,
+			Name:       item.Name,
+			OutcomeIDs: item.OutcomeIDs,
+			LatestID:   item.LatestID,
+			FileType:   item.FileType,
 		}
-		if contentItem, ok := contentInfoMap[item.LessonMaterialID]; ok {
-			materialItem.LatestID = contentItem.LatestID
-			materialItem.FileType = contentItem.FileType
+		if item.ContentType == entity.ContentTypePlan {
+			resultItem.ContentType = v2.AssessmentContentTypeLessonPlan
+		} else if item.ContentType == entity.ContentTypeMaterial {
+			resultItem.ContentType = v2.AssessmentContentTypeLessonMaterial
+		} else {
+			log.Warn(ctx, "content type is invalid", log.Any("contentItem", item), log.Any("schedule", schedule))
+			continue
 		}
-		result = append(result, materialItem)
+		result[i] = resultItem
 	}
 
 	return result, nil

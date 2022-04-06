@@ -181,6 +181,10 @@ func (a *assessmentInternalModel) LockAssessmentContentAndOutcome(ctx context.Co
 	waitAddContents := make([]*v2.AssessmentContent, 0)
 	contentMapFromSchedule := make(map[string]*v2.AssessmentContentView, len(contentsFromSchedule))
 	for _, item := range contentsFromSchedule {
+		if _, ok := contentMapFromSchedule[item.ID]; ok {
+			log.Warn(ctx, "content repeated", log.String("repeated contentID", item.ID), log.Any("contentMapFromSchedule", contentMapFromSchedule))
+			continue
+		}
 		contentNewItem := &v2.AssessmentContent{
 			ID:           utils.NewID(),
 			AssessmentID: assessment.ID,
