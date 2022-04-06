@@ -21,7 +21,9 @@ import (
 type ILearningSummaryReportModel interface {
 	QueryTimeFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryTimeFilterArgs) ([]*entity.LearningSummaryFilterYear, error)
 	QueryLiveClassesSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryLiveClassesSummaryResult, error)
+	QueryLiveClassesSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res *entity.QueryLiveClassesSummaryResult, err error)
 	QueryAssignmentsSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryAssignmentsSummaryResult, error)
+	QueryAssignmentsSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res *entity.QueryAssignmentsSummaryResultV2, err error)
 }
 
 var (
@@ -141,6 +143,11 @@ func (l *learningSummaryReportModel) getYearsWeeksData(nowWithZone time.Time) (r
 		ret = append(ret, &item)
 	}
 	return
+}
+
+func (l *learningSummaryReportModel) QueryLiveClassesSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryLiveClassesSummaryResult, error) {
+
+	return nil, nil
 }
 
 func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryLiveClassesSummaryResult, error) {
@@ -623,7 +630,9 @@ func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context,
 
 	return assessments, nil
 }
-
+func (l *learningSummaryReportModel) QueryAssignmentsSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res *entity.QueryAssignmentsSummaryResultV2, err error) {
+	return
+}
 func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryAssignmentsSummaryResult, error) {
 	// find related schedules and make by schedule id
 	schedules, err := l.findRelatedSchedules(ctx, tx, operator, entity.LearningSummaryTypeAssignment, filter)
