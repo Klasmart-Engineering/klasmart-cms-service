@@ -147,7 +147,7 @@ func (s *Server) queryLiveClassesSummary(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/learning_summary/live_classes [get]
+// @Router /reports/learning_summary/live_classes_v2 [get]
 func (s *Server) queryLiveClassesSummaryV2(c *gin.Context) {
 	ctx := c.Request.Context()
 	operator := s.getOperator(c)
@@ -192,7 +192,7 @@ func (s *Server) queryLiveClassesSummaryV2(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/learning_summary/live_classes_outcomes [get]
+// @Router /reports/learning_summary/outcomes [get]
 func (s *Server) queryOutcomesByAssessmentID(c *gin.Context) {
 	//ctx := c.Request.Context()
 	//operator := s.getOperator(c)
