@@ -85,6 +85,24 @@ type QueryLiveClassesSummaryResult struct {
 	Items  []*LiveClassSummaryItem `json:"items"`
 }
 
+type QueryLiveClassesSummaryResultV2 struct {
+	Attend float64                   `json:"attend"`
+	Items  []*LiveClassSummaryItemV2 `json:"items"`
+}
+
+type LiveClassSummaryItemV2 struct {
+	Absent          bool   `json:"absent"`
+	ClassStartTime  int64  `json:"class_start_time"`
+	ScheduleTitle   string `json:"schedule_title"`
+	LessonPlanName  string `json:"lesson_plan_name"`
+	TeacherFeedback string `json:"teacher_feedback"`
+	// for debug
+	ScheduleID   string `json:"schedule_id"`
+	AssessmentID string `json:"assessment_id"`
+	// for sorting
+	CompleteAt int64 `json:"complete_at"`
+	CreateAt   int64 `json:"create_at"`
+}
 type LiveClassSummaryItem struct {
 	Status          AssessmentStatus          `json:"status" enums:"in_progress,complete"`
 	Absent          bool                      `json:"absent"`
@@ -105,6 +123,27 @@ type LearningSummaryOutcome struct {
 	ID     string                  `json:"id"`
 	Name   string                  `json:"name"`
 	Status AssessmentOutcomeStatus `json:"status" enums:"achieved,not_achieved,partially"`
+}
+
+type QueryAssignmentsSummaryResultV2 struct {
+	StudyCount        int                         `json:"study_count"`
+	HomeFunStudyCount int                         `json:"home_fun_study_count"`
+	Items             []*AssignmentsSummaryItemV2 `json:"items"`
+}
+
+type AssignmentsSummaryItemV2 struct {
+	Type            AssessmentType   `json:"assessment_type" enums:"class,live,study,home_fun_study"`
+	Status          AssessmentStatus `json:"status" enums:"in_progress,complete"`
+	AssessmentTitle string           `json:"assessment_title"`
+	LessonPlanName  string           `json:"lesson_plan_name"`
+	TeacherFeedback string           `json:"teacher_feedback"`
+
+	// for debug
+	ScheduleID   string `json:"schedule_id"`
+	AssessmentID string `json:"assessment_id"`
+	// for sorting
+	CompleteAt int64 `json:"complete_at"`
+	CreateAt   int64 `json:"create_at"`
 }
 
 type QueryAssignmentsSummaryResult struct {
