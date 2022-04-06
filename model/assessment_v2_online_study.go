@@ -42,32 +42,7 @@ func (o *OnlineStudyAssessment) MatchLessPlan() (map[string]*v2.AssessmentConten
 }
 
 func (o *OnlineStudyAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
-	assessmentUserMap, err := o.ag.GetAssessmentUserMap()
-	if err != nil {
-		return nil, err
-	}
-
-	userMap, err := o.ag.GetUserMap()
-	if err != nil {
-		return nil, err
-	}
-
-	result := make(map[string][]*entity.IDName, len(o.ag.assessments))
-	for _, item := range o.ag.assessments {
-		if assUserItems, ok := assessmentUserMap[item.ID]; ok {
-			for _, assUserItem := range assUserItems {
-				if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
-					continue
-				}
-
-				if userItem, ok := userMap[assUserItem.UserID]; ok && userItem != nil {
-					result[item.ID] = append(result[item.ID], userItem)
-				}
-			}
-		}
-	}
-
-	return result, nil
+	return o.base.MatchTeacher()
 }
 
 func (o *OnlineStudyAssessment) MatchClass() (map[string]*entity.IDName, error) {
