@@ -39,6 +39,7 @@ type IReportModel interface {
 	GetStudentProgressLearnOutcomeAchievement(ctx context.Context, op *entity.Operator, req *entity.LearnOutcomeAchievementRequest) (res *entity.LearnOutcomeAchievementResponse, err error)
 	ClassAttendanceStatistics(ctx context.Context, op *entity.Operator, request *entity.ClassAttendanceRequest) (response *entity.ClassAttendanceResponse, err error)
 	GetTeacherIDsCanViewReports(ctx context.Context, operator *entity.Operator, params external.TeacherViewPermissionParams) (teacherIDs []string, err error)
+	GetClassIDsCanViewReports(ctx context.Context, operator *entity.Operator, params external.TeacherViewPermissionParams) (classIDs []string, err error)
 	GetLearnerUsageOverview(ctx context.Context, op *entity.Operator, permissions map[external.PermissionName]bool, request *entity.LearnerUsageRequest) (response *entity.LearnerUsageResponse, err error)
 	GetLearnerReportOverview(ctx context.Context, op *entity.Operator, cond *entity.LearnerReportOverviewCondition) (res entity.LearnerReportOverview, err error)
 }
@@ -478,6 +479,7 @@ func (rm *reportModel) GetTeacherIDsCanViewReports(ctx context.Context, operator
 		for _, teacher := range teachers {
 			teacherIDs = append(teacherIDs, teacher.ID)
 		}
+		return
 	}
 
 	canViewSchool := perms[params.ViewSchoolReports]
@@ -501,13 +503,71 @@ func (rm *reportModel) GetTeacherIDsCanViewReports(ctx context.Context, operator
 				teacherIDs = append(teacherIDs, teacher.ID)
 			}
 		}
-
+		return
 	}
 	if !canViewOrg && !canViewSchool && perms[params.ViewMyReports] {
 		teacherIDs = append(teacherIDs, operator.UserID)
 	}
 	return
 }
+func (rm *reportModel) GetClassIDsCanViewReports(ctx context.Context, operator *entity.Operator, params external.TeacherViewPermissionParams) (classIDs []string, err error) {
+	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, []external.PermissionName{
+		params.ViewSchoolReports,
+		params.ViewOrgReports,
+		params.ViewMyReports,
+	})
+	if err != nil {
+		return
+	}
+	canViewOrg := perms[params.ViewOrgReports]
+	if canViewOrg {
+		var mClasses map[string][]*external.Class
+		mClasses, err = external.GetClassServiceProvider().GetByOrganizationIDs(ctx, operator, []string{operator.OrgID})
+		if err != nil {
+			return
+		}
+		for _, class := range mClasses[operator.OrgID] {
+			classIDs = append(classIDs, class.ID)
+		}
+		return
+	}
+
+	canViewSchool := perms[params.ViewSchoolReports]
+	if canViewSchool {
+		var schools []*external.School
+		schools, err = external.GetSchoolServiceProvider().GetByOperator(ctx, operator)
+		if err != nil {
+			return
+		}
+		var schoolIDs []string
+		for _, school := range schools {
+			schoolIDs = append(schoolIDs, school.ID)
+		}
+		var mClasses map[string][]*external.Class
+		mClasses, err = external.GetClassServiceProvider().GetBySchoolIDs(ctx, operator, schoolIDs)
+		if err != nil {
+			return
+		}
+		for _, classes := range mClasses {
+			for _, class := range classes {
+				classIDs = append(classIDs, class.ID)
+			}
+		}
+		return
+	}
+	if !canViewOrg && !canViewSchool && perms[params.ViewMyReports] {
+		var classes []*external.Class
+		classes, err = external.GetClassServiceProvider().GetByUserID(ctx, operator, operator.UserID)
+		if err != nil {
+			return
+		}
+		for _, class := range classes {
+			classIDs = append(classIDs, class.ID)
+		}
+	}
+	return
+}
+
 func (m *reportModel) GetTeacherReportOverView(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, from, to int64, teacherIDs []string) (res *entity.StudentsAchievementOverviewReportResponse, err error) {
 	res = &entity.StudentsAchievementOverviewReportResponse{}
 	if len(teacherIDs) == 0 {

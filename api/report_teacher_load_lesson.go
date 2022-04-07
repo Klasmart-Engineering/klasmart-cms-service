@@ -169,8 +169,20 @@ func (s *Server) getTeacherLoadOverview(c *gin.Context) {
 		ViewSchoolReports: external.ReportSchoolTeachingLoad618,
 		ViewMyReports:     external.ReportMyTeachingLoad619,
 	})
+	if err != nil {
+		return
+	}
+	classIDs, err := model.GetReportModel().GetClassIDsCanViewReports(ctx, op, external.TeacherViewPermissionParams{
+		ViewOrgReports:    external.ReportOrganizationTeachingLoad617,
+		ViewSchoolReports: external.ReportSchoolTeachingLoad618,
+		ViewMyReports:     external.ReportMyTeachingLoad619,
+	})
+	if err != nil {
+		return
+	}
+
 	tr := entity.TimeRange(c.Query("time_range"))
-	result, err = model.GetReportTeachingLoadModel().GetTeacherLoadOverview(ctx, op, tr, teacherIDs)
+	result, err = model.GetReportTeachingLoadModel().GetTeacherLoadOverview(ctx, op, tr, teacherIDs, classIDs)
 	if err != nil {
 		return
 	}

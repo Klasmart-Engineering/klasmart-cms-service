@@ -17,7 +17,7 @@ import (
 
 type IReportTeachingLoadModel interface {
 	ListTeachingLoadReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.ReportListTeachingLoadArgs) (*entity.ReportListTeachingLoadResult, error)
-	GetTeacherLoadOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, teacherIDs []string) (res *entity.TeacherLoadOverview, err error)
+	GetTeacherLoadOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, teacherIDs []string, classIDs []string) (res *entity.TeacherLoadOverview, err error)
 }
 
 var (
@@ -149,9 +149,9 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 	return &r, nil
 }
 
-func (m *reportTeachingLoadModel) GetTeacherLoadOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, teacherIDs []string) (res *entity.TeacherLoadOverview, err error) {
+func (m *reportTeachingLoadModel) GetTeacherLoadOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, teacherIDs []string, classIDs []string) (res *entity.TeacherLoadOverview, err error) {
 	res = &entity.TeacherLoadOverview{}
-	items, err := da.GetReportDA().GetTeacherLoadItems(ctx, op, tr, teacherIDs)
+	items, err := da.GetReportDA().GetTeacherLoadItems(ctx, op, tr, teacherIDs, classIDs)
 	if err != nil {
 		return
 	}
