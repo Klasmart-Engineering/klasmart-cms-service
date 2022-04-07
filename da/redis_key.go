@@ -32,6 +32,8 @@ const (
 
 	RedisKeyPrefixUser     = "user"
 	RedisKeyPrefixUserMute = "user:lock"
+
+	RedisKeyPrefixReportLearnerReportOverview = "report:learner:overview"
 )
 
 const (

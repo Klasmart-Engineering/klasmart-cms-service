@@ -32,7 +32,7 @@ type UserServiceProvider interface {
 	NewUser(ctx context.Context, operator *entity.Operator, email string) (string, error)
 	FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error)
 	GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Operator, orgID string) ([]*User, error)
-	GetUserCount(ctx context.Context, op *entity.Operator, cond entity.GetUserCountCondition) (count int, err error)
+	GetUserCount(ctx context.Context, op *entity.Operator, cond *entity.GetUserCountCondition) (count int, err error)
 }
 
 type User struct {
@@ -72,7 +72,7 @@ func GetUserServiceProvider() UserServiceProvider {
 
 type AmsUserService struct{}
 
-func (s AmsUserService) GetUserCount(ctx context.Context, op *entity.Operator, cond entity.GetUserCountCondition) (count int, err error) {
+func (s AmsUserService) GetUserCount(ctx context.Context, op *entity.Operator, cond *entity.GetUserCountCondition) (count int, err error) {
 	mFilter := map[string]interface{}{}
 	var condFilters []interface{}
 	if cond.OrgID.Valid {

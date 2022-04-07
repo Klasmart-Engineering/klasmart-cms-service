@@ -166,3 +166,8 @@ const (
 	ContentFolderQueryCacheRefreshDuration = time.Minute
 	ContentFolderQueryCacheExpiration      = 0 // never expire
 )
+
+const (
+	ReportQueryCacheExpiration      = time.Minute * 10
+	ReportQueryCacheRefreshDuration = time.Minute
+)

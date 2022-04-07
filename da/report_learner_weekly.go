@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -12,10 +14,46 @@ import (
 )
 
 type ILearnerWeekly interface {
-	GetLearnerWeeklyReportOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, cond entity.GetUserCountCondition) (res entity.LearnerReportOverview, err error)
+	GetLearnerWeeklyReportOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, cond *entity.GetUserCountCondition) (res *entity.LearnerReportOverview, err error)
 }
 
-func (r *ReportDA) GetLearnerWeeklyReportOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, cond entity.GetUserCountCondition) (res entity.LearnerReportOverview, err error) {
+func (r *ReportDA) GetLearnerWeeklyReportOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, cond *entity.GetUserCountCondition) (*entity.LearnerReportOverview, error) {
+	if !config.Get().RedisConfig.OpenCache {
+		return r.getLearnerWeeklyReportOverviewFromMySQL(ctx, op, tr, cond)
+	}
+
+	request := &getLearnerWeeklyReportOverviewRequest{
+		Operator:  op,
+		TimeRange: tr,
+		Condition: cond,
+	}
+
+	response := &entity.LearnerReportOverview{}
+	err := r.learnerReportOverviewCache.Get(ctx, request, response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+type getLearnerWeeklyReportOverviewRequest struct {
+	Operator  *entity.Operator              `json:"operator"`
+	TimeRange entity.TimeRange              `json:"time_range"`
+	Condition *entity.GetUserCountCondition `json:"condition"`
+}
+
+func (r *ReportDA) getLearnerReportOverview(ctx context.Context, condition interface{}) (interface{}, error) {
+	request, ok := condition.(*getLearnerWeeklyReportOverviewRequest)
+	if !ok {
+		log.Error(ctx, "invalid request", log.Any("condition", condition))
+		return nil, constant.ErrInvalidArgs
+	}
+
+	return r.getLearnerWeeklyReportOverviewFromMySQL(ctx, request.Operator, request.TimeRange, request.Condition)
+}
+
+func (r *ReportDA) getLearnerWeeklyReportOverviewFromMySQL(ctx context.Context, op *entity.Operator, tr entity.TimeRange, cond *entity.GetUserCountCondition) (res *entity.LearnerReportOverview, err error) {
 	sqlSchedule := strings.Builder{}
 	sqlSchedule.WriteString(`
 	select id from schedules s 
@@ -127,6 +165,8 @@ group by user_id
 	if err != nil {
 		return
 	}
+
+	res = new(entity.LearnerReportOverview)
 	if len(*ret) == 0 {
 		res.Status = constant.LearnerReportOverviewStatusNoData
 		return
