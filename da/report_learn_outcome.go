@@ -13,7 +13,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 )
 
-type ILearnOutcomeReport interface {
+type ILearningOutcomeReport interface {
 	GetLearnerOutcomeOverview(ctx context.Context, condition *LearningOutcomeOverviewQueryCondition) (int, []*entity.StudentOutcomeAchievedCount, error)
 }
 
