@@ -512,17 +512,24 @@ func loadAssessmentConfig(ctx context.Context) {
 
 func LoadAMSConfig(ctx context.Context) {
 	config.AMS.EndPoint = assertGetEnv("ams_endpoint")
-	publicKeyPath := os.Getenv("jwt_public_key_path") //"./jwt_public_key.pem"
-	content, err := ioutil.ReadFile(publicKeyPath)
-	if err != nil {
-		log.Panic(ctx, "loadAMSConfig:load public key failed", log.Err(err), log.String("publicKeyPath", publicKeyPath))
+	publicKey := os.Getenv("jwt_public_key_string")
+	if publicKey != "" {
+		// debug mode: HS256/HS512
+		config.AMS.TokenVerifyKey = []byte(publicKey)
+	} else {
+		publicKeyPath := os.Getenv("jwt_public_key_path") //"./jwt_public_key.pem"
+		content, err := ioutil.ReadFile(publicKeyPath)
+		if err != nil {
+			log.Panic(ctx, "loadAMSConfig:load public key failed", log.Err(err), log.String("publicKeyPath", publicKeyPath))
+		}
+
+		key, err := jwt.ParseRSAPublicKeyFromPEM(content)
+		if err != nil {
+			log.Panic(ctx, "loadAMSConfig:ParseRSAPublicKeyFromPEM failed", log.Err(err))
+		}
+		config.AMS.TokenVerifyKey = key
 	}
 
-	key, err := jwt.ParseRSAPublicKeyFromPEM(content)
-	if err != nil {
-		log.Panic(ctx, "loadAMSConfig:ParseRSAPublicKeyFromPEM failed", log.Err(err))
-	}
-	config.AMS.TokenVerifyKey = key
 	config.AMS.AuthorizedKey = os.Getenv("user_service_api_key")
 }
 
