@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -1560,21 +1561,41 @@ func (s *Server) updateScheduleReviewStatus(c *gin.Context) {
 // @Summary getScheduleAttendance
 // @ID getScheduleAttendance
 // @Description get schedule attendance
-// @Param timeframe_from query integer true "search schedule by start_at"
-// @Param timeframe_to query integer true "search schedule by end_at"
+// @Param timeframe_from query integer true "search schedule by start_at, the time interval should not exceed 2 hours"
+// @Param timeframe_to query integer true "search schedule by end_at, the time interval should not exceed 2 hours"
 // @Produce json
 // @Tags internal
 // @Success 200 {array} entity.ScheduleAttendance
+// @Failure 401 {object} UnAuthorizedResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /internal/schedule_counts [get]
 func (s *Server) getScheduleAttendance(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	// check basic auth
+	apiKey := c.GetHeader("Authorization")
+	if apiKey == "" {
+		log.Error(ctx, "no authorization")
+		c.JSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
+		return
+	}
+
+	prefix := "Bearer "
+	if strings.HasPrefix(apiKey, prefix) {
+		apiKey = apiKey[len(prefix):]
+	}
+
+	if apiKey != config.Get().LiveTokenConfig.ScheduleQueryPublicKey {
+		log.Error(ctx, "invalid authorization", log.String("apiKey", apiKey))
+		c.JSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
+		return
+	}
+
 	timeframeFromStr := c.Query("timeframe_from")
 	timeframeToStr := c.Query("timeframe_to")
 	timeframeFrom, err := strconv.ParseInt(timeframeFromStr, 10, 64)
 	if err != nil {
-		log.Error(ctx, " strconv.ParseInt error",
+		log.Error(ctx, "strconv.ParseInt error",
 			log.String("timeframeFromStr", timeframeFromStr))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
@@ -1583,6 +1604,14 @@ func (s *Server) getScheduleAttendance(c *gin.Context) {
 	timeframeTo, err := strconv.ParseInt(timeframeToStr, 10, 64)
 	if err != nil {
 		log.Error(ctx, " strconv.ParseInt error",
+			log.String("timeframeToStr", timeframeToStr))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	if timeframeTo-timeframeFrom > 7200 {
+		log.Error(ctx, "the time interval should not exceed 24 hours",
+			log.String("timeframeFromStr", timeframeFromStr),
 			log.String("timeframeToStr", timeframeToStr))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
