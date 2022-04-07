@@ -537,9 +537,8 @@ func loadH5PServiceConfig(ctx context.Context) {
 func loadDataServiceConfig(ctx context.Context) {
 	// TODO assertGetEnv
 	config.DataService.EndPoint = os.Getenv("data_service_endpoint")
-	// config.DataService.AuthorizedKey = os.Getenv("data_service_api_key")
-	// config.DataService.PublicAuthorizedKey = os.Getenv("data_service_public_key")
-	config.DataService.AuthorizedKey = "8U3cfvDzxn8ZNP3KRwNSy9RZuQpKVROY4uXkipKD"
+	config.DataService.AuthorizedKey = os.Getenv("data_service_api_key")
+	config.DataService.PublicAuthorizedKey = os.Getenv("data_service_public_key")
 }
 
 func loadCORSConfig(ctx context.Context) {
