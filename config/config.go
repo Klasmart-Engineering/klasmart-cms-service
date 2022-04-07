@@ -123,7 +123,8 @@ type ScheduleConfig struct {
 type LiveTokenConfig struct {
 	PrivateKey interface{} `yaml:"private_key" json:"-"`
 	//PublicKey  string      `yaml:"public_key"`
-	AssetsUrlPrefix string `yaml:"assets_url_prefix"`
+	AssetsUrlPrefix        string `yaml:"assets_url_prefix"`
+	ScheduleQueryPublicKey string `yaml:"schedule_query_public_key"`
 }
 
 type AssessmentConfig struct {
@@ -478,6 +479,7 @@ func loadLiveTokenEnvConfig(ctx context.Context) {
 		)
 	}
 	config.LiveTokenConfig.AssetsUrlPrefix = assetsUrlPrefix
+	config.LiveTokenConfig.ScheduleQueryPublicKey = os.Getenv("schedule_query_key")
 }
 
 func loadAssessmentConfig(ctx context.Context) {
