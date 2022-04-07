@@ -1573,22 +1573,24 @@ func (s *Server) getScheduleAttendance(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// check basic auth
-	apiKey := c.GetHeader("Authorization")
-	if apiKey == "" {
-		log.Error(ctx, "no authorization")
-		c.JSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
-		return
-	}
+	if config.Get().LiveTokenConfig.ScheduleQueryPublicKey != "" {
+		apiKey := c.GetHeader("Authorization")
+		if apiKey == "" {
+			log.Error(ctx, "no authorization")
+			c.JSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
+			return
+		}
 
-	prefix := "Bearer "
-	if strings.HasPrefix(apiKey, prefix) {
-		apiKey = apiKey[len(prefix):]
-	}
+		prefix := "Bearer "
+		if strings.HasPrefix(apiKey, prefix) {
+			apiKey = apiKey[len(prefix):]
+		}
 
-	if apiKey != config.Get().LiveTokenConfig.ScheduleQueryPublicKey {
-		log.Error(ctx, "invalid authorization", log.String("apiKey", apiKey))
-		c.JSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
-		return
+		if apiKey != config.Get().LiveTokenConfig.ScheduleQueryPublicKey {
+			log.Error(ctx, "invalid authorization", log.String("apiKey", apiKey))
+			c.JSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
+			return
+		}
 	}
 
 	timeframeFromStr := c.Query("timeframe_from")
