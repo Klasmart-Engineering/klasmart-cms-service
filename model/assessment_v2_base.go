@@ -287,11 +287,12 @@ func ConvertAssessmentPageReply(ctx context.Context, op *entity.Operator, assess
 
 	for i, item := range assessments {
 		replyItem := &v2.AssessmentQueryReply{
-			ID:         item.ID,
-			Title:      item.Title,
-			ClassEndAt: item.ClassEndAt,
-			CompleteAt: item.CompleteAt,
-			Status:     item.Status,
+			ID:             item.ID,
+			AssessmentType: item.AssessmentType,
+			Title:          item.Title,
+			ClassEndAt:     item.ClassEndAt,
+			CompleteAt:     item.CompleteAt,
+			Status:         item.Status,
 		}
 		result[i] = replyItem
 
@@ -384,14 +385,15 @@ func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, asse
 	}
 
 	result := &v2.AssessmentDetailReply{
-		ID:           assessment.ID,
-		Title:        assessment.Title,
-		Status:       assessment.Status,
-		RoomID:       assessment.ScheduleID,
-		ClassEndAt:   assessment.ClassEndAt,
-		ClassLength:  assessment.ClassLength,
-		CompleteAt:   assessment.CompleteAt,
-		CompleteRate: 0,
+		ID:             assessment.ID,
+		AssessmentType: assessment.AssessmentType,
+		Title:          assessment.Title,
+		Status:         assessment.Status,
+		RoomID:         assessment.ScheduleID,
+		ClassEndAt:     assessment.ClassEndAt,
+		ClassLength:    assessment.ClassLength,
+		CompleteAt:     assessment.CompleteAt,
+		CompleteRate:   0,
 	}
 
 	schedule, ok := scheduleMap[assessment.ScheduleID]
@@ -410,6 +412,7 @@ func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, asse
 	result.Students = students
 	result.CompleteRate = completeRateMap[assessment.ID]
 	result.IsAnyOneAttempted = isAnyOneAttempted
+	result.Description = schedule.Description
 
 	for _, item := range outcomeMap {
 		result.Outcomes = append(result.Outcomes, item)
@@ -469,11 +472,12 @@ func ConvertAssessmentHomePageReply(ctx context.Context, op *entity.Operator, as
 
 	for i, item := range assessments {
 		replyItem := &v2.AssessmentQueryReply{
-			ID:         item.ID,
-			Title:      item.Title,
-			ClassEndAt: item.ClassEndAt,
-			CompleteAt: item.CompleteAt,
-			Status:     item.Status,
+			ID:             item.ID,
+			AssessmentType: item.AssessmentType,
+			Title:          item.Title,
+			ClassEndAt:     item.ClassEndAt,
+			CompleteAt:     item.CompleteAt,
+			Status:         item.Status,
 		}
 		result[i] = replyItem
 
