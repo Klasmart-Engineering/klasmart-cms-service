@@ -1566,6 +1566,7 @@ func (s *Server) updateScheduleReviewStatus(c *gin.Context) {
 // @Produce json
 // @Tags internal
 // @Success 200 {array} entity.ScheduleAttendance
+// @Failure 401 {object} UnAuthorizedResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /internal/schedule_counts [get]
 func (s *Server) getScheduleAttendance(c *gin.Context) {
