@@ -88,6 +88,7 @@ type IScheduleModel interface {
 	CheckScheduleReviewData(ctx context.Context, op *entity.Operator, request *entity.CheckScheduleReviewDataRequest) (*entity.CheckScheduleReviewDataResponse, error)
 	UpdateScheduleReviewStatus(ctx context.Context, request *entity.UpdateScheduleReviewStatusRequest) error
 	GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleReview, error)
+	GetScheduleAttendance(ctx context.Context, timeframeFrom, timeframeTo int) ([]*entity.ScheduleAttendance, error)
 }
 
 type scheduleModel struct {
@@ -3216,6 +3217,84 @@ func (s *scheduleModel) GetSuccessScheduleReview(ctx context.Context, op *entity
 	}
 
 	return scheduleReviews, nil
+}
+
+func (s *scheduleModel) GetScheduleAttendance(ctx context.Context, timeframeFrom, timeframeTo int) ([]*entity.ScheduleAttendance, error) {
+	daCondition := da.ScheduleCondition{
+		StartAtOrEndAtOrDueAtGe: sql.NullInt64{
+			Int64: int64(timeframeFrom),
+			Valid: true,
+		},
+		StartAtOrEndAtOrDueAtLe: sql.NullInt64{
+			Int64: int64(timeframeTo),
+			Valid: true,
+		},
+	}
+	var schedules []*entity.Schedule
+	err := s.scheduleDA.Query(ctx, daCondition, &schedules)
+	if err != nil {
+		log.Error(ctx, "s.scheduleDA.Query error",
+			log.Err(err),
+			log.Any("daCondition", daCondition))
+		return nil, err
+	}
+	if len(schedules) == 0 {
+		return []*entity.ScheduleAttendance{}, nil
+	}
+
+	scheduleIDs := make([]string, 0, len(schedules))
+	for _, v := range schedules {
+		scheduleIDs = append(scheduleIDs, v.ID)
+	}
+
+	scheduleRelationCondition := da.ScheduleRelationCondition{
+		ScheduleIDs: entity.NullStrings{
+			Strings: scheduleIDs,
+			Valid:   true,
+		},
+		RelationTypes: entity.NullStrings{
+			Strings: []string{string(entity.ScheduleRelationTypeClassRosterStudent), string(entity.ScheduleRelationTypeClassRosterTeacher)},
+			Valid:   true,
+		},
+	}
+	var scheduleRelations []*entity.ScheduleRelation
+	err = s.scheduleRelationDA.Query(ctx, scheduleRelationCondition, &scheduleRelations)
+	if err != nil {
+		log.Error(ctx, "s.scheduleRelationDA.Query error",
+			log.Err(err),
+			log.Any("scheduleRelationCondition", scheduleRelationCondition))
+		return nil, err
+	}
+
+	scheduleAttendances := make(map[string]*entity.ScheduleAttendance)
+	for _, v := range scheduleRelations {
+		if val, ok := scheduleAttendances[v.ScheduleID]; ok {
+			switch v.RelationType {
+			case entity.ScheduleRelationTypeClassRosterStudent:
+				val.NumberOfStudents++
+			case entity.ScheduleRelationTypeClassRosterTeacher:
+				val.NumberOfTeachers++
+			}
+		} else {
+			switch v.RelationType {
+			case entity.ScheduleRelationTypeClassRosterStudent:
+				scheduleAttendances[v.ScheduleID] = &entity.ScheduleAttendance{
+					NumberOfStudents: 1,
+				}
+			case entity.ScheduleRelationTypeClassRosterTeacher:
+				scheduleAttendances[v.ScheduleID] = &entity.ScheduleAttendance{
+					NumberOfTeachers: 1,
+				}
+			}
+		}
+	}
+
+	result := make([]*entity.ScheduleAttendance, 0, len(scheduleAttendances))
+	for _, v := range scheduleAttendances {
+		result = append(result, v)
+	}
+
+	return result, nil
 }
 
 // Schedule model interval function
