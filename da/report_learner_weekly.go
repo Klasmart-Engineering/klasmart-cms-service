@@ -22,7 +22,7 @@ func (r *ReportDA) GetLearnerWeeklyReportOverview(ctx context.Context, op *entit
 		return r.getLearnerWeeklyReportOverviewFromMySQL(ctx, op, tr, cond)
 	}
 
-	request := &getLearnerWeeklyReportOverviewRequest{
+	request := &getLearnerWeeklyReportOverviewQueryCondition{
 		Operator:  op,
 		TimeRange: tr,
 		Condition: cond,
@@ -37,14 +37,14 @@ func (r *ReportDA) GetLearnerWeeklyReportOverview(ctx context.Context, op *entit
 	return response, nil
 }
 
-type getLearnerWeeklyReportOverviewRequest struct {
+type getLearnerWeeklyReportOverviewQueryCondition struct {
 	Operator  *entity.Operator              `json:"operator"`
 	TimeRange entity.TimeRange              `json:"time_range"`
 	Condition *entity.GetUserCountCondition `json:"condition"`
 }
 
 func (r *ReportDA) getLearnerReportOverview(ctx context.Context, condition interface{}) (interface{}, error) {
-	request, ok := condition.(*getLearnerWeeklyReportOverviewRequest)
+	request, ok := condition.(*getLearnerWeeklyReportOverviewQueryCondition)
 	if !ok {
 		log.Error(ctx, "invalid request", log.Any("condition", condition))
 		return nil, constant.ErrInvalidArgs

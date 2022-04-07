@@ -15,12 +15,13 @@ type IReportDA interface {
 	IStudentProgressAssignment
 	IStudentProgressLearnOutcomeAchievement
 	IClassAttendance
-	ILearnOutcome
+	ILearnOutcomeReport
 	ILearnerWeekly
 }
 type ReportDA struct {
 	BaseDA
-	learnerReportOverviewCache *LazyRefreshCache
+	learnerReportOverviewCache   *LazyRefreshCache
+	learningOutcomeOverviewCache *LazyRefreshCache
 }
 
 var _reportDA *ReportDA
@@ -40,6 +41,17 @@ func GetReportDA() IReportDA {
 		}
 
 		_reportDA.learnerReportOverviewCache = learnerReportOverviewCache
+
+		learningOutcomeOverviewCache, err := NewLazyRefreshCache(&LazyRefreshCacheOption{
+			RedisKeyPrefix:  RedisKeyPrefixReportLearningOutcomeOverview,
+			Expiration:      constant.ReportQueryCacheExpiration,
+			RefreshDuration: constant.ReportQueryCacheRefreshDuration,
+			RawQuery:        _reportDA.getLearningOutcomeOverview})
+		if err != nil {
+			log.Panic(context.Background(), "create learning outcome overview cache failed", log.Err(err))
+		}
+
+		_reportDA.learningOutcomeOverviewCache = learningOutcomeOverviewCache
 
 	})
 	return _reportDA

@@ -168,6 +168,6 @@ const (
 )
 
 const (
-	ReportQueryCacheExpiration      = time.Minute * 10
+	ReportQueryCacheExpiration      = time.Minute * 5
 	ReportQueryCacheRefreshDuration = time.Minute
 )
