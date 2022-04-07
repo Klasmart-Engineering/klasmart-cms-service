@@ -1556,3 +1556,43 @@ func (s *Server) updateScheduleReviewStatus(c *gin.Context) {
 		s.defaultErrorHandler(c, err)
 	}
 }
+
+// @Summary getScheduleAttendance
+// @ID getScheduleAttendance
+// @Description get schedule attendance
+// @Param timeframe_from query integer true "search schedule by start_at"
+// @Param timeframe_to query integer true "search schedule by end_at"
+// @Produce json
+// @Tags internal
+// @Success 200 {array} entity.ScheduleAttendance
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /internal/schedule_counts [get]
+func (s *Server) getScheduleAttendance(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	timeframeFromStr := c.Query("timeframe_from")
+	timeframeToStr := c.Query("timeframe_to")
+	timeframeFrom, err := strconv.ParseInt(timeframeFromStr, 10, 64)
+	if err != nil {
+		log.Error(ctx, " strconv.ParseInt error",
+			log.String("timeframeFromStr", timeframeFromStr))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	timeframeTo, err := strconv.ParseInt(timeframeToStr, 10, 64)
+	if err != nil {
+		log.Error(ctx, " strconv.ParseInt error",
+			log.String("timeframeToStr", timeframeToStr))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	result, err := model.GetScheduleModel().GetScheduleAttendance(ctx, int(timeframeFrom), int(timeframeTo))
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		s.defaultErrorHandler(c, err)
+	}
+}
