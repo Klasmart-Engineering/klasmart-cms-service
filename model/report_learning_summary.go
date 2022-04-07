@@ -21,7 +21,7 @@ import (
 type ILearningSummaryReportModel interface {
 	QueryTimeFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryTimeFilterArgs) ([]*entity.LearningSummaryFilterYear, error)
 	QueryLiveClassesSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryLiveClassesSummaryResult, error)
-	QueryLiveClassesSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res *entity.QueryLiveClassesSummaryResult, err error)
+	QueryLiveClassesSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res *entity.QueryLiveClassesSummaryResultV2, err error)
 	QueryAssignmentsSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryAssignmentsSummaryResult, error)
 	QueryAssignmentsSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res *entity.QueryAssignmentsSummaryResultV2, err error)
 }
@@ -145,9 +145,48 @@ func (l *learningSummaryReportModel) getYearsWeeksData(nowWithZone time.Time) (r
 	return
 }
 
-func (l *learningSummaryReportModel) QueryLiveClassesSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryLiveClassesSummaryResult, error) {
+func (l *learningSummaryReportModel) QueryLiveClassesSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res *entity.QueryLiveClassesSummaryResultV2, err error) {
+	items, err := da.GetReportDA().QueryLiveClassesSummaryV2(ctx, tx, operator, filter)
+	if err != nil {
+		return
+	}
+	var scheduleIDs []string
+	for _, item := range items {
+		scheduleIDs = append(scheduleIDs, item.ScheduleID)
+	}
 
-	return nil, nil
+	// find related comments and make map by schedule id  (live: room comments)
+	roomCommentMap, err := getAssessmentH5P().batchGetRoomCommentMap(ctx, operator, scheduleIDs)
+	if err != nil {
+		log.Error(ctx, "query live classes summary: batch get room comment map failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
+			log.Any("filter", filter),
+		)
+		return nil, err
+	}
+	for _, item := range items {
+		comments := roomCommentMap[item.ScheduleID][filter.StudentID]
+		if len(comments) > 0 {
+			item.TeacherFeedback = comments[len(comments)-1]
+		}
+	}
+
+	res = &entity.QueryLiveClassesSummaryResultV2{
+		Attend: 0,
+		Items:  items,
+	}
+	if len(items) > 0 {
+		absentCount := 0
+		for _, item := range items {
+			if item.Absent {
+				absentCount++
+			}
+		}
+		res.Attend = (float64(len(items)) - float64(absentCount)) / float64(len(items))
+	}
+
+	return
 }
 
 func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryLiveClassesSummaryResult, error) {
