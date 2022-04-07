@@ -325,8 +325,7 @@ func (s Server) registeRoute() {
 		internal.GET("/contents", s.mustLoginWithoutOrgID, s.queryContentInternal)
 		internal.GET("/schedules", s.mustLoginWithoutOrgID, s.queryScheduleInternal)
 		internal.GET("/schedules/:id/relation_ids", s.mustLoginWithoutOrgID, s.queryScheduleRelationIDsInternal)
-		// TODO no authorization
-		internal.POST("/schedules/update_review_status", s.updateScheduleReviewStatus)
+		internal.POST("/schedules/update_review_status", s.mustDataService, s.updateScheduleReviewStatus)
 	}
 }
 
