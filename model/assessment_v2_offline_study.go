@@ -14,7 +14,7 @@ import (
 )
 
 func NewOfflineStudyAssessmentPage(ag *AssessmentGrain) IAssessmentMatch {
-	return &OnlineClassAssessment{
+	return &OfflineStudyAssessment{
 		ag:     ag,
 		action: AssessmentMatchActionPage,
 		base:   NewBaseAssessment(ag),
@@ -22,7 +22,7 @@ func NewOfflineStudyAssessmentPage(ag *AssessmentGrain) IAssessmentMatch {
 }
 
 func NewOfflineStudyAssessmentDetail(ag *AssessmentGrain) IAssessmentMatch {
-	return &OnlineClassAssessment{
+	return &OfflineStudyAssessment{
 		ag:     ag,
 		action: AssessmentMatchActionDetail,
 		base:   NewBaseAssessment(ag),

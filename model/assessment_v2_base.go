@@ -23,6 +23,8 @@ type IAssessmentMatch interface {
 	MatchContents() ([]*v2.AssessmentContentReply, error)
 	MatchStudents(contentsReply []*v2.AssessmentContentReply) ([]*v2.AssessmentStudentReply, error)
 	MatchDiffContentStudents() ([]*v2.AssessmentDiffContentStudentsReply, error)
+
+	Update(req *v2.AssessmentUpdateReq) error
 }
 
 type AssessmentMatchAction int
@@ -215,6 +217,8 @@ func GetAssessmentPageMatch(assessmentType v2.AssessmentType, ags *AssessmentGra
 		match = NewOnlineStudyAssessmentPage(ags)
 	case v2.AssessmentTypeReviewStudy:
 		match = NewReviewStudyAssessmentPage(ags)
+	case v2.AssessmentTypeOfflineStudy:
+		match = NewOfflineStudyAssessmentPage(ags)
 	default:
 		match = NewEmptyAssessment()
 	}
@@ -233,6 +237,8 @@ func GetAssessmentDetailMatch(assessmentType v2.AssessmentType, ags *AssessmentG
 		match = NewOnlineStudyAssessmentDetail(ags)
 	case v2.AssessmentTypeReviewStudy:
 		match = NewReviewStudyAssessmentDetail(ags)
+	case v2.AssessmentTypeOfflineStudy:
+		match = NewOfflineStudyAssessmentDetail(ags)
 	default:
 		match = NewEmptyAssessment()
 	}
@@ -510,6 +516,10 @@ func NewEmptyAssessment() IAssessmentMatch {
 }
 
 type EmptyAssessment struct{}
+
+func (o EmptyAssessment) Update(req *v2.AssessmentUpdateReq) error {
+	return nil
+}
 
 func (o EmptyAssessment) MatchAnyOneAttempted() (bool, error) {
 	return false, nil

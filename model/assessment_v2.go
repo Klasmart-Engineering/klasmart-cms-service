@@ -489,6 +489,11 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 	}
 
 	ags := NewAssessmentGrainSingle(ctx, op, waitUpdatedAssessment)
+	if waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeOfflineStudy {
+		match := GetAssessmentDetailMatch(waitUpdatedAssessment.AssessmentType, ags)
+		return match.Update(req)
+	}
+
 	userIDAndUserTypeMap, err := ags.GetAssessmentUserWithUserIDAndUserTypeMap()
 	if err != nil {
 		return err
