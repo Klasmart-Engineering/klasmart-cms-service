@@ -1,0 +1,21 @@
+query($direction:ConnectionDirection!, $cursor:String!, $count:PageSize){
+    {{.ConnectionName}}(
+        direction:$direction,
+        directionArgs:{cursor:$cursor, count: $count},
+        filter:{{.FilterString}}
+        sort:{field:[id, name],order:ASC}) {
+            totalCount
+            pageInfo{
+              hasNextPage
+              hasPreviousPage
+              startCursor
+              endCursor
+            }
+            edges{
+              cursor
+              node{
+              {{.NodeString}}
+              }
+            }
+    }
+}

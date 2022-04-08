@@ -112,7 +112,7 @@ func TestMain(m *testing.M) {
 	config.Set(&config.Config{
 		AMS: config.AMSConfig{
 			//EndPoint: "https://api.beta.kidsloop.net/user/",
-			EndPoint: "https://api.alpha.kidsloop.net/user/",
+			EndPoint: os.Getenv("ams_endpoint"),
 		},
 		H5P: config.H5PServiceConfig{
 			EndPoint: "https://api.alpha.kidsloop.net/assessment/graphql/",

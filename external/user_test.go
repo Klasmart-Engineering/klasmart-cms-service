@@ -2,6 +2,8 @@ package external
 
 import (
 	"context"
+	_ "embed"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -36,4 +38,11 @@ func TestAmsUserService_GetUserCount(t *testing.T) {
 		},
 	})
 
+}
+
+//go:embed user.go
+var user string
+
+func TestEmbed(t *testing.T) {
+	fmt.Println(user)
 }
