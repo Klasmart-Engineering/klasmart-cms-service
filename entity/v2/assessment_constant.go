@@ -386,3 +386,12 @@ const (
 	AssessmentActionDraft    AssessmentAction = "Draft"
 	AssessmentActionComplete AssessmentAction = "Complete"
 )
+
+func (s AssessmentAction) Valid() bool {
+	switch s {
+	case AssessmentActionDraft,
+		AssessmentActionComplete:
+		return true
+	}
+	return false
+}

@@ -102,8 +102,9 @@ type StorageConfig struct {
 	StorageBucket   string `yaml:"storage_bucket"`
 	StorageRegion   string `yaml:"storage_region"`
 
-	StorageDownloadMode StorageDownloadMode `yaml:"storage_download_mode"`
-	StorageSigMode      bool                `yaml:"storage_sig_mode"`
+	StorageDownloadMode  StorageDownloadMode `yaml:"storage_download_mode"`
+	StorageSigMode       bool                `yaml:"storage_sig_mode"`
+	StorageBucketInbound string              `yaml:"storage_bucket_inbound"`
 }
 
 type CDNConfig struct {
@@ -123,7 +124,8 @@ type ScheduleConfig struct {
 type LiveTokenConfig struct {
 	PrivateKey interface{} `yaml:"private_key" json:"-"`
 	//PublicKey  string      `yaml:"public_key"`
-	AssetsUrlPrefix string `yaml:"assets_url_prefix"`
+	AssetsUrlPrefix        string `yaml:"assets_url_prefix"`
+	ScheduleQueryPublicKey string `yaml:"schedule_query_public_key"`
 }
 
 type AssessmentConfig struct {
@@ -316,6 +318,8 @@ func loadStorageEnvConfig(ctx context.Context) {
 			config.CDNConfig.CDNPrivateKeyPath = assertGetEnv("cdn_private_key_path")
 		}
 	}
+
+	config.StorageConfig.StorageBucketInbound = os.Getenv("storage_bucket_inbound")
 }
 
 func LoadRedisEnvConfig(ctx context.Context) {
@@ -478,6 +482,7 @@ func loadLiveTokenEnvConfig(ctx context.Context) {
 		)
 	}
 	config.LiveTokenConfig.AssetsUrlPrefix = assetsUrlPrefix
+	config.LiveTokenConfig.ScheduleQueryPublicKey = os.Getenv("schedule_query_key")
 }
 
 func loadAssessmentConfig(ctx context.Context) {

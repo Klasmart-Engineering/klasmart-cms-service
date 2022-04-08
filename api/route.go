@@ -66,6 +66,7 @@ func (s Server) registeRoute() {
 		content.GET("/contents_resources", s.mustLogin, s.getUploadPath)
 		content.GET("/contents_resources/:resource_id", s.mustLoginWithoutOrgID, s.getContentResourcePath)
 		content.GET("/contents_resources/:resource_id/download", s.mustLoginWithoutOrgID, s.getDownloadPath)
+		content.GET("/contents_resources/:resource_id/check", s.mustLoginWithoutOrgID, s.checkExist)
 		content.GET("/contents/:content_id/live/token", s.mustLogin, s.getContentLiveToken)
 		content.POST("/contents_lesson_plans", s.mustLogin, s.getLessonPlansCanSchedule)
 	}
@@ -326,6 +327,7 @@ func (s Server) registeRoute() {
 		internal.GET("/schedules", s.mustLoginWithoutOrgID, s.queryScheduleInternal)
 		internal.GET("/schedules/:id/relation_ids", s.mustLoginWithoutOrgID, s.queryScheduleRelationIDsInternal)
 		internal.POST("/schedules/update_review_status", s.mustDataService, s.updateScheduleReviewStatus)
+		internal.GET("/schedule_counts", s.getScheduleAttendance)
 	}
 }
 
