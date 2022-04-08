@@ -37,6 +37,10 @@ type OfflineStudyAssessment struct {
 	action AssessmentMatchAction
 }
 
+func (o *OfflineStudyAssessment) MatchSchedule() (map[string]*entity.Schedule, error) {
+	return o.base.MatchSchedule()
+}
+
 func (o *OfflineStudyAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
 	return o.base.MatchTeacher()
 }
@@ -192,7 +196,10 @@ func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCon
 
 		studentResultItem := new(v2.AssessmentStudentResultReply)
 		resultItem.ReviewerComment = reviewerFeedback.ReviewerComment
-		studentResultItem.AssessScore = reviewerFeedback.AssessScore
+		studentResultItem.AssessScore = v2.AssessmentUserAssessAverage
+		if reviewerFeedback.AssessScore > 0 {
+			studentResultItem.AssessScore = reviewerFeedback.AssessScore
+		}
 		studentResultItem.Attempted = true
 
 		studentResultItem.Outcomes = make([]*v2.AssessmentStudentResultOutcomeReply, 0, len(outcomesFromSchedule))
@@ -354,6 +361,10 @@ func (o *OfflineStudyAssessment) Update(req *v2.AssessmentUpdateReq) error {
 		feedbackIDs := make([]string, 0)
 		for _, item := range reviewerFeedbacks {
 			if reqStuResult, ok := reqStuResultMap[item.AssessmentUserID]; ok {
+				if reqStuResult.AssessScore <= 0 {
+					log.Warn(ctx, "student assessScore invalid in request", log.Any("req", req))
+					return constant.ErrInvalidArgs
+				}
 				item.AssessScore = reqStuResult.AssessScore
 				item.ReviewerID = op.UserID
 			}
