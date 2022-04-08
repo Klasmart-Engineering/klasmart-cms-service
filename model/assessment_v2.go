@@ -123,22 +123,15 @@ func (a *assessmentModelV2) GetByID(ctx context.Context, op *entity.Operator, id
 		return nil, err
 	}
 
-	if assessment.AssessmentType == v2.AssessmentTypeOfflineStudy {
-		log.Warn(ctx, "assessment type is not support offline study", log.Err(err), log.Any("assessment", assessment))
-		return nil, nil
-	}
+	//if assessment.AssessmentType == v2.AssessmentTypeOfflineStudy {
+	//	log.Warn(ctx, "assessment type is not support offline study", log.Err(err), log.Any("assessment", assessment))
+	//	return nil, nil
+	//}
 
 	result, err := ConvertAssessmentDetailReply(ctx, op, assessment)
 	if err != nil {
 		return nil, err
 	}
-
-	//assessmentComponent := NewAssessmentDetailComponent(ctx, op, assessment)
-	//result, err := assessmentComponent.ConvertDetailReply(a.getAssessmentDetailConfig(assessmentComponent, assessment.AssessmentType))
-	//if err != nil {
-	//	log.Error(ctx, "ConvertPageReply error", log.Err(err))
-	//	return nil, err
-	//}
 
 	return result, nil
 }

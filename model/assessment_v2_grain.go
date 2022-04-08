@@ -77,7 +77,7 @@ func NewAssessmentGrainMul(ctx context.Context, op *entity.Operator, assessments
 func NewAssessmentGrainSingle(ctx context.Context, op *entity.Operator, assessment *v2.Assessment) *AssessmentGrain {
 	initRecord := make(map[AssessmentsGrainInit]bool)
 	amg := NewAssessmentMulGrainItem(ctx, op, []*v2.Assessment{assessment}, initRecord)
-	asg := NewAssessmentSingleGrainItem(ctx, op, new(v2.Assessment), initRecord, amg)
+	asg := NewAssessmentSingleGrainItem(ctx, op, assessment, initRecord, amg)
 	return &AssessmentGrain{
 		ctx:        ctx,
 		op:         op,
