@@ -11,7 +11,7 @@ import (
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 )
 
-const assessmentOpToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ2NTNmODgwLWI5MjAtNDM1Zi04ZjJkLTk4YjVkNDYyMWViOCIsImVtYWlsIjoic2Nob29sXzAzMDMyOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0OTQwODkxMiwiaXNzIjoia2lkc2xvb3AifQ.TADOF2OKLArpttA_DcYUjHIngczjXQ2QqNfqSYp3eJdj5gb5hqUR-vBn3aXlbH42afPYOHGpTmsTkumaYPaJriYucaeeYx4XnRa44B74PGysEzzfE539HdExTxhEJ6K72Yv7eVlReLvaHMXtFGjOFOm9xK_EGukyJSUCnNI6VmQ1luOo2TRJawxrB50vOAj61Os0rUOaJDY_5m9w1F5QH986AfI_o2IqtEfR9AdofHDJA4LuiXio9H9kvqwZr2HrW0FBC7pM80y1j6BGShT6_5H25y_fFkMtdWn6GRBzRdkqQ5VtdHjtRfJZXDJE6_MSdMprJtTAslz0oDQC6Uubvg"
+const assessmentOpToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ2NTNmODgwLWI5MjAtNDM1Zi04ZjJkLTk4YjVkNDYyMWViOCIsImVtYWlsIjoic2Nob29sXzAzMDMyOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0OTQwOTgxMywiaXNzIjoia2lkc2xvb3AifQ.GjJXnYds3Tk-qCA8jaJeDsj64FTOAeqUKyFgFLBwjHHz7kIa6zSRtqsJfSyH4EBradrYoxOtYRXsXCdm7wEI0vkkgJ8ktsyeNUo9nmYL80I7XFMM7ASdWQYKulunj4oOB3-BOaRx8i2aG9gx3uU-hxIGbqT44MBoTiulw8NAF3vxr5jAP8btZLbomCkyWm6AxVOcMbsPZo23Mxo2a742fUR8DmuBl1lffT3RdZkg7Tn6upBKT5Ec0ldh5CEU0pPaDPSFrB47uVvwELsjTzjZXo7snI2pFO_hoB0587XYy_2HA2qgDpjyK7a3HrqVqT-uqB11K5wvhH80DIclxac8wg"
 
 func TestAssessmentModel_GetByID(t *testing.T) {
 	ctx := context.Background()
@@ -21,7 +21,7 @@ func TestAssessmentModel_GetByID(t *testing.T) {
 		Token:  "",
 	}
 	op.Token = assessmentOpToken
-	result, err := GetAssessmentModelV2().GetByID(ctx, op, "6221b3b723068b03228e2e05")
+	result, err := GetAssessmentModelV2().GetByID(ctx, op, "60a36e7fde590052a3c5dd96")
 	if err != nil {
 		t.Fatal(err)
 	}
