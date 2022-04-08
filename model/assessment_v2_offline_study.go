@@ -399,7 +399,7 @@ func (o *OfflineStudyAssessment) Update(req *v2.AssessmentUpdateReq) error {
 			return err
 		}
 		for _, item := range feedbackAssigns {
-			if assignmentReq, ok := assignmentMap[item.ID]; ok {
+			if assignmentReq, ok := assignmentMap[item.ID]; ok && assignmentReq.ReviewerAssignmentID != "" {
 				item.ReviewAttachmentID = assignmentReq.ReviewerAssignmentID
 				item.UpdateAt = now
 				waitUpdateFeedbackAssignments = append(waitUpdateFeedbackAssignments, item)
