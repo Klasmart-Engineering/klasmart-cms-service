@@ -209,11 +209,15 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 
 		result := make([]*v2.StudentAssessment, len(userResults))
 		for i, item := range userResults {
+			status := item.Status.Compliant(ctx)
+			if status != condition.Status {
+				continue
+			}
 			resultItem := &v2.StudentAssessment{
 				ID:                  item.ID,
 				Title:               item.Title,
 				Score:               int(item.AssessScore),
-				Status:              item.Status.Compliant(ctx),
+				Status:              status,
 				CreateAt:            item.CreateAt,
 				UpdateAt:            item.UpdateAt,
 				CompleteAt:          item.CompleteAt,
@@ -485,6 +489,11 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 	}
 
 	ags := NewAssessmentGrainSingle(ctx, op, waitUpdatedAssessment)
+	if waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeOfflineStudy {
+		match := GetAssessmentDetailMatch(waitUpdatedAssessment.AssessmentType, ags)
+		return match.Update(req)
+	}
+
 	userIDAndUserTypeMap, err := ags.GetAssessmentUserWithUserIDAndUserTypeMap()
 	if err != nil {
 		return err

@@ -32,6 +32,7 @@ const (
 	GrainUserMap
 	GrainLiveRoomMap
 	GrainLessPlanMap
+	GrainAssessmentReviewerFeedbackMap
 
 	SingleOutcomeMapFromContent
 	SingleLatestContentSliceFromSchedule
@@ -40,22 +41,60 @@ const (
 	SingleContentMapFromLiveRoom
 	SingleUserCommentResultMap
 	SingleOutcomeMapFromAssessment
+	SingleGetOutcomesFromSchedule
 )
 
 type AssessmentGrain struct {
 	ctx        context.Context
 	op         *entity.Operator
-	InitRecord map[AssessmentsGrainInit]bool
+	initRecord map[AssessmentsGrainInit]bool
 
-	assessments []*v2.Assessment
-	assessment  *v2.Assessment
+	*AssessmentMulGrainItem
 
-	AssessmentMulGrainItem
+	*AssessmentSingleGrainItem
+}
 
-	AssessmentSingleGrainItem
+func NewAssessmentGrainMul(ctx context.Context, op *entity.Operator, assessments []*v2.Assessment) *AssessmentGrain {
+	if len(assessments) <= 0 {
+		log.Warn(ctx, "assessments is empty")
+		return new(AssessmentGrain)
+	}
+
+	initRecord := make(map[AssessmentsGrainInit]bool)
+	firstAssessment := assessments[0]
+	amg := NewAssessmentMulGrainItem(ctx, op, assessments, initRecord)
+	asg := NewAssessmentSingleGrainItem(ctx, op, firstAssessment, initRecord, amg)
+	return &AssessmentGrain{
+		ctx:        ctx,
+		op:         op,
+		initRecord: initRecord,
+
+		AssessmentMulGrainItem:    amg,
+		AssessmentSingleGrainItem: asg,
+	}
+}
+
+func NewAssessmentGrainSingle(ctx context.Context, op *entity.Operator, assessment *v2.Assessment) *AssessmentGrain {
+	initRecord := make(map[AssessmentsGrainInit]bool)
+	amg := NewAssessmentMulGrainItem(ctx, op, []*v2.Assessment{assessment}, initRecord)
+	asg := NewAssessmentSingleGrainItem(ctx, op, new(v2.Assessment), initRecord, amg)
+	return &AssessmentGrain{
+		ctx:        ctx,
+		op:         op,
+		initRecord: initRecord,
+
+		AssessmentMulGrainItem:    amg,
+		AssessmentSingleGrainItem: asg,
+	}
 }
 
 type AssessmentMulGrainItem struct {
+	ctx        context.Context
+	op         *entity.Operator
+	initRecord map[AssessmentsGrainInit]bool
+
+	assessments []*v2.Assessment
+
 	assessmentMap        map[string]*v2.Assessment             // assessmentID
 	scheduleMap          map[string]*entity.Schedule           // scheduleID
 	scheduleRelationMap  map[string][]*entity.ScheduleRelation // scheduleID
@@ -68,11 +107,27 @@ type AssessmentMulGrainItem struct {
 	liveRoomMap          map[string]*external.RoomInfo         // roomID
 	lessPlanMap          map[string]*v2.AssessmentContentView  // lessPlanID
 
+	assessmentReviewerFeedbackMap map[string]*v2.AssessmentReviewerFeedback // assessmentUserID
+
 	assessmentUsers []*v2.AssessmentUser
 }
 
+func NewAssessmentMulGrainItem(ctx context.Context, op *entity.Operator, assessments []*v2.Assessment, initRecord map[AssessmentsGrainInit]bool) *AssessmentMulGrainItem {
+	return &AssessmentMulGrainItem{
+		ctx:         ctx,
+		op:          op,
+		assessments: assessments,
+		initRecord:  initRecord,
+	}
+}
+
 type AssessmentSingleGrainItem struct {
+	ctx        context.Context
+	op         *entity.Operator
+	initRecord map[AssessmentsGrainInit]bool
+
 	assessment *v2.Assessment
+	amg        *AssessmentMulGrainItem
 
 	outcomeMapFromContent      map[string]*entity.Outcome // key: outcomeID
 	latestContentsFromSchedule []*v2.AssessmentContentView
@@ -81,51 +136,43 @@ type AssessmentSingleGrainItem struct {
 	contentMapFromLiveRoom     map[string]*RoomContentTree          // key: contentID
 	commentResultMap           map[string]string                    // userID
 	outcomeMapFromAssessment   map[string]*v2.AssessmentUserOutcome // key: AssessmentUserID+AssessmentContentID+OutcomeID
+	outcomesFromSchedule       []*entity.Outcome
 }
 
-func NewAssessmentGrainMul(ctx context.Context, op *entity.Operator, assessments []*v2.Assessment) *AssessmentGrain {
-	return &AssessmentGrain{
-		ctx:         ctx,
-		op:          op,
-		InitRecord:  make(map[AssessmentsGrainInit]bool),
-		assessments: assessments,
-		assessment:  new(v2.Assessment),
-	}
-}
-
-func NewAssessmentGrainSingle(ctx context.Context, op *entity.Operator, assessment *v2.Assessment) *AssessmentGrain {
-	return &AssessmentGrain{
-		ctx:         ctx,
-		op:          op,
-		InitRecord:  make(map[AssessmentsGrainInit]bool),
-		assessment:  assessment,
-		assessments: []*v2.Assessment{assessment},
+func NewAssessmentSingleGrainItem(ctx context.Context, op *entity.Operator, assessment *v2.Assessment, initRecord map[AssessmentsGrainInit]bool, amg *AssessmentMulGrainItem) *AssessmentSingleGrainItem {
+	return &AssessmentSingleGrainItem{
+		ctx:        ctx,
+		op:         op,
+		assessment: assessment,
+		initRecord: initRecord,
+		amg:        amg,
 	}
 }
 
-func (ags *AssessmentGrain) GetAssessmentMap() (map[string]*v2.Assessment, error) {
-	if ags.InitRecord[GrainAssessmentMap] {
-		return ags.assessmentMap, nil
+// Multiple assessment data processing
+func (ag *AssessmentMulGrainItem) GetAssessmentMap() (map[string]*v2.Assessment, error) {
+	if ag.initRecord[GrainAssessmentMap] {
+		return ag.assessmentMap, nil
 	}
 
-	ags.assessmentMap = make(map[string]*v2.Assessment, len(ags.assessments))
-	for _, item := range ags.assessments {
-		ags.assessmentMap[item.ID] = item
+	ag.assessmentMap = make(map[string]*v2.Assessment, len(ag.assessments))
+	for _, item := range ag.assessments {
+		ag.assessmentMap[item.ID] = item
 	}
 
-	ags.InitRecord[GrainAssessmentMap] = true
+	ag.initRecord[GrainAssessmentMap] = true
 
-	return ags.assessmentMap, nil
+	return ag.assessmentMap, nil
 }
 
-func (ags *AssessmentGrain) GetScheduleMap() (map[string]*entity.Schedule, error) {
-	if ags.InitRecord[GrainScheduleMap] {
-		return ags.scheduleMap, nil
+func (ag *AssessmentMulGrainItem) GetScheduleMap() (map[string]*entity.Schedule, error) {
+	if ag.initRecord[GrainScheduleMap] {
+		return ag.scheduleMap, nil
 	}
 
-	ctx := ags.ctx
-	scheduleIDs := make([]string, len(ags.assessments))
-	for i, item := range ags.assessments {
+	ctx := ag.ctx
+	scheduleIDs := make([]string, len(ag.assessments))
+	for i, item := range ag.assessments {
 		scheduleIDs[i] = item.ScheduleID
 	}
 	schedules, err := GetScheduleModel().QueryUnsafe(ctx, &entity.ScheduleQueryCondition{
@@ -139,25 +186,25 @@ func (ags *AssessmentGrain) GetScheduleMap() (map[string]*entity.Schedule, error
 		return nil, err
 	}
 
-	ags.scheduleMap = make(map[string]*entity.Schedule, len(schedules))
+	ag.scheduleMap = make(map[string]*entity.Schedule, len(schedules))
 	for _, item := range schedules {
-		ags.scheduleMap[item.ID] = item
+		ag.scheduleMap[item.ID] = item
 	}
 
-	ags.InitRecord[GrainScheduleMap] = true
+	ag.initRecord[GrainScheduleMap] = true
 
-	return ags.scheduleMap, nil
+	return ag.scheduleMap, nil
 }
 
-func (ags *AssessmentGrain) GetScheduleRelationMap() (map[string][]*entity.ScheduleRelation, error) {
-	if ags.InitRecord[GrainScheduleRelationMap] {
-		return ags.scheduleRelationMap, nil
+func (ag *AssessmentMulGrainItem) GetScheduleRelationMap() (map[string][]*entity.ScheduleRelation, error) {
+	if ag.initRecord[GrainScheduleRelationMap] {
+		return ag.scheduleRelationMap, nil
 	}
-	ctx := ags.ctx
-	op := ags.op
+	ctx := ag.ctx
+	op := ag.op
 
-	scheduleIDs := make([]string, len(ags.assessments))
-	for i, item := range ags.assessments {
+	scheduleIDs := make([]string, len(ag.assessments))
+	for i, item := range ag.assessments {
 		scheduleIDs[i] = item.ScheduleID
 	}
 
@@ -171,25 +218,25 @@ func (ags *AssessmentGrain) GetScheduleRelationMap() (map[string][]*entity.Sched
 		return nil, err
 	}
 
-	ags.scheduleRelationMap = make(map[string][]*entity.ScheduleRelation, len(scheduleIDs))
+	ag.scheduleRelationMap = make(map[string][]*entity.ScheduleRelation, len(scheduleIDs))
 	for _, item := range scheduleRelations {
-		ags.scheduleRelationMap[item.ScheduleID] = append(ags.scheduleRelationMap[item.ScheduleID], item)
+		ag.scheduleRelationMap[item.ScheduleID] = append(ag.scheduleRelationMap[item.ScheduleID], item)
 	}
 
-	ags.InitRecord[GrainScheduleRelationMap] = true
+	ag.initRecord[GrainScheduleRelationMap] = true
 
-	return ags.scheduleRelationMap, nil
+	return ag.scheduleRelationMap, nil
 }
 
-func (ags *AssessmentGrain) GetAssessmentUsers() ([]*v2.AssessmentUser, error) {
-	if ags.InitRecord[GrainAssessmentUserSlice] {
-		return ags.assessmentUsers, nil
+func (ag *AssessmentMulGrainItem) GetAssessmentUsers() ([]*v2.AssessmentUser, error) {
+	if ag.initRecord[GrainAssessmentUserSlice] {
+		return ag.assessmentUsers, nil
 	}
 
-	ctx := ags.ctx
+	ctx := ag.ctx
 
-	assessmentIDs := make([]string, len(ags.assessments))
-	for i, item := range ags.assessments {
+	assessmentIDs := make([]string, len(ag.assessments))
+	for i, item := range ag.assessments {
 		assessmentIDs[i] = item.ID
 	}
 
@@ -204,48 +251,48 @@ func (ags *AssessmentGrain) GetAssessmentUsers() ([]*v2.AssessmentUser, error) {
 		return nil, err
 	}
 
-	ags.assessmentUsers = assessmentUsers
-	ags.InitRecord[GrainAssessmentUserSlice] = true
+	ag.assessmentUsers = assessmentUsers
+	ag.initRecord[GrainAssessmentUserSlice] = true
 
-	return ags.assessmentUsers, nil
+	return ag.assessmentUsers, nil
 }
 
-func (ags *AssessmentGrain) GetAssessmentUserMap() (map[string][]*v2.AssessmentUser, error) {
-	if ags.InitRecord[GrainAssessmentUserMap] {
-		return ags.assessmentUserMap, nil
+func (ag *AssessmentMulGrainItem) GetAssessmentUserMap() (map[string][]*v2.AssessmentUser, error) {
+	if ag.initRecord[GrainAssessmentUserMap] {
+		return ag.assessmentUserMap, nil
 	}
 
-	assessmentUsers, err := ags.GetAssessmentUsers()
+	assessmentUsers, err := ag.GetAssessmentUsers()
 	if err != nil {
 		return nil, err
 	}
 
-	ags.assessmentUserMap = make(map[string][]*v2.AssessmentUser, len(ags.assessments))
+	ag.assessmentUserMap = make(map[string][]*v2.AssessmentUser, len(ag.assessments))
 	for _, item := range assessmentUsers {
-		ags.assessmentUserMap[item.AssessmentID] = append(ags.assessmentUserMap[item.AssessmentID], item)
+		ag.assessmentUserMap[item.AssessmentID] = append(ag.assessmentUserMap[item.AssessmentID], item)
 	}
 
-	ags.InitRecord[GrainAssessmentUserMap] = true
+	ag.initRecord[GrainAssessmentUserMap] = true
 
-	return ags.assessmentUserMap, nil
+	return ag.assessmentUserMap, nil
 }
 
-func (ags *AssessmentGrain) GetProgramMap() (map[string]*entity.IDName, error) {
-	if ags.InitRecord[GrainProgramMap] {
-		return ags.programMap, nil
+func (ag *AssessmentMulGrainItem) GetProgramMap() (map[string]*entity.IDName, error) {
+	if ag.initRecord[GrainProgramMap] {
+		return ag.programMap, nil
 	}
 
-	ctx := ags.ctx
-	op := ags.op
+	ctx := ag.ctx
+	op := ag.op
 
-	scheduleMap, err := ags.GetScheduleMap()
+	scheduleMap, err := ag.GetScheduleMap()
 	if err != nil {
 		return nil, err
 	}
 
 	programIDs := make([]string, 0)
 	deDupMap := make(map[string]struct{})
-	for _, item := range ags.assessments {
+	for _, item := range ag.assessments {
 		schedule, ok := scheduleMap[item.ScheduleID]
 		if !ok {
 			log.Warn(ctx, "schedule not found", log.String("scheduleID", item.ScheduleID))
@@ -263,32 +310,32 @@ func (ags *AssessmentGrain) GetProgramMap() (map[string]*entity.IDName, error) {
 		return nil, err
 	}
 
-	ags.programMap = make(map[string]*entity.IDName)
+	ag.programMap = make(map[string]*entity.IDName)
 	for _, item := range programs {
 		if item == nil || item.ID == "" {
 			log.Warn(ctx, "program id is empty", log.Any("programs", programs))
 			continue
 		}
-		ags.programMap[item.ID] = &entity.IDName{
+		ag.programMap[item.ID] = &entity.IDName{
 			ID:   item.ID,
 			Name: item.Name,
 		}
 	}
 
-	ags.InitRecord[GrainProgramMap] = true
+	ag.initRecord[GrainProgramMap] = true
 
-	return ags.programMap, nil
+	return ag.programMap, nil
 }
 
-func (ags *AssessmentGrain) GetSubjectMap() (map[string]*entity.IDName, error) {
-	if ags.InitRecord[GrainSubjectMap] {
-		return ags.subjectMap, nil
+func (ag *AssessmentMulGrainItem) GetSubjectMap() (map[string]*entity.IDName, error) {
+	if ag.initRecord[GrainSubjectMap] {
+		return ag.subjectMap, nil
 	}
 
-	ctx := ags.ctx
-	op := ags.op
+	ctx := ag.ctx
+	op := ag.op
 
-	relationMap, err := ags.GetScheduleRelationMap()
+	relationMap, err := ag.GetScheduleRelationMap()
 	if err != nil {
 		return nil, err
 	}
@@ -316,32 +363,32 @@ func (ags *AssessmentGrain) GetSubjectMap() (map[string]*entity.IDName, error) {
 		return nil, err
 	}
 
-	ags.subjectMap = make(map[string]*entity.IDName)
+	ag.subjectMap = make(map[string]*entity.IDName)
 	for _, item := range subjects {
 		if item == nil || item.ID == "" {
 			log.Warn(ctx, "subject is empty", log.Any("subjects", subjects))
 			continue
 		}
-		ags.subjectMap[item.ID] = &entity.IDName{
+		ag.subjectMap[item.ID] = &entity.IDName{
 			ID:   item.ID,
 			Name: item.Name,
 		}
 	}
 
-	ags.InitRecord[GrainSubjectMap] = true
+	ag.initRecord[GrainSubjectMap] = true
 
-	return ags.subjectMap, nil
+	return ag.subjectMap, nil
 }
 
-func (ags *AssessmentGrain) GetClassMap() (map[string]*entity.IDName, error) {
-	if ags.InitRecord[GrainClassMap] {
-		return ags.classMap, nil
+func (ag *AssessmentMulGrainItem) GetClassMap() (map[string]*entity.IDName, error) {
+	if ag.initRecord[GrainClassMap] {
+		return ag.classMap, nil
 	}
 
-	ctx := ags.ctx
-	op := ags.op
+	ctx := ag.ctx
+	op := ag.op
 
-	relationMap, err := ags.GetScheduleRelationMap()
+	relationMap, err := ag.GetScheduleRelationMap()
 	if err != nil {
 		return nil, err
 	}
@@ -369,31 +416,31 @@ func (ags *AssessmentGrain) GetClassMap() (map[string]*entity.IDName, error) {
 		return nil, err
 	}
 
-	ags.classMap = make(map[string]*entity.IDName)
+	ag.classMap = make(map[string]*entity.IDName)
 	for _, item := range classes {
 		if item == nil || item.ID == "" {
 			continue
 		}
-		ags.classMap[item.ID] = &entity.IDName{
+		ag.classMap[item.ID] = &entity.IDName{
 			ID:   item.ID,
 			Name: item.Name,
 		}
 	}
 
-	ags.InitRecord[GrainClassMap] = true
+	ag.initRecord[GrainClassMap] = true
 
-	return ags.classMap, nil
+	return ag.classMap, nil
 }
 
-func (ags *AssessmentGrain) GetUserMap() (map[string]*entity.IDName, error) {
-	if ags.InitRecord[GrainUserMap] {
-		return ags.userMap, nil
+func (ag *AssessmentMulGrainItem) GetUserMap() (map[string]*entity.IDName, error) {
+	if ag.initRecord[GrainUserMap] {
+		return ag.userMap, nil
 	}
 
-	ctx := ags.ctx
-	op := ags.op
+	ctx := ag.ctx
+	op := ag.op
 
-	assessmentUsers, err := ags.GetAssessmentUsers()
+	assessmentUsers, err := ag.GetAssessmentUsers()
 	if err != nil {
 		return nil, err
 	}
@@ -413,37 +460,37 @@ func (ags *AssessmentGrain) GetUserMap() (map[string]*entity.IDName, error) {
 		return nil, err
 	}
 
-	ags.userMap = make(map[string]*entity.IDName)
+	ag.userMap = make(map[string]*entity.IDName)
 	for _, item := range users {
 		if !item.Valid {
 			log.Warn(ctx, "user is inValid", log.Any("item", item))
 			continue
 		}
-		ags.userMap[item.ID] = &entity.IDName{
+		ag.userMap[item.ID] = &entity.IDName{
 			ID:   item.ID,
 			Name: item.Name,
 		}
 	}
 
-	ags.InitRecord[GrainUserMap] = true
+	ag.initRecord[GrainUserMap] = true
 
-	return ags.userMap, nil
+	return ag.userMap, nil
 }
 
-func (ags *AssessmentGrain) GetRoomStudentScoresAndComments() (map[string]*external.RoomInfo, error) {
-	if ags.InitRecord[GrainLiveRoomMap] {
-		return ags.liveRoomMap, nil
+func (ag *AssessmentMulGrainItem) GetRoomStudentScoresAndComments() (map[string]*external.RoomInfo, error) {
+	if ag.initRecord[GrainLiveRoomMap] {
+		return ag.liveRoomMap, nil
 	}
 
-	ctx := ags.ctx
-	op := ags.op
+	ctx := ag.ctx
+	op := ag.op
 
-	scheduleMap, err := ags.GetScheduleMap()
+	scheduleMap, err := ag.GetScheduleMap()
 	if err != nil {
 		return nil, err
 	}
 
-	scheduleIDs := make([]string, 0, len(ags.assessments))
+	scheduleIDs := make([]string, 0, len(ag.assessments))
 	for _, item := range scheduleMap {
 		scheduleIDs = append(scheduleIDs, item.ID)
 	}
@@ -451,25 +498,25 @@ func (ags *AssessmentGrain) GetRoomStudentScoresAndComments() (map[string]*exter
 	roomDataMap, err := external.GetAssessmentServiceProvider().GetScoresWithCommentsByRoomIDs(ctx, op, scheduleIDs)
 	if err != nil {
 		log.Warn(ctx, "external service error",
-			log.Err(err), log.Strings("scheduleIDs", scheduleIDs), log.Any("op", ags.op))
-		ags.liveRoomMap = make(map[string]*external.RoomInfo)
+			log.Err(err), log.Strings("scheduleIDs", scheduleIDs), log.Any("op", ag.op))
+		ag.liveRoomMap = make(map[string]*external.RoomInfo)
 	} else {
-		ags.liveRoomMap = roomDataMap
+		ag.liveRoomMap = roomDataMap
 	}
 
-	ags.InitRecord[GrainLiveRoomMap] = true
+	ag.initRecord[GrainLiveRoomMap] = true
 
-	return ags.liveRoomMap, nil
+	return ag.liveRoomMap, nil
 }
 
-func (ags *AssessmentGrain) GetLessPlanMap() (map[string]*v2.AssessmentContentView, error) {
-	ctx := ags.ctx
+func (ag *AssessmentMulGrainItem) GetLessPlanMap() (map[string]*v2.AssessmentContentView, error) {
+	ctx := ag.ctx
 
-	if ags.InitRecord[GrainLessPlanMap] {
-		return ags.lessPlanMap, nil
+	if ag.initRecord[GrainLessPlanMap] {
+		return ag.lessPlanMap, nil
 	}
 
-	scheduleMap, err := ags.GetScheduleMap()
+	scheduleMap, err := ag.GetScheduleMap()
 	if err != nil {
 		return nil, err
 	}
@@ -499,7 +546,7 @@ func (ags *AssessmentGrain) GetLessPlanMap() (map[string]*v2.AssessmentContentVi
 		return nil, err
 	}
 
-	ags.lessPlanMap = make(map[string]*v2.AssessmentContentView, len(lessPlans))
+	ag.lessPlanMap = make(map[string]*v2.AssessmentContentView, len(lessPlans))
 	for _, item := range lessPlans {
 		lessPlanItem := &v2.AssessmentContentView{
 			ID:          item.ID,
@@ -509,7 +556,7 @@ func (ags *AssessmentGrain) GetLessPlanMap() (map[string]*v2.AssessmentContentVi
 			LatestID:    item.LatestID,
 			FileType:    item.FileType,
 		}
-		ags.lessPlanMap[item.ID] = lessPlanItem
+		ag.lessPlanMap[item.ID] = lessPlanItem
 	}
 
 	// update schedule lessPlan ID
@@ -521,38 +568,81 @@ func (ags *AssessmentGrain) GetLessPlanMap() (map[string]*v2.AssessmentContentVi
 		}
 	}
 
-	ags.InitRecord[GrainLessPlanMap] = true
+	ag.initRecord[GrainLessPlanMap] = true
 
-	return ags.lessPlanMap, nil
+	return ag.lessPlanMap, nil
 }
 
-func (ags *AssessmentGrain) GetAssessmentUserWithUserIDAndUserTypeMap() (map[string]*v2.AssessmentUser, error) {
-	ctx := ags.ctx
+func (ag *AssessmentMulGrainItem) GetReviewerFeedbackMap() (map[string]*v2.AssessmentReviewerFeedback, error) {
+	if ag.initRecord[GrainAssessmentReviewerFeedbackMap] {
+		return ag.assessmentReviewerFeedbackMap, nil
+	}
 
-	assessmentUserMap, err := ags.GetAssessmentUserMap()
+	ctx := ag.ctx
+
+	result := make(map[string]*v2.AssessmentReviewerFeedback)
+
+	assessmentUsers, err := ag.GetAssessmentUsers()
 	if err != nil {
 		return nil, err
 	}
 
-	assessmentUsers, ok := assessmentUserMap[ags.assessment.ID]
+	assessmentUserIDs := make([]string, len(assessmentUsers))
+	for i, item := range assessmentUsers {
+		assessmentUserIDs[i] = item.ID
+	}
+
+	condition := &assessmentV2.AssessmentUserResultCondition{
+		AssessmentUserIDs: entity.NullStrings{
+			Strings: assessmentUserIDs,
+			Valid:   true,
+		},
+	}
+	var feedbacks []*v2.AssessmentReviewerFeedback
+	err = assessmentV2.GetAssessmentUserResultDA().Query(ctx, condition, &feedbacks)
+	if err != nil {
+		log.Error(ctx, "query reviewer feedback error", log.Err(err), log.Any("condition", condition))
+		return nil, err
+	}
+
+	for _, item := range feedbacks {
+		result[item.AssessmentUserID] = item
+	}
+
+	ag.assessmentReviewerFeedbackMap = result
+	ag.initRecord[GrainAssessmentReviewerFeedbackMap] = true
+
+	return result, nil
+}
+
+// Single assessment data processing
+func (asg *AssessmentSingleGrainItem) GetAssessmentUserWithUserIDAndUserTypeMap() (map[string]*v2.AssessmentUser, error) {
+	ctx := asg.ctx
+
+	assessmentUserMap, err := asg.amg.GetAssessmentUserMap()
+	if err != nil {
+		return nil, err
+	}
+
+	assessmentUsers, ok := assessmentUserMap[asg.assessment.ID]
 	if !ok {
-		log.Error(ctx, "not found assessment users", log.Any("assessment", ags.assessment), log.Any("assessmentUserMap", assessmentUserMap))
+		log.Error(ctx, "not found assessment users", log.Any("assessment", asg.assessment), log.Any("assessmentUserMap", assessmentUserMap))
 		return nil, constant.ErrRecordNotFound
 	}
 
 	result := make(map[string]*v2.AssessmentUser, len(assessmentUsers))
 	for _, item := range assessmentUsers {
-		result[ags.GetKey([]string{item.UserID, item.UserType.String()})] = item
+		result[asg.GetKey([]string{item.UserID, item.UserType.String()})] = item
 	}
 
 	return result, nil
 }
 
-func (asg *AssessmentGrain) GetKey(value []string) string {
+func (asg *AssessmentSingleGrainItem) GetKey(value []string) string {
 	return strings.Join(value, "_")
 }
 
-func (asg *AssessmentGrain) IsNeedConvertLatestContent() (bool, error) {
+func (asg *AssessmentSingleGrainItem) IsNeedConvertLatestContent() (bool, error) {
 	ctx := asg.ctx
 
 	schedule, err := asg.SingleGetSchedule()
@@ -569,7 +659,7 @@ func (asg *AssessmentGrain) IsNeedConvertLatestContent() (bool, error) {
 	return false, nil
 }
 
-func (asg *AssessmentGrain) ConvertContentOutcome(contents []*v2.AssessmentContentView) error {
+func (asg *AssessmentSingleGrainItem) ConvertContentOutcome(contents []*v2.AssessmentContentView) error {
 	ctx := asg.ctx
 	op := asg.op
 
@@ -629,8 +719,8 @@ func (asg *AssessmentGrain) ConvertContentOutcome(contents []*v2.AssessmentConte
 	return nil
 }
 
-func (asg *AssessmentGrain) SingleGetLatestContentsFromSchedule() ([]*v2.AssessmentContentView, error) {
-	if asg.InitRecord[SingleLatestContentSliceFromSchedule] {
+func (asg *AssessmentSingleGrainItem) SingleGetLatestContentsFromSchedule() ([]*v2.AssessmentContentView, error) {
+	if asg.initRecord[SingleLatestContentSliceFromSchedule] {
 		return asg.latestContentsFromSchedule, nil
 	}
 
@@ -705,13 +795,13 @@ func (asg *AssessmentGrain) SingleGetLatestContentsFromSchedule() ([]*v2.Assessm
 	if err != nil {
 		return nil, err
 	}
-	asg.InitRecord[SingleLatestContentSliceFromSchedule] = true
+	asg.initRecord[SingleLatestContentSliceFromSchedule] = true
 
 	return asg.latestContentsFromSchedule, nil
 }
 
-func (asg *AssessmentGrain) SingleGetSchedule() (*entity.Schedule, error) {
-	scheduleMap, err := asg.GetScheduleMap()
+func (asg *AssessmentSingleGrainItem) SingleGetSchedule() (*entity.Schedule, error) {
+	scheduleMap, err := asg.amg.GetScheduleMap()
 	if err != nil {
 		return nil, err
 	}
@@ -724,8 +814,8 @@ func (asg *AssessmentGrain) SingleGetSchedule() (*entity.Schedule, error) {
 	return schedule, nil
 }
 
-func (asg *AssessmentGrain) SingleGetLockedContentsFromSchedule() ([]*v2.AssessmentContentView, error) {
-	if asg.InitRecord[SingleLockedContentSliceFromSchedule] {
+func (asg *AssessmentSingleGrainItem) SingleGetLockedContentsFromSchedule() ([]*v2.AssessmentContentView, error) {
+	if asg.initRecord[SingleLockedContentSliceFromSchedule] {
 		return asg.lockedContentsFromSchedule, nil
 	}
 
@@ -742,12 +832,12 @@ func (asg *AssessmentGrain) SingleGetLockedContentsFromSchedule() ([]*v2.Assessm
 	}
 
 	asg.lockedContentsFromSchedule = result
-	asg.InitRecord[SingleLockedContentSliceFromSchedule] = true
+	asg.initRecord[SingleLockedContentSliceFromSchedule] = true
 
 	return asg.lockedContentsFromSchedule, nil
 }
 
-func (asg *AssessmentGrain) getLockedContentBySchedule(schedule *entity.Schedule) ([]*v2.AssessmentContentView, error) {
+func (asg *AssessmentSingleGrainItem) getLockedContentBySchedule(schedule *entity.Schedule) ([]*v2.AssessmentContentView, error) {
 	ctx := asg.ctx
 
 	if !schedule.IsLockedLessonPlan() {
@@ -802,7 +892,7 @@ func (asg *AssessmentGrain) getLockedContentBySchedule(schedule *entity.Schedule
 	return result, nil
 }
 
-func (asg *AssessmentGrain) SingleGetContentsFromSchedule() ([]*v2.AssessmentContentView, error) {
+func (asg *AssessmentSingleGrainItem) SingleGetContentsFromSchedule() ([]*v2.AssessmentContentView, error) {
 	var result []*v2.AssessmentContentView
 	var err error
 	if ok, _ := asg.IsNeedConvertLatestContent(); ok {
@@ -827,8 +917,8 @@ func (asg *AssessmentGrain) SingleGetContentsFromSchedule() ([]*v2.AssessmentCon
 	return result, nil
 }
 
-func (asg *AssessmentGrain) SingleGetOutcomeMapFromContent() (map[string]*entity.Outcome, error) {
-	if asg.InitRecord[SingleOutcomeMapFromContent] {
+func (asg *AssessmentSingleGrainItem) SingleGetOutcomeMapFromContent() (map[string]*entity.Outcome, error) {
+	if asg.initRecord[SingleOutcomeMapFromContent] {
 		return asg.outcomeMapFromContent, nil
 	}
 
@@ -863,14 +953,14 @@ func (asg *AssessmentGrain) SingleGetOutcomeMapFromContent() (map[string]*entity
 		result[item.ID] = item
 	}
 
-	asg.InitRecord[SingleOutcomeMapFromContent] = true
+	asg.initRecord[SingleOutcomeMapFromContent] = true
 	asg.outcomeMapFromContent = result
 
 	return result, nil
 }
 
-func (asg *AssessmentGrain) SingleGetAssessmentContentMap() (map[string]*v2.AssessmentContent, error) {
-	if asg.InitRecord[SingleContentMapFromAssessment] {
+func (asg *AssessmentSingleGrainItem) SingleGetAssessmentContentMap() (map[string]*v2.AssessmentContent, error) {
+	if asg.initRecord[SingleContentMapFromAssessment] {
 		return asg.contentMapFromAssessment, nil
 	}
 
@@ -912,17 +1002,17 @@ func (asg *AssessmentGrain) SingleGetAssessmentContentMap() (map[string]*v2.Asse
 		}
 	}
 
-	asg.InitRecord[SingleContentMapFromAssessment] = true
+	asg.initRecord[SingleContentMapFromAssessment] = true
 	asg.contentMapFromAssessment = result
 
 	return result, nil
 }
 
-func (asg *AssessmentGrain) SingleGetContentMapFromLiveRoom() (map[string]*RoomContentTree, error) {
+func (asg *AssessmentSingleGrainItem) SingleGetContentMapFromLiveRoom() (map[string]*RoomContentTree, error) {
 	ctx := asg.ctx
 	//op := adc.op
 
-	if asg.InitRecord[SingleContentMapFromLiveRoom] {
+	if asg.initRecord[SingleContentMapFromLiveRoom] {
 		return asg.contentMapFromLiveRoom, nil
 	}
 
@@ -957,16 +1047,16 @@ func (asg *AssessmentGrain) SingleGetContentMapFromLiveRoom() (map[string]*RoomC
 	}
 
 	asg.contentMapFromLiveRoom = result
-	asg.InitRecord[SingleContentMapFromLiveRoom] = true
+	asg.initRecord[SingleContentMapFromLiveRoom] = true
 
 	return result, nil
 }
 
-func (asg *AssessmentGrain) SingleGetRoomData() (map[string][]*RoomUserScore, []*RoomContentTree, error) {
+func (asg *AssessmentSingleGrainItem) SingleGetRoomData() (map[string][]*RoomUserScore, []*RoomContentTree, error) {
 	ctx := asg.ctx
 	//op := adc.op
 
-	roomDataMap, err := asg.GetRoomStudentScoresAndComments()
+	roomDataMap, err := asg.amg.GetRoomStudentScoresAndComments()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -979,8 +1069,8 @@ func (asg *AssessmentGrain) SingleGetRoomData() (map[string][]*RoomUserScore, []
 	return GetAssessmentExternalService().StudentScores(ctx, roomData.ScoresByUser)
 }
 
-func (asg *AssessmentGrain) SingleGetCommentResultMap() (map[string]string, error) {
-	if asg.InitRecord[SingleUserCommentResultMap] {
+func (asg *AssessmentSingleGrainItem) SingleGetCommentResultMap() (map[string]string, error) {
+	if asg.initRecord[SingleUserCommentResultMap] {
 		return asg.commentResultMap, nil
 	}
 
@@ -989,7 +1079,7 @@ func (asg *AssessmentGrain) SingleGetCommentResultMap() (map[string]string, erro
 
 	asg.commentResultMap = make(map[string]string)
 
-	studentRoomInfoMap, err := asg.GetRoomStudentScoresAndComments()
+	studentRoomInfoMap, err := asg.amg.GetRoomStudentScoresAndComments()
 	if err != nil {
 		return nil, err
 	}
@@ -1010,17 +1100,17 @@ func (asg *AssessmentGrain) SingleGetCommentResultMap() (map[string]string, erro
 		asg.commentResultMap[item.User.UserID] = latestComment.Comment
 	}
 
-	asg.InitRecord[SingleUserCommentResultMap] = true
+	asg.initRecord[SingleUserCommentResultMap] = true
 	return asg.commentResultMap, nil
 }
 
-func (asg *AssessmentGrain) SingleGetOutcomeFromAssessment() (map[string]*v2.AssessmentUserOutcome, error) {
-	if asg.InitRecord[SingleOutcomeMapFromAssessment] {
+func (asg *AssessmentSingleGrainItem) SingleGetOutcomeFromAssessment() (map[string]*v2.AssessmentUserOutcome, error) {
+	if asg.initRecord[SingleOutcomeMapFromAssessment] {
 		return asg.outcomeMapFromAssessment, nil
 	}
 	ctx := asg.ctx
 
-	assessmentUserMap, err := asg.GetAssessmentUserMap()
+	assessmentUserMap, err := asg.amg.GetAssessmentUserMap()
 	if err != nil {
 		return nil, err
 	}
@@ -1060,12 +1150,12 @@ func (asg *AssessmentGrain) SingleGetOutcomeFromAssessment() (map[string]*v2.Ass
 	}
 
 	asg.outcomeMapFromAssessment = result
-	asg.InitRecord[SingleOutcomeMapFromAssessment] = true
+	asg.initRecord[SingleOutcomeMapFromAssessment] = true
 
 	return result, nil
 }
 
-func (asg *AssessmentGrain) SingleGetContentsFromScheduleReview() (map[string]*entity.ScheduleReview, map[string]*entity.ContentInfoInternal, error) {
+func (asg *AssessmentSingleGrainItem) SingleGetContentsFromScheduleReview() (map[string]*entity.ScheduleReview, map[string]*entity.ContentInfoInternal, error) {
 	ctx := asg.ctx
 	op := asg.op
 
@@ -1100,4 +1190,33 @@ func (asg *AssessmentGrain) SingleGetContentsFromScheduleReview() (map[string]*e
 		contentResult[item.ID] = item
 	}
 	return result, contentResult, nil
+}
+
+func (asg *AssessmentSingleGrainItem) SingleGetOutcomesFromSchedule() ([]*entity.Outcome, error) {
+	if asg.initRecord[SingleGetOutcomesFromSchedule] {
+		return asg.outcomesFromSchedule, nil
+	}
+
+	ctx := asg.ctx
+	op := asg.op
+
+	outcomeIDMap, err := GetScheduleModel().GetLearningOutcomeIDs(ctx, op, []string{asg.assessment.ScheduleID})
+	if err != nil {
+		return nil, err
+	}
+
+	outcomeIDs, ok := outcomeIDMap[asg.assessment.ScheduleID]
+	if !ok || len(outcomeIDs) <= 0 {
+		return make([]*entity.Outcome, 0), nil
+	}
+
+	outcomes, err := GetOutcomeModel().GetByIDs(ctx, op, dbo.MustGetDB(ctx), outcomeIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	asg.outcomesFromSchedule = outcomes
+	asg.initRecord[SingleGetOutcomesFromSchedule] = true
+
+	return outcomes, nil
 }
