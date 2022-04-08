@@ -11,7 +11,7 @@ import (
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 )
 
-const assessmentOpToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ2NTNmODgwLWI5MjAtNDM1Zi04ZjJkLTk4YjVkNDYyMWViOCIsImVtYWlsIjoic2Nob29sXzAzMDMyOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0OTQwOTgxMywiaXNzIjoia2lkc2xvb3AifQ.GjJXnYds3Tk-qCA8jaJeDsj64FTOAeqUKyFgFLBwjHHz7kIa6zSRtqsJfSyH4EBradrYoxOtYRXsXCdm7wEI0vkkgJ8ktsyeNUo9nmYL80I7XFMM7ASdWQYKulunj4oOB3-BOaRx8i2aG9gx3uU-hxIGbqT44MBoTiulw8NAF3vxr5jAP8btZLbomCkyWm6AxVOcMbsPZo23Mxo2a742fUR8DmuBl1lffT3RdZkg7Tn6upBKT5Ec0ldh5CEU0pPaDPSFrB47uVvwELsjTzjZXo7snI2pFO_hoB0587XYy_2HA2qgDpjyK7a3HrqVqT-uqB11K5wvhH80DIclxac8wg"
+const assessmentOpToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ2NTNmODgwLWI5MjAtNDM1Zi04ZjJkLTk4YjVkNDYyMWViOCIsImVtYWlsIjoic2Nob29sXzAzMDMyOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0OTQxMjUyNywiaXNzIjoia2lkc2xvb3AifQ.DFDAtVEXRe-YjboagwXBgGj08GddGqbs4PCF15PDztlhz36y352H9ArFlAkGnV7Uw-vwnnbvU46qUqizgGfOqS2-RSFV34FUvDWDTEWBPsciUveK1dczhKrkGu4MQZC4t-f1lV7UM3ZEI7uWacz7_NjQ7BzQNOx3FtLvXGFxDLDCFnPwbgbERD3aZLrrUJdsN8FnFctiiEOBhUULenombR1hTjkrSzEXVkFyrPCyNGEgpoDpIOGGbSzip_Kc5HfMuVNFVtpVcmzMUbuL4jQjgruUCj11v_U2b0339sVlhv2rTug-2R7CPww4SY1obvqUUOFTUHxv9XpKmRN1DUgNfg"
 
 func TestAssessmentModel_GetByID(t *testing.T) {
 	ctx := context.Background()
@@ -41,7 +41,7 @@ func TestAssessmentModel_Query(t *testing.T) {
 	result, err := GetAssessmentModelV2().Page(ctx, op, &v2.AssessmentQueryReq{
 		//QueryKey:       "org mi",
 		//QueryType:      v2.QueryTypeTeacherName,
-		AssessmentType: v2.AssessmentTypeReviewStudy,
+		AssessmentType: v2.AssessmentTypeOfflineStudy,
 		OrderBy:        "-create_at",
 		Status:         "Started,Draft,Complete",
 		PageIndex:      1,
