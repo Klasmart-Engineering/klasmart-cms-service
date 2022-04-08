@@ -163,7 +163,7 @@ func (l *learningSummaryReportModel) QueryLiveClassesSummaryV2(ctx context.Conte
 			log.Strings("schedule_ids", scheduleIDs),
 			log.Any("filter", filter),
 		)
-		return nil, err
+		return
 	}
 	for _, item := range items {
 		comments := roomCommentMap[item.ScheduleID][filter.StudentID]
@@ -670,6 +670,43 @@ func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context,
 	return assessments, nil
 }
 func (l *learningSummaryReportModel) QueryAssignmentsSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res *entity.QueryAssignmentsSummaryResultV2, err error) {
+	items, err := da.GetReportDA().QueryAssignmentsSummaryV2(ctx, tx, operator, filter)
+	if err != nil {
+		return
+	}
+	res = &entity.QueryAssignmentsSummaryResultV2{
+		Items: items,
+	}
+	for _, item := range items {
+		switch item.Type {
+		case entity.AssessmentTypeHomeFunStudy:
+			res.HomeFunStudyCount++
+		case entity.AssessmentTypeStudy:
+			res.StudyCount++
+		}
+	}
+
+	var scheduleIDs []string
+	for _, item := range items {
+		scheduleIDs = append(scheduleIDs, item.ScheduleID)
+	}
+
+	// find related study assessments comments and make map by schedule id (live: room comments)
+	roomCommentMap, err := getAssessmentH5P().batchGetRoomCommentMap(ctx, operator, scheduleIDs)
+	if err != nil {
+		log.Error(ctx, "query assignments summary: batch get room comment map failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
+			log.Any("filter", filter),
+		)
+		return
+	}
+	for _, item := range items {
+		comments := roomCommentMap[item.ScheduleID][filter.StudentID]
+		if len(comments) > 0 {
+			item.TeacherFeedback = comments[len(comments)-1]
+		}
+	}
 	return
 }
 func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryAssignmentsSummaryResult, error) {

@@ -17,10 +17,55 @@ import (
 type ILearnerWeekly interface {
 	GetLearnerWeeklyReportOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, cond entity.GetUserCountCondition) (res entity.LearnerReportOverview, err error)
 	QueryLiveClassesSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res []*entity.LiveClassSummaryItemV2, err error)
+	QueryAssignmentsSummaryV2(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, filter *entity.LearningSummaryFilter) (items []*entity.AssignmentsSummaryItemV2, err error)
 }
 
-func (r *ReportDA) QueryLiveClassesSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res []*entity.LiveClassSummaryItemV2, err error) {
-	res = []*entity.LiveClassSummaryItemV2{}
+func (r *ReportDA) QueryAssignmentsSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (items []*entity.AssignmentsSummaryItemV2, err error) {
+	items = []*entity.AssignmentsSummaryItemV2{}
+	sbSchedule, err := r.getSqlBuilderOfSchedulesByLearningSummaryFilter(ctx, operator, filter, entity.LearningSummaryTypeLiveClass)
+	if err != nil {
+		return
+	}
+
+	sbStatus := NewSqlBuilder(ctx, `
+IF(av.status=?,?,?) as status,
+`, v2.AssessmentStatusComplete, entity.AssessmentStatusComplete, entity.AssessmentStatusInProgress)
+	sbAssessmentType := NewSqlBuilder(ctx, `
+IF(s.is_home_fun=1, ? , ? ) as assessment_type,`, entity.AssessmentTypeHomeFunStudy, entity.AssessmentTypeStudy)
+	sbWhere := NewSqlBuilder(ctx, `
+where s.id in ({{.sbSchedule}})`).Replace(ctx, "sbSchedule", sbSchedule)
+	sql := `
+select 
+	{{.sbAssessmentType}}
+	{{.sbStatus}},
+	av.title  as assessment_title,
+	cc.content_name as lesson_plan_name,	 
+	av.schedule_id,
+	av.id as assessment_id,
+	av.complete_at,
+	av.create_at
+from assessments_v2 av 
+inner join schedules s on s.id = av.schedule_id 
+inner join cms_contents cc on cc.id = s.lesson_plan_id 
+{{.sbWhere}}
+`
+	sb := NewSqlBuilder(ctx, sql).
+		Replace(ctx, "sbAssessmentType", sbAssessmentType).
+		Replace(ctx, "sbStatus", sbStatus).
+		Replace(ctx, "sbWhere", sbWhere)
+	sql, args, err := sb.Build(ctx)
+	if err != nil {
+		return
+	}
+	err = r.QueryRawSQLTx(ctx, tx, &items, sql, args...)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func (r *ReportDA) getSqlBuilderOfSchedulesByLearningSummaryFilter(ctx context.Context, operator *entity.Operator, filter *entity.LearningSummaryFilter, typ entity.LearningSummaryType) (sb *sqlBuilder, err error) {
 	sqlSchedule := strings.Builder{}
 	sqlSchedule.WriteString(`
 select 
@@ -46,14 +91,31 @@ and (s.delete_at = 0)
 		entity.ScheduleRelationTypeClassRosterStudent,
 		entity.ScheduleRelationTypeParticipantStudent,
 	}
-	if filter.WeekStart > 0 {
-		sqlSchedule.WriteString(`and s.start_at >= ? `)
-		argsSchedule = append(argsSchedule, filter.WeekStart)
+	switch typ {
+	case entity.LearningSummaryTypeLiveClass:
+		sqlSchedule.WriteString(`and s.class_type = ? `)
+		argsSchedule = append(argsSchedule, entity.ScheduleClassTypeOnlineClass)
+		if filter.WeekStart > 0 {
+			sqlSchedule.WriteString(`and s.start_at >= ? `)
+			argsSchedule = append(argsSchedule, filter.WeekStart)
+		}
+		if filter.WeekEnd > 0 {
+			sqlSchedule.WriteString(`and s.start_at < ? `)
+			argsSchedule = append(argsSchedule, filter.WeekEnd)
+		}
+	case entity.LearningSummaryTypeAssignment:
+		sqlSchedule.WriteString(`and s.class_type = ? `)
+		argsSchedule = append(argsSchedule, entity.ScheduleClassTypeHomework)
+		if filter.WeekStart > 0 {
+			sqlSchedule.WriteString(`and s.complete_time >= ? `)
+			argsSchedule = append(argsSchedule, filter.WeekStart)
+		}
+		if filter.WeekEnd > 0 {
+			sqlSchedule.WriteString(`and s.complete_time < ? `)
+			argsSchedule = append(argsSchedule, filter.WeekEnd)
+		}
 	}
-	if filter.WeekEnd > 0 {
-		sqlSchedule.WriteString(`and s.start_at < ? `)
-		argsSchedule = append(argsSchedule, filter.WeekEnd)
-	}
+
 	if len(filter.SchoolIDs) > 0 {
 		if filter.SchoolIDs[0] == constant.LearningSummaryFilterOptionNoneID {
 			var classes []*external.NullableClass
@@ -186,7 +248,15 @@ and EXISTS (
 			entity.ScheduleRelationTypeSubject,
 		}, filter.SubjectID)
 	}
-	sbSchedule := NewSqlBuilder(ctx, sqlSchedule.String(), argsSchedule...)
+	sb = NewSqlBuilder(ctx, sqlSchedule.String(), argsSchedule...)
+	return
+}
+func (r *ReportDA) QueryLiveClassesSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res []*entity.LiveClassSummaryItemV2, err error) {
+	res = []*entity.LiveClassSummaryItemV2{}
+	sbSchedule, err := r.getSqlBuilderOfSchedulesByLearningSummaryFilter(ctx, operator, filter, entity.LearningSummaryTypeLiveClass)
+	if err != nil {
+		return
+	}
 	sbAssessment := NewSqlBuilder(ctx, `
 select av.id from assessments_v2 av where av.schedule_id in ({{.sbSchedule}}) 
 `).Replace(ctx, "sbSchedule", sbSchedule)
@@ -218,7 +288,7 @@ select
 	cc.content_name as lesson_plan_name,
 	s.id as schedule_id,
 	av.id as assessment_id,
-	av.complete_at as complete_at,
+	av.complete_at,
 	av.create_at
 from (
 	{{.sbAbsent}}
