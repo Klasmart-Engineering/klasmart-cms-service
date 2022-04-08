@@ -3,9 +3,12 @@ package model
 import (
 	"database/sql"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da/assessmentV2"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
+	"time"
 )
 
 func NewOfflineStudyAssessmentPage(ag *AssessmentGrain) IAssessmentMatch {
@@ -179,12 +182,16 @@ func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCon
 			resultItem.StudentName = userInfo.Name
 		}
 
-		studentResultItem := new(v2.AssessmentStudentResultReply)
-		if reviewerFeedback, ok := reviewerFeedbackMap[item.ID]; ok {
-			resultItem.ReviewerComment = reviewerFeedback.ReviewerComment
-			studentResultItem.AssessScore = reviewerFeedback.AssessScore
-			studentResultItem.Attempted = true
+		reviewerFeedback, ok := reviewerFeedbackMap[item.ID]
+		if !ok {
+			result = append(result, resultItem)
+			continue
 		}
+
+		studentResultItem := new(v2.AssessmentStudentResultReply)
+		resultItem.ReviewerComment = reviewerFeedback.ReviewerComment
+		studentResultItem.AssessScore = reviewerFeedback.AssessScore
+		studentResultItem.Attempted = true
 
 		studentResultItem.Outcomes = make([]*v2.AssessmentStudentResultOutcomeReply, 0, len(outcomesFromSchedule))
 		for _, outcomeItem := range outcomesFromSchedule {
@@ -224,7 +231,161 @@ func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCon
 		}
 
 		resultItem.Results = append(resultItem.Results, studentResultItem)
+
+		result = append(result, resultItem)
 	}
 
 	return result, nil
+}
+
+func (o *OfflineStudyAssessment) Update(req *v2.AssessmentUpdateReq) error {
+	ctx := o.ag.ctx
+	op := o.ag.op
+	now := time.Now().Unix()
+
+	waitUpdateAssessment := o.ag.assessment
+
+	// verify assessment status
+	if !req.Action.Valid() {
+		log.Warn(ctx, "req action invalid", log.Any("req", req))
+		return constant.ErrInvalidArgs
+	}
+	if waitUpdateAssessment.Status == v2.AssessmentStatusComplete {
+		log.Warn(ctx, "assessment is completed", log.Any("waitUpdateAssessment", waitUpdateAssessment))
+		return ErrAssessmentHasCompleted
+	}
+
+	// verify assessment remaining time
+	remainingTimeMap, err := o.MatchRemainingTime()
+	if err != nil {
+		return err
+	}
+	remainingTime, ok := remainingTimeMap[waitUpdateAssessment.ID]
+	if !ok {
+		log.Warn(ctx, "not found assessment remaining time", log.Any("waitUpdateAssessment", waitUpdateAssessment))
+		return constant.ErrInvalidArgs
+	}
+	if remainingTime > 0 {
+		log.Warn(ctx, "assessment remaining time is greater than 0", log.Int64("remainingTime", remainingTime), log.Any("waitUpdateAssessment", waitUpdateAssessment))
+		return constant.ErrInvalidArgs
+	}
+
+	// prepare assessment user data
+	assessmentUserMap, err := o.ag.GetAssessmentUserWithUserIDAndUserTypeMap()
+	if err != nil {
+		return err
+	}
+	waitUpdateAssessmentUsers := make([]*v2.AssessmentUser, 0, len(req.Students))
+
+	assessmentUserIDs := make([]string, 0)
+	reqStuResultMap := make(map[string]*v2.AssessmentStudentResultReq)
+	reqReviewerCommentMap := make(map[string]string)
+	for _, item := range req.Students {
+		if !item.Status.Valid() {
+			log.Warn(ctx, "req student status is invalid", log.Any("studentItem", item))
+			return constant.ErrInvalidArgs
+		}
+
+		stuKey := o.ag.GetKey([]string{
+			item.StudentID,
+			v2.AssessmentUserTypeStudent.String(),
+		})
+
+		assessmentUserItem, ok := assessmentUserMap[stuKey]
+		if !ok {
+			log.Warn(ctx, "not found student in assessment", log.Any("studentItem", item), log.Any("assessmentUserMap", assessmentUserMap))
+			return constant.ErrInvalidArgs
+		}
+		assessmentUserItem.StatusByUser = item.Status
+		assessmentUserItem.UpdateAt = now
+		waitUpdateAssessmentUsers = append(waitUpdateAssessmentUsers, assessmentUserItem)
+		assessmentUserIDs = append(assessmentUserIDs, assessmentUserItem.ID)
+
+		if len(item.Results) <= 0 {
+			continue
+		}
+		reqStuResultMap[assessmentUserItem.ID] = item.Results[0]
+		reqReviewerCommentMap[assessmentUserItem.ID] = item.ReviewerComment
+	}
+
+	// prepare assessment reviewer feedback
+	waitUpdateReviewerFeedbacks := make([]*v2.AssessmentReviewerFeedback, 0, len(assessmentUserIDs))
+
+	reviewerFeedbackCond := &assessmentV2.AssessmentUserResultCondition{
+		AssessmentUserIDs: entity.NullStrings{
+			Strings: assessmentUserIDs,
+			Valid:   true,
+		},
+	}
+	var reviewerFeedbacks []*v2.AssessmentReviewerFeedback
+	err = assessmentV2.GetAssessmentUserResultDA().Query(ctx, reviewerFeedbackCond, &reviewerFeedbacks)
+	if err != nil {
+		return err
+	}
+
+	userOutcomeCond := &assessmentV2.AssessmentUserOutcomeCondition{
+		AssessmentUserIDs: entity.NullStrings{
+			Strings: assessmentUserIDs,
+			Valid:   true,
+		},
+	}
+
+	var userOutcomes []*v2.AssessmentUserOutcome
+	err = assessmentV2.GetAssessmentUserOutcomeDA().Query(ctx, userOutcomeCond, &userOutcomes)
+	if err != nil {
+		log.Warn(ctx, "get assessment user outcomes error", log.Any("userOutcomeCond", userOutcomeCond), log.Any("req", req), log.Any("op", op))
+		return err
+	}
+	waitUpdateUserOutcomes := make([]*v2.AssessmentUserOutcome, 0, len(userOutcomes))
+
+	if len(reviewerFeedbacks) > 0 {
+		for _, item := range reviewerFeedbacks {
+			if reqStuResult, ok := reqStuResultMap[item.AssessmentUserID]; ok {
+				item.AssessScore = reqStuResult.AssessScore
+				item.ReviewerID = op.UserID
+			}
+			if comment, ok := reqReviewerCommentMap[item.AssessmentUserID]; ok {
+				item.ReviewerComment = comment
+			}
+			if req.Action == v2.AssessmentActionDraft {
+				item.Status = v2.UserResultProcessStatusDraft
+			} else if req.Action == v2.AssessmentActionComplete {
+				item.Status = v2.UserResultProcessStatusComplete
+				item.CompleteAt = now
+			}
+			item.UpdateAt = now
+
+			waitUpdateReviewerFeedbacks = append(waitUpdateReviewerFeedbacks, item)
+		}
+
+		//if reqStuResult, ok := reqStuResultMap[item.AssessmentUserID]; ok {
+		//	for _,outcomeReqItem:=range reqStuResult.Outcomes{
+		//		if item.OutcomeID == outcomeReqItem.OutcomeID{
+		//			item.Status =
+		//		}
+		//	}
+		//}
+		//
+		//for _, item := range waitUpdateUserOutcomes {
+		//	if reqStuResult, ok := reqStuResultMap[item.AssessmentUserID]; ok {
+		//		for _,outcomeReqItem:=range reqStuResult.Outcomes{
+		//			if item.OutcomeID == outcomeReqItem.OutcomeID{
+		//				item.Status =
+		//			}
+		//		}
+		//	}
+		//}
+	}
+
+	if req.Action == v2.AssessmentActionDraft {
+		waitUpdateAssessment.Status = v2.AssessmentStatusInDraft
+	} else if req.Action == v2.AssessmentActionComplete {
+		waitUpdateAssessment.Status = v2.AssessmentStatusComplete
+		waitUpdateAssessment.CompleteAt = now
+	} else {
+		log.Warn(ctx, "req action is invalid", log.Any("req", req))
+		return constant.ErrInvalidArgs
+	}
+
+	waitUpdateAssessment.UpdateAt = now
 }
