@@ -132,3 +132,40 @@ func (s *Server) getDownloadPath(c *gin.Context) {
 		s.defaultErrorHandler(c, err)
 	}
 }
+
+// @Summary checkResourceExist
+// @ID checkResourceExist
+// @Description check resource exist
+// @Accept json
+// @Produce json
+// @Param resource_id path string true "Resource id"
+// @Tags content
+// @Success 200 {bool} resource exist
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Router /contents_resources/{resource_id}/check [get]
+func (s *Server) checkExist(c *gin.Context) {
+	ctx := c.Request.Context()
+	resourceId := c.Param("resource_id")
+
+	if resourceId == "" {
+		c.JSON(http.StatusBadRequest,
+			gin.H{
+				"msg": "resourceId is required",
+			})
+		return
+	}
+	exist, err := model.GetResourceUploaderModel().CheckResourceExist(ctx, resourceId)
+	switch err {
+	case model.ErrInvalidResourceID:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case storage.ErrInvalidUploadPartition:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case storage.ErrInvalidExtensionInPartitionFile:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorUnsupported))
+	case nil:
+		c.JSON(http.StatusOK, exist)
+	default:
+		s.defaultErrorHandler(c, err)
+	}
+}

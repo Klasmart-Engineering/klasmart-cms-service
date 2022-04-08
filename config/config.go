@@ -102,8 +102,9 @@ type StorageConfig struct {
 	StorageBucket   string `yaml:"storage_bucket"`
 	StorageRegion   string `yaml:"storage_region"`
 
-	StorageDownloadMode StorageDownloadMode `yaml:"storage_download_mode"`
-	StorageSigMode      bool                `yaml:"storage_sig_mode"`
+	StorageDownloadMode  StorageDownloadMode `yaml:"storage_download_mode"`
+	StorageSigMode       bool                `yaml:"storage_sig_mode"`
+	StorageBucketInbound string              `yaml:"storage_bucket_inbound"`
 }
 
 type CDNConfig struct {
@@ -317,6 +318,8 @@ func loadStorageEnvConfig(ctx context.Context) {
 			config.CDNConfig.CDNPrivateKeyPath = assertGetEnv("cdn_private_key_path")
 		}
 	}
+
+	config.StorageConfig.StorageBucketInbound = os.Getenv("storage_bucket_inbound")
 }
 
 func LoadRedisEnvConfig(ctx context.Context) {

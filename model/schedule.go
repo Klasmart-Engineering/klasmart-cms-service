@@ -13,6 +13,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da/assessmentV2"
@@ -4753,6 +4754,13 @@ func (s *scheduleModel) getAssessmentAddWhenCreateSchedulesReq(ctx context.Conte
 
 // model package interval function
 func removeResourceMetadata(ctx context.Context, resourceID string) error {
+	bucket := config.Get().StorageConfig.StorageBucket
+	inboundBucket := config.Get().StorageConfig.StorageBucketInbound
+	if inboundBucket != "" && inboundBucket != bucket {
+		log.Debug(ctx, "use inbound bucket", log.String("inboundBucket", inboundBucket))
+		return nil
+	}
+
 	if resourceID == "" {
 		return nil
 	}
