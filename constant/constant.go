@@ -166,3 +166,5 @@ const (
 	ContentFolderQueryCacheRefreshDuration = time.Minute
 	ContentFolderQueryCacheExpiration      = 0 // never expire
 )
+
+const ReplaceWithConnection = true

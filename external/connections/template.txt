@@ -2,7 +2,7 @@ query($direction:ConnectionDirection!, $cursor:String!, $count:PageSize){
     {{.ConnectionName}}(
         direction:$direction,
         directionArgs:{cursor:$cursor, count: $count},
-        filter:{{.FilterString}}
+        {{if .FilterString}}filter:{{.FilterString}},{{end}}
         sort:{field:[id, name],order:ASC}) {
             totalCount
             pageInfo{

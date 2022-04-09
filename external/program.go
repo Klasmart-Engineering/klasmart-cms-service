@@ -2,7 +2,9 @@ package external
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/connections"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
@@ -77,6 +79,43 @@ func (s AmsProgramService) QueryByIDs(ctx context.Context, ids []string, options
 
 	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
 
+	if constant.ReplaceWithConnection {
+		var cacheObjects []cache.Object
+		filters := make([]connections.ProgramFilter, len(_ids))
+		for i, v := range _ids {
+			f := connections.ProgramFilter{
+				ID: &connections.UUIDFilter{Operator: connections.OperatorTypeEq, Value: connections.UUID(v)},
+			}
+			filters[i] = f
+		}
+		filter := connections.ProgramFilter{
+			OR: filters,
+		}
+		err = connections.Query[connections.ProgramFilter, connections.ProgramsConnectionResponse](ctx, operator, filter, func(ctx context.Context, result interface{}) error {
+			concrete, ok := result.(connections.ProgramsConnectionResponse)
+			if !ok {
+				return errors.New("assert failed")
+			}
+			for _, v := range concrete.Edges {
+				obj := &Program{
+					ID:   v.Node.ID,
+					Name: v.Node.Name,
+					//GroupName:
+					Status: APStatus(v.Node.Status),
+					System: v.Node.System,
+				}
+				cacheObjects = append(cacheObjects, obj)
+			}
+			return nil
+		})
+		if err != nil {
+			log.Error(ctx, "get programs by ids failed",
+				log.Err(err),
+				log.Strings("ids", ids))
+			return nil, err
+		}
+		return cacheObjects, nil
+	}
 	sb := new(strings.Builder)
 
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$program_id_", ": ID!", len(_ids)))

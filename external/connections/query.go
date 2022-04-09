@@ -139,7 +139,10 @@ func queryArgument[FilterType ConnectionFilter](ctx context.Context, filter Filt
 	}
 	reg := regexp.MustCompile(`"__([^_]*)__"`)
 	filterString := reg.ReplaceAllString(string(data), "${1}")
-
+	filterString = strings.TrimSpace(filterString)
+	if filterString == "{}" {
+		filterString = ""
+	}
 	var connectionName, nodeFields string
 	switch filter.FilterType() {
 	case ProgramsConnectionType:

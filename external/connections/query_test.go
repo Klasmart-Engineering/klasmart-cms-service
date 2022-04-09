@@ -9,14 +9,14 @@ import (
 )
 
 var pf = ProgramFilter{
-	//ID: &UUIDFilter{Operator: OperatorTypeEq, Value: "id1"},
-	Name: &StringFilter{Operator: OperatorTypeContains, Value: "Bada"},
-	AND: []ProgramFilter{
-		{Name: &StringFilter{Operator: OperatorTypeContains, Value: "Bada"}},
-	},
-	OR: []ProgramFilter{
-		{Name: &StringFilter{Operator: OperatorTypeContains, Value: "Math"}},
-	},
+	//ID:   &UUIDFilter{Operator: OperatorTypeEq, Value: "id1"},
+	//Name: &StringFilter{Operator: OperatorTypeContains, Value: "Bada"},
+	//AND: []ProgramFilter{
+	//	{Name: &StringFilter{Operator: OperatorTypeContains, Value: "Bada"}},
+	//},
+	//OR: []ProgramFilter{
+	//	{Name: &StringFilter{Operator: OperatorTypeContains, Value: "Math"}},
+	//},
 }
 
 func TestQueryString(t *testing.T) {
