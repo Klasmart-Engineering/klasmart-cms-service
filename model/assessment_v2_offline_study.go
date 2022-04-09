@@ -252,6 +252,8 @@ func (o *OfflineStudyAssessment) Update(req *v2.AssessmentUpdateReq) error {
 	op := o.ag.op
 	now := time.Now().Unix()
 
+	log.Debug(ctx, "request data", log.Any("req", req))
+
 	waitUpdateAssessment := o.ag.assessment
 
 	// verify assessment status
@@ -410,8 +412,8 @@ func (o *OfflineStudyAssessment) Update(req *v2.AssessmentUpdateReq) error {
 			return err
 		}
 		for _, item := range feedbackAssigns {
-			if assignmentReq, ok := assignmentMap[item.ID]; ok && assignmentReq.ReviewerAssignmentID != "" {
-				item.ReviewAttachmentID = assignmentReq.ReviewerAssignmentID
+			if assignmentReq, ok := assignmentMap[item.ID]; ok && assignmentReq.ReviewAttachmentID != "" {
+				item.ReviewAttachmentID = assignmentReq.ReviewAttachmentID
 				item.UpdateAt = now
 				waitUpdateFeedbackAssignments = append(waitUpdateFeedbackAssignments, item)
 			}
