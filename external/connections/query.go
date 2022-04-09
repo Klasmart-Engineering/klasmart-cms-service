@@ -5,15 +5,21 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
-	"errors"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"regexp"
 	"strings"
 	"text/template"
 )
 
+type ConnectionFilter interface {
+	ProgramFilter | OrganizationFilter
+	FilterType() FilterOfType
+}
+
 type ConnectionResponse interface {
 	ProgramsConnectionResponse | OrganizationsConnectionResponse
+	GetPageInfo() *ConnectionPageInfo
 }
 
 type ConnectionEdge interface {
@@ -23,33 +29,80 @@ type ConnectionEdge interface {
 type ConnectionNode interface {
 	ProgramConnectionNode | OrganizationConnectionNode
 }
-type ProgramFilter struct {
-	ID             *UUIDFilter         `json:"__id__,omitempty"`
-	Name           *StringFilter       `json:"__name__,omitempty"`
-	Status         *StringFilter       `json:"__status__,omitempty"`
-	System         *BooleanFilter      `json:"__system__,omitempty"`
-	OrganizationID *UUIDFilter         `json:"__organizationId__,omitempty"`
-	GradeID        *UUIDFilter         `json:"__gradeId__,omitempty"`
-	AgeRangeFrom   *AgeRangeTypeFilter `json:"__ageRangeFrom__,omitempty"`
-	AgeRangeTo     *AgeRangeTypeFilter `json:"__ageRangeTo__,omitempty"`
-	SubjectID      *UUIDFilter         `json:"__subjectId__,omitempty"`
-	SchoolID       *UUIDFilter         `json:"__schoolId,omitempty"`
-	ClassID        *UUIDFilter         `json:"__classId__,omitempty"`
-	AND            []ProgramFilter     `json:"__AND__,omitempty"`
-	OR             []ProgramFilter     `json:"__OR__,omitempty"`
-}
-
-func (ProgramFilter) FilterType() FilterOfType {
-	return ProgramsConnectionType
-}
 
 //go:embed template.txt
 var connection string
 
-func nodeFieldsString[NodeType ConnectionNode](node NodeType) (string, error) {
+type EdgesFunc func(ctx context.Context, res interface{}) error
+
+func Query[FilterType ConnectionFilter, ResType ConnectionResponse](
+	ctx context.Context, operator *entity.Operator, filter FilterType, edgesFunc EdgesFunc) error {
+	qString, err := queryString(ctx, filter)
+	if err != nil {
+		log.Error(ctx, "query: string failed",
+			log.Any("filter", filter),
+			log.Any("operator", operator))
+		return err
+	}
+	var pageInfo *ConnectionPageInfo
+	for pageInfo.HasNext(FORWARD) {
+		res, err := do[ResType](ctx, operator, pageInfo.Pager(FORWARD, PageDefaultCount), qString)
+		if err != nil {
+			log.Error(ctx, "query: do failed",
+				log.Any("filter", filter),
+				log.Any("pageInfo", pageInfo),
+				log.String("query", qString),
+				log.Any("operator", operator))
+			return err
+		}
+		connectionData := res[string(filter.FilterType())]
+		pageInfo = connectionData.GetPageInfo()
+		err = edgesFunc(ctx, connectionData)
+		if err != nil {
+			log.Error(ctx, "query: edgesFunc failed",
+				log.Err(err),
+				log.Any("filter", filter),
+				log.Any("pageInfo", pageInfo),
+				log.String("query", qString),
+				log.Any("connection", connectionData),
+				log.Any("operator", operator))
+			return err
+		}
+	}
+	return nil
+}
+
+func do[ResType ConnectionResponse](
+	ctx context.Context,
+	operator *entity.Operator,
+	pager map[string]interface{},
+	query string) (map[string]ResType, error) {
+	res := GraphQLResponse[ResType]{
+		Data: map[string]ResType{},
+	}
+	req := NewRequest(query, ReqToken(operator.Token))
+	for k, v := range pager {
+		req.Var(k, v)
+	}
+	_, err := Run(ctx, GetAmsProvider(), req, &res)
+	if err != nil {
+		log.Error(ctx, "do: Run failed",
+			log.Err(err),
+			log.Any("pager", pager),
+			log.String("query", query),
+			log.Any("operator", operator))
+		return nil, err
+	}
+
+	return res.Data, nil
+}
+
+func nodeFieldsString[NodeType ConnectionNode](ctx context.Context, node NodeType) (string, error) {
 	data, err := json.Marshal(node)
 	if err != nil {
-		// TODO
+		log.Error(ctx, "fieldString: marshal failed",
+			log.Err(err),
+			log.Any("node", node))
 		return "", err
 	}
 
@@ -57,6 +110,14 @@ func nodeFieldsString[NodeType ConnectionNode](node NodeType) (string, error) {
 	value := reg.FindAllStringSubmatch(string(data), -1)
 	fields := make([]string, 0, len(value))
 	for _, v := range value {
+		if len(v) < 2 {
+			log.Error(ctx, "fieldString: marshal failed",
+				log.Err(ErrMatchFailed),
+				log.Strings("v", v),
+				log.Any("matched", value),
+				log.Any("node", node))
+			return "", ErrMatchFailed
+		}
 		fields = append(fields, v[1])
 	}
 	return strings.Join(fields, " "), nil
@@ -68,10 +129,12 @@ type argument struct {
 	NodeString     string
 }
 
-func queryArgument[FilterType ConnectionFilter](filter FilterType) (*argument, error) {
+func queryArgument[FilterType ConnectionFilter](ctx context.Context, filter FilterType) (*argument, error) {
 	data, err := json.Marshal(filter)
 	if err != nil {
-		// TODO
+		log.Error(ctx, "argument: marshal failed",
+			log.Err(err),
+			log.Any("filter", filter))
 		return nil, err
 	}
 	reg := regexp.MustCompile(`"__([^_]*)__"`)
@@ -81,82 +144,48 @@ func queryArgument[FilterType ConnectionFilter](filter FilterType) (*argument, e
 	switch filter.FilterType() {
 	case ProgramsConnectionType:
 		connectionName = string(ProgramsConnectionType)
-		nodeFields, err = nodeFieldsString(ProgramConnectionNode{})
+		nodeFields, err = nodeFieldsString(ctx, ProgramConnectionNode{})
 	case OrganizationsConnectionType:
 		connectionName = string(OrganizationsConnectionType)
-		nodeFields, err = nodeFieldsString(OrganizationConnectionNode{})
+		nodeFields, err = nodeFieldsString(ctx, OrganizationConnectionNode{})
 	default:
-		err = errors.New("unsupported")
+		err = ErrUnsupported
 	}
 
 	if err != nil {
-		// TODO
+		log.Error(ctx, "argument: failed",
+			log.Err(err),
+			log.Any("filter", filter))
 		return nil, err
 	}
 	return &argument{connectionName, filterString, nodeFields}, nil
 }
 
-func queryString[FilterType ConnectionFilter](filter FilterType) (string, error) {
-	params, err := queryArgument(filter)
+func queryString[FilterType ConnectionFilter](ctx context.Context, filter FilterType) (string, error) {
+	params, err := queryArgument(ctx, filter)
 	if err != nil {
-		// TODO
+		log.Error(ctx, "string: failed", log.Any("filter", filter))
 		return "", err
 	}
 	temp, err := template.New("ProgramsConnection").Parse(connection)
 	if err != nil {
-		// TODO
+		log.Error(ctx, "string: template parse failed",
+			log.Err(err),
+			log.Any("filter", filter),
+			log.Any("params", params),
+			log.String("connection", connection))
+		return "", err
 	}
 
 	buf := bytes.Buffer{}
 	err = temp.Execute(&buf, params)
 	if err != nil {
-		// TODO
+		log.Error(ctx, "string: template execute failed",
+			log.Err(err),
+			log.Any("filter", filter),
+			log.Any("params", params),
+			log.String("connection", connection))
+		return "", err
 	}
 	return buf.String(), nil
-}
-
-func Query[FilterType ConnectionFilter, ResType ConnectionResponse, EdgeType ConnectionEdge](
-	ctx context.Context, operator *entity.Operator, filter FilterType) ([]EdgeType, error) {
-	queryString, err := queryString(filter)
-	if err != nil {
-		// TODO
-	}
-	pageInfo := ConnectionPageInfo{
-		HasNextPage:     true,
-		HasPreviousPage: true,
-		StartCursor:     "",
-		EndCursor:       "",
-	}
-	for pageInfo.HasNextPage {
-		do[ResType](ctx, operator, pageInfo.Pager(FORWARD, 50), queryString)
-		if err != nil {
-			// TODO
-		}
-		//if response != nil {
-		//	pageInfo = response.PageInfo
-		//}
-		//fmt.Println(response.Edges)
-	}
-	return nil, nil
-}
-
-func do[ResType ConnectionResponse](
-	ctx context.Context,
-	operator *entity.Operator,
-	pager Pager,
-	query string) (map[string]ResType, error) {
-	res := GraphQLResponse[ResType]{
-		Data: map[string]ResType{},
-	}
-	req := NewRequest(query, ReqToken(operator.Token))
-	for k, v := range pager {
-		req.Var(k, v)
-	}
-	_, err := Run(ctx, GetAmsProvider(), req, &res)
-	if err != nil {
-		// TODO
-		return nil, err
-	}
-
-	return res.Data, nil
 }

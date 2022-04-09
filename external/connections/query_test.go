@@ -2,6 +2,7 @@ package connections
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"testing"
@@ -19,7 +20,8 @@ var pf = ProgramFilter{
 }
 
 func TestQueryString(t *testing.T) {
-	result, err := queryString(pf)
+	ctx := context.Background()
+	result, err := queryString(ctx, pf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,5 +35,17 @@ func TestQuery(t *testing.T) {
 	op := &entity.Operator{
 		Token: token,
 	}
-	Query[ProgramFilter, ProgramsConnectionResponse, ProgramsConnectionEdge](ctx, op, pf)
+	var programEdges []ProgramsConnectionEdge
+	err := Query[ProgramFilter, ProgramsConnectionResponse](ctx, op, pf, func(ctx context.Context, result interface{}) error {
+		concrete, ok := result.(ProgramsConnectionResponse)
+		if !ok {
+			return errors.New("assert failed")
+		}
+		programEdges = append(programEdges, concrete.Edges...)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(programEdges)
 }

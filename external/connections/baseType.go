@@ -1,5 +1,12 @@
 package connections
 
+import "errors"
+
+var (
+	ErrUnsupported = errors.New("unsupported")
+	ErrMatchFailed = errors.New("match failed")
+)
+
 type OperatorType string
 
 type UUID string
@@ -59,27 +66,62 @@ const (
 	BACKWARD ConnectionDirection = "BACKWARD"
 )
 
-//type DirectionArgs struct {
-//	Count  int    `json:"__count__"`
-//	Cursor string `json:"__cursor__"`
-//}
-
-type Pager map[string]interface{}
-
 const (
 	PagerDirection string = "direction"
 	PagerCursor    string = "cursor"
 	PagerCount     string = "count"
 )
 
-type ConnectionFilter interface {
-	ProgramFilter | OrganizationFilter
-	FilterType() FilterOfType
-}
-
 type FilterOfType string
 
 const (
 	ProgramsConnectionType      FilterOfType = "programsConnection"
 	OrganizationsConnectionType FilterOfType = "organizationsConnection"
+	SubcategoriesConnectionType FilterOfType = "subcategoriesConnection"
 )
+
+const (
+	PageDefaultCount = 50
+)
+
+type ConnectionPageInfo struct {
+	HasNextPage     bool   `json:"hasNextPage"`
+	HasPreviousPage bool   `json:"hasPreviousPage"`
+	StartCursor     string `json:"startCursor"`
+	EndCursor       string `json:"endCursor"`
+}
+
+func (pager *ConnectionPageInfo) HasNext(direction ConnectionDirection) bool {
+	if pager == nil {
+		return true
+	}
+	if pager.HasPreviousPage || pager.HasNextPage {
+		return true
+	}
+	return false
+}
+
+func (pager *ConnectionPageInfo) Pager(direction ConnectionDirection, count int) map[string]interface{} {
+	var cursor string
+	if pager == nil {
+		return map[string]interface{}{
+			PagerDirection: FORWARD,
+			PagerCursor:    "",
+			PagerCount:     PageDefaultCount,
+		}
+	}
+	if direction == FORWARD {
+		cursor = pager.EndCursor
+	}
+	if direction == BACKWARD {
+		cursor = pager.StartCursor
+	}
+	if count > PageDefaultCount {
+		count = PageDefaultCount
+	}
+	return map[string]interface{}{
+		PagerDirection: direction,
+		PagerCursor:    cursor,
+		PagerCount:     count,
+	}
+}

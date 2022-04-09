@@ -16,3 +16,28 @@ type OrganizationFilter struct {
 func (OrganizationFilter) FilterType() FilterOfType {
 	return OrganizationsConnectionType
 }
+
+type OrganizationConnectionNode struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	ContactInfo string `json:"contactInfo"`
+	ShortCode   string `json:"shortCode"`
+	Status      string `json:"status"`
+	Owners      []int  `json:"owners"`
+	Branding    string `json:"branding"`
+}
+
+type OrganizationsConnectionEdge struct {
+	Cursor string                     `json:"cursor"`
+	Node   OrganizationConnectionNode `json:"node"`
+}
+
+type OrganizationsConnectionResponse struct {
+	TotalCount int                           `json:"totalCount"`
+	PageInfo   ConnectionPageInfo            `json:"pageInfo"`
+	Edges      []OrganizationsConnectionEdge `json:"edges"`
+}
+
+func (pcs OrganizationsConnectionResponse) GetPageInfo() *ConnectionPageInfo {
+	return &pcs.PageInfo
+}
