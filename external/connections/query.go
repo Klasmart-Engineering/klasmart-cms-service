@@ -13,7 +13,7 @@ import (
 )
 
 type ConnectionFilter interface {
-	ProgramFilter | OrganizationFilter
+	ProgramFilter | OrganizationFilter | SubcategoryFilter
 	FilterType() FilterOfType
 }
 

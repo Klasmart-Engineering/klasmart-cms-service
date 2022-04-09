@@ -94,6 +94,8 @@ func (s AmsProgramService) QueryByIDs(ctx context.Context, ids []string, options
 		err = connections.Query[connections.ProgramFilter, connections.ProgramsConnectionResponse](ctx, operator, filter, func(ctx context.Context, result interface{}) error {
 			concrete, ok := result.(connections.ProgramsConnectionResponse)
 			if !ok {
+				log.Error(ctx, "program: assert failed",
+					log.Any("response", result))
 				return errors.New("assert failed")
 			}
 			for _, v := range concrete.Edges {
