@@ -81,8 +81,10 @@ func (s *Server) getContentResourcePath(c *gin.Context) {
 		return
 	}
 	path, err := model.GetResourceUploaderModel().GetResourcePath(ctx, resourceId)
-	path = path + utils.GetUrlParamStr(c.Request.URL.Path)
-	log.Debug(ctx, "getContentResourcePath: request url", log.String("request url", c.Request.URL.Path), log.String("path", path))
+	if err == nil {
+		path = path + utils.GetUrlParamStr(c.Request.URL.Path)
+		log.Debug(ctx, "getContentResourcePath: request url", log.String("request url", c.Request.URL.Path), log.String("path", path))
+	}
 
 	switch err {
 	case model.ErrInvalidResourceID:
