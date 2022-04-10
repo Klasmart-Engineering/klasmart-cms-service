@@ -2,9 +2,8 @@ package external
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/connections"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gdp"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
@@ -79,45 +78,6 @@ func (s AmsProgramService) QueryByIDs(ctx context.Context, ids []string, options
 
 	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
 
-	if constant.ReplaceWithConnection {
-		var cacheObjects []cache.Object
-		filters := make([]connections.ProgramFilter, len(_ids))
-		for i, v := range _ids {
-			f := connections.ProgramFilter{
-				ID: &connections.UUIDFilter{Operator: connections.OperatorTypeEq, Value: connections.UUID(v)},
-			}
-			filters[i] = f
-		}
-		filter := connections.ProgramFilter{
-			OR: filters,
-		}
-		err = connections.Query[connections.ProgramFilter, connections.ProgramsConnectionResponse](ctx, operator, filter, func(ctx context.Context, result interface{}) error {
-			concrete, ok := result.(connections.ProgramsConnectionResponse)
-			if !ok {
-				log.Error(ctx, "program: assert failed",
-					log.Any("response", result))
-				return errors.New("assert failed")
-			}
-			for _, v := range concrete.Edges {
-				obj := &Program{
-					ID:   v.Node.ID,
-					Name: v.Node.Name,
-					//GroupName:
-					Status: APStatus(v.Node.Status),
-					System: v.Node.System,
-				}
-				cacheObjects = append(cacheObjects, obj)
-			}
-			return nil
-		})
-		if err != nil {
-			log.Error(ctx, "get programs by ids failed",
-				log.Err(err),
-				log.Strings("ids", ids))
-			return nil, err
-		}
-		return cacheObjects, nil
-	}
 	sb := new(strings.Builder)
 
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$program_id_", ": ID!", len(_ids)))
@@ -199,6 +159,51 @@ func (s AmsProgramService) BatchGetNameMap(ctx context.Context, operator *entity
 
 func (s AmsProgramService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Program, error) {
 	condition := NewCondition(options...)
+	if constant.ReplaceWithConnection {
+		filter := gdp.ProgramFilter{
+			OrganizationID: &gdp.UUIDFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    gdp.UUID(operator.OrgID),
+			},
+			Status: &gdp.StringFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    Active.String(),
+			},
+		}
+		if condition.Status.Valid {
+			filter.Status.Value = condition.Status.Status.String()
+		}
+		if condition.System.Valid {
+			filter.System = &gdp.BooleanFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    condition.System.Valid,
+			}
+		}
+
+		var programs []*Program
+		var pages []gdp.ProgramsConnectionResponse
+		err := gdp.Query(ctx, operator, filter.FilterType(), filter, &pages)
+		if err != nil {
+			log.Error(ctx, "get programs by ids failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Any("filter", filter))
+			return nil, err
+		}
+		for _, p := range pages {
+			for _, v := range p.Edges {
+				obj := &Program{
+					ID:   v.Node.ID,
+					Name: v.Node.Name,
+					//GroupName:
+					Status: APStatus(v.Node.Status),
+					System: v.Node.System,
+				}
+				programs = append(programs, obj)
+			}
+		}
+		return programs, nil
+	}
 
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {

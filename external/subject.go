@@ -3,6 +3,8 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gdp"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -155,6 +157,49 @@ func (s AmsSubjectService) BatchGetNameMap(ctx context.Context, operator *entity
 
 func (s AmsSubjectService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Subject, error) {
 	condition := NewCondition(options...)
+	if constant.ReplaceWithConnection {
+		filter := gdp.SubjectFilter{
+			ProgramID: &gdp.UUIDFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    gdp.UUID(programID),
+			},
+			Status: &gdp.StringFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    Active.String(),
+			},
+		}
+		if condition.Status.Valid {
+			filter.Status.Value = condition.Status.Status.String()
+		}
+		if condition.System.Valid {
+			filter.System = &gdp.BooleanFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    condition.System.Valid,
+			}
+		}
+		var subjects []*Subject
+		var pages []gdp.SubjectsConnectionResponse
+		err := gdp.Query(ctx, operator, filter.FilterType(), filter, &pages)
+		if err != nil {
+			log.Error(ctx, "get subject by program failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Any("filter", filter))
+			return nil, err
+		}
+		for _, p := range pages {
+			for _, v := range p.Edges {
+				obj := &Subject{
+					ID:     v.Node.ID,
+					Name:   v.Node.Name,
+					Status: APStatus(v.Node.Status),
+					System: v.Node.System,
+				}
+				subjects = append(subjects, obj)
+			}
+		}
+		return subjects, nil
+	}
 
 	request := chlorine.NewRequest(`
 	query($program_id: ID!) {
@@ -227,6 +272,49 @@ func (s AmsSubjectService) GetByProgram(ctx context.Context, operator *entity.Op
 func (s AmsSubjectService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Subject, error) {
 	condition := NewCondition(options...)
 
+	if constant.ReplaceWithConnection {
+		filter := gdp.SubjectFilter{
+			OrganizationID: &gdp.UUIDFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    gdp.UUID(operator.OrgID),
+			},
+			Status: &gdp.StringFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    Active.String(),
+			},
+		}
+		if condition.Status.Valid {
+			filter.Status.Value = condition.Status.Status.String()
+		}
+		if condition.System.Valid {
+			filter.System = &gdp.BooleanFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    condition.System.Valid,
+			}
+		}
+		var subjects []*Subject
+		var pages []gdp.SubjectsConnectionResponse
+		err := gdp.Query(ctx, operator, filter.FilterType(), filter, &pages)
+		if err != nil {
+			log.Error(ctx, "get subject by organization failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Any("filter", filter))
+			return nil, err
+		}
+		for _, p := range pages {
+			for _, v := range p.Edges {
+				obj := &Subject{
+					ID:     v.Node.ID,
+					Name:   v.Node.Name,
+					Status: APStatus(v.Node.Status),
+					System: v.Node.System,
+				}
+				subjects = append(subjects, obj)
+			}
+		}
+		return subjects, nil
+	}
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {

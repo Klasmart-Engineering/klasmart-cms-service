@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gdp"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
@@ -159,6 +160,50 @@ func (s AmsSubCategoryService) BatchGetNameMap(ctx context.Context, operator *en
 func (s AmsSubCategoryService) GetByCategory(ctx context.Context, operator *entity.Operator, categoryID string, options ...APOption) ([]*SubCategory, error) {
 	condition := NewCondition(options...)
 
+	if constant.ReplaceWithConnection {
+		filter := gdp.SubcategoryFilter{
+			CategoryID: &gdp.UUIDFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    gdp.UUID(categoryID),
+			},
+			Status: &gdp.StringFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    Active.String(),
+			},
+		}
+		if condition.Status.Valid {
+			filter.Status.Value = condition.Status.Status.String()
+		}
+		if condition.System.Valid {
+			filter.System = &gdp.BooleanFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    condition.System.Valid,
+			}
+		}
+
+		var subCategories []*SubCategory
+		var pages []gdp.SubcategoriesConnectionResponse
+		err := gdp.Query(ctx, operator, filter.FilterType(), filter, &pages)
+		if err != nil {
+			log.Error(ctx, "get subcategory by category failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Any("filter", filter))
+			return nil, err
+		}
+		for _, p := range pages {
+			for _, v := range p.Edges {
+				obj := &SubCategory{
+					ID:     v.Node.ID,
+					Name:   v.Node.Name,
+					Status: APStatus(v.Node.Status),
+					System: v.Node.System,
+				}
+				subCategories = append(subCategories, obj)
+			}
+		}
+		return subCategories, nil
+	}
 	request := chlorine.NewRequest(`
 	query($category_id: ID!) {
 		category(id: $category_id) {
@@ -233,6 +278,50 @@ func (s AmsSubCategoryService) GetByCategory(ctx context.Context, operator *enti
 func (s AmsSubCategoryService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*SubCategory, error) {
 	condition := NewCondition(options...)
 
+	if constant.ReplaceWithConnection {
+		filter := gdp.SubcategoryFilter{
+			OrganizationID: &gdp.UUIDFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    gdp.UUID(operator.OrgID),
+			},
+			Status: &gdp.StringFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    Active.String(),
+			},
+		}
+		if condition.Status.Valid {
+			filter.Status.Value = condition.Status.Status.String()
+		}
+		if condition.System.Valid {
+			filter.System = &gdp.BooleanFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    condition.System.Valid,
+			}
+		}
+
+		var subCategories []*SubCategory
+		var pages []gdp.SubcategoriesConnectionResponse
+		err := gdp.Query(ctx, operator, filter.FilterType(), filter, &pages)
+		if err != nil {
+			log.Error(ctx, "get subcategory by organization failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Any("filter", filter))
+			return nil, err
+		}
+		for _, p := range pages {
+			for _, v := range p.Edges {
+				obj := &SubCategory{
+					ID:     v.Node.ID,
+					Name:   v.Node.Name,
+					Status: APStatus(v.Node.Status),
+					System: v.Node.System,
+				}
+				subCategories = append(subCategories, obj)
+			}
+		}
+		return subCategories, nil
+	}
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {

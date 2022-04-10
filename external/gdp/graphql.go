@@ -1,4 +1,4 @@
-package connections
+package gdp
 
 import (
 	"fmt"
@@ -23,7 +23,6 @@ type GraphQLResponse[T ConnectionResponse] struct {
 	Data   map[string]T    `json:"data,omitempty"`
 	Errors []*GraphQLError `json:"errors,omitempty"`
 }
-
 type GraphQLRequest struct {
 	q      string
 	vars   map[string]interface{}
@@ -66,9 +65,3 @@ func (req *GraphQLRequest) SetHeaders(key string, values []string) {
 }
 
 const cookieKey = "Cookie"
-
-func makeResponse[T ConnectionResponse](data map[string]T) GraphQLResponse[T] {
-	return GraphQLResponse[T]{
-		Data: data,
-	}
-}

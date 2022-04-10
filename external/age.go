@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gdp"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
@@ -155,6 +156,50 @@ func (s AmsAgeService) BatchGetNameMap(ctx context.Context, operator *entity.Ope
 
 func (s AmsAgeService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Age, error) {
 	condition := NewCondition(options...)
+	if constant.ReplaceWithConnection {
+		filter := gdp.AgeRangeFilter{
+			ProgramID: &gdp.UUIDFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    gdp.UUID(programID),
+			},
+			Status: &gdp.StringFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    Active.String(),
+			},
+		}
+
+		if condition.Status.Valid {
+			filter.Status.Value = condition.Status.Status.String()
+		}
+		if condition.System.Valid {
+			filter.System = &gdp.BooleanFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    condition.System.Valid,
+			}
+		}
+		var pages []gdp.AgesConnectionResponse
+		err := gdp.Query(ctx, operator, filter.FilterType(), filter, &pages)
+		if err != nil {
+			log.Error(ctx, "get age by program failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Any("filter", filter))
+			return nil, err
+		}
+		var ages []*Age
+		for _, page := range pages {
+			for _, v := range page.Edges {
+				age := Age{
+					ID:     v.Node.ID,
+					Name:   v.Node.Name,
+					Status: APStatus(v.Node.Status),
+					System: v.Node.System,
+				}
+				ages = append(ages, &age)
+			}
+		}
+		return ages, nil
+	}
 
 	request := chlorine.NewRequest(`
 	query($program_id: ID!) {
@@ -230,6 +275,51 @@ func (s AmsAgeService) GetByProgram(ctx context.Context, operator *entity.Operat
 func (s AmsAgeService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Age, error) {
 	condition := NewCondition(options...)
 
+	if constant.ReplaceWithConnection {
+		filter := gdp.AgeRangeFilter{
+			ProgramID: &gdp.UUIDFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    gdp.UUID(operator.OrgID),
+			},
+			Status: &gdp.StringFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    Active.String(),
+			},
+		}
+
+		if condition.Status.Valid {
+			filter.Status.Value = condition.Status.Status.String()
+		}
+		if condition.System.Valid {
+			filter.System = &gdp.BooleanFilter{
+				Operator: gdp.OperatorTypeEq,
+				Value:    condition.System.Valid,
+			}
+		}
+
+		var pages []gdp.AgesConnectionResponse
+		err := gdp.Query(ctx, operator, filter.FilterType(), filter, &pages)
+		if err != nil {
+			log.Error(ctx, "get age by organization failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Any("filter", filter))
+			return nil, err
+		}
+		var ages []*Age
+		for _, page := range pages {
+			for _, v := range page.Edges {
+				age := Age{
+					ID:     v.Node.ID,
+					Name:   v.Node.Name,
+					Status: APStatus(v.Node.Status),
+					System: v.Node.System,
+				}
+				ages = append(ages, &age)
+			}
+		}
+		return ages, nil
+	}
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {

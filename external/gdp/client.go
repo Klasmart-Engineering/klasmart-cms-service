@@ -1,4 +1,4 @@
-package connections
+package gdp
 
 import (
 	"bytes"
@@ -66,7 +66,7 @@ func GraphQLRun[ResType ConnectionResponse](ctx context.Context, c *GraphGLClien
 	}
 	reqBuffer, err := json.Marshal(&reqBody)
 	if err != nil {
-		log.Warn(ctxWithTimeout, "Run: Marshal failed", log.Err(err), log.Any("reqBody", reqBody))
+		log.Warn(ctxWithTimeout, "Run: marshalFilter failed", log.Err(err), log.Any("reqBody", reqBody))
 		return 0, err
 	}
 	request, err := http.NewRequestWithContext(ctxWithTimeout, http.MethodPost, c.endpoint, bytes.NewBuffer(reqBuffer))
