@@ -5,6 +5,7 @@ import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"sync"
 	"text/template"
 )
 
@@ -24,6 +25,7 @@ func Query[ResType ConnectionResponse](ctx context.Context, operator *entity.Ope
 	qString, err := queryString(ctx, key, filter, result)
 	if err != nil {
 		log.Error(ctx, "query: string failed",
+			log.String("key", string(key)),
 			log.Any("filter", filter),
 			log.Any("operator", operator))
 		return err
@@ -36,6 +38,7 @@ func Query[ResType ConnectionResponse](ctx context.Context, operator *entity.Ope
 		err := do(ctx, operator, pageInfo.Pager(FORWARD, PageDefaultCount), qString, &res)
 		if err != nil {
 			log.Error(ctx, "query: do failed",
+				log.String("key", string(key)),
 				log.Any("filter", filter),
 				log.Any("pageInfo", pageInfo),
 				log.String("query", qString),
@@ -50,7 +53,7 @@ func Query[ResType ConnectionResponse](ctx context.Context, operator *entity.Ope
 }
 
 func do[ResType ConnectionResponse](ctx context.Context, operator *entity.Operator, pager map[string]interface{}, query string, res *GraphQLResponse[ResType]) error {
-	req := NewRequest(query, ReqToken(operator.Token))
+	req := NewRequest(query, RequestToken(operator.Token))
 	for k, v := range pager {
 		req.Var(k, v)
 	}
@@ -78,6 +81,7 @@ func toArgument(ctx context.Context, key FilterOfType, filter interface{}, res i
 	if err != nil {
 		log.Error(ctx, "argument: marshal failed",
 			log.Err(err),
+			log.String("key", string(key)),
 			log.Any("filter", filter))
 		return nil, err
 	}
@@ -86,11 +90,15 @@ func toArgument(ctx context.Context, key FilterOfType, filter interface{}, res i
 	if err != nil {
 		log.Error(ctx, "argument: failed",
 			log.Err(err),
+			log.String("key", string(key)),
 			log.Any("filter", filter))
 		return nil, err
 	}
 	return &argument{string(key), filterString, nodeFields}, nil
 }
+
+var temp *template.Template
+var tempOnce sync.Once
 
 func queryString(ctx context.Context, key FilterOfType, filter interface{}, res interface{}) (string, error) {
 	params, err := toArgument(ctx, key, filter, res)
@@ -98,14 +106,18 @@ func queryString(ctx context.Context, key FilterOfType, filter interface{}, res 
 	if err != nil {
 		log.Error(ctx, "argument: failed",
 			log.Err(err),
+			log.String("key", string(key)),
 			log.Any("filter", filter))
 		return "", err
 	}
 
-	temp, err := template.New("ProgramsConnection").Parse(graphQLString)
-	if err != nil {
+	tempOnce.Do(func() {
+		temp, err = template.New("UseConnection").Parse(graphQLString)
+	})
+	if temp == nil {
 		log.Error(ctx, "string: template parse failed",
 			log.Err(err),
+			log.String("key", string(key)),
 			log.Any("filter", filter),
 			log.Any("params", params),
 			log.String("connection", graphQLString))
@@ -117,6 +129,7 @@ func queryString(ctx context.Context, key FilterOfType, filter interface{}, res 
 	if err != nil {
 		log.Error(ctx, "string: template execute failed",
 			log.Err(err),
+			log.String("key", string(key)),
 			log.Any("filter", filter),
 			log.Any("params", params),
 			log.String("connection", graphQLString))

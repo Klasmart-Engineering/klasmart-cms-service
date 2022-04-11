@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gql"
 	"strings"
 
@@ -159,7 +160,7 @@ func (s AmsProgramService) BatchGetNameMap(ctx context.Context, operator *entity
 
 func (s AmsProgramService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Program, error) {
 	condition := NewCondition(options...)
-	if constant.ReplaceWithConnection {
+	if config.Get().AMS.ReplaceWithConnection {
 		filter := gql.ProgramFilter{
 			OrganizationID: &gql.UUIDFilter{
 				Operator: gql.OperatorTypeEq,

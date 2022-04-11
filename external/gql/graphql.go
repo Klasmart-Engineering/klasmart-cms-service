@@ -1,6 +1,7 @@
 package gql
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -19,27 +20,32 @@ type GraphQLError struct {
 	}
 }
 
+func (ge GraphQLError) Error() string {
+	str, _ := json.Marshal(ge)
+	return string(str)
+}
+
 type GraphQLResponse[T ConnectionResponse] struct {
 	Data   map[string]T    `json:"data,omitempty"`
 	Errors []*GraphQLError `json:"errors,omitempty"`
 }
 type GraphQLRequest struct {
-	q      string
+	query  string
 	vars   map[string]interface{}
 	Header http.Header
 }
 
-type OptFunc func(*GraphQLRequest)
+type OptionFunc func(*GraphQLRequest)
 
-func ReqToken(token string) OptFunc {
+func RequestToken(token string) OptionFunc {
 	return func(req *GraphQLRequest) {
 		req.Header.Add(cookieKey, fmt.Sprintf("access=%s", token))
 	}
 }
 
-func NewRequest(q string, opt ...OptFunc) *GraphQLRequest {
+func NewRequest(q string, opt ...OptionFunc) *GraphQLRequest {
 	req := &GraphQLRequest{
-		q:      q,
+		query:  q,
 		Header: make(map[string][]string),
 	}
 

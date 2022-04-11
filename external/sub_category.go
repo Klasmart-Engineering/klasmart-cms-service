@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gql"
 	"strings"
 
@@ -160,7 +161,7 @@ func (s AmsSubCategoryService) BatchGetNameMap(ctx context.Context, operator *en
 func (s AmsSubCategoryService) GetByCategory(ctx context.Context, operator *entity.Operator, categoryID string, options ...APOption) ([]*SubCategory, error) {
 	condition := NewCondition(options...)
 
-	if constant.ReplaceWithConnection {
+	if config.Get().AMS.ReplaceWithConnection {
 		filter := gql.SubcategoryFilter{
 			CategoryID: &gql.UUIDFilter{
 				Operator: gql.OperatorTypeEq,
@@ -278,7 +279,7 @@ func (s AmsSubCategoryService) GetByCategory(ctx context.Context, operator *enti
 func (s AmsSubCategoryService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*SubCategory, error) {
 	condition := NewCondition(options...)
 
-	if constant.ReplaceWithConnection {
+	if config.Get().AMS.ReplaceWithConnection {
 		filter := gql.SubcategoryFilter{
 			OrganizationID: &gql.UUIDFilter{
 				Operator: gql.OperatorTypeEq,

@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gql"
 	"strings"
 
@@ -156,7 +157,7 @@ func (s AmsAgeService) BatchGetNameMap(ctx context.Context, operator *entity.Ope
 
 func (s AmsAgeService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Age, error) {
 	condition := NewCondition(options...)
-	if constant.ReplaceWithConnection {
+	if config.Get().AMS.ReplaceWithConnection {
 		filter := gql.AgeRangeFilter{
 			ProgramID: &gql.UUIDFilter{
 				Operator: gql.OperatorTypeEq,
@@ -275,7 +276,7 @@ func (s AmsAgeService) GetByProgram(ctx context.Context, operator *entity.Operat
 func (s AmsAgeService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Age, error) {
 	condition := NewCondition(options...)
 
-	if constant.ReplaceWithConnection {
+	if config.Get().AMS.ReplaceWithConnection {
 		filter := gql.AgeRangeFilter{
 			ProgramID: &gql.UUIDFilter{
 				Operator: gql.OperatorTypeEq,

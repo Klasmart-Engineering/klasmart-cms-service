@@ -114,7 +114,10 @@ func (pager *ConnectionPageInfo) HasNext(direction ConnectionDirection) bool {
 	if pager == nil {
 		return true
 	}
-	if pager.HasPreviousPage || pager.HasNextPage {
+	if direction == FORWARD && pager.HasNextPage {
+		return true
+	}
+	if direction == BACKWARD && pager.HasPreviousPage {
 		return true
 	}
 	return false

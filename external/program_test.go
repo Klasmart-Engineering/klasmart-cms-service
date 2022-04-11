@@ -2,19 +2,13 @@ package external
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"testing"
 	"time"
 )
 
-var tokenOp = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImExZmFhNTc1LWVhMGMtNGEzMC04YmI2LTViYjM3M2MwYjA5NCIsImVtYWlsIjoiYWxsMTEyNEB5b3BtYWlsLmNvbSIsImV4cCI6Mjc0ODcyMDcwMSwiaXNzIjoiY2FsbWlkLWRlYnVnIn0.qVfuPzeQFKvHlOg3aPh45rQ878LrGif5I3yb3eZj7Z8"
-
 func TestAmsProgramService_BatchGet(t *testing.T) {
-	op := &entity.Operator{
-		Token: tokenOp,
-	}
 	ids := []string{"4591423a-2619-4ef8-a900-f5d924939d02", "14d350f1-a7ba-4f46-bef9-dc847f0cbac5"}
-	programs, err := GetProgramServiceProvider().BatchGet(context.TODO(), op, ids)
+	programs, err := GetProgramServiceProvider().BatchGet(context.TODO(), testOperator, ids)
 	if err != nil {
 		t.Errorf("GetProgramServiceProvider().BatchGet() error = %v", err)
 		return

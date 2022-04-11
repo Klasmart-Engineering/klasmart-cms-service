@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gql"
 	"strings"
 
@@ -159,7 +160,7 @@ func (s AmsGradeService) BatchGetNameMap(ctx context.Context, operator *entity.O
 func (s AmsGradeService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Grade, error) {
 	condition := NewCondition(options...)
 
-	if constant.ReplaceWithConnection {
+	if config.Get().AMS.ReplaceWithConnection {
 		filter := gql.GradeFilter{
 			ProgramID: &gql.UUIDFilter{
 				Operator: gql.OperatorTypeEq,
@@ -277,7 +278,7 @@ func (s AmsGradeService) GetByProgram(ctx context.Context, operator *entity.Oper
 func (s AmsGradeService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Grade, error) {
 	condition := NewCondition(options...)
 
-	if constant.ReplaceWithConnection {
+	if config.Get().AMS.ReplaceWithConnection {
 		filter := gql.GradeFilter{
 			OrganizationID: &gql.UUIDFilter{
 				Operator: gql.OperatorTypeEq,

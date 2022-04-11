@@ -2,7 +2,6 @@ package external
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"testing"
 )
 
@@ -28,10 +27,7 @@ func TestAmsGradeService_BatchGet(t *testing.T) {
 }
 
 func TestAmsGradeService_GetByProgram(t *testing.T) {
-	op := &entity.Operator{
-		Token: tokenOp,
-	}
-	grades, err := GetGradeServiceProvider().GetByProgram(context.TODO(), op, "04c630cc-fabe-4176-80f2-30a029907a33", WithStatus(Active))
+	grades, err := GetGradeServiceProvider().GetByProgram(context.TODO(), testOperator, "04c630cc-fabe-4176-80f2-30a029907a33", WithStatus(Active))
 	if err != nil {
 		t.Errorf("GetGradeServiceProvider().GetByProgram() error = %v", err)
 		return

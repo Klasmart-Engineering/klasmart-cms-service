@@ -61,7 +61,7 @@ func GraphQLRun[ResType ConnectionResponse](ctx context.Context, c *GraphGLClien
 		Query     string                 `json:"query"`
 		Variables map[string]interface{} `json:"variables"`
 	}{
-		Query:     req.q,
+		Query:     req.query,
 		Variables: req.vars,
 	}
 	reqBuffer, err := json.Marshal(&reqBody)
