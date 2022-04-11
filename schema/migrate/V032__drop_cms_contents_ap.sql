@@ -1,0 +1,1 @@
+alter table cms_contents drop column program, drop column subject, drop column developmental, drop column skills, drop column age, drop column grade;
