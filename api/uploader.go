@@ -1,12 +1,13 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"net/http"
 )
 
 type UploadPathResponse struct {
@@ -146,7 +147,7 @@ func (s *Server) getDownloadPath(c *gin.Context) {
 // @Produce json
 // @Param resource_id path string true "Resource id"
 // @Tags content
-// @Success 200 {bool} bool
+// @Success 200 {boolean} string "true/false"
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents_resources/{resource_id}/check [get]
