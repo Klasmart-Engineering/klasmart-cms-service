@@ -956,33 +956,35 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 		)
 		return nil, constant.ErrOperateNotAllowed
 	}
+
 	if schedule.ClassType == entity.ScheduleClassTypeHomework &&
 		schedule.IsHomeFun &&
 		schedule.IsHidden {
 		log.Info(ctx, "schedule already hidden", log.Any("schedule", schedule))
 		return nil, ErrScheduleAlreadyHidden
 	}
-	if schedule.ClassType == entity.ScheduleClassTypeHomework {
-		if schedule.IsHomeFun {
-			exist, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, op, schedule.ID)
-			if err != nil {
-				log.Error(ctx, "update schedule: get schedule feedback error",
-					log.Any("schedule", schedule),
-					log.Err(err),
-				)
-				return nil, err
-			}
-			if exist {
-				log.Info(ctx, "ErrScheduleAlreadyAssignments", log.Any("schedule", schedule))
-				return nil, ErrScheduleAlreadyFeedback
-			}
-		} else {
-			if schedule.IsLockedLessonPlan() {
-				log.Info(ctx, "The schedule has already been attended", log.Any("scheduleID", schedule.ID))
-				return nil, ErrScheduleStudyAlreadyProgress
-			}
+
+	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
+		exist, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, op, schedule.ID)
+		if err != nil {
+			log.Error(ctx, "update schedule: get schedule feedback error",
+				log.Any("schedule", schedule),
+				log.Err(err),
+			)
+			return nil, err
+		}
+		if exist {
+			log.Info(ctx, "ErrScheduleAlreadyAssignments", log.Any("schedule", schedule))
+			return nil, ErrScheduleAlreadyFeedback
 		}
 	}
+
+	// check schedule is locked lesson plan version
+	if schedule.IsLockedLessonPlan() {
+		log.Info(ctx, "The schedule has already been attended", log.Any("scheduleID", schedule.ID))
+		return nil, ErrScheduleStudyAlreadyProgress
+	}
+
 	switch schedule.ClassType {
 	case entity.ScheduleClassTypeHomework, entity.ScheduleClassTypeTask:
 		if schedule.DueAt > 0 {
