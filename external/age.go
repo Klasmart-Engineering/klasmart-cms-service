@@ -3,7 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gqp"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gql"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
@@ -157,13 +157,13 @@ func (s AmsAgeService) BatchGetNameMap(ctx context.Context, operator *entity.Ope
 func (s AmsAgeService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Age, error) {
 	condition := NewCondition(options...)
 	if constant.ReplaceWithConnection {
-		filter := gqp.AgeRangeFilter{
-			ProgramID: &gqp.UUIDFilter{
-				Operator: gqp.OperatorTypeEq,
-				Value:    gqp.UUID(programID),
+		filter := gql.AgeRangeFilter{
+			ProgramID: &gql.UUIDFilter{
+				Operator: gql.OperatorTypeEq,
+				Value:    gql.UUID(programID),
 			},
-			Status: &gqp.StringFilter{
-				Operator: gqp.OperatorTypeEq,
+			Status: &gql.StringFilter{
+				Operator: gql.OperatorTypeEq,
 				Value:    Active.String(),
 			},
 		}
@@ -172,13 +172,13 @@ func (s AmsAgeService) GetByProgram(ctx context.Context, operator *entity.Operat
 			filter.Status.Value = condition.Status.Status.String()
 		}
 		if condition.System.Valid {
-			filter.System = &gqp.BooleanFilter{
-				Operator: gqp.OperatorTypeEq,
+			filter.System = &gql.BooleanFilter{
+				Operator: gql.OperatorTypeEq,
 				Value:    condition.System.Valid,
 			}
 		}
-		var pages []gqp.AgesConnectionResponse
-		err := gqp.Query(ctx, operator, filter.FilterType(), filter, &pages)
+		var pages []gql.AgesConnectionResponse
+		err := gql.Query(ctx, operator, filter.FilterType(), filter, &pages)
 		if err != nil {
 			log.Error(ctx, "get age by program failed",
 				log.Err(err),
@@ -276,13 +276,13 @@ func (s AmsAgeService) GetByOrganization(ctx context.Context, operator *entity.O
 	condition := NewCondition(options...)
 
 	if constant.ReplaceWithConnection {
-		filter := gqp.AgeRangeFilter{
-			ProgramID: &gqp.UUIDFilter{
-				Operator: gqp.OperatorTypeEq,
-				Value:    gqp.UUID(operator.OrgID),
+		filter := gql.AgeRangeFilter{
+			ProgramID: &gql.UUIDFilter{
+				Operator: gql.OperatorTypeEq,
+				Value:    gql.UUID(operator.OrgID),
 			},
-			Status: &gqp.StringFilter{
-				Operator: gqp.OperatorTypeEq,
+			Status: &gql.StringFilter{
+				Operator: gql.OperatorTypeEq,
 				Value:    Active.String(),
 			},
 		}
@@ -291,14 +291,14 @@ func (s AmsAgeService) GetByOrganization(ctx context.Context, operator *entity.O
 			filter.Status.Value = condition.Status.Status.String()
 		}
 		if condition.System.Valid {
-			filter.System = &gqp.BooleanFilter{
-				Operator: gqp.OperatorTypeEq,
+			filter.System = &gql.BooleanFilter{
+				Operator: gql.OperatorTypeEq,
 				Value:    condition.System.Valid,
 			}
 		}
 
-		var pages []gqp.AgesConnectionResponse
-		err := gqp.Query(ctx, operator, filter.FilterType(), filter, &pages)
+		var pages []gql.AgesConnectionResponse
+		err := gql.Query(ctx, operator, filter.FilterType(), filter, &pages)
 		if err != nil {
 			log.Error(ctx, "get age by organization failed",
 				log.Err(err),

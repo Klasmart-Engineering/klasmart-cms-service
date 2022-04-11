@@ -3,7 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gqp"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gql"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
@@ -160,13 +160,13 @@ func (s AmsGradeService) GetByProgram(ctx context.Context, operator *entity.Oper
 	condition := NewCondition(options...)
 
 	if constant.ReplaceWithConnection {
-		filter := gqp.GradeFilter{
-			ProgramID: &gqp.UUIDFilter{
-				Operator: gqp.OperatorTypeEq,
-				Value:    gqp.UUID(programID),
+		filter := gql.GradeFilter{
+			ProgramID: &gql.UUIDFilter{
+				Operator: gql.OperatorTypeEq,
+				Value:    gql.UUID(programID),
 			},
-			Status: &gqp.StringFilter{
-				Operator: gqp.OperatorTypeEq,
+			Status: &gql.StringFilter{
+				Operator: gql.OperatorTypeEq,
 				Value:    Active.String(),
 			},
 		}
@@ -174,15 +174,15 @@ func (s AmsGradeService) GetByProgram(ctx context.Context, operator *entity.Oper
 			filter.Status.Value = condition.Status.Status.String()
 		}
 		if condition.System.Valid {
-			filter.System = &gqp.BooleanFilter{
-				Operator: gqp.OperatorTypeEq,
+			filter.System = &gql.BooleanFilter{
+				Operator: gql.OperatorTypeEq,
 				Value:    condition.System.Valid,
 			}
 		}
 
 		var grades []*Grade
-		var pages []gqp.GradesConnectionResponse
-		err := gqp.Query(ctx, operator, filter.FilterType(), filter, &pages)
+		var pages []gql.GradesConnectionResponse
+		err := gql.Query(ctx, operator, filter.FilterType(), filter, &pages)
 		if err != nil {
 			log.Error(ctx, "get grade by program failed",
 				log.Err(err),
@@ -278,13 +278,13 @@ func (s AmsGradeService) GetByOrganization(ctx context.Context, operator *entity
 	condition := NewCondition(options...)
 
 	if constant.ReplaceWithConnection {
-		filter := gqp.GradeFilter{
-			OrganizationID: &gqp.UUIDFilter{
-				Operator: gqp.OperatorTypeEq,
-				Value:    gqp.UUID(operator.OrgID),
+		filter := gql.GradeFilter{
+			OrganizationID: &gql.UUIDFilter{
+				Operator: gql.OperatorTypeEq,
+				Value:    gql.UUID(operator.OrgID),
 			},
-			Status: &gqp.StringFilter{
-				Operator: gqp.OperatorTypeEq,
+			Status: &gql.StringFilter{
+				Operator: gql.OperatorTypeEq,
 				Value:    Active.String(),
 			},
 		}
@@ -292,15 +292,15 @@ func (s AmsGradeService) GetByOrganization(ctx context.Context, operator *entity
 			filter.Status.Value = condition.Status.Status.String()
 		}
 		if condition.System.Valid {
-			filter.System = &gqp.BooleanFilter{
-				Operator: gqp.OperatorTypeEq,
+			filter.System = &gql.BooleanFilter{
+				Operator: gql.OperatorTypeEq,
 				Value:    condition.System.Valid,
 			}
 		}
 
 		var grades []*Grade
-		var pages []gqp.GradesConnectionResponse
-		err := gqp.Query(ctx, operator, filter.FilterType(), filter, &pages)
+		var pages []gql.GradesConnectionResponse
+		err := gql.Query(ctx, operator, filter.FilterType(), filter, &pages)
 		if err != nil {
 			log.Error(ctx, "get grade by organization failed",
 				log.Err(err),

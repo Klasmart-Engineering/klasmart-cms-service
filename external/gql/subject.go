@@ -1,4 +1,4 @@
-package gqp
+package gql
 
 type SubjectFilter struct {
 	ID             *UUIDFilter     `json:"id,omitempty" gqls:"id,omitempty"`

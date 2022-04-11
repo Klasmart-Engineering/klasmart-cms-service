@@ -1,4 +1,4 @@
-package gqp
+package gql
 
 type SubcategoryFilter struct {
 	OrganizationID *UUIDFilter         `json:"organizationId" gqls:"organizationId"`

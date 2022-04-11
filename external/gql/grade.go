@@ -1,4 +1,4 @@
-package gqp
+package gql
 
 type GradeFilter struct {
 	ID             *UUIDFilter    `gqls:"id,omitempty"`

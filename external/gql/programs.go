@@ -1,4 +1,4 @@
-package gqp
+package gql
 
 type ProgramFilter struct {
 	ID             *UUIDFilter         `gqls:"id,omitempty"`

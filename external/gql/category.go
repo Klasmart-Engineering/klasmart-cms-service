@@ -1,4 +1,4 @@
-package gqp
+package gql
 
 type CategoryFilter struct {
 	Status *StringFilter    `json:"status,omitempty" gqls:"status,omitempty"`

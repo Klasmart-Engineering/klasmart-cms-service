@@ -1,4 +1,4 @@
-package gqp
+package gql
 
 type OrganizationFilter struct {
 	ID            *UUIDFilter          `json:"id,omitempty" gqls:"id,omitempty"`
