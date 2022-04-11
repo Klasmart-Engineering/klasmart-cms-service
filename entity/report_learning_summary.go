@@ -125,6 +125,16 @@ type LearningSummaryOutcome struct {
 	Status AssessmentOutcomeStatus `json:"status" enums:"achieved,not_achieved,partially"`
 }
 
+type LearningSummaryOutcomeItem struct {
+	OutcomeID          string `json:"outcome_id" gorm:"column:outcome_id" `
+	OutcomeName        string `json:"outcome_name" gorm:"column:outcome_name" `
+	CountOfUnknown     int    `json:"count_of_unknown" gorm:"column:count_of_unknown" `
+	CountOfAchieved    int    `json:"count_of_achieved" gorm:"column:count_of_achieved" `
+	CountOfNotAchieved int    `json:"count_of_not_achieved" gorm:"column:count_of_not_achieved" `
+	CountOfNotCovered  int    `json:"count_of_not_covered" gorm:"column:count_of_not_covered" `
+	CountOfAll         int    `json:"count_of_all" gorm:"column:count_of_all" `
+}
+
 type QueryAssignmentsSummaryResultV2 struct {
 	StudyCount        int                         `json:"study_count"`
 	HomeFunStudyCount int                         `json:"home_fun_study_count"`

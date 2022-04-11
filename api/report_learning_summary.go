@@ -188,42 +188,28 @@ func (s *Server) queryLiveClassesSummaryV2(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param assessment_id query string false "assessment_id"
+// @Param student_id query string false "student_id"
 // @Success 200 {object} []entity.LearningSummaryOutcome
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/learning_summary/outcomes [get]
 func (s *Server) queryOutcomesByAssessmentID(c *gin.Context) {
-	//ctx := c.Request.Context()
-	//operator := s.getOperator(c)
-	//
-	//filter, err := s.parseLearningSummaryFilter(c)
-	//if err != nil {
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//	return
-	//}
-	//if filter.StudentID == "" {
-	//	log.Error(ctx, "query live classes summary: require student id")
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//	return
-	//}
-	//result, err := model.GetLearningSummaryReportModel().QueryLiveClassesSummaryV2(ctx, dbo.MustGetDB(ctx), operator, filter)
-	//if err != nil {
-	//	log.Error(ctx, "query live classes summary failed",
-	//		log.Err(err),
-	//		log.Any("filter", filter),
-	//	)
-	//}
-	//switch err {
-	//case nil:
-	//	c.JSON(http.StatusOK, result)
-	//case constant.ErrInvalidArgs:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case constant.ErrForbidden:
-	//	c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
-	//default:
-	//	s.defaultErrorHandler(c, err)
-	//}
+	ctx := c.Request.Context()
+	operator := s.getOperator(c)
+	assessmentID := c.Query("assessment_id")
+	studentID := c.Query("student_id")
+	result, err := model.GetLearningSummaryReportModel().QueryOutcomesByAssessmentID(ctx, operator, assessmentID, studentID)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
+	default:
+		s.defaultErrorHandler(c, err)
+	}
 }
 
 // @Summary query live classes summary
