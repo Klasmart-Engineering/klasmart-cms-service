@@ -14,7 +14,7 @@ type SubjectFilter struct {
 }
 
 func (SubjectFilter) FilterType() FilterOfType {
-	return CategoriesConnectionType
+	return SubjectsConnectionType
 }
 
 type SubjectConnectionNode struct {

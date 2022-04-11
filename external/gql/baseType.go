@@ -92,6 +92,7 @@ type FilterOfType string
 const (
 	OrganizationsConnectionType FilterOfType = "organizationsConnection"
 	ProgramsConnectionType      FilterOfType = "programsConnection"
+	SubjectsConnectionType      FilterOfType = "subjectsConnection"
 	CategoriesConnectionType    FilterOfType = "categoriesConnection"
 	SubcategoriesConnectionType FilterOfType = "subcategoriesConnection"
 	GradesConnectionType        FilterOfType = "gradesConnection"
