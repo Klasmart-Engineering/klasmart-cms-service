@@ -867,26 +867,45 @@ func (asg *AssessmentSingleGrainItem) getLockedContentBySchedule(schedule *entit
 		)
 		return nil, err
 	}
+	contentMap := make(map[string]*entity.ContentInfoInternal, len(contents))
+	for _, item := range contents {
+		contentMap[item.ID] = item
+	}
 
-	// convert to content map
-	result := make([]*v2.AssessmentContentView, len(contents))
-	for i, item := range contents {
+	// convert to content view
+	result := make([]*v2.AssessmentContentView, 0, len(contents))
+	if contentItem, ok := contentMap[schedule.LiveLessonPlan.LessonPlanID]; ok {
 		resultItem := &v2.AssessmentContentView{
-			ID:         item.ID,
-			Name:       item.Name,
-			OutcomeIDs: item.OutcomeIDs,
-			LatestID:   item.LatestID,
-			FileType:   item.FileType,
+			ID:          contentItem.ID,
+			Name:        contentItem.Name,
+			ContentType: v2.AssessmentContentTypeLessonPlan,
+			OutcomeIDs:  contentItem.OutcomeIDs,
+			LatestID:    contentItem.LatestID,
+			FileType:    contentItem.FileType,
 		}
-		if item.ContentType == entity.ContentTypePlan {
-			resultItem.ContentType = v2.AssessmentContentTypeLessonPlan
-		} else if item.ContentType == entity.ContentTypeMaterial {
-			resultItem.ContentType = v2.AssessmentContentTypeLessonMaterial
-		} else {
-			log.Warn(ctx, "content type is invalid", log.Any("contentItem", item), log.Any("schedule", schedule))
+
+		result = append(result, resultItem)
+	} else {
+		log.Warn(ctx, "not found lessPlan", log.Any("contentMap", contentMap), log.Any("LiveLessonPlan", schedule.LiveLessonPlan))
+		return nil, constant.ErrInvalidArgs
+	}
+
+	for _, materialItem := range schedule.LiveLessonPlan.LessonMaterials {
+		contentItem, ok := contentMap[materialItem.LessonMaterialID]
+		if !ok {
+			log.Warn(ctx, "not found material", log.Any("contentMap", contentMap), log.String("LessonMaterialID", materialItem.LessonMaterialID))
 			continue
 		}
-		result[i] = resultItem
+		resultItem := &v2.AssessmentContentView{
+			ID:          contentItem.ID,
+			Name:        contentItem.Name,
+			ContentType: v2.AssessmentContentTypeLessonMaterial,
+			OutcomeIDs:  contentItem.OutcomeIDs,
+			LatestID:    contentItem.LatestID,
+			FileType:    contentItem.FileType,
+		}
+
+		result = append(result, resultItem)
 	}
 
 	return result, nil
