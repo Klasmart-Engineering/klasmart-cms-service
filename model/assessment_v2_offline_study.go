@@ -213,6 +213,10 @@ func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCon
 
 		reviewerFeedback, ok := reviewerFeedbackMap[item.ID]
 		if !ok {
+			if len(studentResultItem.Outcomes) > 0 {
+				resultItem.Results = append(resultItem.Results, studentResultItem)
+			}
+
 			result = append(result, resultItem)
 			continue
 		}
