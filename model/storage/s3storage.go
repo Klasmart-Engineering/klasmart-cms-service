@@ -270,9 +270,20 @@ func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition Storage
 	path := fmt.Sprintf("%s/%s", partition, fileName)
 	svc := s3.New(s.session)
 
-	fmt.Println(s.bucket)
+	bucket := s.bucket
+
+	inboundBucket := config.Get().StorageConfig.StorageBucketInbound
+	// HFS students upload with a separate inbound s3 bucket
+	if partition == ScheduleAttachmentStoragePartition &&
+		inboundBucket != "" &&
+		inboundBucket != s.bucket {
+		bucket = inboundBucket
+	}
+
+	log.Debug(ctx, "uploading to bucket", log.String("bucket", bucket))
+
 	req, _ := svc.PutObjectRequest(&s3.PutObjectInput{
-		Bucket: aws.String(s.bucket),
+		Bucket: aws.String(bucket),
 		Key:    aws.String(path),
 		// ContentLength: aws.Int64(partition.SizeLimit()),
 	})

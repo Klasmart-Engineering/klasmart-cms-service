@@ -1058,3 +1058,8 @@ type ScheduleReviewFailedResult struct {
 	StudentID string `json:"student_id"`
 	Reason    string `json:"reason"`
 }
+
+type ScheduleAttendance struct {
+	NumberOfTeachers int `json:"number_of_teachers"`
+	NumberOfStudents int `json:"number_of_students"`
+}
