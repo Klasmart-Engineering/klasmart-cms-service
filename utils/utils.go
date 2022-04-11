@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"strings"
 	"unsafe"
 
@@ -155,4 +156,12 @@ func PaddingString(s string, l int) string {
 		return s
 	}
 	return strings.Repeat("0", l-len(s)) + s
+}
+
+func GetUrlParamStr(url string) string {
+	urls := strings.Split(url, "?")
+	if len(urls) >= 2 {
+		return fmt.Sprintf("?%s", urls[1])
+	}
+	return ""
 }

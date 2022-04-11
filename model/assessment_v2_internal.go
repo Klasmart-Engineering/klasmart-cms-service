@@ -117,7 +117,7 @@ func (a *assessmentInternalModel) AddWhenCreateSchedules(ctx context.Context, tx
 			MigrateFlag:    constant.AssessmentCurrentFlag,
 		}
 		if req.AssessmentType == v2.AssessmentTypeOfflineStudy {
-			assessmentItem.Status = v2.AssessmentStatusNotApplicable
+			assessmentItem.Status = v2.AssessmentStatusNotStarted
 		}
 		if req.AssessmentType == v2.AssessmentTypeReviewStudy {
 			assessmentItem.Status = v2.AssessmentStatusPending

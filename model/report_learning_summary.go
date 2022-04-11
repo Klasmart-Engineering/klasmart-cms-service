@@ -21,9 +21,10 @@ import (
 type ILearningSummaryReportModel interface {
 	QueryTimeFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryLearningSummaryTimeFilterArgs) ([]*entity.LearningSummaryFilterYear, error)
 	QueryLiveClassesSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryLiveClassesSummaryResult, error)
-	QueryLiveClassesSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res *entity.QueryLiveClassesSummaryResult, err error)
+	QueryLiveClassesSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res *entity.QueryLiveClassesSummaryResultV2, err error)
 	QueryAssignmentsSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryAssignmentsSummaryResult, error)
 	QueryAssignmentsSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res *entity.QueryAssignmentsSummaryResultV2, err error)
+	QueryOutcomesByAssessmentID(ctx context.Context, op *entity.Operator, assessmentID string, studentID string) (res []*entity.LearningSummaryOutcome, err error)
 }
 
 var (
@@ -145,9 +146,48 @@ func (l *learningSummaryReportModel) getYearsWeeksData(nowWithZone time.Time) (r
 	return
 }
 
-func (l *learningSummaryReportModel) QueryLiveClassesSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryLiveClassesSummaryResult, error) {
+func (l *learningSummaryReportModel) QueryLiveClassesSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res *entity.QueryLiveClassesSummaryResultV2, err error) {
+	items, err := da.GetReportDA().QueryLiveClassesSummaryV2(ctx, tx, operator, filter)
+	if err != nil {
+		return
+	}
+	var scheduleIDs []string
+	for _, item := range items {
+		scheduleIDs = append(scheduleIDs, item.ScheduleID)
+	}
 
-	return nil, nil
+	// find related comments and make map by schedule id  (live: room comments)
+	roomCommentMap, err := getAssessmentH5P().batchGetRoomCommentMap(ctx, operator, scheduleIDs)
+	if err != nil {
+		log.Error(ctx, "query live classes summary: batch get room comment map failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
+			log.Any("filter", filter),
+		)
+		return
+	}
+	for _, item := range items {
+		comments := roomCommentMap[item.ScheduleID][filter.StudentID]
+		if len(comments) > 0 {
+			item.TeacherFeedback = comments[len(comments)-1]
+		}
+	}
+
+	res = &entity.QueryLiveClassesSummaryResultV2{
+		Attend: 0,
+		Items:  items,
+	}
+	if len(items) > 0 {
+		absentCount := 0
+		for _, item := range items {
+			if item.Absent {
+				absentCount++
+			}
+		}
+		res.Attend = (float64(len(items)) - float64(absentCount)) / float64(len(items))
+	}
+
+	return
 }
 
 func (l *learningSummaryReportModel) QueryLiveClassesSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryLiveClassesSummaryResult, error) {
@@ -630,7 +670,86 @@ func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context,
 
 	return assessments, nil
 }
+
+func (l *learningSummaryReportModel) QueryOutcomesByAssessmentID(ctx context.Context, op *entity.Operator, assessmentID string, studentID string) (res []*entity.LearningSummaryOutcome, err error) {
+	if assessmentID == "" {
+		log.Warn(ctx, "assessment_id is required")
+		err = constant.ErrInvalidArgs
+		return
+	}
+	if studentID == "" {
+		log.Warn(ctx, "student_id is required")
+		err = constant.ErrInvalidArgs
+		return
+	}
+	res = []*entity.LearningSummaryOutcome{}
+	items, err := da.GetReportDA().QueryOutcomesByAssessmentID(ctx, op, assessmentID, studentID)
+	if err != nil {
+		return
+	}
+	for _, item := range items {
+		if item.CountOfAll == item.CountOfUnknown {
+			continue
+		}
+		o := &entity.LearningSummaryOutcome{
+			ID:   item.OutcomeID,
+			Name: item.OutcomeName,
+		}
+		if item.CountOfNotCovered != item.CountOfAll {
+			continue
+		}
+		if item.CountOfAchieved == item.CountOfAll {
+			o.Status = entity.AssessmentOutcomeStatusAchieved
+		} else if item.CountOfAchieved > 0 && item.CountOfNotAchieved > 0 {
+			o.Status = entity.AssessmentOutcomeStatusPartially
+		} else {
+			o.Status = entity.AssessmentOutcomeStatusNotAchieved
+		}
+
+		res = append(res, o)
+	}
+
+	return
+}
+
 func (l *learningSummaryReportModel) QueryAssignmentsSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res *entity.QueryAssignmentsSummaryResultV2, err error) {
+	items, err := da.GetReportDA().QueryAssignmentsSummaryV2(ctx, tx, operator, filter)
+	if err != nil {
+		return
+	}
+	res = &entity.QueryAssignmentsSummaryResultV2{
+		Items: items,
+	}
+	for _, item := range items {
+		switch item.Type {
+		case entity.AssessmentTypeHomeFunStudy:
+			res.HomeFunStudyCount++
+		case entity.AssessmentTypeStudy:
+			res.StudyCount++
+		}
+	}
+
+	var scheduleIDs []string
+	for _, item := range items {
+		scheduleIDs = append(scheduleIDs, item.ScheduleID)
+	}
+
+	// find related study assessments comments and make map by schedule id (live: room comments)
+	roomCommentMap, err := getAssessmentH5P().batchGetRoomCommentMap(ctx, operator, scheduleIDs)
+	if err != nil {
+		log.Error(ctx, "query assignments summary: batch get room comment map failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
+			log.Any("filter", filter),
+		)
+		return
+	}
+	for _, item := range items {
+		comments := roomCommentMap[item.ScheduleID][filter.StudentID]
+		if len(comments) > 0 {
+			item.TeacherFeedback = comments[len(comments)-1]
+		}
+	}
 	return
 }
 func (l *learningSummaryReportModel) QueryAssignmentsSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryAssignmentsSummaryResult, error) {

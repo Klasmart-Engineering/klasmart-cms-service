@@ -23,6 +23,8 @@ type IAssessmentMatch interface {
 	MatchContents() ([]*v2.AssessmentContentReply, error)
 	MatchStudents(contentsReply []*v2.AssessmentContentReply) ([]*v2.AssessmentStudentReply, error)
 	MatchDiffContentStudents() ([]*v2.AssessmentDiffContentStudentsReply, error)
+
+	Update(req *v2.AssessmentUpdateReq) error
 }
 
 type AssessmentMatchAction int
@@ -215,6 +217,8 @@ func GetAssessmentPageMatch(assessmentType v2.AssessmentType, ags *AssessmentGra
 		match = NewOnlineStudyAssessmentPage(ags)
 	case v2.AssessmentTypeReviewStudy:
 		match = NewReviewStudyAssessmentPage(ags)
+	case v2.AssessmentTypeOfflineStudy:
+		match = NewOfflineStudyAssessmentPage(ags)
 	default:
 		match = NewEmptyAssessment()
 	}
@@ -233,6 +237,8 @@ func GetAssessmentDetailMatch(assessmentType v2.AssessmentType, ags *AssessmentG
 		match = NewOnlineStudyAssessmentDetail(ags)
 	case v2.AssessmentTypeReviewStudy:
 		match = NewReviewStudyAssessmentDetail(ags)
+	case v2.AssessmentTypeOfflineStudy:
+		match = NewOfflineStudyAssessmentDetail(ags)
 	default:
 		match = NewEmptyAssessment()
 	}
@@ -287,11 +293,12 @@ func ConvertAssessmentPageReply(ctx context.Context, op *entity.Operator, assess
 
 	for i, item := range assessments {
 		replyItem := &v2.AssessmentQueryReply{
-			ID:         item.ID,
-			Title:      item.Title,
-			ClassEndAt: item.ClassEndAt,
-			CompleteAt: item.CompleteAt,
-			Status:     item.Status,
+			ID:             item.ID,
+			AssessmentType: item.AssessmentType,
+			Title:          item.Title,
+			ClassEndAt:     item.ClassEndAt,
+			CompleteAt:     item.CompleteAt,
+			Status:         item.Status,
 		}
 		result[i] = replyItem
 
@@ -384,14 +391,15 @@ func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, asse
 	}
 
 	result := &v2.AssessmentDetailReply{
-		ID:           assessment.ID,
-		Title:        assessment.Title,
-		Status:       assessment.Status,
-		RoomID:       assessment.ScheduleID,
-		ClassEndAt:   assessment.ClassEndAt,
-		ClassLength:  assessment.ClassLength,
-		CompleteAt:   assessment.CompleteAt,
-		CompleteRate: 0,
+		ID:             assessment.ID,
+		AssessmentType: assessment.AssessmentType,
+		Title:          assessment.Title,
+		Status:         assessment.Status,
+		RoomID:         assessment.ScheduleID,
+		ClassEndAt:     assessment.ClassEndAt,
+		ClassLength:    assessment.ClassLength,
+		CompleteAt:     assessment.CompleteAt,
+		CompleteRate:   0,
 	}
 
 	schedule, ok := scheduleMap[assessment.ScheduleID]
@@ -410,6 +418,7 @@ func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, asse
 	result.Students = students
 	result.CompleteRate = completeRateMap[assessment.ID]
 	result.IsAnyOneAttempted = isAnyOneAttempted
+	result.Description = schedule.Description
 
 	for _, item := range outcomeMap {
 		result.Outcomes = append(result.Outcomes, item)
@@ -469,11 +478,12 @@ func ConvertAssessmentHomePageReply(ctx context.Context, op *entity.Operator, as
 
 	for i, item := range assessments {
 		replyItem := &v2.AssessmentQueryReply{
-			ID:         item.ID,
-			Title:      item.Title,
-			ClassEndAt: item.ClassEndAt,
-			CompleteAt: item.CompleteAt,
-			Status:     item.Status,
+			ID:             item.ID,
+			AssessmentType: item.AssessmentType,
+			Title:          item.Title,
+			ClassEndAt:     item.ClassEndAt,
+			CompleteAt:     item.CompleteAt,
+			Status:         item.Status,
 		}
 		result[i] = replyItem
 
@@ -506,6 +516,10 @@ func NewEmptyAssessment() IAssessmentMatch {
 }
 
 type EmptyAssessment struct{}
+
+func (o EmptyAssessment) Update(req *v2.AssessmentUpdateReq) error {
+	return nil
+}
 
 func (o EmptyAssessment) MatchAnyOneAttempted() (bool, error) {
 	return false, nil

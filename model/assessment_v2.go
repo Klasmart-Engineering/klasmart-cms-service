@@ -103,6 +103,13 @@ func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *
 		return nil, err
 	}
 
+	if len(assessments) <= 0 {
+		return &v2.AssessmentPageReply{
+			Total:       0,
+			Assessments: make([]*v2.AssessmentQueryReply, 0),
+		}, nil
+	}
+
 	result, err := ConvertAssessmentPageReply(ctx, op, req.AssessmentType, assessments)
 	if err != nil {
 		return nil, err
@@ -123,22 +130,15 @@ func (a *assessmentModelV2) GetByID(ctx context.Context, op *entity.Operator, id
 		return nil, err
 	}
 
-	if assessment.AssessmentType == v2.AssessmentTypeOfflineStudy {
-		log.Warn(ctx, "assessment type is not support offline study", log.Err(err), log.Any("assessment", assessment))
-		return nil, nil
-	}
+	//if assessment.AssessmentType == v2.AssessmentTypeOfflineStudy {
+	//	log.Warn(ctx, "assessment type is not support offline study", log.Err(err), log.Any("assessment", assessment))
+	//	return nil, nil
+	//}
 
 	result, err := ConvertAssessmentDetailReply(ctx, op, assessment)
 	if err != nil {
 		return nil, err
 	}
-
-	//assessmentComponent := NewAssessmentDetailComponent(ctx, op, assessment)
-	//result, err := assessmentComponent.ConvertDetailReply(a.getAssessmentDetailConfig(assessmentComponent, assessment.AssessmentType))
-	//if err != nil {
-	//	log.Error(ctx, "ConvertPageReply error", log.Err(err))
-	//	return nil, err
-	//}
 
 	return result, nil
 }
@@ -209,11 +209,15 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 
 		result := make([]*v2.StudentAssessment, len(userResults))
 		for i, item := range userResults {
+			status := item.Status.Compliant(ctx)
+			if status != condition.Status {
+				continue
+			}
 			resultItem := &v2.StudentAssessment{
 				ID:                  item.ID,
 				Title:               item.Title,
 				Score:               int(item.AssessScore),
-				Status:              item.Status.Compliant(ctx),
+				Status:              status,
 				CreateAt:            item.CreateAt,
 				UpdateAt:            item.UpdateAt,
 				CompleteAt:          item.CompleteAt,
@@ -485,6 +489,11 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 	}
 
 	ags := NewAssessmentGrainSingle(ctx, op, waitUpdatedAssessment)
+	if waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeOfflineStudy {
+		match := GetAssessmentDetailMatch(waitUpdatedAssessment.AssessmentType, ags)
+		return match.Update(req)
+	}
+
 	userIDAndUserTypeMap, err := ags.GetAssessmentUserWithUserIDAndUserTypeMap()
 	if err != nil {
 		return err
