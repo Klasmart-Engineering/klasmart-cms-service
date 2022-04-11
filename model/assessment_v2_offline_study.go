@@ -89,7 +89,7 @@ func (o *OfflineStudyAssessment) MatchCompleteRate() (map[string]float64, error)
 				log.Any("reviewerFeedbackMap", reviewerFeedbackMap))
 			result[item.ID] = 1
 		} else {
-			result[item.ID] = float64(stuComplete / stuTotal)
+			result[item.ID] = float64(stuComplete) / float64(stuTotal)
 		}
 	}
 
