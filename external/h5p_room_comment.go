@@ -32,7 +32,7 @@ type H5PTeacherComment struct {
 // 	teacherComments: [TeacherComment!]!
 // }
 type H5PTeacherCommentsByStudent struct {
-	User            *H5PUser             `json:"user"`
+	User            *H5PUser             `json:"student"`
 	TeacherComments []*H5PTeacherComment `json:"teacherComments"`
 }
 

@@ -13,6 +13,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da/assessmentV2"
@@ -88,6 +89,7 @@ type IScheduleModel interface {
 	CheckScheduleReviewData(ctx context.Context, op *entity.Operator, request *entity.CheckScheduleReviewDataRequest) (*entity.CheckScheduleReviewDataResponse, error)
 	UpdateScheduleReviewStatus(ctx context.Context, request *entity.UpdateScheduleReviewStatusRequest) error
 	GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleReview, error)
+	GetScheduleAttendance(ctx context.Context, timeframeFrom, timeframeTo int) ([]*entity.ScheduleAttendance, error)
 }
 
 type scheduleModel struct {
@@ -954,33 +956,35 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 		)
 		return nil, constant.ErrOperateNotAllowed
 	}
+
 	if schedule.ClassType == entity.ScheduleClassTypeHomework &&
 		schedule.IsHomeFun &&
 		schedule.IsHidden {
 		log.Info(ctx, "schedule already hidden", log.Any("schedule", schedule))
 		return nil, ErrScheduleAlreadyHidden
 	}
-	if schedule.ClassType == entity.ScheduleClassTypeHomework {
-		if schedule.IsHomeFun {
-			exist, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, op, schedule.ID)
-			if err != nil {
-				log.Error(ctx, "update schedule: get schedule feedback error",
-					log.Any("schedule", schedule),
-					log.Err(err),
-				)
-				return nil, err
-			}
-			if exist {
-				log.Info(ctx, "ErrScheduleAlreadyAssignments", log.Any("schedule", schedule))
-				return nil, ErrScheduleAlreadyFeedback
-			}
-		} else {
-			if schedule.IsLockedLessonPlan() {
-				log.Info(ctx, "The schedule has already been attended", log.Any("scheduleID", schedule.ID))
-				return nil, ErrScheduleStudyAlreadyProgress
-			}
+
+	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
+		exist, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, op, schedule.ID)
+		if err != nil {
+			log.Error(ctx, "update schedule: get schedule feedback error",
+				log.Any("schedule", schedule),
+				log.Err(err),
+			)
+			return nil, err
+		}
+		if exist {
+			log.Info(ctx, "ErrScheduleAlreadyAssignments", log.Any("schedule", schedule))
+			return nil, ErrScheduleAlreadyFeedback
 		}
 	}
+
+	// check schedule is locked lesson plan version
+	if schedule.IsLockedLessonPlan() {
+		log.Info(ctx, "The schedule has already been attended", log.Any("scheduleID", schedule.ID))
+		return nil, ErrScheduleStudyAlreadyProgress
+	}
+
 	switch schedule.ClassType {
 	case entity.ScheduleClassTypeHomework, entity.ScheduleClassTypeTask:
 		if schedule.DueAt > 0 {
@@ -3218,6 +3222,84 @@ func (s *scheduleModel) GetSuccessScheduleReview(ctx context.Context, op *entity
 	return scheduleReviews, nil
 }
 
+func (s *scheduleModel) GetScheduleAttendance(ctx context.Context, timeframeFrom, timeframeTo int) ([]*entity.ScheduleAttendance, error) {
+	daCondition := da.ScheduleCondition{
+		StartAtOrEndAtOrDueAtGe: sql.NullInt64{
+			Int64: int64(timeframeFrom),
+			Valid: true,
+		},
+		StartAtOrEndAtOrDueAtLe: sql.NullInt64{
+			Int64: int64(timeframeTo),
+			Valid: true,
+		},
+	}
+	var schedules []*entity.Schedule
+	err := s.scheduleDA.Query(ctx, daCondition, &schedules)
+	if err != nil {
+		log.Error(ctx, "s.scheduleDA.Query error",
+			log.Err(err),
+			log.Any("daCondition", daCondition))
+		return nil, err
+	}
+	if len(schedules) == 0 {
+		return []*entity.ScheduleAttendance{}, nil
+	}
+
+	scheduleIDs := make([]string, 0, len(schedules))
+	for _, v := range schedules {
+		scheduleIDs = append(scheduleIDs, v.ID)
+	}
+
+	scheduleRelationCondition := da.ScheduleRelationCondition{
+		ScheduleIDs: entity.NullStrings{
+			Strings: scheduleIDs,
+			Valid:   true,
+		},
+		RelationTypes: entity.NullStrings{
+			Strings: []string{string(entity.ScheduleRelationTypeClassRosterStudent), string(entity.ScheduleRelationTypeClassRosterTeacher)},
+			Valid:   true,
+		},
+	}
+	var scheduleRelations []*entity.ScheduleRelation
+	err = s.scheduleRelationDA.Query(ctx, scheduleRelationCondition, &scheduleRelations)
+	if err != nil {
+		log.Error(ctx, "s.scheduleRelationDA.Query error",
+			log.Err(err),
+			log.Any("scheduleRelationCondition", scheduleRelationCondition))
+		return nil, err
+	}
+
+	scheduleAttendances := make(map[string]*entity.ScheduleAttendance)
+	for _, v := range scheduleRelations {
+		if val, ok := scheduleAttendances[v.ScheduleID]; ok {
+			switch v.RelationType {
+			case entity.ScheduleRelationTypeClassRosterStudent:
+				val.NumberOfStudents++
+			case entity.ScheduleRelationTypeClassRosterTeacher:
+				val.NumberOfTeachers++
+			}
+		} else {
+			switch v.RelationType {
+			case entity.ScheduleRelationTypeClassRosterStudent:
+				scheduleAttendances[v.ScheduleID] = &entity.ScheduleAttendance{
+					NumberOfStudents: 1,
+				}
+			case entity.ScheduleRelationTypeClassRosterTeacher:
+				scheduleAttendances[v.ScheduleID] = &entity.ScheduleAttendance{
+					NumberOfTeachers: 1,
+				}
+			}
+		}
+	}
+
+	result := make([]*entity.ScheduleAttendance, 0, len(scheduleAttendances))
+	for _, v := range scheduleAttendances {
+		result = append(result, v)
+	}
+
+	return result, nil
+}
+
 // Schedule model interval function
 func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, operator *entity.Operator, schedule *entity.Schedule) (*entity.ScheduleDetailsView, error) {
 	if schedule == nil {
@@ -4674,6 +4756,13 @@ func (s *scheduleModel) getAssessmentAddWhenCreateSchedulesReq(ctx context.Conte
 
 // model package interval function
 func removeResourceMetadata(ctx context.Context, resourceID string) error {
+	bucket := config.Get().StorageConfig.StorageBucket
+	inboundBucket := config.Get().StorageConfig.StorageBucketInbound
+	if inboundBucket != "" && inboundBucket != bucket {
+		log.Debug(ctx, "use inbound bucket", log.String("inboundBucket", inboundBucket))
+		return nil
+	}
+
 	if resourceID == "" {
 		return nil
 	}

@@ -103,6 +103,13 @@ func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *
 		return nil, err
 	}
 
+	if len(assessments) <= 0 {
+		return &v2.AssessmentPageReply{
+			Total:       0,
+			Assessments: make([]*v2.AssessmentQueryReply, 0),
+		}, nil
+	}
+
 	result, err := ConvertAssessmentPageReply(ctx, op, req.AssessmentType, assessments)
 	if err != nil {
 		return nil, err
@@ -123,22 +130,15 @@ func (a *assessmentModelV2) GetByID(ctx context.Context, op *entity.Operator, id
 		return nil, err
 	}
 
-	if assessment.AssessmentType == v2.AssessmentTypeOfflineStudy {
-		log.Warn(ctx, "assessment type is not support offline study", log.Err(err), log.Any("assessment", assessment))
-		return nil, nil
-	}
+	//if assessment.AssessmentType == v2.AssessmentTypeOfflineStudy {
+	//	log.Warn(ctx, "assessment type is not support offline study", log.Err(err), log.Any("assessment", assessment))
+	//	return nil, nil
+	//}
 
 	result, err := ConvertAssessmentDetailReply(ctx, op, assessment)
 	if err != nil {
 		return nil, err
 	}
-
-	//assessmentComponent := NewAssessmentDetailComponent(ctx, op, assessment)
-	//result, err := assessmentComponent.ConvertDetailReply(a.getAssessmentDetailConfig(assessmentComponent, assessment.AssessmentType))
-	//if err != nil {
-	//	log.Error(ctx, "ConvertPageReply error", log.Err(err))
-	//	return nil, err
-	//}
 
 	return result, nil
 }
@@ -209,11 +209,15 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 
 		result := make([]*v2.StudentAssessment, len(userResults))
 		for i, item := range userResults {
+			status := item.Status.Compliant(ctx)
+			if status != condition.Status {
+				continue
+			}
 			resultItem := &v2.StudentAssessment{
 				ID:                  item.ID,
 				Title:               item.Title,
 				Score:               int(item.AssessScore),
-				Status:              item.Status.Compliant(ctx),
+				Status:              status,
 				CreateAt:            item.CreateAt,
 				UpdateAt:            item.UpdateAt,
 				CompleteAt:          item.CompleteAt,
@@ -457,8 +461,6 @@ func (a *assessmentModelV2) queryFeedbackInfo(ctx context.Context, operator *ent
 }
 
 // TODO need refactor
-
-// TODO need refactor
 func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, status v2.AssessmentStatus, req *v2.AssessmentUpdateReq) error {
 	if len(req.Students) <= 0 {
 		log.Warn(ctx, "students is empty", log.Any("req", req))
@@ -487,6 +489,11 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 	}
 
 	ags := NewAssessmentGrainSingle(ctx, op, waitUpdatedAssessment)
+	if waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeOfflineStudy {
+		match := GetAssessmentDetailMatch(waitUpdatedAssessment.AssessmentType, ags)
+		return match.Update(req)
+	}
+
 	userIDAndUserTypeMap, err := ags.GetAssessmentUserWithUserIDAndUserTypeMap()
 	if err != nil {
 		return err
@@ -507,24 +514,30 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		waitUpdatedUsers = append(waitUpdatedUsers, existItem)
 	}
 
-	roomData, err := ags.GetRoomData()
+	roomDataMap, err := ags.GetRoomStudentScoresAndComments()
 	if err != nil {
 		return err
 	}
-	userScores, hasScore := roomData[waitUpdatedAssessment.ScheduleID]
+	roomData, hasScore := roomDataMap[waitUpdatedAssessment.ScheduleID]
 	userRoomData := make(map[string][]*external.H5PUserContentScore)
+	canSetScoreContentMap := make(map[string]*AllowEditScoreContent)
+	studentCommentMap := make(map[string]string)
 	if hasScore {
-		for _, item := range userScores {
+		for _, item := range roomData.ScoresByUser {
 			if item.User == nil {
 				continue
 			}
 			userRoomData[item.User.UserID] = item.Scores
 		}
-	}
 
-	canSetScoreContentMap, err := getAssessmentLiveRoom().AllowEditScoreContent(ctx, userScores)
-	if err != nil {
-		return err
+		canSetScoreContentMap, err = GetAssessmentExternalService().AllowEditScoreContent(ctx, roomData.ScoresByUser)
+		if err != nil {
+			return err
+		}
+		studentCommentMap, err = GetAssessmentExternalService().StudentCommentMap(ctx, roomData.TeacherCommentsByStudent)
+		if err != nil {
+			return err
+		}
 	}
 
 	if waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeReviewStudy {
@@ -537,6 +550,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			ag:                    ags,
 			userRoomData:          userRoomData,
 			canSetScoreContentMap: canSetScoreContentMap,
+			studentCommentMap:     studentCommentMap,
 		})
 	}
 
@@ -698,19 +712,15 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			}
 			if contentItem, ok := contentReqMap[stuResult.ContentID]; ok {
 				if _, ok := userRoomData[stuItem.StudentID]; ok {
-					if _, ok := canSetScoreContentMap[contentItem.ContentID]; ok {
+					if canSetScoreContentItem, ok := canSetScoreContentMap[contentItem.ContentID]; ok {
 						newScore := &external.H5PSetScoreRequest{
 							RoomID:    waitUpdatedAssessment.ScheduleID,
 							StudentID: stuItem.StudentID,
 							Score:     stuResult.Score,
 						}
 
-						if contentItem.ParentID == "" {
-							newScore.ContentID = contentItem.ContentID
-						} else {
-							newScore.ContentID = contentItem.ParentID
-							newScore.SubContentID = contentItem.ContentID
-						}
+						newScore.ContentID = canSetScoreContentItem.ContentID
+						newScore.SubContentID = canSetScoreContentItem.SubContentID
 
 						newScores = append(newScores, newScore)
 					}
@@ -718,12 +728,21 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			}
 		}
 
-		newComment := external.H5PAddRoomCommentRequest{
-			RoomID:    waitUpdatedAssessment.ScheduleID,
-			StudentID: stuItem.StudentID,
-			Comment:   stuItem.ReviewerComment,
+		if stuComment, ok := studentCommentMap[stuItem.StudentID]; ok && stuComment != stuItem.ReviewerComment {
+			newComment := external.H5PAddRoomCommentRequest{
+				RoomID:    waitUpdatedAssessment.ScheduleID,
+				StudentID: stuItem.StudentID,
+				Comment:   stuItem.ReviewerComment,
+			}
+			newComments = append(newComments, &newComment)
+		} else if stuItem.ReviewerComment != "" {
+			newComment := external.H5PAddRoomCommentRequest{
+				RoomID:    waitUpdatedAssessment.ScheduleID,
+				StudentID: stuItem.StudentID,
+				Comment:   stuItem.ReviewerComment,
+			}
+			newComments = append(newComments, &newComment)
 		}
-		newComments = append(newComments, &newComment)
 	}
 
 	// update student comment
@@ -844,7 +863,8 @@ type updateReviewStudyAssessmentInput struct {
 	userIDAndUserTypeMap  map[string]*v2.AssessmentUser
 	ag                    *AssessmentGrain
 	userRoomData          map[string][]*external.H5PUserContentScore
-	canSetScoreContentMap map[string]bool
+	canSetScoreContentMap map[string]*AllowEditScoreContent
+	studentCommentMap     map[string]string
 }
 
 func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op *entity.Operator, input updateReviewStudyAssessmentInput) error {
@@ -871,19 +891,15 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 		for _, stuResult := range stuItem.Results {
 			if contentItem, ok := contentReqMap[stuResult.ContentID]; ok {
 				if _, ok := input.userRoomData[stuItem.StudentID]; ok {
-					if _, ok := input.canSetScoreContentMap[contentItem.ContentID]; ok {
+					if canSetScoreContentItem, ok := input.canSetScoreContentMap[contentItem.ContentID]; ok {
 						newScore := &external.H5PSetScoreRequest{
 							RoomID:    input.waitUpdatedAssessment.ScheduleID,
 							StudentID: stuItem.StudentID,
 							Score:     stuResult.Score,
 						}
 
-						if contentItem.ParentID == "" {
-							newScore.ContentID = contentItem.ContentID
-						} else {
-							newScore.ContentID = contentItem.ParentID
-							newScore.SubContentID = contentItem.ContentID
-						}
+						newScore.ContentID = canSetScoreContentItem.ContentID
+						newScore.SubContentID = canSetScoreContentItem.SubContentID
 
 						newScores = append(newScores, newScore)
 					}
@@ -891,12 +907,21 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 			}
 		}
 
-		newComment := external.H5PAddRoomCommentRequest{
-			RoomID:    input.waitUpdatedAssessment.ScheduleID,
-			StudentID: stuItem.StudentID,
-			Comment:   stuItem.ReviewerComment,
+		if stuComment, ok := input.studentCommentMap[stuItem.StudentID]; ok && stuComment != stuItem.ReviewerComment {
+			newComment := external.H5PAddRoomCommentRequest{
+				RoomID:    input.waitUpdatedAssessment.ScheduleID,
+				StudentID: stuItem.StudentID,
+				Comment:   stuItem.ReviewerComment,
+			}
+			newComments = append(newComments, &newComment)
+		} else if stuItem.ReviewerComment != "" {
+			newComment := external.H5PAddRoomCommentRequest{
+				RoomID:    input.waitUpdatedAssessment.ScheduleID,
+				StudentID: stuItem.StudentID,
+				Comment:   stuItem.ReviewerComment,
+			}
+			newComments = append(newComments, &newComment)
 		}
-		newComments = append(newComments, &newComment)
 	}
 
 	// update student comment

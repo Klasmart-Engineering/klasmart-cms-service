@@ -76,6 +76,10 @@ func (c LazyRefreshCache) Get(ctx context.Context, request, response interface{}
 		}
 
 		err = c.cacheKey.Param(hash).GetObject(ctx, response)
+		if err == redis.Nil {
+			// return nil if cache missed and got lock failed
+			return nil
+		}
 	}
 	if err != nil {
 		return err
