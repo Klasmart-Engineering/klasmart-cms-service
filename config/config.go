@@ -530,7 +530,11 @@ func LoadAMSConfig(ctx context.Context) {
     }
     config.AMS.TokenVerifyKey = key
     config.AMS.AuthorizedKey = os.Getenv("user_service_api_key")
-    config.AMS.ReplaceWithConnection, err = strconv.ParseBool(os.Getenv("use_deprecated_query"))
+    value := os.Getenv("use_deprecated_query")
+    if value == "" {
+        value = "true"
+    }
+    config.AMS.ReplaceWithConnection, err = strconv.ParseBool(value)
     if err != nil {
         log.Panic(ctx, "parse use_deprecated_query failed", log.Err(err))
     }
