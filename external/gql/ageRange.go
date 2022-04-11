@@ -1,16 +1,16 @@
 package gql
 
 type AgeRangeFilter struct {
-	AgeRangeValueFrom AgeRangeValueFilter `json:"ageRangeValueFrom,omitempty" gqls:"ageRangeValueFrom,omitempty"`
-	AgeRangeUnitFrom  AgeRangeUnitFilter  `json:"ageRangeUnitFrom,omitempty" gqls:"ageRangeUnitFrom,omitempty"`
-	AgeRangeValueTo   AgeRangeValueFilter `json:"ageRangeValueTo,omitempty" gqls:"ageRangeValueTo,omitempty"`
-	AgeRangeUnitTo    AgeRangeUnitFilter  `json:"ageRangeUnitTo,omitempty" gqls:"ageRangeUnitTo,omitempty"`
-	Status            *StringFilter       `json:"status,omitempty" gqls:"status,omitempty"`
-	System            *BooleanFilter      `json:"system,omitempty" gqls:"system,omitempty"`
-	OrganizationID    *UUIDFilter         `json:"organizationId,omitempty" gqls:"organizationId,omitempty"`
-	ProgramID         *UUIDFilter         `json:"programId,omitempty" gqls:"programId,omitempty"`
-	AND               []AgeRangeFilter    `json:"AND,omitempty" gqls:"AND,omitempty"`
-	OR                []AgeRangeFilter    `json:"OR,omitempty" gqls:"OR,omitempty"`
+	AgeRangeValueFrom *AgeRangeValueFilter `json:"ageRangeValueFrom,omitempty" gqls:"ageRangeValueFrom,omitempty"`
+	AgeRangeUnitFrom  *AgeRangeUnitFilter  `json:"ageRangeUnitFrom,omitempty" gqls:"ageRangeUnitFrom,omitempty"`
+	AgeRangeValueTo   *AgeRangeValueFilter `json:"ageRangeValueTo,omitempty" gqls:"ageRangeValueTo,omitempty"`
+	AgeRangeUnitTo    *AgeRangeUnitFilter  `json:"ageRangeUnitTo,omitempty" gqls:"ageRangeUnitTo,omitempty"`
+	Status            *StringFilter        `json:"status,omitempty" gqls:"status,omitempty"`
+	System            *BooleanFilter       `json:"system,omitempty" gqls:"system,omitempty"`
+	OrganizationID    *UUIDFilter          `json:"organizationId,omitempty" gqls:"organizationId,omitempty"`
+	ProgramID         *UUIDFilter          `json:"programId,omitempty" gqls:"programId,omitempty"`
+	AND               []AgeRangeFilter     `json:"AND,omitempty" gqls:"AND,omitempty"`
+	OR                []AgeRangeFilter     `json:"OR,omitempty" gqls:"OR,omitempty"`
 }
 
 func (AgeRangeFilter) FilterType() FilterOfType {
