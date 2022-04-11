@@ -1,7 +1,6 @@
 package gql
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -28,7 +27,7 @@ func marshalFilter(v interface{}) (string, error) {
 	//case reflect.Bool:
 	//case reflect.Int:
 	default:
-		return "", errors.New("unsupported")
+		return "", ErrUnsupported
 	}
 }
 
@@ -115,7 +114,7 @@ func structEncode(v reflect.Value) (string, error) {
 		return "", nil
 	}
 	if len(names) != len(values) {
-		return "", errors.New("some error")
+		return "", ErrUnMatch
 	}
 
 	namesValues := make([]string, 0, len(names))
@@ -166,7 +165,7 @@ func pointerEncode(p reflect.Value) (string, error) {
 		value := p.Int()
 		return strconv.FormatInt(value, 10), nil
 	default:
-		return "", errors.New("unsupported")
+		return "", ErrUnsupported
 	}
 }
 

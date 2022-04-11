@@ -4,7 +4,7 @@ import "errors"
 
 var (
 	ErrUnsupported = errors.New("unsupported")
-	ErrMatchFailed = errors.New("match failed")
+	ErrUnMatch     = errors.New("match failed")
 )
 
 type OperatorType string
