@@ -1,4 +1,4 @@
-package gdp
+package gqp
 
 import (
 	"context"

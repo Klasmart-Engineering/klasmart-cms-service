@@ -3,7 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gdp"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gqp"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
@@ -161,13 +161,13 @@ func (s AmsSubCategoryService) GetByCategory(ctx context.Context, operator *enti
 	condition := NewCondition(options...)
 
 	if constant.ReplaceWithConnection {
-		filter := gdp.SubcategoryFilter{
-			CategoryID: &gdp.UUIDFilter{
-				Operator: gdp.OperatorTypeEq,
-				Value:    gdp.UUID(categoryID),
+		filter := gqp.SubcategoryFilter{
+			CategoryID: &gqp.UUIDFilter{
+				Operator: gqp.OperatorTypeEq,
+				Value:    gqp.UUID(categoryID),
 			},
-			Status: &gdp.StringFilter{
-				Operator: gdp.OperatorTypeEq,
+			Status: &gqp.StringFilter{
+				Operator: gqp.OperatorTypeEq,
 				Value:    Active.String(),
 			},
 		}
@@ -175,15 +175,15 @@ func (s AmsSubCategoryService) GetByCategory(ctx context.Context, operator *enti
 			filter.Status.Value = condition.Status.Status.String()
 		}
 		if condition.System.Valid {
-			filter.System = &gdp.BooleanFilter{
-				Operator: gdp.OperatorTypeEq,
+			filter.System = &gqp.BooleanFilter{
+				Operator: gqp.OperatorTypeEq,
 				Value:    condition.System.Valid,
 			}
 		}
 
 		var subCategories []*SubCategory
-		var pages []gdp.SubcategoriesConnectionResponse
-		err := gdp.Query(ctx, operator, filter.FilterType(), filter, &pages)
+		var pages []gqp.SubcategoriesConnectionResponse
+		err := gqp.Query(ctx, operator, filter.FilterType(), filter, &pages)
 		if err != nil {
 			log.Error(ctx, "get subcategory by category failed",
 				log.Err(err),
@@ -279,13 +279,13 @@ func (s AmsSubCategoryService) GetByOrganization(ctx context.Context, operator *
 	condition := NewCondition(options...)
 
 	if constant.ReplaceWithConnection {
-		filter := gdp.SubcategoryFilter{
-			OrganizationID: &gdp.UUIDFilter{
-				Operator: gdp.OperatorTypeEq,
-				Value:    gdp.UUID(operator.OrgID),
+		filter := gqp.SubcategoryFilter{
+			OrganizationID: &gqp.UUIDFilter{
+				Operator: gqp.OperatorTypeEq,
+				Value:    gqp.UUID(operator.OrgID),
 			},
-			Status: &gdp.StringFilter{
-				Operator: gdp.OperatorTypeEq,
+			Status: &gqp.StringFilter{
+				Operator: gqp.OperatorTypeEq,
 				Value:    Active.String(),
 			},
 		}
@@ -293,15 +293,15 @@ func (s AmsSubCategoryService) GetByOrganization(ctx context.Context, operator *
 			filter.Status.Value = condition.Status.Status.String()
 		}
 		if condition.System.Valid {
-			filter.System = &gdp.BooleanFilter{
-				Operator: gdp.OperatorTypeEq,
+			filter.System = &gqp.BooleanFilter{
+				Operator: gqp.OperatorTypeEq,
 				Value:    condition.System.Valid,
 			}
 		}
 
 		var subCategories []*SubCategory
-		var pages []gdp.SubcategoriesConnectionResponse
-		err := gdp.Query(ctx, operator, filter.FilterType(), filter, &pages)
+		var pages []gqp.SubcategoriesConnectionResponse
+		err := gqp.Query(ctx, operator, filter.FilterType(), filter, &pages)
 		if err != nil {
 			log.Error(ctx, "get subcategory by organization failed",
 				log.Err(err),

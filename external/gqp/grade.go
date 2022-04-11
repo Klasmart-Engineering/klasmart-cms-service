@@ -1,4 +1,4 @@
-package gdp
+package gqp
 
 type GradeFilter struct {
 	ID             *UUIDFilter    `gqls:"id,omitempty"`

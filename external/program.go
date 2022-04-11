@@ -3,7 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gdp"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gqp"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
@@ -160,13 +160,13 @@ func (s AmsProgramService) BatchGetNameMap(ctx context.Context, operator *entity
 func (s AmsProgramService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Program, error) {
 	condition := NewCondition(options...)
 	if constant.ReplaceWithConnection {
-		filter := gdp.ProgramFilter{
-			OrganizationID: &gdp.UUIDFilter{
-				Operator: gdp.OperatorTypeEq,
-				Value:    gdp.UUID(operator.OrgID),
+		filter := gqp.ProgramFilter{
+			OrganizationID: &gqp.UUIDFilter{
+				Operator: gqp.OperatorTypeEq,
+				Value:    gqp.UUID(operator.OrgID),
 			},
-			Status: &gdp.StringFilter{
-				Operator: gdp.OperatorTypeEq,
+			Status: &gqp.StringFilter{
+				Operator: gqp.OperatorTypeEq,
 				Value:    Active.String(),
 			},
 		}
@@ -174,15 +174,15 @@ func (s AmsProgramService) GetByOrganization(ctx context.Context, operator *enti
 			filter.Status.Value = condition.Status.Status.String()
 		}
 		if condition.System.Valid {
-			filter.System = &gdp.BooleanFilter{
-				Operator: gdp.OperatorTypeEq,
+			filter.System = &gqp.BooleanFilter{
+				Operator: gqp.OperatorTypeEq,
 				Value:    condition.System.Valid,
 			}
 		}
 
 		var programs []*Program
-		var pages []gdp.ProgramsConnectionResponse
-		err := gdp.Query(ctx, operator, filter.FilterType(), filter, &pages)
+		var pages []gqp.ProgramsConnectionResponse
+		err := gqp.Query(ctx, operator, filter.FilterType(), filter, &pages)
 		if err != nil {
 			log.Error(ctx, "get programs by ids failed",
 				log.Err(err),

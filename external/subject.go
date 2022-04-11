@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gdp"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gqp"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -158,13 +158,13 @@ func (s AmsSubjectService) BatchGetNameMap(ctx context.Context, operator *entity
 func (s AmsSubjectService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Subject, error) {
 	condition := NewCondition(options...)
 	if constant.ReplaceWithConnection {
-		filter := gdp.SubjectFilter{
-			ProgramID: &gdp.UUIDFilter{
-				Operator: gdp.OperatorTypeEq,
-				Value:    gdp.UUID(programID),
+		filter := gqp.SubjectFilter{
+			ProgramID: &gqp.UUIDFilter{
+				Operator: gqp.OperatorTypeEq,
+				Value:    gqp.UUID(programID),
 			},
-			Status: &gdp.StringFilter{
-				Operator: gdp.OperatorTypeEq,
+			Status: &gqp.StringFilter{
+				Operator: gqp.OperatorTypeEq,
 				Value:    Active.String(),
 			},
 		}
@@ -172,14 +172,14 @@ func (s AmsSubjectService) GetByProgram(ctx context.Context, operator *entity.Op
 			filter.Status.Value = condition.Status.Status.String()
 		}
 		if condition.System.Valid {
-			filter.System = &gdp.BooleanFilter{
-				Operator: gdp.OperatorTypeEq,
+			filter.System = &gqp.BooleanFilter{
+				Operator: gqp.OperatorTypeEq,
 				Value:    condition.System.Valid,
 			}
 		}
 		var subjects []*Subject
-		var pages []gdp.SubjectsConnectionResponse
-		err := gdp.Query(ctx, operator, filter.FilterType(), filter, &pages)
+		var pages []gqp.SubjectsConnectionResponse
+		err := gqp.Query(ctx, operator, filter.FilterType(), filter, &pages)
 		if err != nil {
 			log.Error(ctx, "get subject by program failed",
 				log.Err(err),
@@ -273,13 +273,13 @@ func (s AmsSubjectService) GetByOrganization(ctx context.Context, operator *enti
 	condition := NewCondition(options...)
 
 	if constant.ReplaceWithConnection {
-		filter := gdp.SubjectFilter{
-			OrganizationID: &gdp.UUIDFilter{
-				Operator: gdp.OperatorTypeEq,
-				Value:    gdp.UUID(operator.OrgID),
+		filter := gqp.SubjectFilter{
+			OrganizationID: &gqp.UUIDFilter{
+				Operator: gqp.OperatorTypeEq,
+				Value:    gqp.UUID(operator.OrgID),
 			},
-			Status: &gdp.StringFilter{
-				Operator: gdp.OperatorTypeEq,
+			Status: &gqp.StringFilter{
+				Operator: gqp.OperatorTypeEq,
 				Value:    Active.String(),
 			},
 		}
@@ -287,14 +287,14 @@ func (s AmsSubjectService) GetByOrganization(ctx context.Context, operator *enti
 			filter.Status.Value = condition.Status.Status.String()
 		}
 		if condition.System.Valid {
-			filter.System = &gdp.BooleanFilter{
-				Operator: gdp.OperatorTypeEq,
+			filter.System = &gqp.BooleanFilter{
+				Operator: gqp.OperatorTypeEq,
 				Value:    condition.System.Valid,
 			}
 		}
 		var subjects []*Subject
-		var pages []gdp.SubjectsConnectionResponse
-		err := gdp.Query(ctx, operator, filter.FilterType(), filter, &pages)
+		var pages []gqp.SubjectsConnectionResponse
+		err := gqp.Query(ctx, operator, filter.FilterType(), filter, &pages)
 		if err != nil {
 			log.Error(ctx, "get subject by organization failed",
 				log.Err(err),
