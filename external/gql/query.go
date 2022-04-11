@@ -14,7 +14,7 @@ query($direction:ConnectionDirection!, $cursor:String!, $count:PageSize){
         direction:$direction,
         directionArgs:{cursor:$cursor, count: $count},
         {{if .FilterString}}filter:{{.FilterString}},{{end}}
-        sort:{field:[id, name],order:ASC}) {
+        sort:{field:[id],order:ASC}) {
         {{.NodeString}}
     }
 }
