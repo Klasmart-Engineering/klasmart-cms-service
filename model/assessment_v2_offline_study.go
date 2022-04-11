@@ -78,7 +78,7 @@ func (o *OfflineStudyAssessment) MatchCompleteRate() (map[string]float64, error)
 
 	result := make(map[string]float64)
 	for _, item := range o.ag.assessments {
-		stuTotal := studentCompleteCount[item.ID]
+		stuTotal := studentCount[item.ID]
 		stuComplete := studentCompleteCount[item.ID]
 		if stuTotal == 0 || stuComplete == 0 {
 			result[item.ID] = 0
