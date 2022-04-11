@@ -153,6 +153,7 @@ and (s.delete_at = 0)
 			if err != nil {
 				log.Error(ctx, "find related schedules: get only under org classes failed",
 					log.Err(err),
+					log.Any("operator", operator),
 				)
 				return
 			}
@@ -193,6 +194,7 @@ and EXISTS (
 			if err != nil {
 				log.Error(ctx, "find related schedules: get only under org users failed",
 					log.Err(err),
+					log.Any("operator", operator),
 				)
 				return
 			}

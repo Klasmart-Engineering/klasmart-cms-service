@@ -673,12 +673,12 @@ func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context,
 
 func (l *learningSummaryReportModel) QueryOutcomesByAssessmentID(ctx context.Context, op *entity.Operator, assessmentID string, studentID string) (res []*entity.LearningSummaryOutcome, err error) {
 	if assessmentID == "" {
-		log.Error(ctx, "assessment_id is required")
+		log.Warn(ctx, "assessment_id is required")
 		err = constant.ErrInvalidArgs
 		return
 	}
 	if studentID == "" {
-		log.Error(ctx, "student_id is required")
+		log.Warn(ctx, "student_id is required")
 		err = constant.ErrInvalidArgs
 		return
 	}
