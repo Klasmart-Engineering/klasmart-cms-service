@@ -188,6 +188,7 @@ func (s *Server) queryLiveClassesSummaryV2(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param assessment_id query string false "assessment_id"
+// @Param student_id query string false "student_id"
 // @Success 200 {object} []entity.LearningSummaryOutcome
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
