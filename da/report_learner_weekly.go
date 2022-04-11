@@ -18,8 +18,38 @@ type ILearnerWeekly interface {
 	GetLearnerWeeklyReportOverview(ctx context.Context, op *entity.Operator, tr entity.TimeRange, cond entity.GetUserCountCondition) (res entity.LearnerReportOverview, err error)
 	QueryLiveClassesSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res []*entity.LiveClassSummaryItemV2, err error)
 	QueryAssignmentsSummaryV2(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, filter *entity.LearningSummaryFilter) (items []*entity.AssignmentsSummaryItemV2, err error)
+	QueryOutcomesByAssessmentID(ctx context.Context, op *entity.Operator, assessmentID string, studentID string) (items []*entity.LearningSummaryOutcomeItem, err error)
 }
 
+func (r *ReportDA) QueryOutcomesByAssessmentID(ctx context.Context, op *entity.Operator, assessmentID string, studentID string) (items []*entity.LearningSummaryOutcomeItem, err error) {
+	items = []*entity.LearningSummaryOutcomeItem{}
+	sql := `
+	select lo.id,lo.name,t.* from (
+	      	select
+	      	auov.outcome_id,
+	      	sum(IF(auov.status='Unknown',1,0)) as count_of_unknown,
+	      	sum(IF(auov.status='Achieved',1,0)) as count_of_achieved,
+	      	sum(IF(auov.status='NotCovered',1,0)) as count_of_not_covered,
+	      	sum(IF(auov.status='NotAchieved',1,0)) as count_of_not_achieved,
+	      	count(1) as count_of_all
+	      from assessments_users_outcomes_v2 auov
+	      inner join assessments_users_v2 auv  on auov.assessment_user_id =auv.id
+	      where auv.assessment_id = ? and auv.user_type = ?  and auv.user_id = ?
+	      group by auov.outcome_id
+	      ) t
+	      left join learning_outcomes lo on lo.id =t.outcome_id
+`
+	sb := NewSqlBuilder(ctx, sql, assessmentID, v2.AssessmentUserTypeStudent, studentID)
+	sql, args, err := sb.Build(ctx)
+	if err != nil {
+		return
+	}
+	err = r.QueryRawSQL(ctx, &items, sql, args...)
+	if err != nil {
+		return
+	}
+	return
+}
 func (r *ReportDA) QueryAssignmentsSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (items []*entity.AssignmentsSummaryItemV2, err error) {
 	items = []*entity.AssignmentsSummaryItemV2{}
 	sbSchedule, err := r.getSqlBuilderOfSchedulesByLearningSummaryFilter(ctx, operator, filter, entity.LearningSummaryTypeLiveClass)

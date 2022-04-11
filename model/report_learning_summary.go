@@ -24,6 +24,7 @@ type ILearningSummaryReportModel interface {
 	QueryLiveClassesSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res *entity.QueryLiveClassesSummaryResultV2, err error)
 	QueryAssignmentsSummary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (*entity.QueryAssignmentsSummaryResult, error)
 	QueryAssignmentsSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res *entity.QueryAssignmentsSummaryResultV2, err error)
+	QueryOutcomesByAssessmentID(ctx context.Context, op *entity.Operator, assessmentID string, studentID string) (res []*entity.LearningSummaryOutcome, err error)
 }
 
 var (
@@ -669,6 +670,48 @@ func (l *learningSummaryReportModel) findRelatedAssessments(ctx context.Context,
 
 	return assessments, nil
 }
+
+func (l *learningSummaryReportModel) QueryOutcomesByAssessmentID(ctx context.Context, op *entity.Operator, assessmentID string, studentID string) (res []*entity.LearningSummaryOutcome, err error) {
+	if assessmentID == "" {
+		log.Error(ctx, "assessment_id is required")
+		err = constant.ErrInvalidArgs
+		return
+	}
+	if studentID == "" {
+		log.Error(ctx, "student_id is required")
+		err = constant.ErrInvalidArgs
+		return
+	}
+	res = []*entity.LearningSummaryOutcome{}
+	items, err := da.GetReportDA().QueryOutcomesByAssessmentID(ctx, op, assessmentID, studentID)
+	if err != nil {
+		return
+	}
+	for _, item := range items {
+		if item.CountOfAll == item.CountOfUnknown {
+			continue
+		}
+		o := &entity.LearningSummaryOutcome{
+			ID:   item.OutcomeID,
+			Name: item.OutcomeName,
+		}
+		if item.CountOfNotCovered != item.CountOfAll {
+			continue
+		}
+		if item.CountOfAchieved == item.CountOfAll {
+			o.Status = entity.AssessmentOutcomeStatusAchieved
+		} else if item.CountOfAchieved > 0 && item.CountOfNotAchieved > 0 {
+			o.Status = entity.AssessmentOutcomeStatusPartially
+		} else {
+			o.Status = entity.AssessmentOutcomeStatusNotAchieved
+		}
+
+		res = append(res, o)
+	}
+
+	return
+}
+
 func (l *learningSummaryReportModel) QueryAssignmentsSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (res *entity.QueryAssignmentsSummaryResultV2, err error) {
 	items, err := da.GetReportDA().QueryAssignmentsSummaryV2(ctx, tx, operator, filter)
 	if err != nil {
