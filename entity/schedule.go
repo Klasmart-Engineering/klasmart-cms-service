@@ -661,8 +661,8 @@ type ScheduleSimplified struct {
 }
 
 type ScheduleShortInfo struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID   string `json:"id" gorm:"column:id" `
+	Name string `json:"name" gorm:"column:name" `
 }
 
 type SchedulePlain struct {

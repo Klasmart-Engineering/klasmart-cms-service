@@ -13,8 +13,42 @@ import (
 type ILearnOutcome interface {
 	GetCompleteLearnOutcomeCount(ctx context.Context, tx *dbo.DBContext, from, to int64, teacherIDs []string) (cnt int, err error)
 	GetStudentAchievedOutcome(ctx context.Context, tx *dbo.DBContext, from, to int64, teacherIDs []string) (studentOutcomeAchievedCounts []*entity.StudentOutcomeAchievedCount, err error)
+	GetLessonPlanFilter(ctx context.Context, op *entity.Operator, classID string) (items []*entity.ScheduleShortInfo, err error)
 }
 
+func (r *ReportDA) GetLessonPlanFilter(ctx context.Context, op *entity.Operator, classID string) (items []*entity.ScheduleShortInfo, err error) {
+	items = []*entity.ScheduleShortInfo{}
+	sql := `
+select 
+	DISTINCT cc.id,
+	cc.content_name as name
+from schedules s 
+inner join assessments_v2 av on s.id = av.schedule_id 
+inner join cms_contents cc on cc.id = s.lesson_plan_id 
+where s.delete_at =0
+and s.org_id = ?
+and av.status = ?
+and EXISTS (
+	select 
+		1 
+	from schedules_relations sr 
+	where sr.schedule_id =s.id  
+	and sr.relation_type = ?
+	and sr.relation_id = ?
+)
+`
+	args := []interface{}{
+		op.OrgID,
+		v2.AssessmentStatusComplete,
+		entity.ScheduleRelationTypeClassRosterClass,
+		classID,
+	}
+	err = r.QueryRawSQL(ctx, &items, sql, args...)
+	if err != nil {
+		return
+	}
+	return
+}
 func (r *ReportDA) GetStudentAchievedOutcome(ctx context.Context, tx *dbo.DBContext, from, to int64, teacherIDs []string) (studentOutcomeAchievedCounts []*entity.StudentOutcomeAchievedCount, err error) {
 	studentOutcomeAchievedCounts = []*entity.StudentOutcomeAchievedCount{}
 	if len(teacherIDs) == 0 {
