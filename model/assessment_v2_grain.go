@@ -890,12 +890,20 @@ func (asg *AssessmentSingleGrainItem) getLockedContentBySchedule(schedule *entit
 		return nil, constant.ErrInvalidArgs
 	}
 
+	dedupMap = make(map[string]struct{})
 	for _, materialItem := range schedule.LiveLessonPlan.LessonMaterials {
+		if _, ok := dedupMap[materialItem.LessonMaterialID]; ok {
+			log.Warn(ctx, "this content already exists", log.Any("dedupMap", dedupMap), log.String("LessonMaterialID", materialItem.LessonMaterialID), log.Any("contentMap", contentMap))
+			continue
+		}
+		dedupMap[materialItem.LessonMaterialID] = struct{}{}
+
 		contentItem, ok := contentMap[materialItem.LessonMaterialID]
 		if !ok {
 			log.Warn(ctx, "not found material", log.Any("contentMap", contentMap), log.String("LessonMaterialID", materialItem.LessonMaterialID))
 			continue
 		}
+
 		resultItem := &v2.AssessmentContentView{
 			ID:          contentItem.ID,
 			Name:        contentItem.Name,
