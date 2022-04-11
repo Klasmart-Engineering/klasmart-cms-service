@@ -25,7 +25,7 @@ func TestAmsUserService_FilterByPermission(t *testing.T) {
 
 func TestAmsUserService_GetUserCount(t *testing.T) {
 	ctx := context.Background()
-	GetUserServiceProvider().GetUserCount(ctx, testOperator, entity.GetUserCountCondition{
+	GetUserServiceProvider().GetUserCount(ctx, testOperator, &entity.GetUserCountCondition{
 		OrgID: entity.NullString{
 			String: "60c064cc-bbd8-4724-b3f6-b886dce4774f",
 			Valid:  true,

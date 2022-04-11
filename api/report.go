@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 
 	"github.com/gin-gonic/gin"
@@ -17,7 +18,7 @@ import (
 // @Summary list student report overview
 // @Description list student report overview
 // @Tags reports
-// @ID listStudentsAchievementOverviewReport
+// @ID getLearningOutcomeOverView
 // @Accept json
 // @Produce json
 // @Param time_range query string true "time_range"
@@ -26,7 +27,7 @@ import (
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/students_achievement_overview [get]
-func (s *Server) listStudentsAchievementOverviewReport(c *gin.Context) {
+func (s *Server) getLearningOutcomeOverView(c *gin.Context) {
 	ctx := c.Request.Context()
 	operator := s.getOperator(c)
 	var err error
@@ -58,7 +59,11 @@ func (s *Server) listStudentsAchievementOverviewReport(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	result, err = model.GetReportModel().GetTeacherReportOverView(ctx, dbo.MustGetDB(ctx), operator, start, end, teacherIDs)
+	result, err = model.GetReportModel().GetLearningOutcomeOverView(ctx, &da.LearningOutcomeOverviewQueryCondition{
+		From:       start,
+		To:         end,
+		TeacherIDs: teacherIDs,
+	})
 	if err != nil {
 		return
 	}
