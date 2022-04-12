@@ -120,7 +120,6 @@ func NewClient(endpoint string, options ...OptionClient) *GraphGLClient {
 	return c
 }
 
-//func GraphQLRun[ResType ConnectionResponse](ctx context.Context, c *GraphGLClient, req *GraphQLRequest, resp *GraphQLResponse[ResType]) (int, error) {
 func (c *GraphGLClient) Run(ctx context.Context, req *GraphQLRequest, resp interface{}) (int, error) {
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, c.httpTimeout)
 	defer cancel()
