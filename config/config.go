@@ -138,7 +138,7 @@ type AMSConfig struct {
 	EndPoint           string      `json:"endpoint" yaml:"endpoint"`
 	TokenVerifyKey     interface{} `json:"-" yaml:"token_verify_key"`
 	AuthorizedKey      string      `json:"authorized_key"`
-	UseDeprecatedQuery bool        `json:"replace_with_connection"`
+	UseDeprecatedQuery bool        `json:"use_deprecated_query"`
 }
 
 type DataServiceConfig struct {
