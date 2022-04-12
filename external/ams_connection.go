@@ -48,7 +48,9 @@ func (c AmsConnection) Run(ctx context.Context, req *GraphQLRequest, resp interf
 		// using authorized key
 		if amsAuthorizedKey := config.Get().AMS.AuthorizedKey; amsAuthorizedKey != "" {
 			req.SetHeader(constant.AMSAuthorizedHeaderKey, fmt.Sprintf("Bearer %s", amsAuthorizedKey))
-			log.Debug(ctx, "using ams authorizedKey", log.String("header key", constant.AMSAuthorizedHeaderKey))
+			log.Debug(ctx, "using ams authorizedKey",
+				log.String("ams_authorized_key", amsAuthorizedKey),
+				log.String("header constant key", constant.AMSAuthorizedHeaderKey))
 			if len(config.Get().AMS.AuthorizedKey) > 5 {
 				log.Debug(ctx, "using ams authorizedKey", log.String("header value", config.Get().AMS.AuthorizedKey[0:5]))
 			}
@@ -60,7 +62,7 @@ func (c AmsConnection) Run(ctx context.Context, req *GraphQLRequest, resp interf
 	if err != nil {
 		log.Error(
 			ctx,
-			"external/AmsClient.Run error",
+			"ams connection run failed",
 			log.Err(err),
 			log.Any("req", req),
 			log.Any("statusCode", statusCode),
