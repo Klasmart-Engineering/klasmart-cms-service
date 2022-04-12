@@ -11,7 +11,7 @@ import (
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 )
 
-const assessmentOpToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ2NTNmODgwLWI5MjAtNDM1Zi04ZjJkLTk4YjVkNDYyMWViOCIsImVtYWlsIjoic2Nob29sXzAzMDMyOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0OTE0MTA0NSwiaXNzIjoia2lkc2xvb3AifQ.kNcEp-MztIsNvkjMKS-ILoQKodyHT1JinWgAXAF6Ig14m7GFWnYdr0m-EFNWZBB1Dqktert1NYdxvnNLHONa6ilyMAog-kHQANmpr8ng6x1SuM7uICRXwmzxv1KocxtcZvjVfnibnSh63u7Q-wwREQ1nBba7x41N1saa7254ZLFXv80_AYukyVQMn0USE1kg3Vsvo0nu4XuwUqSo3jPye33TkA3N2zbBnyjUFsYdpsPrffQBA8x6UYhiiN1-WDnFmKby5N_944qF38Nb32qFViYgjH0_nPIGDyHWW2K3QkvdLuRgI-hPxhV8wrb5YNK5qVWWyPj_QTtNmPByBU89Ag"
+const assessmentOpToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ2NTNmODgwLWI5MjAtNDM1Zi04ZjJkLTk4YjVkNDYyMWViOCIsImVtYWlsIjoic2Nob29sXzAzMDMyOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0OTQxMjUyNywiaXNzIjoia2lkc2xvb3AifQ.DFDAtVEXRe-YjboagwXBgGj08GddGqbs4PCF15PDztlhz36y352H9ArFlAkGnV7Uw-vwnnbvU46qUqizgGfOqS2-RSFV34FUvDWDTEWBPsciUveK1dczhKrkGu4MQZC4t-f1lV7UM3ZEI7uWacz7_NjQ7BzQNOx3FtLvXGFxDLDCFnPwbgbERD3aZLrrUJdsN8FnFctiiEOBhUULenombR1hTjkrSzEXVkFyrPCyNGEgpoDpIOGGbSzip_Kc5HfMuVNFVtpVcmzMUbuL4jQjgruUCj11v_U2b0339sVlhv2rTug-2R7CPww4SY1obvqUUOFTUHxv9XpKmRN1DUgNfg"
 
 func TestAssessmentModel_GetByID(t *testing.T) {
 	ctx := context.Background()
@@ -21,7 +21,7 @@ func TestAssessmentModel_GetByID(t *testing.T) {
 		Token:  "",
 	}
 	op.Token = assessmentOpToken
-	result, err := GetAssessmentModelV2().GetByID(ctx, op, "6221b3b723068b03228e2e05")
+	result, err := GetAssessmentModelV2().GetByID(ctx, op, "60a36e7fde590052a3c5dd96")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestAssessmentModel_Query(t *testing.T) {
 	result, err := GetAssessmentModelV2().Page(ctx, op, &v2.AssessmentQueryReq{
 		//QueryKey:       "org mi",
 		//QueryType:      v2.QueryTypeTeacherName,
-		AssessmentType: v2.AssessmentTypeReviewStudy,
+		AssessmentType: v2.AssessmentTypeOfflineStudy,
 		OrderBy:        "-create_at",
 		Status:         "Started,Draft,Complete",
 		PageIndex:      1,

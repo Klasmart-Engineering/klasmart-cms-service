@@ -25,9 +25,11 @@ func (f *feedbackAssignmentModel) QueryMap(ctx context.Context, op *entity.Opera
 	result := make(map[string][]*entity.FeedbackAssignmentView)
 	for _, assignmentItem := range assignments {
 		item := &entity.FeedbackAssignmentView{
-			AttachmentID:   assignmentItem.AttachmentID,
-			AttachmentName: assignmentItem.AttachmentName,
-			Number:         assignmentItem.Number,
+			ID:                 assignmentItem.ID,
+			AttachmentID:       assignmentItem.AttachmentID,
+			AttachmentName:     assignmentItem.AttachmentName,
+			Number:             assignmentItem.Number,
+			ReviewAttachmentID: assignmentItem.ReviewAttachmentID,
 		}
 		if _, ok := result[assignmentItem.FeedbackID]; ok {
 			result[assignmentItem.FeedbackID] = append(result[assignmentItem.FeedbackID], item)

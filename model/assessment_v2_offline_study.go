@@ -37,6 +37,10 @@ type OfflineStudyAssessment struct {
 	action AssessmentMatchAction
 }
 
+func (o *OfflineStudyAssessment) MatchSchedule() (map[string]*entity.Schedule, error) {
+	return o.base.MatchSchedule()
+}
+
 func (o *OfflineStudyAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
 	return o.base.MatchTeacher()
 }
@@ -74,7 +78,7 @@ func (o *OfflineStudyAssessment) MatchCompleteRate() (map[string]float64, error)
 
 	result := make(map[string]float64)
 	for _, item := range o.ag.assessments {
-		stuTotal := studentCompleteCount[item.ID]
+		stuTotal := studentCount[item.ID]
 		stuComplete := studentCompleteCount[item.ID]
 		if stuTotal == 0 || stuComplete == 0 {
 			result[item.ID] = 0
@@ -85,7 +89,7 @@ func (o *OfflineStudyAssessment) MatchCompleteRate() (map[string]float64, error)
 				log.Any("reviewerFeedbackMap", reviewerFeedbackMap))
 			result[item.ID] = 1
 		} else {
-			result[item.ID] = float64(stuComplete / stuTotal)
+			result[item.ID] = float64(stuComplete) / float64(stuTotal)
 		}
 	}
 
@@ -184,17 +188,7 @@ func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCon
 			resultItem.StudentName = userInfo.Name
 		}
 
-		reviewerFeedback, ok := reviewerFeedbackMap[item.ID]
-		if !ok {
-			result = append(result, resultItem)
-			continue
-		}
-
 		studentResultItem := new(v2.AssessmentStudentResultReply)
-		resultItem.ReviewerComment = reviewerFeedback.ReviewerComment
-		studentResultItem.AssessScore = reviewerFeedback.AssessScore
-		studentResultItem.Attempted = true
-
 		studentResultItem.Outcomes = make([]*v2.AssessmentStudentResultOutcomeReply, 0, len(outcomesFromSchedule))
 		for _, outcomeItem := range outcomesFromSchedule {
 			aoKey := o.ag.GetKey([]string{
@@ -216,6 +210,23 @@ func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCon
 
 			studentResultItem.Outcomes = append(studentResultItem.Outcomes, stuOutcomeReplyItem)
 		}
+
+		reviewerFeedback, ok := reviewerFeedbackMap[item.ID]
+		if !ok {
+			if len(studentResultItem.Outcomes) > 0 {
+				resultItem.Results = append(resultItem.Results, studentResultItem)
+			}
+
+			result = append(result, resultItem)
+			continue
+		}
+
+		resultItem.ReviewerComment = reviewerFeedback.ReviewerComment
+		studentResultItem.AssessScore = v2.AssessmentUserAssessAverage
+		if reviewerFeedback.AssessScore > 0 {
+			studentResultItem.AssessScore = reviewerFeedback.AssessScore
+		}
+		studentResultItem.Attempted = true
 
 		if studentFeedbackItems, ok := scheduleFeedbackMap[item.UserID]; ok {
 			studentResultItem.StudentFeedbacks = make([]*v2.StudentResultFeedBacksReply, 0, len(studentFeedbackItems))
@@ -244,6 +255,8 @@ func (o *OfflineStudyAssessment) Update(req *v2.AssessmentUpdateReq) error {
 	ctx := o.ag.ctx
 	op := o.ag.op
 	now := time.Now().Unix()
+
+	log.Debug(ctx, "request data", log.Any("req", req))
 
 	waitUpdateAssessment := o.ag.assessment
 
@@ -349,11 +362,27 @@ func (o *OfflineStudyAssessment) Update(req *v2.AssessmentUpdateReq) error {
 		return err
 	}
 	waitUpdateUserOutcomes := make([]*v2.AssessmentUserOutcome, 0, len(userOutcomes))
+	// user outcomes
+	for _, item := range userOutcomes {
+		if reqStuOutcome, ok := reqStuOutcomeMap[o.ag.GetKey([]string{item.AssessmentUserID, item.OutcomeID})]; ok {
+			if !reqStuOutcome.Status.Valid() {
+				log.Warn(ctx, "student outcome status invalid", log.Any("reqStuOutcome", reqStuOutcome), log.Any("req", req))
+				return constant.ErrInvalidArgs
+			}
+			item.Status = reqStuOutcome.Status
+			item.UpdateAt = now
+			waitUpdateUserOutcomes = append(waitUpdateUserOutcomes, item)
+		}
+	}
 
 	if len(reviewerFeedbacks) > 0 {
 		feedbackIDs := make([]string, 0)
 		for _, item := range reviewerFeedbacks {
 			if reqStuResult, ok := reqStuResultMap[item.AssessmentUserID]; ok {
+				if reqStuResult.AssessScore <= 0 {
+					log.Warn(ctx, "student assessScore invalid in request", log.Any("req", req))
+					return constant.ErrInvalidArgs
+				}
 				item.AssessScore = reqStuResult.AssessScore
 				item.ReviewerID = op.UserID
 			}
@@ -372,18 +401,6 @@ func (o *OfflineStudyAssessment) Update(req *v2.AssessmentUpdateReq) error {
 			feedbackIDs = append(feedbackIDs, item.StudentFeedbackID)
 		}
 
-		// user outcomes
-		for _, item := range userOutcomes {
-			if reqStuOutcome, ok := reqStuOutcomeMap[o.ag.GetKey([]string{item.AssessmentUserID, item.OutcomeID})]; ok {
-				if !reqStuOutcome.Status.Valid() {
-					log.Warn(ctx, "student outcome status invalid", log.Any("reqStuOutcome", reqStuOutcome), log.Any("req", req))
-					return constant.ErrInvalidArgs
-				}
-				item.Status = reqStuOutcome.Status
-				item.UpdateAt = now
-				waitUpdateUserOutcomes = append(waitUpdateUserOutcomes, item)
-			}
-		}
 		// assignment
 		feedbackAssignCond := &da.FeedbackAssignmentCondition{
 			FeedBackIDs: entity.NullStrings{
@@ -399,8 +416,8 @@ func (o *OfflineStudyAssessment) Update(req *v2.AssessmentUpdateReq) error {
 			return err
 		}
 		for _, item := range feedbackAssigns {
-			if assignmentReq, ok := assignmentMap[item.ID]; ok && assignmentReq.ReviewerAssignmentID != "" {
-				item.ReviewAttachmentID = assignmentReq.ReviewerAssignmentID
+			if assignmentReq, ok := assignmentMap[item.ID]; ok && assignmentReq.ReviewAttachmentID != "" {
+				item.ReviewAttachmentID = assignmentReq.ReviewAttachmentID
 				item.UpdateAt = now
 				waitUpdateFeedbackAssignments = append(waitUpdateFeedbackAssignments, item)
 			}

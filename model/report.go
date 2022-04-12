@@ -18,7 +18,7 @@ import (
 type IReportModel interface {
 	ListStudentsReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsAchievementReportRequest) (*entity.StudentsAchievementReportResponse, error)
 	GetStudentReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.GetStudentAchievementReportRequest) (*entity.StudentAchievementReportResponse, error)
-	GetTeacherReportOverView(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, from, to int64, teacherIDs []string) (res *entity.StudentsAchievementOverviewReportResponse, err error)
+	GetLearningOutcomeOverView(ctx context.Context, condition *da.LearningOutcomeOverviewQueryCondition) (res *entity.StudentsAchievementOverviewReportResponse, err error)
 	GetTeacherReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, teacherIDs ...string) (*entity.TeacherReport, error)
 	GetLessonPlanFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string) ([]*entity.ScheduleShortInfo, error)
 	// DEPRECATED
@@ -568,20 +568,19 @@ func (rm *reportModel) GetClassIDsCanViewReports(ctx context.Context, operator *
 	return
 }
 
-func (m *reportModel) GetTeacherReportOverView(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, from, to int64, teacherIDs []string) (res *entity.StudentsAchievementOverviewReportResponse, err error) {
+func (m *reportModel) GetLearningOutcomeOverView(ctx context.Context, condition *da.LearningOutcomeOverviewQueryCondition) (res *entity.StudentsAchievementOverviewReportResponse, err error) {
 	res = &entity.StudentsAchievementOverviewReportResponse{}
-	if len(teacherIDs) == 0 {
+	if len(condition.TeacherIDs) == 0 {
 		return
 	}
-	res.CoveredLearnOutComeCount, err = da.GetReportDA().GetCompleteLearnOutcomeCount(ctx, tx, from, to, teacherIDs)
+
+	covered, achieved, err := da.GetReportDA().GetLearnerOutcomeOverview(ctx, condition)
 	if err != nil {
 		return
 	}
-	studentOutcomeAchievedCounts, err := da.GetReportDA().GetStudentAchievedOutcome(ctx, tx, from, to, teacherIDs)
-	if err != nil {
-		return
-	}
-	for _, s := range studentOutcomeAchievedCounts {
+
+	res.CoveredLearnOutComeCount = covered
+	for _, s := range achieved {
 		percent := float64(s.AchievedOutcomeCount) / float64(s.TotalAchievedOutcomeCount)
 		switch {
 		case percent >= 0.8:
@@ -1694,75 +1693,5 @@ func (m *reportModel) getStudentInClass(ctx context.Context, operator *entity.Op
 // endregion
 
 func (m *reportModel) GetLessonPlanFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string) ([]*entity.ScheduleShortInfo, error) {
-	// query assessments
-	cond := da.QueryAssessmentConditions{
-		OrgID: entity.NullString{
-			String: operator.OrgID,
-			Valid:  true,
-		},
-		Status: entity.NullAssessmentStatus{
-			Value: entity.AssessmentStatusComplete,
-			Valid: true,
-		},
-		ClassIDs: entity.NullStrings{
-			Strings: []string{classID},
-			Valid:   true,
-		},
-	}
-	assessments, err := GetAssessmentModel().Query(ctx, operator, &cond)
-	if err != nil {
-		log.Error(ctx, "get lesson plan filter: query assessments failed",
-			log.Err(err),
-			log.Any("cond", cond),
-			log.String("class_id", classID),
-		)
-		return nil, err
-	}
-
-	// batch get schedules
-	scheduleIDs := make([]string, 0, len(assessments))
-	for _, a := range assessments {
-		scheduleIDs = append(scheduleIDs, a.ScheduleID)
-	}
-	scheduleIDs = utils.SliceDeduplicationExcludeEmpty(scheduleIDs)
-	if len(scheduleIDs) == 0 {
-		log.Debug(ctx, "get lesson plan filter: empty schedule ids",
-			log.Any("cond", cond),
-			log.String("class_id", classID),
-		)
-		return nil, nil
-	}
-	schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, operator, scheduleIDs, nil)
-	if err != nil {
-		log.Error(ctx, "get lesson plan filter: get schedules failed",
-			log.Err(err),
-			log.Strings("schedule_ids", scheduleIDs),
-			log.String("class_id", classID),
-		)
-		return nil, err
-	}
-
-	// batch get lesson plans
-	lessonPlanIDs := make([]string, 0, len(schedules))
-	for _, s := range schedules {
-		lessonPlanIDs = append(lessonPlanIDs, s.LessonPlanID)
-	}
-	lessonPlanIDs = utils.SliceDeduplicationExcludeEmpty(lessonPlanIDs)
-	contents, err := GetContentModel().GetContentNameByIDList(ctx, tx, lessonPlanIDs)
-	if err != nil {
-		log.Error(ctx, "get lesson plan filter: get content names failed",
-			log.Err(err),
-			log.Strings("lesson_plan_ids", lessonPlanIDs),
-			log.String("class_id", classID),
-		)
-		return nil, err
-	}
-	result := make([]*entity.ScheduleShortInfo, 0, len(contents))
-	for _, c := range contents {
-		result = append(result, &entity.ScheduleShortInfo{
-			ID:   c.ID,
-			Name: c.Name,
-		})
-	}
-	return result, nil
+	return da.GetReportDA().GetLessonPlanFilter(ctx, operator, classID)
 }

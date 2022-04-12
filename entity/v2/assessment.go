@@ -249,8 +249,8 @@ type AssessmentStudentUpdateReq struct {
 }
 
 type FeedbackAssignmentsReq struct {
-	ID                   string `json:"id"`
-	ReviewerAssignmentID string `json:"reviewer_assignment_id"`
+	ID                 string `json:"id"`
+	ReviewAttachmentID string `json:"review_attachment_id"`
 }
 
 type AssessmentStudentResultReq struct {

@@ -4,8 +4,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type UploadPathResponse struct {
@@ -80,6 +82,11 @@ func (s *Server) getContentResourcePath(c *gin.Context) {
 		return
 	}
 	path, err := model.GetResourceUploaderModel().GetResourcePath(ctx, resourceId)
+	if err == nil {
+		path = path + utils.GetUrlParamStr(c.Request.URL.String())
+		log.Debug(ctx, "getContentResourcePath: request url", log.String("request url", c.Request.URL.Path), log.String("path", path))
+	}
+
 	switch err {
 	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -140,7 +147,7 @@ func (s *Server) getDownloadPath(c *gin.Context) {
 // @Produce json
 // @Param resource_id path string true "Resource id"
 // @Tags content
-// @Success 200 {bool} resource exist
+// @Success 200 {boolean} string "true/false"
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents_resources/{resource_id}/check [get]

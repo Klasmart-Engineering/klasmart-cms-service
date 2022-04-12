@@ -1,0 +1,1 @@
+CREATE INDEX idx_lesson_plan_id ON schedules ( lesson_plan_id );
