@@ -135,9 +135,10 @@ type AssessmentConfig struct {
 }
 
 type AMSConfig struct {
-	EndPoint       string      `json:"endpoint" yaml:"endpoint"`
-	TokenVerifyKey interface{} `json:"-" yaml:"token_verify_key"`
-	AuthorizedKey  string      `json:"authorized_key"`
+	EndPoint           string      `json:"endpoint" yaml:"endpoint"`
+	TokenVerifyKey     interface{} `json:"-" yaml:"token_verify_key"`
+	AuthorizedKey      string      `json:"authorized_key"`
+	UseDeprecatedQuery bool        `json:"use_deprecated_query"`
 }
 
 type DataServiceConfig struct {
@@ -213,7 +214,7 @@ func LoadEnvConfig() {
 	loadCryptoEnvConfig(ctx)
 	loadLiveTokenEnvConfig(ctx)
 	LoadAMSConfig(ctx)
-	loadH5PServiceConfig(ctx)
+	LoadH5PServiceConfig(ctx)
 	loadDataServiceConfig(ctx)
 	loadTencentConfig(ctx)
 	loadKidsloopCNLoginConfig(ctx)
@@ -534,11 +535,11 @@ func LoadAMSConfig(ctx context.Context) {
 		}
 		config.AMS.TokenVerifyKey = key
 	}
-
 	config.AMS.AuthorizedKey = os.Getenv("user_service_api_key")
+	config.AMS.UseDeprecatedQuery, _ = strconv.ParseBool(os.Getenv("use_deprecated_query"))
 }
 
-func loadH5PServiceConfig(ctx context.Context) {
+func LoadH5PServiceConfig(ctx context.Context) {
 	config.H5P.EndPoint = constant.H5PServiceDefaultEndpoint
 	h5pEndpoint := os.Getenv("h5p_endpoint")
 	if h5pEndpoint != "" {

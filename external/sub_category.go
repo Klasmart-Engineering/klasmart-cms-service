@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
@@ -38,7 +39,10 @@ func (n *SubCategory) RelatedIDs() []*cache.RelatedEntity {
 }
 
 func GetSubCategoryServiceProvider() SubCategoryServiceProvider {
-	return &AmsSubCategoryService{}
+	if config.Get().AMS.UseDeprecatedQuery {
+		return &AmsSubCategoryService{}
+	}
+	return &AmsSubCategoryConnectionService{}
 }
 
 type AmsSubCategoryService struct{}

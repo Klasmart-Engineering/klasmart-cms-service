@@ -48,6 +48,9 @@ var (
 	ErrBadUsageOfKl2Cache = errors.New("bad usage of kl2cache see log for detail")
 	ErrAssertFailed       = errors.New("assert failed")
 	ErrAmsDataFailed      = errors.New("ams data failed")
+	ErrGraphQLUnsupported = errors.New("unsupported graphql marshal type")
+	ErrGraphQLUnMatch     = errors.New("graphql marshal match failed")
+	ErrGraphQLHttpNotOK   = errors.New("graphql status code is not ok")
 )
 
 const (

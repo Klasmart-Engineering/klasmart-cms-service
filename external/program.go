@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
@@ -37,7 +38,10 @@ func (n *Program) RelatedIDs() []*cache.RelatedEntity {
 	return nil
 }
 func GetProgramServiceProvider() ProgramServiceProvider {
-	return &AmsProgramService{}
+	if config.Get().AMS.UseDeprecatedQuery {
+		return &AmsProgramService{}
+	}
+	return &AmsProgramConnectionService{}
 }
 
 type AmsProgramService struct{}

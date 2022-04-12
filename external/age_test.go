@@ -30,7 +30,7 @@ func TestAmsAgeService_BatchGet(t *testing.T) {
 }
 
 func TestAmsAgeService_GetByProgram(t *testing.T) {
-	ages, err := GetAgeServiceProvider().GetByProgram(context.TODO(), testOperator, "75004121-0c0d-486c-ba65-4c57deacb44b")
+	ages, err := GetAgeServiceProvider().GetByProgram(context.TODO(), testOperator, "04c630cc-fabe-4176-80f2-30a029907a33")
 	if err != nil {
 		t.Errorf("GetAgeServiceProvider().GetByProgram() error = %v", err)
 		return

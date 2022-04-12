@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
@@ -37,7 +38,10 @@ func (n *Grade) RelatedIDs() []*cache.RelatedEntity {
 	return nil
 }
 func GetGradeServiceProvider() GradeServiceProvider {
-	return &AmsGradeService{}
+	if config.Get().AMS.UseDeprecatedQuery {
+		return &AmsGradeService{}
+	}
+	return &AmsGradeConnectionService{}
 }
 
 type AmsGradeService struct{}

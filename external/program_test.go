@@ -7,7 +7,7 @@ import (
 )
 
 func TestAmsProgramService_BatchGet(t *testing.T) {
-	ids := []string{"b39edb9a-ab91-4245-94a4-eb2b5007c033", "14d350f1-a7ba-4f46-bef9-dc847f0cbac5"}
+	ids := []string{"4591423a-2619-4ef8-a900-f5d924939d02", "14d350f1-a7ba-4f46-bef9-dc847f0cbac5"}
 	programs, err := GetProgramServiceProvider().BatchGet(context.TODO(), testOperator, ids)
 	if err != nil {
 		t.Errorf("GetProgramServiceProvider().BatchGet() error = %v", err)

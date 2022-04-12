@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -36,7 +37,10 @@ func (n *Subject) RelatedIDs() []*cache.RelatedEntity {
 }
 
 func GetSubjectServiceProvider() SubjectServiceProvider {
-	return &AmsSubjectService{}
+	if config.Get().AMS.UseDeprecatedQuery {
+		return &AmsSubjectService{}
+	}
+	return AmsSubjectConnectionService{}
 }
 
 type AmsSubjectService struct{}
