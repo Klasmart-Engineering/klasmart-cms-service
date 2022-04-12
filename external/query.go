@@ -26,6 +26,7 @@ func pageQuery[ResType ConnectionResponse](ctx context.Context, operator *entity
 	qString, err := queryString(ctx, key, filter, result)
 	if err != nil {
 		log.Error(ctx, "query: string failed",
+			log.Err(err),
 			log.String("key", string(key)),
 			log.Any("filter", filter),
 			log.Any("operator", operator))
@@ -39,6 +40,7 @@ func pageQuery[ResType ConnectionResponse](ctx context.Context, operator *entity
 		err := fetch(ctx, operator, pageInfo.Pager(Forward, PageDefaultCount), qString, &res)
 		if err != nil {
 			log.Error(ctx, "query: do failed",
+				log.Err(err),
 				log.String("key", string(key)),
 				log.Any("filter", filter),
 				log.Any("pageInfo", pageInfo),
@@ -46,6 +48,15 @@ func pageQuery[ResType ConnectionResponse](ctx context.Context, operator *entity
 				log.Any("operator", operator))
 			return err
 		}
+
+		log.Debug(ctx, "query: do failed",
+			log.Any("response", res),
+			log.String("key", string(key)),
+			log.Any("filter", filter),
+			log.Any("pageInfo", pageInfo),
+			log.String("query", qString),
+			log.Any("operator", operator))
+
 		connections := res.Data[string(key)]
 		pageInfo = connections.GetPageInfo()
 		*result = append(*result, connections)
