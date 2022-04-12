@@ -102,7 +102,7 @@ where s.id in ({{.sbSchedule}})`).Replace(ctx, "sbSchedule", sbSchedule)
 	sql := `
 select 
 	{{.sbAssessmentType}}
-	{{.sbStatus}},
+	{{.sbStatus}}
 	av.title  as assessment_title,
 	cc.content_name as lesson_plan_name,	 
 	av.schedule_id,
@@ -334,18 +334,23 @@ IF(av.status=?,?,?) as status,
 	sbAbsentSelect := NewSqlBuilder(ctx, `
 IF(sum(IF(auv.status_by_system =?,1,0))>0,0,1) as absent
 `, v2.AssessmentUserStatusParticipate)
+	sbWhere := NewSqlBuilder(ctx, `
+and auv.user_type = ?
+and auv.user_id in (?)
+`, v2.AssessmentUserTypeStudent, filter.StudentID)
 	sbAbsent := NewSqlBuilder(ctx, `
 select 
 	auv.assessment_id,
 	{{.sbAbsentSelect}}
 from   assessments_users_v2 auv 
 where  auv.assessment_id in ({{.sbAssessment}})
+{{.sbWhere}}
 group by auv.assessment_id 
-`).Replace(ctx, "sbAbsentSelect", sbAbsentSelect).Replace(ctx, "sbAssessment", sbAssessment)
-	sbWhere := NewSqlBuilder(ctx, `
-and auv.user_type = ?
-and auv.user_id in (?)
-`, v2.AssessmentUserTypeStudent, filter.StudentID)
+`).
+		Replace(ctx, "sbAbsentSelect", sbAbsentSelect).
+		Replace(ctx, "sbAssessment", sbAssessment).
+		Replace(ctx, "sbWhere", sbWhere)
+
 	sb := NewSqlBuilder(ctx, `
 select 
 	{{.sbStatus}}	
@@ -364,12 +369,10 @@ inner join assessments_v2 av on auv.assessment_id =av.id
 inner join schedules s on av.schedule_id =s.id 
 inner join cms_contents cc on cc.id = s.lesson_plan_id 
 where auv.assessment_id in ({{.sbAssessment}})
-{{.sbWhere}}
 order by s.start_at
 `).
 		Replace(ctx, "sbStatus", sbStatus).
 		Replace(ctx, "sbAbsent", sbAbsent).
-		Replace(ctx, "sbWhere", sbWhere).
 		Replace(ctx, "sbAssessment", sbAssessment)
 	sql, args, err := sb.Build(ctx)
 	if err != nil {
