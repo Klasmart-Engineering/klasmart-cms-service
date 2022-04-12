@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gql"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
@@ -39,7 +38,10 @@ func (n *Grade) RelatedIDs() []*cache.RelatedEntity {
 	return nil
 }
 func GetGradeServiceProvider() GradeServiceProvider {
-	return &AmsGradeService{}
+	if config.Get().AMS.UseDeprecatedQuery {
+		return &AmsGradeService{}
+	}
+	return &AmsGradeConnectionService{}
 }
 
 type AmsGradeService struct{}
@@ -157,51 +159,9 @@ func (s AmsGradeService) BatchGetNameMap(ctx context.Context, operator *entity.O
 	return dict, nil
 }
 
-func (s AmsGradeService) getWithProgram(ctx context.Context, operator *entity.Operator, id string, condition *APCondition) ([]*Grade, error) {
-	filter := gql.GradeFilter{
-		ProgramID: &gql.UUIDFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    gql.UUID(id),
-		},
-		Status: &gql.StringFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    Active.String(),
-		},
-	}
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
-	}
-	if condition.System.Valid {
-		filter.System = &gql.BooleanFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    condition.System.Valid,
-		}
-	}
+func (s AmsGradeService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Grade, error) {
+	condition := NewCondition(options...)
 
-	var grades []*Grade
-	var pages []gql.GradesConnectionResponse
-	err := gql.Query(ctx, operator, filter.FilterType(), filter, &pages)
-	if err != nil {
-		log.Error(ctx, "get grade by program failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("filter", filter))
-		return nil, err
-	}
-	for _, p := range pages {
-		for _, v := range p.Edges {
-			obj := &Grade{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			grades = append(grades, obj)
-		}
-	}
-	return grades, nil
-}
-func (s AmsGradeService) getByProgram(ctx context.Context, operator *entity.Operator, id string, condition *APCondition) ([]*Grade, error) {
 	request := chlorine.NewRequest(`
 	query($program_id: ID!) {
 		program(id: $program_id) {
@@ -213,7 +173,7 @@ func (s AmsGradeService) getByProgram(ctx context.Context, operator *entity.Oper
 			}			
 		}
 	}`, chlorine.ReqToken(operator.Token))
-	request.Var("program_id", id)
+	request.Var("program_id", programID)
 
 	data := &struct {
 		Program struct {
@@ -230,7 +190,7 @@ func (s AmsGradeService) getByProgram(ctx context.Context, operator *entity.Oper
 		log.Error(ctx, "query grades by operator failed",
 			log.Err(err),
 			log.Any("operator", operator),
-			log.String("programID", id),
+			log.String("programID", programID),
 			log.Any("condition", condition))
 		return nil, err
 	}
@@ -239,7 +199,7 @@ func (s AmsGradeService) getByProgram(ctx context.Context, operator *entity.Oper
 		log.Error(ctx, "get grades by operator failed",
 			log.Err(response.Errors),
 			log.Any("operator", operator),
-			log.String("programID", id),
+			log.String("programID", programID),
 			log.Any("condition", condition))
 		return nil, response.Errors
 	}
@@ -266,66 +226,16 @@ func (s AmsGradeService) getByProgram(ctx context.Context, operator *entity.Oper
 
 	log.Info(ctx, "get grades by program success",
 		log.Any("operator", operator),
-		log.String("programID", id),
+		log.String("programID", programID),
 		log.Any("condition", condition),
 		log.Any("grades", grades))
 
 	return grades, nil
 }
-func (s AmsGradeService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Grade, error) {
+
+func (s AmsGradeService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Grade, error) {
 	condition := NewCondition(options...)
 
-	if config.Get().AMS.ReplaceWithConnection {
-		return s.getWithProgram(ctx, operator, programID, condition)
-	}
-	return s.getByProgram(ctx, operator, programID, condition)
-}
-
-func (s AmsGradeService) getWithOrganization(ctx context.Context, operator *entity.Operator, id string, condition *APCondition) ([]*Grade, error) {
-	filter := gql.GradeFilter{
-		OrganizationID: &gql.UUIDFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    gql.UUID(id),
-		},
-		Status: &gql.StringFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    Active.String(),
-		},
-	}
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
-	}
-	if condition.System.Valid {
-		filter.System = &gql.BooleanFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    condition.System.Valid,
-		}
-	}
-
-	var grades []*Grade
-	var pages []gql.GradesConnectionResponse
-	err := gql.Query(ctx, operator, filter.FilterType(), filter, &pages)
-	if err != nil {
-		log.Error(ctx, "get grade by organization failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("filter", filter))
-		return nil, err
-	}
-	for _, p := range pages {
-		for _, v := range p.Edges {
-			obj := &Grade{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			grades = append(grades, obj)
-		}
-	}
-	return grades, nil
-}
-func (s AmsGradeService) getByOrganization(ctx context.Context, operator *entity.Operator, id string, condition *APCondition) ([]*Grade, error) {
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {
@@ -337,7 +247,7 @@ func (s AmsGradeService) getByOrganization(ctx context.Context, operator *entity
 			}			
 		}
 	}`, chlorine.ReqToken(operator.Token))
-	request.Var("organization_id", id)
+	request.Var("organization_id", operator.OrgID)
 
 	data := &struct {
 		Organization struct {
@@ -392,15 +302,6 @@ func (s AmsGradeService) getByOrganization(ctx context.Context, operator *entity
 		log.Any("grades", grades))
 
 	return grades, nil
-}
-
-func (s AmsGradeService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Grade, error) {
-	condition := NewCondition(options...)
-
-	if config.Get().AMS.ReplaceWithConnection {
-		return s.getWithOrganization(ctx, operator, operator.OrgID, condition)
-	}
-	return s.getByOrganization(ctx, operator, operator.OrgID, condition)
 }
 func (s AmsGradeService) Name() string {
 	return "ams_grade_service"

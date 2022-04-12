@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gql"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
@@ -40,7 +39,10 @@ func (n *SubCategory) RelatedIDs() []*cache.RelatedEntity {
 }
 
 func GetSubCategoryServiceProvider() SubCategoryServiceProvider {
-	return &AmsSubCategoryService{}
+	if config.Get().AMS.UseDeprecatedQuery {
+		return &AmsSubCategoryService{}
+	}
+	return &AmsSubCategoryConnectionService{}
 }
 
 type AmsSubCategoryService struct{}
@@ -158,51 +160,9 @@ func (s AmsSubCategoryService) BatchGetNameMap(ctx context.Context, operator *en
 	return dict, nil
 }
 
-func (s AmsSubCategoryService) getWithCategory(ctx context.Context, operator *entity.Operator, id string, condition *APCondition) ([]*SubCategory, error) {
-	filter := gql.SubcategoryFilter{
-		CategoryID: &gql.UUIDFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    gql.UUID(id),
-		},
-		Status: &gql.StringFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    Active.String(),
-		},
-	}
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
-	}
-	if condition.System.Valid {
-		filter.System = &gql.BooleanFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    condition.System.Valid,
-		}
-	}
+func (s AmsSubCategoryService) GetByCategory(ctx context.Context, operator *entity.Operator, categoryID string, options ...APOption) ([]*SubCategory, error) {
+	condition := NewCondition(options...)
 
-	var subCategories []*SubCategory
-	var pages []gql.SubcategoriesConnectionResponse
-	err := gql.Query(ctx, operator, filter.FilterType(), filter, &pages)
-	if err != nil {
-		log.Error(ctx, "get subcategory by category failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("filter", filter))
-		return nil, err
-	}
-	for _, p := range pages {
-		for _, v := range p.Edges {
-			obj := &SubCategory{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			subCategories = append(subCategories, obj)
-		}
-	}
-	return subCategories, nil
-}
-func (s AmsSubCategoryService) getByCategory(ctx context.Context, operator *entity.Operator, id string, condition *APCondition) ([]*SubCategory, error) {
 	request := chlorine.NewRequest(`
 	query($category_id: ID!) {
 		category(id: $category_id) {
@@ -214,7 +174,7 @@ func (s AmsSubCategoryService) getByCategory(ctx context.Context, operator *enti
 			}
 		}
 	}`, chlorine.ReqToken(operator.Token))
-	request.Var("category_id", id)
+	request.Var("category_id", categoryID)
 
 	data := &struct {
 		Category struct {
@@ -231,7 +191,7 @@ func (s AmsSubCategoryService) getByCategory(ctx context.Context, operator *enti
 		log.Error(ctx, "query sub categories by operator failed",
 			log.Err(err),
 			log.Any("operator", operator),
-			log.String("categoryID", id),
+			log.String("categoryID", categoryID),
 			log.Any("condition", condition))
 		return nil, err
 	}
@@ -240,7 +200,7 @@ func (s AmsSubCategoryService) getByCategory(ctx context.Context, operator *enti
 		log.Error(ctx, "get sub categories by operator failed",
 			log.Err(response.Errors),
 			log.Any("operator", operator),
-			log.String("categoryID", id),
+			log.String("categoryID", categoryID),
 			log.Any("condition", condition))
 		return nil, response.Errors
 	}
@@ -267,67 +227,16 @@ func (s AmsSubCategoryService) getByCategory(ctx context.Context, operator *enti
 
 	log.Info(ctx, "get sub categories by program success",
 		log.Any("operator", operator),
-		log.String("categoryID", id),
+		log.String("categoryID", categoryID),
 		log.Any("condition", condition),
 		log.Any("subCategories", subCategories))
 
 	return subCategories, nil
 }
-func (s AmsSubCategoryService) GetByCategory(ctx context.Context, operator *entity.Operator, categoryID string, options ...APOption) ([]*SubCategory, error) {
+
+func (s AmsSubCategoryService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*SubCategory, error) {
 	condition := NewCondition(options...)
 
-	if config.Get().AMS.ReplaceWithConnection {
-		return s.getWithCategory(ctx, operator, categoryID, condition)
-	}
-	return s.getByCategory(ctx, operator, categoryID, condition)
-}
-
-func (s AmsSubCategoryService) getWithOrganization(ctx context.Context, operator *entity.Operator, id string, condition *APCondition) ([]*SubCategory, error) {
-	filter := gql.SubcategoryFilter{
-		OrganizationID: &gql.UUIDFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    gql.UUID(id),
-		},
-		Status: &gql.StringFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    Active.String(),
-		},
-	}
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
-	}
-	if condition.System.Valid {
-		filter.System = &gql.BooleanFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    condition.System.Valid,
-		}
-	}
-
-	var subCategories []*SubCategory
-	var pages []gql.SubcategoriesConnectionResponse
-	err := gql.Query(ctx, operator, filter.FilterType(), filter, &pages)
-	if err != nil {
-		log.Error(ctx, "get subcategory by organization failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("filter", filter))
-		return nil, err
-	}
-	for _, p := range pages {
-		for _, v := range p.Edges {
-			obj := &SubCategory{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			subCategories = append(subCategories, obj)
-		}
-	}
-	return subCategories, nil
-
-}
-func (s AmsSubCategoryService) getByOrganization(ctx context.Context, operator *entity.Operator, id string, condition *APCondition) ([]*SubCategory, error) {
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {
@@ -339,7 +248,7 @@ func (s AmsSubCategoryService) getByOrganization(ctx context.Context, operator *
 			}			
 		}
 	}`, chlorine.ReqToken(operator.Token))
-	request.Var("organization_id", id)
+	request.Var("organization_id", operator.OrgID)
 
 	data := &struct {
 		Organization struct {
@@ -394,14 +303,6 @@ func (s AmsSubCategoryService) getByOrganization(ctx context.Context, operator *
 		log.Any("subcategories", subCategories))
 
 	return subCategories, nil
-}
-func (s AmsSubCategoryService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*SubCategory, error) {
-	condition := NewCondition(options...)
-
-	if config.Get().AMS.ReplaceWithConnection {
-		return s.getWithOrganization(ctx, operator, operator.OrgID, condition)
-	}
-	return s.getByOrganization(ctx, operator, operator.OrgID, condition)
 }
 
 func (s AmsSubCategoryService) Name() string {

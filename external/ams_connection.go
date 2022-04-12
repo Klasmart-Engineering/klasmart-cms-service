@@ -1,42 +1,39 @@
-package gql
+package external
 
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"sync"
-
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"regexp"
+	"sync"
 )
 
 var (
-	_amsProvider     *AmsProvider
-	_amsProviderOnce sync.Once
+	_amsConnection     *AmsConnection
+	_amsConnectionOnce sync.Once
 )
 
-func GetAmsProvider() *AmsProvider {
-	_amsProviderOnce.Do(func() {
-		_amsProvider = &AmsProvider{
+func GetAmsConnection() *AmsConnection {
+	_amsConnectionOnce.Do(func() {
+		_amsConnection = &AmsConnection{
 			Client: NewClient(config.Get().AMS.EndPoint),
 			reg:    regexp.MustCompile("access=\\S+"),
 		}
 
 	})
-	return _amsProvider
+	return _amsConnection
 }
 
-type AmsProvider struct {
+type AmsConnection struct {
 	Client *GraphGLClient
 	reg    *regexp.Regexp
 }
 
-func Run[ResType ConnectionResponse](ctx context.Context, c *AmsProvider, req *GraphQLRequest, resp *GraphQLResponse[ResType]) (int, error) {
+func (c AmsConnection) Run(ctx context.Context, req *GraphQLRequest, resp interface{}) (int, error) {
 	externalStopwatch, foundStopwatch := utils.GetStopwatch(ctx, constant.ExternalStopwatch)
 	if foundStopwatch {
 		externalStopwatch.Start()
@@ -59,8 +56,7 @@ func Run[ResType ConnectionResponse](ctx context.Context, c *AmsProvider, req *G
 			log.Warn(ctx, "Found access graphql without cookie and user_service_api_key is empty")
 		}
 	}
-	//statusCode, err := c.Client.Run(ctx, req, resp)
-	statusCode, err := GraphQLRun(ctx, c.Client, req, resp)
+	statusCode, err := c.Client.Run(ctx, req, resp)
 	if err != nil {
 		log.Error(
 			ctx,

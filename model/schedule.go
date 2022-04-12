@@ -466,7 +466,7 @@ func (s *scheduleModel) ConflictDetection(ctx context.Context, op *entity.Operat
 
 	userInfos, err := external.GetUserServiceProvider().BatchGet(ctx, op, userIDs)
 	if err != nil {
-		log.Error(ctx, "ConflictDetection:GetScheduleRelationDA Query error",
+		log.Error(ctx, "ConflictDetection:GetScheduleRelationDA pageQuery error",
 			log.Any("input", input),
 			log.Any("op", op),
 			log.Strings("userIDs", userIDs),
@@ -1682,7 +1682,7 @@ func (s *scheduleModel) QueryByCondition(ctx context.Context, op *entity.Operato
 	// cache
 	// cacheData, err := s.queryByCache(ctx, op, condition)
 	// if err == nil {
-	// 	log.Info(ctx, "Query:using cache",
+	// 	log.Info(ctx, "pageQuery:using cache",
 	// 		log.Any("op", op),
 	// 		log.Any("condition", condition),
 	// 	)
@@ -1692,7 +1692,7 @@ func (s *scheduleModel) QueryByCondition(ctx context.Context, op *entity.Operato
 	var scheduleList []*entity.Schedule
 	err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)
 	if err != nil {
-		log.Error(ctx, "da.GetScheduleDA().Query error",
+		log.Error(ctx, "da.GetScheduleDA().pageQuery error",
 			log.Err(err),
 			log.Any("condition", condition))
 		return nil, err
@@ -2246,7 +2246,7 @@ func (s *scheduleModel) GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBCon
 	var scheduleList []*entity.Schedule
 	err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)
 	if err != nil {
-		log.Error(ctx, "GetScheduleIDsByOrgID:GetScheduleDA.Query error", log.Err(err), log.Any("condition", condition))
+		log.Error(ctx, "GetScheduleIDsByOrgID:GetScheduleDA.pageQuery error", log.Err(err), log.Any("condition", condition))
 		return nil, err
 	}
 	var result = make([]string, len(scheduleList))
@@ -2295,7 +2295,7 @@ func (s *scheduleModel) StartScheduleRepeat(ctx context.Context, template *entit
 func (s *scheduleModel) QueryScheduledDatesByCondition(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]string, error) {
 	cacheData, err := da.GetScheduleRedisDA().GetScheduledDates(ctx, op.OrgID, condition)
 	if err == nil && len(cacheData) > 0 {
-		log.Info(ctx, "Query:using cache",
+		log.Info(ctx, "pageQuery:using cache",
 			log.Any("condition", condition),
 			log.Any("cacheData", cacheData),
 		)
@@ -2304,7 +2304,7 @@ func (s *scheduleModel) QueryScheduledDatesByCondition(ctx context.Context, op *
 	var scheduleList []*entity.Schedule
 	err = da.GetScheduleDA().Query(ctx, condition, &scheduleList)
 	if err != nil {
-		log.Error(ctx, "GetHasScheduleDate:GetScheduleDA.Query error", log.Err(err), log.Any("condition", condition))
+		log.Error(ctx, "GetHasScheduleDate:GetScheduleDA.pageQuery error", log.Err(err), log.Any("condition", condition))
 		return nil, err
 	}
 	dateList := make([]string, 0)
@@ -2791,7 +2791,7 @@ func (s *scheduleModel) Query(ctx context.Context, query *entity.ScheduleTimeVie
 	var scheduleList []*entity.Schedule
 	err = s.scheduleDA.Query(ctx, condition, &scheduleList)
 	if err != nil {
-		log.Error(ctx, "s.scheduleDA.Query error",
+		log.Error(ctx, "s.scheduleDA.pageQuery error",
 			log.Err(err),
 			log.Any("condition", condition))
 		return nil, err
@@ -2831,7 +2831,7 @@ func (s *scheduleModel) QueryUnsafe(ctx context.Context, condition *entity.Sched
 	}
 	err := s.scheduleDA.Query(ctx, daCondition, &scheduleList)
 	if err != nil {
-		log.Error(ctx, "s.scheduleDA.Query error", log.Err(err), log.Any("condition", condition))
+		log.Error(ctx, "s.scheduleDA.pageQuery error", log.Err(err), log.Any("condition", condition))
 		return nil, err
 	}
 
@@ -2994,7 +2994,7 @@ func (s *scheduleModel) GetScheduleRelationIDs(ctx context.Context, op *entity.O
 		},
 	}, &scheduleRelationIDs)
 	if err != nil {
-		log.Error(ctx, "s.scheduleRelationDA.Query error",
+		log.Error(ctx, "s.scheduleRelationDA.pageQuery error",
 			log.Err(err),
 			log.String("scheduleID", scheduleID))
 		return nil, err
@@ -3213,7 +3213,7 @@ func (s *scheduleModel) GetSuccessScheduleReview(ctx context.Context, op *entity
 	}
 	err := s.scheduleReviewDA.Query(ctx, daCondition, &scheduleReviews)
 	if err != nil {
-		log.Error(ctx, "s.scheduleReviewDA.Query error",
+		log.Error(ctx, "s.scheduleReviewDA.pageQuery error",
 			log.Err(err),
 			log.Any("daCondition", daCondition))
 		return nil, err
@@ -3236,7 +3236,7 @@ func (s *scheduleModel) GetScheduleAttendance(ctx context.Context, timeframeFrom
 	var schedules []*entity.Schedule
 	err := s.scheduleDA.Query(ctx, daCondition, &schedules)
 	if err != nil {
-		log.Error(ctx, "s.scheduleDA.Query error",
+		log.Error(ctx, "s.scheduleDA.pageQuery error",
 			log.Err(err),
 			log.Any("daCondition", daCondition))
 		return nil, err
@@ -3263,7 +3263,7 @@ func (s *scheduleModel) GetScheduleAttendance(ctx context.Context, timeframeFrom
 	var scheduleRelations []*entity.ScheduleRelation
 	err = s.scheduleRelationDA.Query(ctx, scheduleRelationCondition, &scheduleRelations)
 	if err != nil {
-		log.Error(ctx, "s.scheduleRelationDA.Query error",
+		log.Error(ctx, "s.scheduleRelationDA.pageQuery error",
 			log.Err(err),
 			log.Any("scheduleRelationCondition", scheduleRelationCondition))
 		return nil, err
@@ -3640,7 +3640,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 		g.Go(func() error {
 			scheduleAssessmentMap, err := GetAssessmentOfflineStudyModel().IsAnyOneCompleteByScheduleIDs(ctx, operator, []string{schedule.ID})
 			if err != nil {
-				log.Error(ctx, "s.homefunStudyModel.Query error",
+				log.Error(ctx, "s.homefunStudyModel.pageQuery error",
 					log.Err(err),
 					log.Any("scheduleID", schedule.ID))
 				return err
@@ -3659,7 +3659,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 				},
 			})
 			if err != nil {
-				log.Error(ctx, "s.assessmentModel.Query error",
+				log.Error(ctx, "s.assessmentModel.pageQuery error",
 					log.Err(err),
 					log.Any("scheduleID", schedule.ID))
 				return err
@@ -4205,7 +4205,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 		g.Go(func() error {
 			scheduleAssessmentMap, err := GetAssessmentOfflineStudyModel().IsAnyOneCompleteByScheduleIDs(ctx, operator, []string{schedule.ID})
 			if err != nil {
-				log.Error(ctx, "s.homefunStudyModel.Query error",
+				log.Error(ctx, "s.homefunStudyModel.pageQuery error",
 					log.Err(err),
 					log.Any("scheduleID", schedule.ID))
 				return err
@@ -4224,7 +4224,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 				},
 			})
 			if err != nil {
-				log.Error(ctx, "s.assessmentModel.Query error",
+				log.Error(ctx, "s.assessmentModel.pageQuery error",
 					log.Err(err),
 					log.Any("scheduleID", schedule.ID))
 				return err
@@ -4361,7 +4361,7 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 			var err error
 			scheduleCompleteAssessmentMap, err = GetAssessmentOfflineStudyModel().IsAnyOneCompleteByScheduleIDs(ctx, operator, homefunHomeworkIDs)
 			if err != nil {
-				log.Error(ctx, "s.homefunStudyModel.Query error",
+				log.Error(ctx, "s.homefunStudyModel.pageQuery error",
 					log.Err(err),
 					log.Any("homefunHomeworkIDs", homefunHomeworkIDs))
 				return err
@@ -4371,7 +4371,7 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 		if len(withAssessmentScheduleIDs) > 0 {
 			assessmentsMap, err := GetAssessmentInternalModel().AnyoneAttemptedByScheduleIDs(ctx, operator, withAssessmentScheduleIDs)
 			if err != nil {
-				log.Error(ctx, "s.assessmentModel.Query error",
+				log.Error(ctx, "s.assessmentModel.pageQuery error",
 					log.Err(err),
 					log.Any("withAssessmentScheduleIDs", withAssessmentScheduleIDs))
 				return err
@@ -4425,7 +4425,7 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 			},
 		}, &scheduleRelations)
 		if err != nil {
-			log.Error(ctx, "s.scheduleRelationDA.Query error",
+			log.Error(ctx, "s.scheduleRelationDA.pageQuery error",
 				log.Err(err),
 				log.Strings("ScheduleIDs", scheduleIDs))
 			return err
@@ -4678,7 +4678,7 @@ func (s *scheduleModel) transformToScheduleTimeView(ctx context.Context, operato
 			},
 		}, &scheduleRelations)
 		if err != nil {
-			log.Error(ctx, "s.scheduleRelationDA.Query error",
+			log.Error(ctx, "s.scheduleRelationDA.pageQuery error",
 				log.Err(err),
 				log.Strings("ScheduleIDs", scheduleIDs))
 			return err

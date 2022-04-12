@@ -45,12 +45,12 @@ func TestDB(t *testing.T) {
 	dbo.ReplaceGlobal(newDBO)
 
 	// var scheduleList []*entity.Schedule
-	// err = da.GetScheduleDA().Query(context.Background(), &da.ScheduleCondition{}, &scheduleList)
+	// err = da.GetScheduleDA().pageQuery(context.Background(), &da.ScheduleCondition{}, &scheduleList)
 	// if err != nil {
 	// 	t.Log(err)
 	// 	return
 	// }
-	// ourAges, err := model.GetAgeModel().Query(context.Background(), &da.AgeCondition{})
+	// ourAges, err := model.GetAgeModel().pageQuery(context.Background(), &da.AgeCondition{})
 	// if err != nil {
 	// 	t.Log(err)
 	// 	return

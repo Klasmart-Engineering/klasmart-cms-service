@@ -1349,7 +1349,7 @@ func (m *MilestoneModel) transformToSearchMilestoneView(ctx context.Context, ope
 		},
 	}, &milestoneRelations)
 	if err != nil {
-		log.Error(ctx, "m.milestoneRelationDA.Query error",
+		log.Error(ctx, "m.milestoneRelationDA.pageQuery error",
 			log.Err(err),
 			log.Strings("milestoneIDs", milestoneIDs))
 		return nil, err
@@ -1452,7 +1452,7 @@ func (m *MilestoneModel) transformToSearchMilestoneView(ctx context.Context, ope
 
 			err := m.milestoneDA.Query(ctx, lockedChildrenCondition, &lockedMilestoneChildren)
 			if err != nil {
-				log.Error(ctx, "m.milestoneDA.Query error",
+				log.Error(ctx, "m.milestoneDA.pageQuery error",
 					log.Err(err),
 					log.Any("condition", lockedChildrenCondition))
 				return err
@@ -1575,7 +1575,7 @@ func (m *MilestoneModel) transformToMilestoneDetailView(ctx context.Context, ope
 		},
 	}, &milestoneRelations)
 	if err != nil {
-		log.Error(ctx, "m.milestoneRelationDA.Query error",
+		log.Error(ctx, "m.milestoneRelationDA.pageQuery error",
 			log.Err(err),
 			log.String("milsestoneID", milestone.ID))
 		return nil, err
@@ -1932,7 +1932,7 @@ func (m *MilestoneModel) transformToMilestoneOutcomeView(ctx context.Context, op
 		},
 	}, &outcomeRelations)
 	if err != nil {
-		log.Error(ctx, "m.outcomeRelationDA.Query error",
+		log.Error(ctx, "m.outcomeRelationDA.pageQuery error",
 			log.Err(err),
 			log.Strings("outcomeIDs", outcomeIDs))
 		return nil, err

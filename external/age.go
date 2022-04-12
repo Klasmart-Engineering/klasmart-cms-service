@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gql"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
@@ -39,7 +38,10 @@ func (n *Age) RelatedIDs() []*cache.RelatedEntity {
 	return nil
 }
 func GetAgeServiceProvider() AgeServiceProvider {
-	return &AmsAgeService{}
+	if config.Get().AMS.UseDeprecatedQuery {
+		return &AmsAgeService{}
+	}
+	return &AmsAgeConnectionService{}
 }
 
 type AmsAgeService struct{}
@@ -155,52 +157,9 @@ func (s AmsAgeService) BatchGetNameMap(ctx context.Context, operator *entity.Ope
 	return dict, nil
 }
 
-func (s AmsAgeService) getWithProgram(ctx context.Context, operator *entity.Operator, programID string, condition *APCondition) ([]*Age, error) {
-	filter := gql.AgeRangeFilter{
-		ProgramID: &gql.UUIDFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    gql.UUID(programID),
-		},
-		Status: &gql.StringFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    Active.String(),
-		},
-	}
+func (s AmsAgeService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Age, error) {
+	condition := NewCondition(options...)
 
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
-	}
-	if condition.System.Valid {
-		filter.System = &gql.BooleanFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    condition.System.Valid,
-		}
-	}
-	var pages []gql.AgesConnectionResponse
-	err := gql.Query(ctx, operator, filter.FilterType(), filter, &pages)
-	if err != nil {
-		log.Error(ctx, "get age by program failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("filter", filter))
-		return nil, err
-	}
-	var ages []*Age
-	for _, page := range pages {
-		for _, v := range page.Edges {
-			age := Age{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			ages = append(ages, &age)
-		}
-	}
-	return ages, nil
-}
-
-func (s AmsAgeService) getByProgram(ctx context.Context, operator *entity.Operator, programID string, condition *APCondition) ([]*Age, error) {
 	request := chlorine.NewRequest(`
 	query($program_id: ID!) {
 		program(id: $program_id) {
@@ -272,61 +231,9 @@ func (s AmsAgeService) getByProgram(ctx context.Context, operator *entity.Operat
 	return ages, nil
 }
 
-func (s AmsAgeService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Age, error) {
+func (s AmsAgeService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Age, error) {
 	condition := NewCondition(options...)
-	if config.Get().AMS.ReplaceWithConnection {
-		return s.getWithProgram(ctx, operator, programID, condition)
-	}
-	return s.getByProgram(ctx, operator, programID, condition)
-}
 
-func (s AmsAgeService) getWithOrganization(ctx context.Context, operator *entity.Operator, id string, condition *APCondition) ([]*Age, error) {
-	filter := gql.AgeRangeFilter{
-		ProgramID: &gql.UUIDFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    gql.UUID(id),
-		},
-		Status: &gql.StringFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    Active.String(),
-		},
-	}
-
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
-	}
-	if condition.System.Valid {
-		filter.System = &gql.BooleanFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    condition.System.Valid,
-		}
-	}
-
-	var pages []gql.AgesConnectionResponse
-	err := gql.Query(ctx, operator, filter.FilterType(), filter, &pages)
-	if err != nil {
-		log.Error(ctx, "get age by organization failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("filter", filter))
-		return nil, err
-	}
-	var ages []*Age
-	for _, page := range pages {
-		for _, v := range page.Edges {
-			age := Age{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			ages = append(ages, &age)
-		}
-	}
-	return ages, nil
-}
-
-func (s AmsAgeService) getByOrganization(ctx context.Context, operator *entity.Operator, id string, condition *APCondition) ([]*Age, error) {
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {
@@ -338,7 +245,7 @@ func (s AmsAgeService) getByOrganization(ctx context.Context, operator *entity.O
 			}			
 		}
 	}`, chlorine.ReqToken(operator.Token))
-	request.Var("organization_id", id)
+	request.Var("organization_id", operator.OrgID)
 
 	data := &struct {
 		Organization struct {
@@ -392,14 +299,6 @@ func (s AmsAgeService) getByOrganization(ctx context.Context, operator *entity.O
 		log.Any("ages", ages))
 
 	return ages, nil
-}
-func (s AmsAgeService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Age, error) {
-	condition := NewCondition(options...)
-
-	if config.Get().AMS.ReplaceWithConnection {
-		return s.getWithOrganization(ctx, operator, operator.OrgID, condition)
-	}
-	return s.getByOrganization(ctx, operator, operator.OrgID, condition)
 }
 func (s AmsAgeService) Name() string {
 	return "ams_age_service"

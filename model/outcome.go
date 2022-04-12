@@ -593,7 +593,7 @@ func (ocm OutcomeModel) SearchWithoutRelation(ctx context.Context, user *entity.
 	var outcomes []*entity.Outcome
 	total, err := da.GetOutcomeDA().Page(ctx, da.NewOutcomeCondition(condition), &outcomes)
 	if err != nil {
-		log.Error(ctx, "SearchWithoutRelation: da.GetOutcomeDA().Query failed",
+		log.Error(ctx, "SearchWithoutRelation: da.GetOutcomeDA().pageQuery failed",
 			log.Any("op", user),
 			log.Any("condition", condition))
 		return 0, nil, err
@@ -1491,7 +1491,7 @@ func (ocm OutcomeModel) fillRelation(ctx context.Context, operator *entity.Opera
 			// MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
 		}, &outcomeRelations)
 		if err != nil {
-			log.Error(ctx, "fillRelation: Query failed",
+			log.Error(ctx, "fillRelation: pageQuery failed",
 				log.Err(err),
 				log.String("op", operator.UserID),
 				log.Any("outcomes", outcomes))
@@ -1984,7 +1984,7 @@ func (o OutcomeModel) transformToPublishedOutcomeView(ctx context.Context, opera
 			},
 		}, &outcomeRelations)
 		if err != nil {
-			log.Error(ctx, "o.outcomeRelationDA.Query error",
+			log.Error(ctx, "o.outcomeRelationDA.pageQuery error",
 				log.Err(err),
 				log.Strings("outcomeIDs", outcomeIDs))
 			return err
@@ -2083,7 +2083,7 @@ func (o OutcomeModel) transformToOutcomeView(ctx context.Context, operator *enti
 		},
 	}, &outcomeRelations)
 	if err != nil {
-		log.Error(ctx, "o.outcomeRelationDA.Query error",
+		log.Error(ctx, "o.outcomeRelationDA.pageQuery error",
 			log.Err(err),
 			log.Strings("outcomeIDs", outcomeIDs))
 		return nil, err
@@ -2150,7 +2150,7 @@ func (o OutcomeModel) transformToOutcomeView(ctx context.Context, operator *enti
 
 			err := o.outcomeDA.Query(ctx, lockedChildrenCondition, &lockedOutcomeChildren)
 			if err != nil {
-				log.Error(ctx, "o.outcomeDA.Query",
+				log.Error(ctx, "o.outcomeDA.pageQuery",
 					log.Err(err),
 					log.Any("condition", lockedChildrenCondition))
 				return err
@@ -2322,7 +2322,7 @@ func (o OutcomeModel) transformToOutcomeDetailView(ctx context.Context, operator
 		},
 	}, &outcomeRelations)
 	if err != nil {
-		log.Error(ctx, "o.outcomeRelationDA.Query error",
+		log.Error(ctx, "o.outcomeRelationDA.pageQuery error",
 			log.Err(err),
 			log.String("outcomeID", outcome.ID))
 		return nil, err
@@ -2422,7 +2422,7 @@ func (o OutcomeModel) transformToOutcomeDetailView(ctx context.Context, operator
 
 			err := o.outcomeDA.Query(ctx, lockedChildrenCondition, &lockedOutcomeChildren)
 			if err != nil {
-				log.Error(ctx, "o.outcomeDA.Query",
+				log.Error(ctx, "o.outcomeDA.pageQuery",
 					log.Err(err),
 					log.Any("condition", lockedChildrenCondition))
 				return err

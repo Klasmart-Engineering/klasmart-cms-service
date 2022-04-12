@@ -355,7 +355,7 @@ func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operat
 	)
 	if args.TeacherName.Valid {
 		if teachers, err = m.AmsServices.TeacherService.Query(ctx, operator, operator.OrgID, args.TeacherName.String); err != nil {
-			log.Error(ctx, "List: external.GetTeacherServiceProvider().Query: query failed",
+			log.Error(ctx, "List: external.GetTeacherServiceProvider().pageQuery: query failed",
 				log.Err(err),
 				log.String("org_id", operator.OrgID),
 				log.String("teacher_name", args.TeacherName.String),
@@ -430,10 +430,10 @@ func (m *assessmentModel) StudentQuery(ctx context.Context, operator *entity.Ope
 
 	scheduleClassType := assessmentType.ToScheduleClassType()
 	if scheduleClassType.IsHomeFun {
-		//Query assessments
+		//pageQuery assessments
 		return m.studentsHomeFunStudyQuery(ctx, operator, tx, scheduleClassType, condition)
 	}
-	//Query home fun study
+	//pageQuery home fun study
 	return m.studentsAssessmentQuery(ctx, operator, tx, scheduleClassType, condition)
 }
 
@@ -635,7 +635,7 @@ func (m *assessmentModel) studentsHomeFunStudyQuery(ctx context.Context,
 		Valid:   condition.ID != "",
 	}
 
-	//Query home fun study
+	//pageQuery home fun study
 	var r []*entity.HomeFunStudy
 
 	conditions := &da.QueryHomeFunStudyCondition{

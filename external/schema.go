@@ -26,26 +26,31 @@ type UUIDOperator OperatorType
 type StringOperator OperatorType
 
 type UUIDFilter struct {
-	Operator UUIDOperator `json:"operator"`
-	Value    UUID         `json:"value"`
+	Operator UUIDOperator `json:"operator" gqls:"operator,noquoted"`
+	Value    UUID         `json:"value" gqls:"value"`
 }
 
 type UserFilter struct {
-	UserID UUIDFilter `json:"userId"`
+	UserID UUIDFilter `json:"userId" gqls:"userId"`
 }
 
 type StringFilter struct {
-	Operator        StringOperator `json:"operator"`
-	Value           string         `json:"value"`
-	CaseInsensitive bool           `json:"caseInsensitive"`
+	Operator        StringOperator `json:"operator" gqls:"operator,noquoted"`
+	Value           string         `json:"value" gqls:"value"`
+	CaseInsensitive bool           `json:"caseInsensitive" gqls:"caseInsensitive"`
+}
+
+type BooleanFilter struct {
+	Operator OperatorType `json:"operator" gqls:"operator,noquoted"`
+	Value    bool         `json:"value" gqls:"value"`
 }
 
 type ClassFilter struct {
-	ID             *UUIDFilter   `json:"id,omitempty"`
-	Name           *StringFilter `json:"name,omitempty"`
-	Status         *StringFilter `json:"status,omitempty"`
-	OrganizationID *UUIDFilter   `json:"organizationId,omitempty"`
-	TeacherID      *UUIDFilter   `json:"teacherId,omitempty"`
+	ID             *UUIDFilter   `json:"id,omitempty" gqls:"id,omitempty"`
+	Name           *StringFilter `json:"name,omitempty" gqls:"name,omitempty"`
+	Status         *StringFilter `json:"status,omitempty" gqls:"status,omitempty"`
+	OrganizationID *UUIDFilter   `json:"organizationId,omitempty" gqls:"organizationId,omitempty"`
+	TeacherID      *UUIDFilter   `json:"teacherId,omitempty" gqls:"teacherId,omitempty"`
 }
 
 type PageInfo struct {
@@ -255,4 +260,120 @@ func do(ctx context.Context, operator *entity.Operator, query string, variables 
 		log.Any("response", response))
 
 	return nil
+}
+
+type AgeRangeValueFilter struct {
+	Operator OperatorType `gqls:"operator,noquoted"`
+	Value    int          `gqls:"value"`
+}
+
+type AgeRangeUnitFilter struct {
+	Operator OperatorType `gqls:"operator,noquoted"`
+	Value    int          `gqls:"value"`
+}
+
+type AgeRangeUnit string
+
+const (
+	AgeRangeUnitYear  AgeRangeUnit = "year"
+	AgeRangeUnitMonth AgeRangeUnit = "month"
+)
+
+type AgeRangeValue struct {
+	Value int          `gqls:"value"`
+	Unit  AgeRangeUnit `gqls:"AgeRangeUnit"`
+}
+type AgeRangeTypeFilter struct {
+	Operator OperatorType  `gqls:"operator,noquoted"`
+	Value    AgeRangeValue `gqls:"value"`
+}
+
+//type ConnectionDirection string
+//
+//const (
+//	FORWARD  ConnectionDirection = "FORWARD"
+//	BACKWARD ConnectionDirection = "BACKWARD"
+//)
+
+const (
+	PagerDirection string = "direction"
+	PagerCursor    string = "cursor"
+	PagerCount     string = "count"
+)
+
+type FilterOfType string
+
+const (
+	OrganizationsConnectionType FilterOfType = "organizationsConnection"
+	ProgramsConnectionType      FilterOfType = "programsConnection"
+	SubjectsConnectionType      FilterOfType = "subjectsConnection"
+	CategoriesConnectionType    FilterOfType = "categoriesConnection"
+	SubcategoriesConnectionType FilterOfType = "subcategoriesConnection"
+	GradesConnectionType        FilterOfType = "gradesConnection"
+	AgeRangesConnectionType     FilterOfType = "ageRangesConnection"
+)
+
+const (
+	PageDefaultCount = 50
+)
+
+type ConnectionPageInfo struct {
+	HasNextPage     bool   `json:"hasNextPage" gqls:"hasNextPage"`
+	HasPreviousPage bool   `json:"hasPreviousPage" gqls:"hasPreviousPage"`
+	StartCursor     string `json:"startCursor" gqls:"startCursor"`
+	EndCursor       string `json:"endCursor" gqls:"endCursor"`
+}
+
+func (pager *ConnectionPageInfo) HasNext(direction Direction) bool {
+	if pager == nil {
+		return true
+	}
+	if direction == Forward && pager.HasNextPage {
+		return true
+	}
+	if direction == BackWard && pager.HasPreviousPage {
+		return true
+	}
+	return false
+}
+
+func (pager *ConnectionPageInfo) Pager(direction Direction, count int) map[string]interface{} {
+	var cursor string
+	if pager == nil {
+		return map[string]interface{}{
+			PagerDirection: Forward,
+			PagerCursor:    "",
+			PagerCount:     PageDefaultCount,
+		}
+	}
+	if direction == Forward {
+		cursor = pager.EndCursor
+	}
+	if direction == BackWard {
+		cursor = pager.StartCursor
+	}
+	if count > PageDefaultCount {
+		count = PageDefaultCount
+	}
+	return map[string]interface{}{
+		PagerDirection: direction,
+		PagerCursor:    cursor,
+		PagerCount:     count,
+	}
+}
+
+type ConnectionFilter interface {
+	FilterType() FilterOfType
+}
+
+type ConnectionResponse interface {
+	OrganizationsConnectionResponse |
+	ProgramsConnectionResponse |
+	SubjectsConnectionResponse |
+	CategoriesConnectionResponse |
+	SubcategoriesConnectionResponse |
+	GradesConnectionResponse |
+	AgesConnectionResponse
+
+	GetPageInfo() *ConnectionPageInfo
 }

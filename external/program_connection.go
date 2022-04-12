@@ -1,4 +1,10 @@
-package gql
+package external
+
+import (
+	"context"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+)
 
 type ProgramFilter struct {
 	ID             *UUIDFilter         `gqls:"id,omitempty"`
@@ -39,4 +45,56 @@ type ProgramsConnectionResponse struct {
 
 func (pcs ProgramsConnectionResponse) GetPageInfo() *ConnectionPageInfo {
 	return &pcs.PageInfo
+}
+
+type AmsProgramConnectionService struct {
+	AmsProgramService
+}
+
+func (pcs AmsProgramConnectionService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Program, error) {
+	condition := NewCondition(options...)
+
+	filter := ProgramFilter{
+		OrganizationID: &UUIDFilter{
+			Operator: UUIDOperator(OperatorTypeEq),
+			Value:    UUID(operator.OrgID),
+		},
+		Status: &StringFilter{
+			Operator: StringOperator(OperatorTypeEq),
+			Value:    Active.String(),
+		},
+	}
+	if condition.Status.Valid {
+		filter.Status.Value = condition.Status.Status.String()
+	}
+	if condition.System.Valid {
+		filter.System = &BooleanFilter{
+			Operator: OperatorTypeEq,
+			Value:    condition.System.Valid,
+		}
+	}
+
+	var programs []*Program
+	var pages []ProgramsConnectionResponse
+	err := pageQuery(ctx, operator, filter.FilterType(), filter, &pages)
+	if err != nil {
+		log.Error(ctx, "get programs by ids failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("filter", filter))
+		return nil, err
+	}
+	for _, p := range pages {
+		for _, v := range p.Edges {
+			obj := &Program{
+				ID:   v.Node.ID,
+				Name: v.Node.Name,
+				//GroupName:
+				Status: APStatus(v.Node.Status),
+				System: v.Node.System,
+			}
+			programs = append(programs, obj)
+		}
+	}
+	return programs, nil
 }

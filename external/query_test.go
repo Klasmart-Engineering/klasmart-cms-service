@@ -1,4 +1,4 @@
-package gql
+package external
 
 import (
 	"context"
@@ -10,21 +10,21 @@ import (
 type TestFilter struct {
 	//Name string `gqls:"__name__"`
 	//ID   *UUIDFilter   `gqls:"id,omitempty"`
-	Name StringFilter `gqls:"name,omitempty"`
-	AND  []TestFilter `gqls:"AND,omitempty"`
+	Name *StringFilter `gqls:"name,omitempty"`
+	AND  []TestFilter  `gqls:"AND,omitempty"`
 	//OR   []TestFilter  `gqls:"OR,omitempty"`
 }
 
 var TF = TestFilter{
-	Name: StringFilter{
-		Operator: OperatorTypeContains,
+	Name: &StringFilter{
+		Operator: StringOperator(OperatorTypeContains),
 		Value:    "mmm",
 	},
 	AND: []TestFilter{
 		//{Name: "xxx"},
 		//{Name: "yyy"},
-		{Name: StringFilter{OperatorTypeContains, "xxx", false}},
-		{Name: StringFilter{OperatorTypeContains, "yyy", false}},
+		{Name: &StringFilter{StringOperator(OperatorTypeContains), "xxx", false}},
+		{Name: &StringFilter{StringOperator(OperatorTypeContains), "yyy", false}},
 	},
 }
 
@@ -37,13 +37,13 @@ func TestFilterMarshal(t *testing.T) {
 }
 
 var pf = ProgramFilter{
-	//ID:   &UUIDFilter{Operator: OperatorTypeEq, Value: "id1"},
-	Name: &StringFilter{Operator: OperatorTypeContains, Value: "Bada"},
+	//ID:   &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: "id1"},
+	Name: &StringFilter{Operator: StringOperator(OperatorTypeContains), Value: "Bada"},
 	AND: []ProgramFilter{
-		{Name: &StringFilter{Operator: OperatorTypeContains, Value: "Bada"}},
+		{Name: &StringFilter{Operator: StringOperator(OperatorTypeContains), Value: "Bada"}},
 	},
 	OR: []ProgramFilter{
-		{Name: &StringFilter{Operator: OperatorTypeContains, Value: "Math"}},
+		{Name: &StringFilter{Operator: StringOperator(OperatorTypeContains), Value: "Math"}},
 	},
 }
 
@@ -59,11 +59,11 @@ func TestNodeMarshal(t *testing.T) {
 func TestQuery(t *testing.T) {
 	ctx := context.Background()
 	op := &entity.Operator{
-		Token: token,
+		Token: "",
 	}
 	pf.FilterType()
 	var result []ProgramsConnectionResponse
-	err := Query(ctx, op, pf.FilterType(), pf, &result)
+	err := pageQuery(ctx, op, pf.FilterType(), pf, &result)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,5 +73,3 @@ func TestQuery(t *testing.T) {
 		}
 	}
 }
-
-var token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImExZmFhNTc1LWVhMGMtNGEzMC04YmI2LTViYjM3M2MwYjA5NCIsImVtYWlsIjoiYWxsMTEyNEB5b3BtYWlsLmNvbSIsImV4cCI6Mjc0ODcyMDcwMSwiaXNzIjoiY2FsbWlkLWRlYnVnIn0.qVfuPzeQFKvHlOg3aPh45rQ878LrGif5I3yb3eZj7Z8"

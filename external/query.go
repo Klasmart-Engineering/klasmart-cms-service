@@ -1,10 +1,11 @@
-package gql
+package external
 
 import (
 	"bytes"
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"net/http"
 	"sync"
 	"text/template"
 )
@@ -21,7 +22,7 @@ query($direction:ConnectionDirection!, $cursor:String!, $count:PageSize){
 }
 `
 
-func Query[ResType ConnectionResponse](ctx context.Context, operator *entity.Operator, key FilterOfType, filter interface{}, result *[]ResType) error {
+func pageQuery[ResType ConnectionResponse](ctx context.Context, operator *entity.Operator, key FilterOfType, filter interface{}, result *[]ResType) error {
 	qString, err := queryString(ctx, key, filter, result)
 	if err != nil {
 		log.Error(ctx, "query: string failed",
@@ -31,11 +32,11 @@ func Query[ResType ConnectionResponse](ctx context.Context, operator *entity.Ope
 		return err
 	}
 	var pageInfo *ConnectionPageInfo
-	for pageInfo.HasNext(FORWARD) {
+	for pageInfo.HasNext(Forward) {
 		res := GraphQLResponse[ResType]{
 			Data: map[string]ResType{},
 		}
-		err := do(ctx, operator, pageInfo.Pager(FORWARD, PageDefaultCount), qString, &res)
+		err := fetch(ctx, operator, pageInfo.Pager(Forward, PageDefaultCount), qString, &res)
 		if err != nil {
 			log.Error(ctx, "query: do failed",
 				log.String("key", string(key)),
@@ -52,21 +53,40 @@ func Query[ResType ConnectionResponse](ctx context.Context, operator *entity.Ope
 	return nil
 }
 
-func do[ResType ConnectionResponse](ctx context.Context, operator *entity.Operator, pager map[string]interface{}, query string, res *GraphQLResponse[ResType]) error {
+func fetch[ResType ConnectionResponse](ctx context.Context, operator *entity.Operator, pager map[string]interface{}, query string, res *GraphQLResponse[ResType]) error {
 	req := NewRequest(query, RequestToken(operator.Token))
 	for k, v := range pager {
 		req.Var(k, v)
 	}
-	_, err := Run(ctx, GetAmsProvider(), req, res)
-	if err != nil {
-		log.Error(ctx, "do: Run failed",
-			log.Err(err),
+
+	statusCode, err := GetAmsConnection().Run(ctx, req, res)
+
+	if statusCode != http.StatusOK {
+		log.Error(ctx, "fetch: http is not ok",
+			log.Err(res.Errors),
+			log.Int("status_code", statusCode),
 			log.Any("pager", pager),
 			log.String("query", query),
 			log.Any("operator", operator))
 		return err
 	}
 
+	if err != nil {
+		log.Error(ctx, "fetch: Run failed",
+			log.Err(err),
+			log.Any("pager", pager),
+			log.String("query", query),
+			log.Any("operator", operator))
+		return err
+	}
+	if res.Errors != nil {
+		log.Error(ctx, "fetch: data has error",
+			log.Err(res.Errors),
+			log.Any("pager", pager),
+			log.String("query", query),
+			log.Any("operator", operator))
+		return res.Errors
+	}
 	return nil
 }
 

@@ -135,10 +135,10 @@ type AssessmentConfig struct {
 }
 
 type AMSConfig struct {
-	EndPoint              string      `json:"endpoint" yaml:"endpoint"`
-	TokenVerifyKey        interface{} `json:"-" yaml:"token_verify_key"`
-	AuthorizedKey         string      `json:"authorized_key"`
-	ReplaceWithConnection bool        `json:"replace_with_connection"`
+	EndPoint           string      `json:"endpoint" yaml:"endpoint"`
+	TokenVerifyKey     interface{} `json:"-" yaml:"token_verify_key"`
+	AuthorizedKey      string      `json:"authorized_key"`
+	UseDeprecatedQuery bool        `json:"replace_with_connection"`
 }
 
 type DataServiceConfig struct {
@@ -536,15 +536,7 @@ func LoadAMSConfig(ctx context.Context) {
 		config.AMS.TokenVerifyKey = key
 	}
 	config.AMS.AuthorizedKey = os.Getenv("user_service_api_key")
-	value := os.Getenv("use_deprecated_query")
-	if value == "" {
-		value = "true"
-	}
-	var err error
-	config.AMS.ReplaceWithConnection, err = strconv.ParseBool(value)
-	if err != nil {
-		log.Panic(ctx, "parse use_deprecated_query failed", log.Err(err))
-	}
+	config.AMS.UseDeprecatedQuery, _ = strconv.ParseBool(os.Getenv("use_deprecated_query"))
 }
 
 func LoadH5PServiceConfig(ctx context.Context) {

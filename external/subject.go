@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external/gql"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -38,7 +37,10 @@ func (n *Subject) RelatedIDs() []*cache.RelatedEntity {
 }
 
 func GetSubjectServiceProvider() SubjectServiceProvider {
-	return &AmsSubjectService{}
+	if config.Get().AMS.UseDeprecatedQuery {
+		return &AmsSubjectService{}
+	}
+	return AmsSubjectConnectionService{}
 }
 
 type AmsSubjectService struct{}
@@ -155,50 +157,9 @@ func (s AmsSubjectService) BatchGetNameMap(ctx context.Context, operator *entity
 	return dict, nil
 }
 
-func (s AmsSubjectService) getWithProgram(ctx context.Context, operator *entity.Operator, programID string, condition *APCondition) ([]*Subject, error) {
-	filter := gql.SubjectFilter{
-		ProgramID: &gql.UUIDFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    gql.UUID(programID),
-		},
-		Status: &gql.StringFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    Active.String(),
-		},
-	}
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
-	}
-	if condition.System.Valid {
-		filter.System = &gql.BooleanFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    condition.System.Valid,
-		}
-	}
-	var subjects []*Subject
-	var pages []gql.SubjectsConnectionResponse
-	err := gql.Query(ctx, operator, filter.FilterType(), filter, &pages)
-	if err != nil {
-		log.Error(ctx, "get subject by program failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("filter", filter))
-		return nil, err
-	}
-	for _, p := range pages {
-		for _, v := range p.Edges {
-			obj := &Subject{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			subjects = append(subjects, obj)
-		}
-	}
-	return subjects, nil
-}
-func (s AmsSubjectService) getByProgram(ctx context.Context, operator *entity.Operator, programID string, condition *APCondition) ([]*Subject, error) {
+func (s AmsSubjectService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Subject, error) {
+	condition := NewCondition(options...)
+
 	request := chlorine.NewRequest(`
 	query($program_id: ID!) {
 		program(id: $program_id) {
@@ -266,58 +227,10 @@ func (s AmsSubjectService) getByProgram(ctx context.Context, operator *entity.Op
 
 	return subjects, nil
 }
-func (s AmsSubjectService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Subject, error) {
-	condition := NewCondition(options...)
-	if config.Get().AMS.ReplaceWithConnection {
-		return s.getWithProgram(ctx, operator, programID, condition)
-	}
-	return s.getByProgram(ctx, operator, programID, condition)
-}
 
-func (s AmsSubjectService) getWithOrganization(ctx context.Context, operator *entity.Operator, id string, condition *APCondition) ([]*Subject, error) {
-	filter := gql.SubjectFilter{
-		OrganizationID: &gql.UUIDFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    gql.UUID(id),
-		},
-		Status: &gql.StringFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    Active.String(),
-		},
-	}
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
-	}
-	if condition.System.Valid {
-		filter.System = &gql.BooleanFilter{
-			Operator: gql.OperatorTypeEq,
-			Value:    condition.System.Valid,
-		}
-	}
-	var subjects []*Subject
-	var pages []gql.SubjectsConnectionResponse
-	err := gql.Query(ctx, operator, filter.FilterType(), filter, &pages)
-	if err != nil {
-		log.Error(ctx, "get subject by organization failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("filter", filter))
-		return nil, err
-	}
-	for _, p := range pages {
-		for _, v := range p.Edges {
-			obj := &Subject{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			subjects = append(subjects, obj)
-		}
-	}
-	return subjects, nil
-}
-func (s AmsSubjectService) getByOrganization(ctx context.Context, operator *entity.Operator, id string, condition *APCondition) ([]*Subject, error) {
+func (s AmsSubjectService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Subject, error) {
+	condition := NewCondition(options...)
+
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {
@@ -329,7 +242,7 @@ func (s AmsSubjectService) getByOrganization(ctx context.Context, operator *enti
 			}			
 		}
 	}`, chlorine.ReqToken(operator.Token))
-	request.Var("organization_id", id)
+	request.Var("organization_id", operator.OrgID)
 
 	data := &struct {
 		Organization struct {
@@ -381,14 +294,6 @@ func (s AmsSubjectService) getByOrganization(ctx context.Context, operator *enti
 		log.Any("subjects", subjects))
 
 	return subjects, nil
-}
-func (s AmsSubjectService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Subject, error) {
-	condition := NewCondition(options...)
-
-	if config.Get().AMS.ReplaceWithConnection {
-		return s.getWithOrganization(ctx, operator, operator.OrgID, condition)
-	}
-	return s.getByOrganization(ctx, operator, operator.OrgID, condition)
 }
 
 func (s AmsSubjectService) Name() string {

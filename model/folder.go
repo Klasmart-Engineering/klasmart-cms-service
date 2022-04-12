@@ -71,7 +71,7 @@ type IFolderModel interface {
 	//List all folder items belongs to the folder
 	ListItems(ctx context.Context, folderID string, itemType entity.ItemType, operator *entity.Operator) ([]*entity.FolderItemInfo, error)
 	//查询Folder
-	//Query folders
+	//pageQuery folders
 	SearchFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItemInfo, error)
 	SearchPrivateFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItemInfo, error)
 	SearchOrgFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItemInfo, error)
