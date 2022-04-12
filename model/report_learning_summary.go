@@ -688,24 +688,18 @@ func (l *learningSummaryReportModel) QueryOutcomesByAssessmentID(ctx context.Con
 		return
 	}
 	for _, item := range items {
-		if item.CountOfAll == item.CountOfUnknown {
-			continue
-		}
 		o := &entity.LearningSummaryOutcome{
 			ID:   item.OutcomeID,
 			Name: item.OutcomeName,
 		}
-		if item.CountOfNotCovered == item.CountOfAll {
-			continue
-		}
-		if item.CountOfAchieved == item.CountOfAll {
+		switch {
+		case item.CountOfAll == item.CountOfAchieved:
 			o.Status = entity.AssessmentOutcomeStatusAchieved
-		} else if item.CountOfAchieved > 0 && item.CountOfNotAchieved > 0 {
+		case item.CountOfAchieved < item.CountOfAll && item.CountOfAchieved > 0:
 			o.Status = entity.AssessmentOutcomeStatusPartially
-		} else {
+		default:
 			o.Status = entity.AssessmentOutcomeStatusNotAchieved
 		}
-
 		res = append(res, o)
 	}
 
