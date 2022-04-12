@@ -867,26 +867,53 @@ func (asg *AssessmentSingleGrainItem) getLockedContentBySchedule(schedule *entit
 		)
 		return nil, err
 	}
+	contentMap := make(map[string]*entity.ContentInfoInternal, len(contents))
+	for _, item := range contents {
+		contentMap[item.ID] = item
+	}
 
-	// convert to content map
-	result := make([]*v2.AssessmentContentView, len(contents))
-	for i, item := range contents {
+	// convert to content view
+	result := make([]*v2.AssessmentContentView, 0, len(contents))
+	if contentItem, ok := contentMap[schedule.LiveLessonPlan.LessonPlanID]; ok {
 		resultItem := &v2.AssessmentContentView{
-			ID:         item.ID,
-			Name:       item.Name,
-			OutcomeIDs: item.OutcomeIDs,
-			LatestID:   item.LatestID,
-			FileType:   item.FileType,
+			ID:          contentItem.ID,
+			Name:        contentItem.Name,
+			ContentType: v2.AssessmentContentTypeLessonPlan,
+			OutcomeIDs:  contentItem.OutcomeIDs,
+			LatestID:    contentItem.LatestID,
+			FileType:    contentItem.FileType,
 		}
-		if item.ContentType == entity.ContentTypePlan {
-			resultItem.ContentType = v2.AssessmentContentTypeLessonPlan
-		} else if item.ContentType == entity.ContentTypeMaterial {
-			resultItem.ContentType = v2.AssessmentContentTypeLessonMaterial
-		} else {
-			log.Warn(ctx, "content type is invalid", log.Any("contentItem", item), log.Any("schedule", schedule))
+
+		result = append(result, resultItem)
+	} else {
+		log.Warn(ctx, "not found lessPlan", log.Any("contentMap", contentMap), log.Any("LiveLessonPlan", schedule.LiveLessonPlan))
+		return nil, constant.ErrInvalidArgs
+	}
+
+	dedupMap = make(map[string]struct{})
+	for _, materialItem := range schedule.LiveLessonPlan.LessonMaterials {
+		if _, ok := dedupMap[materialItem.LessonMaterialID]; ok {
+			log.Warn(ctx, "this content already exists", log.Any("dedupMap", dedupMap), log.String("LessonMaterialID", materialItem.LessonMaterialID), log.Any("contentMap", contentMap))
 			continue
 		}
-		result[i] = resultItem
+		dedupMap[materialItem.LessonMaterialID] = struct{}{}
+
+		contentItem, ok := contentMap[materialItem.LessonMaterialID]
+		if !ok {
+			log.Warn(ctx, "not found material", log.Any("contentMap", contentMap), log.String("LessonMaterialID", materialItem.LessonMaterialID))
+			continue
+		}
+
+		resultItem := &v2.AssessmentContentView{
+			ID:          contentItem.ID,
+			Name:        contentItem.Name,
+			ContentType: v2.AssessmentContentTypeLessonMaterial,
+			OutcomeIDs:  contentItem.OutcomeIDs,
+			LatestID:    contentItem.LatestID,
+			FileType:    contentItem.FileType,
+		}
+
+		result = append(result, resultItem)
 	}
 
 	return result, nil

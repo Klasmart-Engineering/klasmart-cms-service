@@ -18,7 +18,7 @@ import (
 type IReportModel interface {
 	ListStudentsReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsAchievementReportRequest) (*entity.StudentsAchievementReportResponse, error)
 	GetStudentReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.GetStudentAchievementReportRequest) (*entity.StudentAchievementReportResponse, error)
-	GetTeacherReportOverView(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, from, to int64, teacherIDs []string) (res *entity.StudentsAchievementOverviewReportResponse, err error)
+	GetLearningOutcomeOverView(ctx context.Context, condition *da.LearningOutcomeOverviewQueryCondition) (res *entity.StudentsAchievementOverviewReportResponse, err error)
 	GetTeacherReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, teacherIDs ...string) (*entity.TeacherReport, error)
 	GetLessonPlanFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string) ([]*entity.ScheduleShortInfo, error)
 	// DEPRECATED
@@ -568,20 +568,19 @@ func (rm *reportModel) GetClassIDsCanViewReports(ctx context.Context, operator *
 	return
 }
 
-func (m *reportModel) GetTeacherReportOverView(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, from, to int64, teacherIDs []string) (res *entity.StudentsAchievementOverviewReportResponse, err error) {
+func (m *reportModel) GetLearningOutcomeOverView(ctx context.Context, condition *da.LearningOutcomeOverviewQueryCondition) (res *entity.StudentsAchievementOverviewReportResponse, err error) {
 	res = &entity.StudentsAchievementOverviewReportResponse{}
-	if len(teacherIDs) == 0 {
+	if len(condition.TeacherIDs) == 0 {
 		return
 	}
-	res.CoveredLearnOutComeCount, err = da.GetReportDA().GetCompleteLearnOutcomeCount(ctx, tx, from, to, teacherIDs)
+
+	covered, achieved, err := da.GetReportDA().GetLearnerOutcomeOverview(ctx, condition)
 	if err != nil {
 		return
 	}
-	studentOutcomeAchievedCounts, err := da.GetReportDA().GetStudentAchievedOutcome(ctx, tx, from, to, teacherIDs)
-	if err != nil {
-		return
-	}
-	for _, s := range studentOutcomeAchievedCounts {
+
+	res.CoveredLearnOutComeCount = covered
+	for _, s := range achieved {
 		percent := float64(s.AchievedOutcomeCount) / float64(s.TotalAchievedOutcomeCount)
 		switch {
 		case percent >= 0.8:
