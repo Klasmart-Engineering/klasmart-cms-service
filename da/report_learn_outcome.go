@@ -13,8 +13,38 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 )
 
-type ILearningOutcomeReport interface {
-	GetLearnerOutcomeOverview(ctx context.Context, condition *LearningOutcomeOverviewQueryCondition) (int, []*entity.StudentOutcomeAchievedCount, error)
+func (r *ReportDA) GetLessonPlanFilter(ctx context.Context, op *entity.Operator, classID string) (items []*entity.ScheduleShortInfo, err error) {
+	items = []*entity.ScheduleShortInfo{}
+	sql := `
+select 
+	DISTINCT cc.id,
+	cc.content_name as name
+from schedules s 
+inner join assessments_v2 av on s.id = av.schedule_id 
+inner join cms_contents cc on cc.id = s.lesson_plan_id 
+where s.delete_at =0
+and s.org_id = ?
+and av.status = ?
+and EXISTS (
+	select 
+		1 
+	from schedules_relations sr 
+	where sr.schedule_id =s.id  
+	and sr.relation_type = ?
+	and sr.relation_id = ?
+)
+`
+	args := []interface{}{
+		op.OrgID,
+		v2.AssessmentStatusComplete,
+		entity.ScheduleRelationTypeClassRosterClass,
+		classID,
+	}
+	err = r.QueryRawSQL(ctx, &items, sql, args...)
+	if err != nil {
+		return
+	}
+	return
 }
 
 type LearningOutcomeOverviewQueryCondition struct {
@@ -51,6 +81,11 @@ func (r *ReportDA) GetLearnerOutcomeOverview(ctx context.Context, condition *Lea
 	}
 
 	return result.Covered, result.Achieved, nil
+}
+
+type ILearningOutcomeReport interface {
+	GetLessonPlanFilter(ctx context.Context, op *entity.Operator, classID string) (items []*entity.ScheduleShortInfo, err error)
+	GetLearnerOutcomeOverview(ctx context.Context, condition *LearningOutcomeOverviewQueryCondition) (int, []*entity.StudentOutcomeAchievedCount, error)
 }
 
 func (r *ReportDA) getLearningOutcomeOverview(ctx context.Context, condition interface{}) (interface{}, error) {
