@@ -207,8 +207,8 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 			return 0, nil, err
 		}
 
-		result := make([]*v2.StudentAssessment, len(userResults))
-		for i, item := range userResults {
+		result := make([]*v2.StudentAssessment, 0, len(userResults))
+		for _, item := range userResults {
 			status := item.Status.Compliant(ctx)
 			if status != condition.Status {
 				continue
@@ -268,7 +268,7 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 				}
 			}
 
-			result[i] = resultItem
+			result = append(result, resultItem)
 		}
 
 		return total, result, nil
