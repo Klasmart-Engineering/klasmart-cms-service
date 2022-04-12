@@ -340,7 +340,7 @@ func (s *scheduleRelationModel) GetRelationTypeByScheduleID(ctx context.Context,
 	var relations []*entity.ScheduleRelation
 	err := da.GetScheduleRelationDA().Query(ctx, condition, &relations)
 	if err != nil {
-		log.Error(ctx, "da.GetScheduleRelationDA().pageQuery error",
+		log.Error(ctx, "da.GetScheduleRelationDA().Query error",
 			log.Err(err),
 			log.Any("op", op),
 			log.Any("condition", condition))
@@ -399,7 +399,7 @@ func (s *scheduleRelationModel) GetOutcomeIDs(ctx context.Context, scheduleID st
 	}
 	err := da.GetScheduleRelationDA().Query(ctx, relationCondition, &scheduleRelations)
 	if err != nil {
-		log.Error(ctx, "da.GetScheduleRelationDA().pageQuery error",
+		log.Error(ctx, "da.GetScheduleRelationDA().Query error",
 			log.Err(err),
 			log.Any("relationCondition", relationCondition))
 		return nil, err

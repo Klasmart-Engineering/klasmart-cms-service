@@ -923,7 +923,7 @@ func (m *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.D
 
 	schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, operator, scheduleIDs, &entity.ScheduleInclude{Subject: true})
 	if err != nil {
-		log.Error(ctx, "GetStudentPerformanceReport: call GetScheduleDA().pageQuery failed",
+		log.Error(ctx, "GetStudentPerformanceReport: call GetScheduleDA().Query failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("req", req),
@@ -1091,7 +1091,7 @@ func (m *reportModel) getCompletedAssessments(ctx context.Context, tx *dbo.DBCon
 		},
 	})
 	if err != nil {
-		log.Error(ctx, "da.GetAssessmentDA().pageQuery: call FilterCompletedAssessments failed",
+		log.Error(ctx, "da.GetAssessmentDA().Query: call FilterCompletedAssessments failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.String("class_id", classID),
@@ -1137,13 +1137,13 @@ func (m *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, o
 }
 
 func (m *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) ([]string, error) {
-	log.Debug(ctx, "get schedule ids: before call GetScheduleModel().pageQuery()")
+	log.Debug(ctx, "get schedule ids: before call GetScheduleModel().Query()")
 	result, err := GetScheduleModel().GetScheduleIDsByCondition(ctx, tx, operator, &entity.ScheduleIDsCondition{
 		ClassID:      classID,
 		LessonPlanID: lessonPlanID,
 		StartAt:      time.Now().Add(constant.ScheduleAllowGoLiveTime).Unix(),
 	})
-	log.Debug(ctx, "get schedule ids: after call GetScheduleModel().pageQuery()")
+	log.Debug(ctx, "get schedule ids: after call GetScheduleModel().Query()")
 	if err != nil {
 		log.Error(ctx, "get schedule ids: query failed",
 			log.Err(err),

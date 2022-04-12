@@ -717,7 +717,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 	if strings.TrimSpace(teacherName) != "" {
 		teachers, err := external.GetTeacherServiceProvider().Query(ctx, op, op.OrgID, teacherName)
 		if err != nil {
-			log.Error(ctx, "external.GetTeacherServiceProvider().pageQuery error",
+			log.Error(ctx, "external.GetTeacherServiceProvider().Query error",
 				log.Err(err),
 				log.Any("op", op),
 				log.String("teacherName", teacherName))

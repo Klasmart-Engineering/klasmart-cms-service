@@ -2,7 +2,6 @@ package external
 
 import (
 	"context"
-	_ "embed"
 	"reflect"
 	"testing"
 

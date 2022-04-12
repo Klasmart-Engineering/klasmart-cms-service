@@ -45,7 +45,7 @@ func (s *schedulePermissionModel) GetUnDefineClass(ctx context.Context, op *enti
 func (s *schedulePermissionModel) HasUnDefineClass(ctx context.Context, op *entity.Operator, permissionMap map[external.PermissionName]bool) (bool, error) {
 	cacheData, err := da.GetScheduleRedisDA().GetScheduleFilterUndefinedClass(ctx, op.OrgID, permissionMap)
 	if err == nil {
-		log.Info(ctx, "pageQuery:using cache",
+		log.Info(ctx, "Query:using cache",
 			log.Any("op", op),
 			log.Any("permissionMap", permissionMap),
 			log.Err(err),

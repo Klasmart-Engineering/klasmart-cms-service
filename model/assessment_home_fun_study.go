@@ -248,7 +248,7 @@ func (m *homeFunStudyModel) GetByScheduleIDAndStudentID(ctx context.Context, ope
 	}
 	var studies []*entity.HomeFunStudy
 	if err := da.GetHomeFunStudyDA().Query(ctx, &cond, &studies); err != nil {
-		log.Error(ctx, "GetByScheduleIDAndStudentID: da.GetHomeFunStudyDA().pageQuery: query home fun study",
+		log.Error(ctx, "GetByScheduleIDAndStudentID: da.GetHomeFunStudyDA().Query: query home fun study",
 			log.Err(err),
 			log.Any("cond", cond),
 		)
@@ -303,7 +303,7 @@ func (m *homeFunStudyModel) Summary(ctx context.Context, tx *dbo.DBContext, oper
 	)
 	if args.TeacherName.Valid {
 		if teachers, err = external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.TeacherName.String); err != nil {
-			log.Error(ctx, "List: external.GetTeacherServiceProvider().pageQuery: query failed",
+			log.Error(ctx, "List: external.GetTeacherServiceProvider().Query: query failed",
 				log.Err(err),
 				log.String("org_id", operator.OrgID),
 				log.String("teacher_name", args.TeacherName.String),
@@ -398,7 +398,7 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 	if args.Query != "" {
 		teachers, err := external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.Query)
 		if err != nil {
-			log.Error(ctx, "external.GetTeacherServiceProvider().pageQuery: query failed",
+			log.Error(ctx, "external.GetTeacherServiceProvider().Query: query failed",
 				log.Err(err),
 				log.Any("operator", operator),
 				log.String("org_id", operator.OrgID),
@@ -413,7 +413,7 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 	}
 	students, err := external.GetStudentServiceProvider().Query(ctx, operator, operator.OrgID, args.Query)
 	if err != nil {
-		log.Error(ctx, "external.GetStudentServiceProvider().pageQuery: query failed",
+		log.Error(ctx, "external.GetStudentServiceProvider().Query: query failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.String("org_id", operator.OrgID),
@@ -433,7 +433,7 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 		total int
 	)
 	if total, err = da.GetHomeFunStudyDA().Page(ctx, &cond, &items); err != nil {
-		log.Error(ctx, "da.GetHomeFunStudyDA().pageQuery: query failed",
+		log.Error(ctx, "da.GetHomeFunStudyDA().Query: query failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.String("org_id", operator.OrgID),

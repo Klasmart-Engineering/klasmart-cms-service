@@ -99,7 +99,7 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 		if teachers, err = external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.TeacherName.String); err != nil {
 			return nil, err
 		}
-		log.Debug(ctx, "List: external.GetTeacherServiceProvider().pageQuery: query success",
+		log.Debug(ctx, "List: external.GetTeacherServiceProvider().Query: query success",
 			log.String("org_id", operator.OrgID),
 			log.String("teacher_name", args.TeacherName.String),
 			log.Any("args", args),
