@@ -695,7 +695,7 @@ func (l *learningSummaryReportModel) QueryOutcomesByAssessmentID(ctx context.Con
 			ID:   item.OutcomeID,
 			Name: item.OutcomeName,
 		}
-		if item.CountOfNotCovered != item.CountOfAll {
+		if item.CountOfNotCovered == item.CountOfAll {
 			continue
 		}
 		if item.CountOfAchieved == item.CountOfAll {
