@@ -117,7 +117,7 @@ func (a *assessmentInternalModel) AddWhenCreateSchedules(ctx context.Context, tx
 			MigrateFlag:    constant.AssessmentCurrentFlag,
 		}
 		if req.AssessmentType == v2.AssessmentTypeOfflineStudy {
-			assessmentItem.Status = v2.AssessmentStatusNotApplicable
+			assessmentItem.Status = v2.AssessmentStatusNotStarted
 		}
 		if req.AssessmentType == v2.AssessmentTypeReviewStudy {
 			assessmentItem.Status = v2.AssessmentStatusPending
@@ -163,6 +163,7 @@ func (a *assessmentInternalModel) LockAssessmentContentAndOutcome(ctx context.Co
 		log.Warn(ctx, "no one attempted,don't need to lock", log.Any("schedule", schedule))
 		return nil
 	}
+
 	assessment, err := a.getAssessmentByScheduleID(ctx, schedule.ID)
 	if err != nil {
 		return err
@@ -176,92 +177,102 @@ func (a *assessmentInternalModel) LockAssessmentContentAndOutcome(ctx context.Co
 		return err
 	}
 
-	assessmentUserMap, err := ags.GetAssessmentUserMap()
-	if err != nil {
-		return err
-	}
-	assessmentUsers, ok := assessmentUserMap[assessment.ID]
-	if !ok {
-		log.Error(ctx, "can not found assessment users", log.String("assessmentID", assessment.ID), log.Any("assessmentUserMap", assessmentUserMap))
-		return constant.ErrRecordNotFound
-	}
-
-	// contents
+	// lock contents
 	waitAddContents := make([]*v2.AssessmentContent, 0)
-	assessmentContentMap := make(map[string]*v2.AssessmentContent)
+	contentMapFromSchedule := make(map[string]*v2.AssessmentContentView, len(contentsFromSchedule))
 	for _, item := range contentsFromSchedule {
-		if _, ok := assessmentContentMap[item.ID]; !ok {
-			contentNewItem := &v2.AssessmentContent{
-				ID:           utils.NewID(),
-				AssessmentID: assessment.ID,
-				ContentID:    item.ID,
-				ContentType:  item.ContentType,
-				Status:       v2.AssessmentContentStatusCovered,
-				CreateAt:     now,
-			}
-			waitAddContents = append(waitAddContents, contentNewItem)
-			assessmentContentMap[item.ID] = contentNewItem
+		if _, ok := contentMapFromSchedule[item.ID]; ok {
+			log.Warn(ctx, "content repeated", log.String("repeated contentID", item.ID), log.Any("contentMapFromSchedule", contentMapFromSchedule))
+			continue
 		}
+		contentNewItem := &v2.AssessmentContent{
+			ID:           utils.NewID(),
+			AssessmentID: assessment.ID,
+			ContentID:    item.ID,
+			ContentType:  item.ContentType,
+			Status:       v2.AssessmentContentStatusCovered,
+			CreateAt:     now,
+		}
+		waitAddContents = append(waitAddContents, contentNewItem)
+		contentMapFromSchedule[item.ID] = item
 	}
 
-	// outcomes
+	// lock outcomes
 	outcomeIDs := make([]string, 0)
 	for _, item := range contentsFromSchedule {
 		outcomeIDs = append(outcomeIDs, item.OutcomeIDs...)
 	}
 
+	// convert outcome in content to the latest outcome
 	outcomeIDs = utils.SliceDeduplicationExcludeEmpty(outcomeIDs)
-	outcomes, err := GetOutcomeModel().GetByIDs(ctx, op, dbo.MustGetDB(ctx), outcomeIDs)
-	if err != nil {
-		return err
-	}
-
-	outcomeMap := make(map[string]*entity.Outcome)
-	for _, item := range outcomes {
-		outcomeMap[item.ID] = item
-	}
-
 	waitAddUserOutcomes := make([]*v2.AssessmentUserOutcome, 0)
-	assessmentUserIDs := make([]string, 0, len(assessmentUsers))
-	for _, userItem := range assessmentUsers {
-		if userItem.UserType != v2.AssessmentUserTypeStudent {
-			continue
+	assessmentUserIDs := make([]string, 0)
+
+	if len(outcomeIDs) > 0 {
+		assessmentUserMap, err := ags.GetAssessmentUserMap()
+		if err != nil {
+			return err
+		}
+		assessmentUsers, ok := assessmentUserMap[assessment.ID]
+		if !ok {
+			log.Error(ctx, "can not found assessment users", log.String("assessmentID", assessment.ID), log.Any("assessmentUserMap", assessmentUserMap))
+			return constant.ErrRecordNotFound
 		}
 
-		assessmentUserIDs = append(assessmentUserIDs, userItem.ID)
+		latestOutcomeMap, _, err := GetOutcomeModel().GetLatestOutcomes(ctx, op, dbo.MustGetDB(ctx), outcomeIDs)
+		if err != nil {
+			return err
+		}
 
-		for _, contentItem := range contentsFromSchedule {
-			if assessmentContent, ok := assessmentContentMap[contentItem.ID]; ok {
-				for _, outcomeID := range contentItem.OutcomeIDs {
-					if outcomeItem, ok := outcomeMap[outcomeID]; ok {
-						userOutcomeItem := &v2.AssessmentUserOutcome{
-							ID:                  utils.NewID(),
-							AssessmentUserID:    userItem.ID,
-							AssessmentContentID: assessmentContent.ID,
-							OutcomeID:           outcomeID,
-							Status:              v2.AssessmentUserOutcomeStatusUnknown,
-							CreateAt:            now,
-							UpdateAt:            0,
-							DeleteAt:            0,
-						}
-						if outcomeItem.Assumed {
-							userOutcomeItem.Status = v2.AssessmentUserOutcomeStatusAchieved
-						}
+		log.Debug(ctx, "latestOutcomeMap data",
+			log.Any("latestOutcomeMap", latestOutcomeMap),
+			log.Strings("old outcomeIDs", outcomeIDs),
+			log.Any("contentsFromSchedule", contentsFromSchedule))
 
-						waitAddUserOutcomes = append(waitAddUserOutcomes, userOutcomeItem)
+		for _, userItem := range assessmentUsers {
+			if userItem.UserType != v2.AssessmentUserTypeStudent {
+				continue
+			}
+
+			assessmentUserIDs = append(assessmentUserIDs, userItem.ID)
+
+			for _, assContentItem := range waitAddContents {
+				contentItem, ok := contentMapFromSchedule[assContentItem.ContentID]
+				if !ok {
+					log.Warn(ctx, "not found content in contentMapFromSchedule", log.Any("contentMapFromSchedule", contentMapFromSchedule), log.String("assContentItem.ContentID", assContentItem.ContentID))
+					continue
+				}
+
+				for _, oldOutcomeID := range contentItem.OutcomeIDs {
+					latestOutcomeItem, ok := latestOutcomeMap[oldOutcomeID]
+					if !ok {
+						log.Warn(ctx, "not found outcome in latestOutcomeMap", log.Any("latestOutcomeMap", latestOutcomeMap), log.String("oldOutcomeID", oldOutcomeID))
+						continue
 					}
+
+					userOutcomeItem := &v2.AssessmentUserOutcome{
+						ID:                  utils.NewID(),
+						AssessmentUserID:    userItem.ID,
+						AssessmentContentID: assContentItem.ID,
+						OutcomeID:           latestOutcomeItem.ID,
+						Status:              v2.AssessmentUserOutcomeStatusUnknown,
+						CreateAt:            now,
+						UpdateAt:            0,
+						DeleteAt:            0,
+					}
+					if latestOutcomeItem.Assumed {
+						userOutcomeItem.Status = v2.AssessmentUserOutcomeStatusAchieved
+					}
+
+					waitAddUserOutcomes = append(waitAddUserOutcomes, userOutcomeItem)
 				}
 			}
 		}
 	}
 
+	// The reason for deleting first and then adding is to consider the migration of old and new data
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		err := assessmentV2.GetAssessmentContentDA().DeleteByAssessmentIDsTx(ctx, tx, []string{assessment.ID})
-		if err != nil {
-			return err
-		}
-
-		err = assessmentV2.GetAssessmentUserOutcomeDA().DeleteByAssessmentUserIDsTx(ctx, tx, assessmentUserIDs)
 		if err != nil {
 			return err
 		}
@@ -272,6 +283,10 @@ func (a *assessmentInternalModel) LockAssessmentContentAndOutcome(ctx context.Co
 		}
 
 		if len(waitAddUserOutcomes) > 0 {
+			err = assessmentV2.GetAssessmentUserOutcomeDA().DeleteByAssessmentUserIDsTx(ctx, tx, assessmentUserIDs)
+			if err != nil {
+				return err
+			}
 			_, err = assessmentV2.GetAssessmentUserOutcomeDA().InsertTx(ctx, tx, waitAddUserOutcomes)
 			if err != nil {
 				return err

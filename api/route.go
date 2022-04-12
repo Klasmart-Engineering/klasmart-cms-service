@@ -66,6 +66,7 @@ func (s Server) registeRoute() {
 		content.GET("/contents_resources", s.mustLogin, s.getUploadPath)
 		content.GET("/contents_resources/:resource_id", s.mustLoginWithoutOrgID, s.getContentResourcePath)
 		content.GET("/contents_resources/:resource_id/download", s.mustLoginWithoutOrgID, s.getDownloadPath)
+		content.GET("/contents_resources/:resource_id/check", s.mustLoginWithoutOrgID, s.checkExist)
 		content.GET("/contents/:content_id/live/token", s.mustLogin, s.getContentLiveToken)
 		content.POST("/contents_lesson_plans", s.mustLogin, s.getLessonPlansCanSchedule)
 	}
@@ -123,7 +124,7 @@ func (s Server) registeRoute() {
 
 	reports := s.engine.Group("/v1")
 	{
-		reports.GET("/reports/students_achievement_overview", s.mustLogin, s.listStudentsAchievementOverviewReport)
+		reports.GET("/reports/students_achievement_overview", s.mustLogin, s.getLearningOutcomeOverView)
 		reports.GET("/reports/students", s.mustLogin, s.listStudentsAchievementReport)
 		reports.GET("/reports/students/:id", s.mustLogin, s.getStudentAchievementReport)
 		reports.GET("/reports/teachers/:id", s.mustLogin, s.getTeacherReport)
@@ -327,6 +328,7 @@ func (s Server) registeRoute() {
 		internal.GET("/schedules/:id/relation_ids", s.mustLoginWithoutOrgID, s.queryScheduleRelationIDsInternal)
 		// TODO no authorization
 		internal.POST("/schedules/update_review_status", s.updateScheduleReviewStatus)
+		internal.GET("/schedule_counts", s.getScheduleAttendance)
 	}
 }
 

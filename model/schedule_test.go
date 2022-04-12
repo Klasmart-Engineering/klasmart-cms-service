@@ -232,3 +232,15 @@ func TestGetSuccessScheduleReview(t *testing.T) {
 		t.Log(v)
 	}
 }
+
+func TestGetScheduleAttendance(t *testing.T) {
+	ctx := context.TODO()
+
+	result, err := GetScheduleModel().GetScheduleAttendance(ctx, 1649174400, 1650470399)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range result {
+		t.Log(v)
+	}
+}

@@ -2,8 +2,9 @@ package external
 
 import (
 	"context"
-	"math/rand"
 
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
@@ -21,76 +22,63 @@ type ScheduleReviewService struct{}
 
 func (s ScheduleReviewService) CreateScheduleReview(ctx context.Context, operator *entity.Operator, createScheduleReviewRequest CreateScheduleReviewRequest) error {
 
-	// response := &CreateScheduleReviewResponse{}
+	response := &CreateScheduleReviewResponse{}
 
-	// statusCode, err := GetDataServiceClient().Run(ctx, constant.DataServiceCreateScheduleReviewUrlPath, &createScheduleReviewRequest, response)
-	// if err != nil {
-	// 	log.Error(ctx, "CreateScheduleReview error",
-	// 		log.Err(err),
-	// 		log.Any("operator", operator),
-	// 		log.Any("createScheduleReviewRequest", createScheduleReviewRequest))
-	// 	return err
-	// }
+	statusCode, err := GetDataServiceClient().Run(ctx, constant.DataServiceCreateScheduleReviewUrlPath, &createScheduleReviewRequest, response)
+	if err != nil {
+		log.Error(ctx, "CreateScheduleReview error",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("createScheduleReviewRequest", createScheduleReviewRequest))
+		return err
+	}
 
-	// log.Debug(ctx, "CreateScheduleReview success",
-	// 	log.Int("statusCode", statusCode),
-	// 	log.Any("createScheduleReviewRequest", createScheduleReviewRequest),
-	// 	log.Any("response", response))
+	log.Debug(ctx, "CreateScheduleReview success",
+		log.Int("statusCode", statusCode),
+		log.Any("createScheduleReviewRequest", createScheduleReviewRequest),
+		log.Any("response", response))
 
-	// return nil
 	return nil
 }
 
 func (s ScheduleReviewService) CheckScheduleReview(ctx context.Context, operator *entity.Operator, checkScheduleReviewRequest CheckScheduleReviewRequest) (*CheckScheduleReviewResponse, error) {
 
-	// response := &CheckScheduleReviewResponse{}
-
-	// statusCode, err := GetDataServiceClient().Run(ctx, constant.DataServiceCheckScheduleReviewUrlPath, &checkScheduleReviewRequest, response)
-	// if err != nil {
-	// 	log.Error(ctx, "CheckScheduleReview error",
-	// 		log.Err(err),
-	// 		log.Any("operator", operator),
-	// 		log.Any("checkScheduleReviewRequest", checkScheduleReviewRequest))
-	// 	return nil, err
-	// }
-
-	// log.Debug(ctx, "CheckScheduleReview success",
-	// 	log.Int("statusCode", statusCode),
-	// 	log.Any("checkScheduleReviewRequest", checkScheduleReviewRequest),
-	// 	log.Any("response", response))
-
-	// return response, nil
 	response := &CheckScheduleReviewResponse{}
-	response.Results = make(map[string]bool)
-	for _, v := range checkScheduleReviewRequest.StudentIDs {
-		response.Results[v] = rand.Intn(2) == 1
+
+	statusCode, err := GetDataServiceClient().Run(ctx, constant.DataServiceCheckScheduleReviewUrlPath, &checkScheduleReviewRequest, response)
+	if err != nil {
+		log.Error(ctx, "CheckScheduleReview error",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("checkScheduleReviewRequest", checkScheduleReviewRequest))
+		return nil, err
 	}
+
+	log.Debug(ctx, "CheckScheduleReview success",
+		log.Int("statusCode", statusCode),
+		log.Any("checkScheduleReviewRequest", checkScheduleReviewRequest),
+		log.Any("response", response))
 
 	return response, nil
 }
 
 func (s ScheduleReviewService) DeleteScheduleReview(ctx context.Context, operator *entity.Operator, deleteScheduleReviewRequest DeleteScheduleReviewRequest) (*DeleteScheduleReviewResponse, error) {
 
-	// response := &DeleteScheduleReviewResponse{}
+	response := &DeleteScheduleReviewResponse{}
 
-	// statusCode, err := GetDataServiceClient().Run(ctx, constant.DataServiceDeleteScheduleReviewUrlPath, &deleteScheduleReviewRequest, response)
-	// if err != nil {
-	// 	log.Error(ctx, "DeleteScheduleReview error",
-	// 		log.Err(err),
-	// 		log.Any("operator", operator),
-	// 		log.Any("deleteScheduleReviewRequest", deleteScheduleReviewRequest))
-	// 	return nil, err
-	// }
-
-	// log.Debug(ctx, "DeleteScheduleReview success",
-	// 	log.Int("statusCode", statusCode),
-	// 	log.Any("deleteScheduleReviewRequest", deleteScheduleReviewRequest),
-	// 	log.Any("response", response))
-
-	// return response, nil
-	response := &DeleteScheduleReviewResponse{
-		Succeeded: deleteScheduleReviewRequest.ScheduleIDs,
+	statusCode, err := GetDataServiceClient().Run(ctx, constant.DataServiceDeleteScheduleReviewUrlPath, &deleteScheduleReviewRequest, response)
+	if err != nil {
+		log.Error(ctx, "DeleteScheduleReview error",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("deleteScheduleReviewRequest", deleteScheduleReviewRequest))
+		return nil, err
 	}
+
+	log.Debug(ctx, "DeleteScheduleReview success",
+		log.Int("statusCode", statusCode),
+		log.Any("deleteScheduleReviewRequest", deleteScheduleReviewRequest),
+		log.Any("response", response))
 
 	return response, nil
 }

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/go-redis/redis/v8"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -90,9 +91,9 @@ func (r *ScheduleRedisDA) Set(ctx context.Context, orgID string, condition *Sche
 	field := r.getScheduleConditionField(condition)
 	redisClient := ro.MustGetRedis(ctx)
 	pipe := redisClient.TxPipeline()
-	exist := pipe.Exists(key)
-	pipe.HSet(key, field, string(b))
-	_, err = pipe.Exec()
+	exist := pipe.Exists(ctx, key)
+	pipe.HSet(ctx, key, field, string(b))
+	_, err = pipe.Exec(ctx)
 	if err != nil {
 		log.Error(ctx, "failed to exec redis pipeline",
 			log.Err(err),
@@ -110,7 +111,7 @@ func (r *ScheduleRedisDA) Set(ctx context.Context, orgID string, condition *Sche
 
 	// key not exist
 	if exist.Val() == int64(0) {
-		err = redisClient.Expire(key, r.expiration).Err()
+		err = redisClient.Expire(ctx, key, r.expiration).Err()
 		if err != nil {
 			log.Error(ctx, "failed to set timeout",
 				log.Err(err),
@@ -130,7 +131,7 @@ func (r *ScheduleRedisDA) GetScheduleListView(ctx context.Context, orgID string,
 		DataType:  ScheduleListView,
 	}
 	data, err := r.get(ctx, orgID, cacheCondition)
-	if err == ro.ErrKeyNotExist {
+	if err == redis.Nil {
 		log.Info(ctx, "redis cache missed", log.Any("condition", cacheCondition))
 		return nil, err
 	} else if err != nil {
@@ -160,7 +161,7 @@ func (r *ScheduleRedisDA) GetScheduledDates(ctx context.Context, orgID string, c
 		DataType:  ScheduledDates,
 	}
 	data, err := r.get(ctx, orgID, cacheCondition)
-	if err == ro.ErrKeyNotExist {
+	if err == redis.Nil {
 		log.Info(ctx, "redis cache missed", log.Any("condition", cacheCondition))
 		return nil, err
 	} else if err != nil {
@@ -190,7 +191,7 @@ func (r *ScheduleRedisDA) GetScheduleBasic(ctx context.Context, orgID string, sc
 		DataType:   ScheduleBasic,
 	}
 	data, err := r.get(ctx, orgID, cacheCondition)
-	if err == ro.ErrKeyNotExist {
+	if err == redis.Nil {
 		log.Info(ctx, "redis cache missed", log.Any("condition", cacheCondition))
 		return nil, err
 	} else if err != nil {
@@ -221,7 +222,7 @@ func (r *ScheduleRedisDA) GetScheduleDetailView(ctx context.Context, orgID strin
 		DataType:   ScheduleDetailView,
 	}
 	data, err := r.get(ctx, orgID, cacheCondition)
-	if err == ro.ErrKeyNotExist {
+	if err == redis.Nil {
 		log.Info(ctx, "redis cache missed", log.Any("condition", cacheCondition))
 		return nil, err
 	} else if err != nil {
@@ -252,7 +253,7 @@ func (r *ScheduleRedisDA) GetScheduleFilterUndefinedClass(ctx context.Context, o
 		DataType:      ScheduleFilterUndefinedClass,
 	}
 	data, err := r.get(ctx, orgID, cacheCondition)
-	if err == ro.ErrKeyNotExist {
+	if err == redis.Nil {
 		log.Info(ctx, "redis cache missed", log.Any("condition", cacheCondition))
 		return false, err
 	} else if err != nil {
@@ -283,7 +284,7 @@ func (r *ScheduleRedisDA) Clean(ctx context.Context, orgID string) error {
 	}
 
 	key := r.getScheduleConditionKey(orgID)
-	err := ro.MustGetRedis(ctx).Del(key).Err()
+	err := ro.MustGetRedis(ctx).Del(ctx, key).Err()
 	if err != nil {
 		log.Error(ctx, "redis del keys error",
 			log.Err(err),
@@ -318,5 +319,5 @@ func (r *ScheduleRedisDA) get(ctx context.Context, orgID string, condition *Sche
 		log.String("key", key),
 		log.String("field", field))
 
-	return ro.MustGetRedis(ctx).HGet(key, field).Result()
+	return ro.MustGetRedis(ctx).HGet(ctx, key, field).Result()
 }

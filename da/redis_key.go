@@ -1,11 +1,11 @@
 package da
 
 const (
-	RedisKeyPrefixContentCondition = "content:condition"
-	RedisKeyPrefixContentId        = "content:id"
-	RedisKeyPrefixContentLock      = "content:lock"
-	RedisKeyPrefixContentReview    = "content:review"
-	RedisKeyPrefixContentAuth      = "content:auth"
+	RedisKeyPrefixContentId          = "content:id"
+	RedisKeyPrefixContentLock        = "content:lock"
+	RedisKeyPrefixContentReview      = "content:review"
+	RedisKeyPrefixContentAuth        = "content:auth"
+	RedisKeyPrefixContentFolderQuery = "content:folder:query"
 
 	RedisKeyPrefixScheduleID        = "schedule:id"
 	RedisKeyPrefixScheduleCondition = "schedule:condition"
@@ -32,6 +32,9 @@ const (
 
 	RedisKeyPrefixUser     = "user"
 	RedisKeyPrefixUserMute = "user:lock"
+
+	RedisKeyPrefixReportLearnerReportOverview   = "report:learner:overview"
+	RedisKeyPrefixReportLearningOutcomeOverview = "report:learning:outcome:overview"
 )
 
 const (

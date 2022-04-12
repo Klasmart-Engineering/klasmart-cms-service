@@ -26,7 +26,7 @@ func (m *reportModel) GetLearnerReportOverview(ctx context.Context, op *entity.O
 	if err != nil {
 		return
 	}
-	ucCond := entity.GetUserCountCondition{
+	ucCond := &entity.GetUserCountCondition{
 		OrgID: entity.NullString{
 			String: op.OrgID,
 			Valid:  true,

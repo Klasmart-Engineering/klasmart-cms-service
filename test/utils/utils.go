@@ -7,7 +7,6 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -47,22 +46,6 @@ func InitConfig(ctx context.Context) {
 
 	log.Debug(ctx, "load config success",
 		log.Any("config", config.Get()))
-}
-
-func InitDB(ctx context.Context) {
-	dboHandler, err := dbo.NewWithConfig(func(c *dbo.Config) {
-		dbConf := config.Get().DBConfig
-		c.ShowLog = dbConf.ShowLog
-		c.ShowSQL = dbConf.ShowSQL
-		c.MaxIdleConns = dbConf.MaxIdleConns
-		c.MaxOpenConns = dbConf.MaxOpenConns
-		c.ConnectionString = dbConf.ConnectionString
-	})
-	if err != nil {
-		log.Panic(ctx, "initDB failed",
-			log.Err(err))
-	}
-	dbo.ReplaceGlobal(dboHandler)
 }
 
 func loadDBEnvConfig(ctx context.Context) {
@@ -113,12 +96,12 @@ func assertGetEnv(key string) string {
 
 func loadAMSConfig() {
 	cfg := config.Get()
-	cfg.AMS.EndPoint = "https://api.alpha.kidsloop.net/user/" //os.Getenv("ams_endpoint")
+	cfg.AMS.EndPoint = os.Getenv("ams_endpoint")
 }
 
 func loadAssessmentServiceConfig() {
 	cfg := config.Get()
-	cfg.H5P.EndPoint = "https://api.alpha.kidsloop.net/assessment/graphql/" //os.Getenv("h5p_endpoint")
+	cfg.H5P.EndPoint = os.Getenv("h5p_endpoint")
 }
 
 func loadDataServiceConfig() {

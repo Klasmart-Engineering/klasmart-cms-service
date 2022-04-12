@@ -117,6 +117,7 @@ type IContentModel interface {
 	CountUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, error)
 	SearchUserPrivateFolderContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error)
 	SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error)
+	SearchUserFolderContentSlim(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error)
 	SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
@@ -161,6 +162,8 @@ type IContentModel interface {
 	GetContentByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentInfoInternal, error)
 	GetContentsSubContentsMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*entity.ContentInfoInternal, error)
 	GetLatestContentIDMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) (map[string]string, error)
+
+	CleanCache(ctx context.Context)
 }
 
 func (cm *ContentModel) GetSpecifiedLessonPlan(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, planID string, materialIDs []string, withAP bool) (*entity.ContentInfoWithDetails, error) {
@@ -505,6 +508,8 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 		return ErrUpdateContentFailed
 	}
 
+	log.Debug(ctx, "update source content successfully", log.Any("content", sourceContent))
+
 	//更新所有latestID为sourceContent的Content
 	//Update all sourceContent latestID fields
 	oldContents, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
@@ -525,6 +530,8 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 			log.Error(ctx, "update old content failed", log.Err(err), log.String("OldID", oldContents[i].ID))
 			return ErrUpdateContentFailed
 		}
+
+		log.Debug(ctx, "update old content successfully", log.Any("content", oldContents[i]))
 
 		oldContentIDs[i] = oldContents[i].ID
 	}
@@ -1010,6 +1017,8 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	da.GetContentRedis().CleanContentCache(ctx, []string{cid, content.SourceID})
+	cm.CleanCache(ctx)
+
 	return nil
 }
 
@@ -1155,7 +1164,9 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 			updateIDs = append(updateIDs, contents[i].SourceID)
 		}
 	}
+
 	da.GetContentRedis().CleanContentCache(ctx, updateIDs)
+	cm.CleanCache(ctx)
 	return err
 }
 
@@ -1197,6 +1208,8 @@ func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, c
 	}
 
 	da.GetContentRedis().CleanContentCache(ctx, []string{cid, content.SourceID})
+	cm.CleanCache(ctx)
+
 	return nil
 }
 
@@ -1335,6 +1348,8 @@ func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DB
 	}
 
 	da.GetContentRedis().CleanContentCache(ctx, []string{content.ID, content.SourceID})
+	cm.CleanCache(ctx)
+
 	return nil
 }
 func (cm *ContentModel) DeleteContentBulkTx(ctx context.Context, ids []string, user *entity.Operator) error {
@@ -1399,7 +1414,10 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 			log.String("uid", user.UserID))
 		return err
 	}
+
 	da.GetContentRedis().CleanContentCache(ctx, deletedIDs)
+	cm.CleanCache(ctx)
+
 	return nil
 }
 
@@ -1588,6 +1606,8 @@ func (cm *ContentModel) DeleteContent(ctx context.Context, tx *dbo.DBContext, ci
 	}
 
 	da.GetContentRedis().CleanContentCache(ctx, []string{cid, content.SourceID})
+	cm.CleanCache(ctx)
+
 	return nil
 }
 
@@ -1664,7 +1684,10 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 			log.Strings("VisibilitySettings", contentVisibilitySettings.VisibilitySettings))
 		return "", ErrInvalidContentData
 	}
+
 	da.GetContentRedis().CleanContentCache(ctx, []string{id, obj.ID})
+	cm.CleanCache(ctx)
+
 	return id, nil
 }
 
@@ -2363,6 +2386,43 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 		ContentList:       res,
 		StudentContentMap: studentContentMap,
 	}, nil
+}
+
+func (cm *ContentModel) SearchUserFolderContentSlim(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error) {
+	searchUserIDs := cm.getRelatedUserID(ctx, condition.Name, user)
+	err := cm.filterRootPath(ctx, condition, entity.OwnerTypeOrganization, user)
+	if err != nil {
+		log.Warn(ctx, "filterRootPath failed", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
+		return 0, nil, err
+	}
+	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, searchUserIDs, user)
+	if err != nil {
+		log.Warn(ctx, "buildUserContentCondition failed", log.Err(err), log.Any("condition", condition), log.Any("searchUserIDs", searchUserIDs), log.String("uid", user.UserID))
+		return 0, nil, err
+	}
+
+	foldPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, user, []external.PermissionName{
+		external.CreateFolder289,
+		external.ShowAllFolder295,
+	})
+	if err != nil {
+		log.Error(ctx, "hasFolderPermission failed",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.Any("user", user))
+		return 0, nil, err
+	}
+	folderCondition := cm.buildFolderConditionWithPermission(ctx, user, condition, searchUserIDs, foldPermission)
+
+	log.Info(ctx, "search folder content", log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
+	count, objs, err := da.GetContentDA().SearchFolderContentUnsafe(ctx, tx, combineCondition, folderCondition)
+	if err != nil {
+		log.Error(ctx, "can't read folder content", log.Err(err), log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
+		return 0, nil, ErrReadContentFailed
+	}
+	ret := cm.convertFolderContent(ctx, objs, user)
+	cm.fillFolderContentPermissionSlim(ctx, user, ret, foldPermission)
+	return count, ret, nil
 }
 
 func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error) {
@@ -3344,6 +3404,41 @@ func (cm *ContentModel) getContentProperties(ctx context.Context, cid string) (*
 	}, nil
 }
 
+func (cm *ContentModel) buildFolderConditionWithPermission(ctx context.Context, user *entity.Operator, condition *entity.ContentConditionRequest, searchUserIDs []string, perm map[external.PermissionName]bool) *da.FolderCondition {
+	dirPath := condition.DirPath
+	isAssets := false
+	disableFolder := true
+	for i := range condition.ContentType {
+		if entity.NewContentType(condition.ContentType[i]).IsAsset() {
+			isAssets = true
+			continue
+		}
+		if entity.NewContentType(condition.ContentType[i]) == entity.AliasContentTypeFolder {
+			disableFolder = false
+		}
+	}
+	partition := entity.FolderPartitionMaterialAndPlans
+	if isAssets {
+		partition = entity.FolderPartitionAssets
+	}
+
+	folderCondition := &da.FolderCondition{
+		OwnerType:    int(entity.OwnerTypeOrganization),
+		ItemType:     int(entity.FolderItemTypeFolder),
+		Owner:        user.OrgID,
+		NameLike:     condition.Name,
+		Name:         condition.ContentName,
+		ExactDirPath: dirPath,
+		//Editors:      searchUserIDs,
+		Partition: partition,
+		Disable:   disableFolder,
+	}
+	if len(condition.PublishStatus) == 1 && condition.PublishStatus[0] == entity.ContentStatusPublished {
+		folderCondition.ShowEmptyFolder = entity.NullBool{Bool: perm[external.ShowAllFolder295], Valid: true}
+	}
+	return folderCondition
+}
+
 func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition *entity.ContentConditionRequest, searchUserIDs []string, user *entity.Operator) *da.FolderCondition {
 	dirPath := condition.DirPath
 	isAssets := false
@@ -3380,6 +3475,81 @@ func (cm *ContentModel) hasFolderPermission(ctx context.Context, user *entity.Op
 	return external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, user, external.CreateFolder289)
 }
 
+func (cm *ContentModel) fillFolderContentPermissionSlim(ctx context.Context, user *entity.Operator, objs []*entity.FolderContentData, perm map[external.PermissionName]bool) {
+	var contentList []*entity.ContentInfo
+	for i := range objs {
+		//init permission
+		objs[i].Permission = entity.ContentPermission{
+			ID:             objs[i].ID,
+			AllowEdit:      perm[external.CreateFolder289],
+			AllowDelete:    perm[external.CreateFolder289],
+			AllowApprove:   false,
+			AllowReject:    false,
+			AllowRepublish: false,
+		}
+		objs[i].ContentTypeName = objs[i].ContentType.Name()
+
+		if objs[i].ContentType != entity.AliasContentTypeFolder {
+			//contentIDs = append(contentIDs, objs[i].ID)
+			contentInfo := &entity.ContentInfo{
+				ID:            objs[i].ID,
+				ContentType:   objs[i].ContentType,
+				Name:          objs[i].ContentName,
+				Keywords:      objs[i].Keywords,
+				Description:   objs[i].Description,
+				Thumbnail:     objs[i].Thumbnail,
+				Data:          objs[i].Data,
+				Author:        objs[i].Author,
+				PublishStatus: entity.ContentPublishStatus(objs[i].PublishStatus),
+				CreatedAt:     int64(objs[i].CreateAt),
+				UpdatedAt:     int64(objs[i].UpdateAt),
+			}
+			contentList = append(contentList, contentInfo)
+			//when it comes to content, set permission as false, pending to check content permission
+			objs[i].Permission.AllowEdit = false
+			objs[i].Permission.AllowDelete = false
+		}
+	}
+
+	log.Debug(ctx, "hasFolderPermission result after init permissions",
+		log.Any("contentList", contentList),
+		log.Any("objs", objs))
+
+	//build content profiles
+	contentProfiles, err := cm.buildContentProfiles(ctx, contentList, user)
+	if err != nil {
+		log.Error(ctx, "buildContentProfiles failed",
+			log.Err(err),
+			log.Any("user", user),
+			log.Any("contentList", contentList))
+		return
+	}
+	log.Debug(ctx, "contentProfiles result",
+		log.Any("contentList", contentList),
+		log.Any("contentProfiles", contentProfiles))
+
+	//get permission map
+	permissionMap, err := GetContentPermissionChecker().BatchGetContentPermission(ctx, user, contentProfiles)
+	if err != nil {
+		log.Error(ctx, "BatchGetContentPermissions failed",
+			log.Err(err),
+			log.Any("user", user),
+			log.Any("contentProfiles", contentProfiles),
+			log.Any("contentList", contentList))
+		return
+	}
+	log.Debug(ctx, "BatchGetContentPermissions result",
+		log.Any("permissionMap", permissionMap))
+	//if permission is in the map, replace the permission of content
+	for i := range objs {
+		p, exists := permissionMap[objs[i].ID]
+		if exists {
+			objs[i].Permission = p
+		}
+	}
+	log.Debug(ctx, "fillFolderContentPermission result",
+		log.Any("objs", objs))
+}
 func (cm *ContentModel) fillFolderContentPermission(ctx context.Context, objs []*entity.FolderContentData, user *entity.Operator) {
 	hasFolderPermission, err := cm.hasFolderPermission(ctx, user)
 	if err != nil {
@@ -3876,6 +4046,10 @@ func (cm *ContentModel) GetLatestContentIDMapByIDListInternal(ctx context.Contex
 	}
 
 	return resp, nil
+}
+
+func (cm *ContentModel) CleanCache(ctx context.Context) {
+	da.GetContentDA().CleanCache(ctx)
 }
 
 var (

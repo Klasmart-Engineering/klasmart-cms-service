@@ -70,7 +70,7 @@ func (r *OutcomeRedis) SaveOutcomeCacheList(ctx context.Context, outcomes []*ent
 				log.Error(ctx, "Can't parse outcome into json", log.Err(err), log.String("cid", outcomes[i].ID))
 				continue
 			}
-			err = ro.MustGetRedis(ctx).SetNX(key, string(outcomeJSON), r.expiration).Err()
+			err = ro.MustGetRedis(ctx).SetNX(ctx, key, string(outcomeJSON), r.expiration).Err()
 			if err != nil {
 				log.Error(ctx, "Can't save outcome into cache", log.Err(err), log.String("key", key), log.String("data", string(outcomeJSON)))
 				continue
@@ -109,7 +109,7 @@ func (r *OutcomeRedis) SaveOutcomeCacheListBySearchCondition(ctx context.Context
 	log.Info(ctx, "save outcome into cache", log.String("cache", string(outcomeListJSON)), log.String("key", key), log.Any("condition", condition))
 	//err = ro.MustGetRedis(ctx).HSetNX(RedisKeyPrefixOutcomeCondition, r.conditionHash(condition), string(outcomeListJSON)).Err()
 	//ro.MustGetRedis(ctx).Expire(RedisKeyPrefixOutcomeCondition, r.expiration)
-	err = ro.MustGetRedis(ctx).SetNX(key, string(outcomeListJSON), r.expiration).Err()
+	err = ro.MustGetRedis(ctx).SetNX(ctx, key, string(outcomeListJSON), r.expiration).Err()
 	if err != nil {
 		log.Error(ctx, "Can't save outcome list into cache", log.Err(err), log.String("key", key), log.String("data", string(outcomeListJSON)))
 	}
@@ -124,7 +124,7 @@ func (r *OutcomeRedis) GetOutcomeCacheByIDList(ctx context.Context, IDs []string
 	for i := range IDs {
 		keys[i] = r.outcomeKey(IDs[i])
 	}
-	res, err := ro.MustGetRedis(ctx).MGet(keys...).Result()
+	res, err := ro.MustGetRedis(ctx).MGet(ctx, keys...).Result()
 	if err != nil {
 		log.Info(ctx, "Can't get outcome list from cache", log.Err(err), log.Strings("keys", keys), log.Strings("ids", IDs))
 		return IDs, nil
@@ -175,7 +175,7 @@ func (r *OutcomeRedis) GetOutcomeCacheBySearchCondition(ctx context.Context, op 
 
 	key := r.outcomeConditionKey(op.OrgID, condition)
 
-	res, err := ro.MustGetRedis(ctx).Get(key).Result()
+	res, err := ro.MustGetRedis(ctx).Get(ctx, key).Result()
 	//res, err := ro.MustGetRedis(ctx).HGet(RedisKeyPrefixOutcomeCondition, r.conditionHash(condition)).Result()
 
 	if err != nil {
@@ -188,7 +188,7 @@ func (r *OutcomeRedis) GetOutcomeCacheBySearchCondition(ctx context.Context, op 
 	err = json.Unmarshal([]byte(res), outcomeLists)
 	if err != nil {
 		log.Error(ctx, "Can't unmarshal outcome condition from cache", log.Err(err), log.String("key", key), log.String("json", res))
-		err = ro.MustGetRedis(ctx).Del(key).Err()
+		err = ro.MustGetRedis(ctx).Del(ctx, key).Err()
 		if err != nil {
 			log.Error(ctx, "Can't delete outcome from cache", log.Err(err), log.String("key", key), log.String("json", res))
 		}
@@ -218,7 +218,7 @@ func (r *OutcomeRedis) CleanOutcomeCache(ctx context.Context, op *entity.Operato
 	//keys = append(keys, conditionKeys...)
 	keys = append(keys, r.outcomeOrgConditionKey(op.OrgID))
 	// go func() {
-	err := ro.MustGetRedis(ctx).Del(keys...).Err()
+	err := ro.MustGetRedis(ctx).Del(ctx, keys...).Err()
 	if err != nil {
 		log.Error(ctx, "Can't clean outcome from cache", log.Err(err), log.Strings("keys", keys))
 	}
@@ -241,7 +241,7 @@ func (r *OutcomeRedis) CleanOutcomeConditionCache(ctx context.Context, op *entit
 		keys = append(keys, key)
 	} else {
 		var err error
-		keys, err = ro.MustGetRedis(ctx).Keys(r.outcomeOrgConditionKey(op.OrgID)).Result()
+		keys, err = ro.MustGetRedis(ctx).Keys(ctx, r.outcomeOrgConditionKey(op.OrgID)).Result()
 		if err != nil {
 			log.Error(ctx, "CleanOutcomeConditionCache: keys failed", log.Err(err), log.Strings("keys", keys))
 			return
@@ -253,7 +253,7 @@ func (r *OutcomeRedis) CleanOutcomeConditionCache(ctx context.Context, op *entit
 		return
 	}
 
-	err := ro.MustGetRedis(ctx).Del(keys...).Err()
+	err := ro.MustGetRedis(ctx).Del(ctx, keys...).Err()
 	if err != nil {
 		log.Error(ctx, "CleanOutcomeConditionCache: del failed", log.Err(err), log.Strings("keys", keys))
 	}

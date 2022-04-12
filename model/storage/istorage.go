@@ -28,6 +28,7 @@ const (
 	ThumbnailStoragePartition          StoragePartition = "thumbnail"
 	TeacherManualStoragePartition      StoragePartition = "teacher_manual"
 	ScheduleAttachmentStoragePartition StoragePartition = "schedule_attachment"
+	DrawingFeedbackStoragePartition    StoragePartition = "drawing_feedback"
 )
 
 type StoragePartition string
@@ -41,6 +42,9 @@ func (s StoragePartition) SizeLimit() int64 {
 		// 20 MB
 		return 1024 * 1024 * 20
 	case ScheduleAttachmentStoragePartition:
+		// 1 GB
+		return 1024 * 1024 * 1024
+	case DrawingFeedbackStoragePartition:
 		// 1 GB
 		return 1024 * 1024 * 1024
 	}
@@ -73,6 +77,8 @@ func NewStoragePartition(ctx context.Context, partition, extension string) (Stor
 		return ThumbnailStoragePartition, nil
 	case string(ScheduleAttachmentStoragePartition):
 		return ScheduleAttachmentStoragePartition, nil
+	case string(DrawingFeedbackStoragePartition):
+		return DrawingFeedbackStoragePartition, nil
 	case string(TeacherManualStoragePartition):
 		ret := utils.CheckInStringArray(extension, constant.TeacherManualExtension)
 		if !ret {

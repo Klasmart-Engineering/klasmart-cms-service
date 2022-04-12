@@ -2,16 +2,18 @@ package model
 
 import (
 	"context"
+	"strings"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"strings"
-	"sync"
 )
 
 type IResourceUploaderModel interface {
 	GetResourceUploadPath(ctx context.Context, partition string, extension string) (string, string, error)
 	GetResourcePath(ctx context.Context, resourceId string) (string, error)
+	CheckResourceExist(ctx context.Context, resourceId string) (bool, error)
 }
 
 type ResourceUploaderModel struct {
@@ -50,6 +52,40 @@ func (r *ResourceUploaderModel) GetResourcePath(ctx context.Context, resourceId 
 		return "", err
 	}
 	return storage.DefaultStorage().GetFileTempPath(ctx, pat, parts[1])
+}
+
+func (r *ResourceUploaderModel) CheckResourceExist(ctx context.Context, resourceId string) (bool, error) {
+	var exist bool
+	parts := strings.Split(resourceId, "-")
+	if len(parts) != 2 {
+		log.Error(ctx, "invalid resource id", log.String("resourceId", resourceId))
+		return exist, ErrInvalidResourceID
+	}
+	extensionPairs := strings.Split(parts[1], ".")
+	if len(extensionPairs) != 2 {
+		log.Error(ctx, "invalid extension", log.String("resourceId", resourceId))
+		return exist, ErrInvalidResourceID
+	}
+
+	pat, err := storage.NewStoragePartition(ctx, parts[0], extensionPairs[1])
+	if err != nil {
+		log.Error(ctx, "invalid partition",
+			log.Err(err),
+			log.String("resourceId", resourceId),
+			log.Strings("parts", parts))
+		return exist, err
+	}
+
+	_, exist = storage.DefaultStorage().ExistFile(ctx, pat, parts[1])
+	if err != nil {
+		log.Error(ctx, "invalid partition",
+			log.Err(err),
+			log.String("resourceId", resourceId),
+			log.Strings("parts", parts))
+		return exist, err
+	}
+
+	return exist, nil
 }
 
 var (

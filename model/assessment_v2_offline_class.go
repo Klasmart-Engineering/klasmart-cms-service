@@ -53,9 +53,7 @@ func (o *OfflineClassAssessment) MatchSubject() (map[string][]*entity.IDName, er
 }
 
 func (o *OfflineClassAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
-	onlineClass := NewOnlineClassAssessmentPage(o.ags)
-
-	return onlineClass.MatchTeacher()
+	return o.base.MatchTeacher()
 }
 
 func (o *OfflineClassAssessment) MatchClass() (map[string]*entity.IDName, error) {
@@ -157,10 +155,6 @@ func (o *OfflineClassAssessment) MatchStudents(contents []*v2.AssessmentContentR
 			continue
 		}
 
-		if item.StatusBySystem == v2.AssessmentUserStatusNotParticipate {
-			continue
-		}
-
 		studentInfo, ok := userMap[item.UserID]
 		if !ok {
 			log.Warn(ctx, "not found user info from user service", log.Any("item", item), log.Any("userMap", userMap))
@@ -196,7 +190,7 @@ func (o *OfflineClassAssessment) MatchStudents(contents []*v2.AssessmentContentR
 				userOutcomeReplyItem := &v2.AssessmentStudentResultOutcomeReply{
 					OutcomeID: outcomeID,
 				}
-				if userOutcome != nil {
+				if userOutcome != nil && userOutcome.Status != "" {
 					userOutcomeReplyItem.Status = userOutcome.Status
 				} else {
 					if outcomeInfo, ok := outcomeMapFromContent[outcomeID]; ok && outcomeInfo.Assumed {

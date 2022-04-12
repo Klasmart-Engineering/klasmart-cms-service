@@ -20,7 +20,7 @@ func GetServices() []Service {
 	_serviceOnce.Do(func() {
 		_services = []Service{
 			&ContentService{},
-			&OutcomeService{},
+			// &OutcomeService{},
 			&Schedule{},
 		}
 	})

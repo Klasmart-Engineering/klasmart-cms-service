@@ -744,7 +744,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 	if author == constant.Self {
 		total, results, err = model.GetContentModel().SearchUserPrivateFolderContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	} else {
-		total, results, err = model.GetContentModel().SearchUserFolderContent(ctx, dbo.MustGetDB(ctx), &condition, op)
+		total, results, err = model.GetContentModel().SearchUserFolderContentSlim(ctx, dbo.MustGetDB(ctx), &condition, op)
 	}
 	switch err {
 	case nil:

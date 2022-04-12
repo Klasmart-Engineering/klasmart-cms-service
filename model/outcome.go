@@ -1360,11 +1360,19 @@ func (ocm OutcomeModel) GetLatestOutcomes(ctx context.Context, operator *entity.
 		return nil, nil, err
 	}
 
+	for _, outcome := range outcomes {
+		for _, latestOutcome := range latestOutcomes {
+			if outcome.LatestID == latestOutcome.ID {
+				result[outcome.ID] = latestOutcome
+				break
+			}
+		}
+	}
+
 	for _, latestOutcome := range latestOutcomes {
 		for _, outcome := range outcomes {
 			if outcome.LatestID == latestOutcome.ID {
 				sortedOutcomeID = append(sortedOutcomeID, outcome.ID)
-				result[outcome.ID] = latestOutcome
 				break
 			}
 		}

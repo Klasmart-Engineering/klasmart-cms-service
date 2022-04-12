@@ -3,18 +3,15 @@ package da
 import (
 	"context"
 
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 )
-
-type ILearnOutcome interface {
-	GetCompleteLearnOutcomeCount(ctx context.Context, tx *dbo.DBContext, from, to int64, teacherIDs []string) (cnt int, err error)
-	GetStudentAchievedOutcome(ctx context.Context, tx *dbo.DBContext, from, to int64, teacherIDs []string) (studentOutcomeAchievedCounts []*entity.StudentOutcomeAchievedCount, err error)
-	GetLessonPlanFilter(ctx context.Context, op *entity.Operator, classID string) (items []*entity.ScheduleShortInfo, err error)
-}
 
 func (r *ReportDA) GetLessonPlanFilter(ctx context.Context, op *entity.Operator, classID string) (items []*entity.ScheduleShortInfo, err error) {
 	items = []*entity.ScheduleShortInfo{}
@@ -49,9 +46,72 @@ and EXISTS (
 	}
 	return
 }
-func (r *ReportDA) GetStudentAchievedOutcome(ctx context.Context, tx *dbo.DBContext, from, to int64, teacherIDs []string) (studentOutcomeAchievedCounts []*entity.StudentOutcomeAchievedCount, err error) {
+
+type LearningOutcomeOverviewQueryCondition struct {
+	From       int64    `json:"to"`
+	To         int64    `json:"from"`
+	TeacherIDs []string `json:"teacher_ids"`
+}
+
+type LearningOutcomeOverviewResult struct {
+	Covered  int                                   `json:"covered"`
+	Achieved []*entity.StudentOutcomeAchievedCount `json:"achieved"`
+}
+
+func (r *ReportDA) GetLearnerOutcomeOverview(ctx context.Context, condition *LearningOutcomeOverviewQueryCondition) (int, []*entity.StudentOutcomeAchievedCount, error) {
+	if !config.Get().RedisConfig.OpenCache {
+		tx := dbo.MustGetDB(ctx)
+		covered, err := r.getCompleteLearnOutcomeCount(ctx, tx, condition)
+		if err != nil {
+			return 0, nil, err
+		}
+
+		achieved, err := r.getStudentAchievedOutcome(ctx, tx, condition)
+		if err != nil {
+			return 0, nil, err
+		}
+
+		return covered, achieved, nil
+	}
+
+	result := &LearningOutcomeOverviewResult{}
+	err := r.learningOutcomeOverviewCache.Get(ctx, condition, result)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return result.Covered, result.Achieved, nil
+}
+
+type ILearningOutcomeReport interface {
+	GetLessonPlanFilter(ctx context.Context, op *entity.Operator, classID string) (items []*entity.ScheduleShortInfo, err error)
+	GetLearnerOutcomeOverview(ctx context.Context, condition *LearningOutcomeOverviewQueryCondition) (int, []*entity.StudentOutcomeAchievedCount, error)
+}
+
+func (r *ReportDA) getLearningOutcomeOverview(ctx context.Context, condition interface{}) (interface{}, error) {
+	qc, ok := condition.(*LearningOutcomeOverviewQueryCondition)
+	if !ok {
+		log.Error(ctx, "invalid request", log.Any("condition", condition))
+		return nil, constant.ErrInvalidArgs
+	}
+
+	tx := dbo.MustGetDB(ctx)
+	covered, err := r.getCompleteLearnOutcomeCount(ctx, tx, qc)
+	if err != nil {
+		return nil, err
+	}
+
+	achieved, err := r.getStudentAchievedOutcome(ctx, tx, qc)
+	if err != nil {
+		return nil, err
+	}
+
+	return &LearningOutcomeOverviewResult{Covered: covered, Achieved: achieved}, nil
+}
+
+func (r *ReportDA) getStudentAchievedOutcome(ctx context.Context, tx *dbo.DBContext, condition *LearningOutcomeOverviewQueryCondition) (studentOutcomeAchievedCounts []*entity.StudentOutcomeAchievedCount, err error) {
 	studentOutcomeAchievedCounts = []*entity.StudentOutcomeAchievedCount{}
-	if len(teacherIDs) == 0 {
+	if len(condition.TeacherIDs) == 0 {
 		return
 	}
 
@@ -77,10 +137,10 @@ group by ass.student_id
 `
 	args := []interface{}{
 		v2.AssessmentUserTypeStudent,
-		from,
-		to,
+		condition.From,
+		condition.To,
 		entity.ScheduleRelationTypeClassRosterTeacher,
-		teacherIDs,
+		condition.TeacherIDs,
 	}
 	err = r.QueryRawSQL(ctx, &studentOutcomeAchievedCounts, sql, args...)
 	if err != nil {
@@ -88,8 +148,8 @@ group by ass.student_id
 	}
 	return
 }
-func (r *ReportDA) GetCompleteLearnOutcomeCount(ctx context.Context, tx *dbo.DBContext, from, to int64, teacherIDs []string) (cnt int, err error) {
-	if len(teacherIDs) == 0 {
+func (r *ReportDA) getCompleteLearnOutcomeCount(ctx context.Context, tx *dbo.DBContext, condition *LearningOutcomeOverviewQueryCondition) (cnt int, err error) {
+	if len(condition.TeacherIDs) == 0 {
 		return
 	}
 	sql := `
@@ -108,11 +168,11 @@ and sr.relation_id in(?)
 
 `
 	args := []interface{}{
-		from,
-		to,
-		from,
-		to,
-		teacherIDs,
+		condition.From,
+		condition.To,
+		condition.From,
+		condition.To,
+		condition.TeacherIDs,
 	}
 	res := struct {
 		Cnt int `json:"cnt" gorm:"column:cnt" `

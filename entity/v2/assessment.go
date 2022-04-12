@@ -45,9 +45,10 @@ type AssessmentItemForHomePage struct {
 
 type AssessmentQueryReply struct {
 	// all type
-	ID     string           `json:"id"`
-	Title  string           `json:"title"`
-	Status AssessmentStatus `json:"status"`
+	ID             string           `json:"id"`
+	Title          string           `json:"title"`
+	AssessmentType AssessmentType   `json:"assessment_type"`
+	Status         AssessmentStatus `json:"status"`
 
 	// onlineClass,offlineClass,OnlineStudy
 	LessonPlan *entity.IDName `json:"lesson_plan"`
@@ -116,6 +117,7 @@ type ScheduleEndClassCallBackResp struct {
 type AssessmentDetailReply struct {
 	ID                string           `json:"id"`
 	Title             string           `json:"title"`
+	AssessmentType    AssessmentType   `json:"assessment_type"`
 	Status            AssessmentStatus `json:"status"`
 	RoomID            string           `json:"room_id"`
 	Class             *entity.IDName   `json:"class"`
@@ -130,10 +132,11 @@ type AssessmentDetailReply struct {
 	ScheduleDueAt     int64            `json:"schedule_due_at"`
 	CompleteRate      float64          `json:"complete_rate"`
 	IsAnyOneAttempted bool             `json:"is_anyone_attempted"`
+	Description       string           `json:"description"`
 
-	Outcomes []*AssessmentOutcomeReply `json:"outcomes,omitempty"`
-	Contents []*AssessmentContentReply `json:"contents,omitempty"`
-	Students []*AssessmentStudentReply `json:"students,omitempty"`
+	Outcomes []*AssessmentOutcomeReply `json:"outcomes"`
+	Contents []*AssessmentContentReply `json:"contents"`
+	Students []*AssessmentStudentReply `json:"students"`
 
 	DiffContentStudents []*AssessmentDiffContentStudentsReply `json:"diff_content_students,omitempty"`
 }
@@ -143,7 +146,7 @@ type AssessmentDiffContentStudentsReply struct {
 	StudentName     string                           `json:"student_name"`
 	Status          AssessmentUserStatus             `json:"status" enums:"Participate,NotParticipate"`
 	ReviewerComment string                           `json:"reviewer_comment"`
-	Results         []*DiffContentStudentResultReply `json:"results"`
+	Results         []*DiffContentStudentResultReply `json:"results,omitempty"`
 }
 
 type DiffContentStudentResultReply struct {
@@ -173,6 +176,7 @@ type AssessmentStudentReply struct {
 	Status          AssessmentUserStatus            `json:"status" enums:"Participate,NotParticipate"`
 	ReviewerComment string                          `json:"reviewer_comment"`
 	Results         []*AssessmentStudentResultReply `json:"results"`
+	//OfflineStudyResult *StudentOfflineStudyResult      `json:"offline_study_result,omitempty"`
 }
 
 type AssessmentStudentResultReply struct {
@@ -181,6 +185,20 @@ type AssessmentStudentResultReply struct {
 	Attempted bool                                   `json:"attempted"`
 	ContentID string                                 `json:"content_id"`
 	Outcomes  []*AssessmentStudentResultOutcomeReply `json:"outcomes"`
+
+	StudentFeedbacks []*StudentResultFeedBacksReply `json:"student_feed_backs"`
+	AssessScore      AssessmentUserAssess           `json:"assess_score" enums:"1,2,3,4,5"`
+}
+
+type StudentResultFeedBacksReply struct {
+	ID         string `json:"id"`
+	ScheduleID string `json:"schedule_id"`
+	UserID     string `json:"user_id"`
+	Comment    string `json:"comment"`
+
+	CreateAt    int64                            `json:"create_at"`
+	Assignments []*entity.FeedbackAssignmentView `json:"assignments"`
+	//IsAllowSubmit bool                             `json:"is_allow_submit"`
 }
 
 type AssessmentStudentResultOutcomeReply struct {
@@ -203,8 +221,7 @@ type AssessmentContentReply struct {
 	MaxScore             float64                 `json:"max_score"`
 	H5PSubID             string                  `json:"h5p_sub_id"`
 	RoomProvideContentID string                  `json:"-"`
-
-	//LatestID string `json:"latest_id"`
+	IgnoreCalculateScore bool                    `json:"-"`
 }
 
 type AssessmentOutcomeReply struct {
@@ -215,7 +232,6 @@ type AssessmentOutcomeReply struct {
 	AssignedToLessPlan bool                          `json:"-"`
 	AssignedToMaterial bool                          `json:"-"`
 	ScoreThreshold     float32                       `json:"score_threshold"`
-	//StudentIDs  []string                      `json:"student_ids"`
 }
 
 type AssessmentUpdateReq struct {
@@ -232,11 +248,21 @@ type AssessmentStudentUpdateReq struct {
 	Results         []*AssessmentStudentResultReq `json:"results"`
 }
 
+type FeedbackAssignmentsReq struct {
+	ID                 string `json:"id"`
+	ReviewAttachmentID string `json:"review_attachment_id"`
+}
+
 type AssessmentStudentResultReq struct {
-	ParentID  string                               `json:"parent_id"`
-	ContentID string                               `json:"content_id"`
-	Outcomes  []*AssessmentStudentResultOutcomeReq `json:"outcomes"`
-	Score     float64                              `json:"score"`
+	ParentID  string  `json:"parent_id"`
+	ContentID string  `json:"content_id"`
+	Score     float64 `json:"score"`
+
+	Outcomes []*AssessmentStudentResultOutcomeReq `json:"outcomes"`
+
+	AssessFeedbackID string                    `json:"assess_feedback_id"`
+	AssessScore      AssessmentUserAssess      `json:"assess_score" enums:"1,2,3,4,5"`
+	Assignments      []*FeedbackAssignmentsReq `json:"assignments"`
 }
 
 type AssessmentStudentResultOutcomeReq struct {

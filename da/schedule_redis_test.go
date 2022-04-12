@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/go-playground/assert/v2"
+	"github.com/go-redis/redis/v8"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/ro"
 )
 
 func TestSet(t *testing.T) {
@@ -77,7 +77,7 @@ func TestGetScheduleListViewNotExist(t *testing.T) {
 			Valid:  true,
 		},
 	})
-	assert.Equal(t, err, ro.ErrKeyNotExist)
+	assert.Equal(t, err, redis.Nil)
 	assert.Equal(t, result, nil)
 }
 
@@ -243,6 +243,6 @@ func TestClean(t *testing.T) {
 		},
 	})
 
-	assert.Equal(t, err, ro.ErrKeyNotExist)
+	assert.Equal(t, err, redis.Nil)
 	assert.Equal(t, result, nil)
 }
