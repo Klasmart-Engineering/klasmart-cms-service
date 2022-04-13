@@ -225,7 +225,7 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 				CreateAt:            item.CreateAt,
 				UpdateAt:            item.UpdateAt,
 				CompleteAt:          item.CompleteAt,
-				TeacherComments:     nil,
+				TeacherComments:     make([]*v2.StudentAssessmentTeacher,0),
 				Schedule:            nil,
 				FeedbackAttachments: nil,
 			}
@@ -874,6 +874,21 @@ type updateReviewStudyAssessmentInput struct {
 }
 
 func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op *entity.Operator, input updateReviewStudyAssessmentInput) error {
+	match := GetAssessmentDetailMatch(input.waitUpdatedAssessment.AssessmentType, input.ag)
+	remainingTimeMap, err := match.MatchRemainingTime()
+	if err != nil {
+		return err
+	}
+	remainingTime, ok := remainingTimeMap[input.waitUpdatedAssessment.ID]
+	if !ok {
+		log.Warn(ctx, "not found assessment remaining time", log.Any("waitUpdateAssessment", input.waitUpdatedAssessment))
+		return constant.ErrInvalidArgs
+	}
+	if remainingTime > 0 {
+		log.Warn(ctx, "assessment remaining time is greater than 0", log.Int64("remainingTime", remainingTime), log.Any("waitUpdateAssessment", input.waitUpdatedAssessment))
+		return constant.ErrInvalidArgs
+	}
+
 	// user comment,score
 	newScores := make([]*external.H5PSetScoreRequest, 0)
 	newComments := make([]*external.H5PAddRoomCommentRequest, 0)
@@ -931,7 +946,7 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 	}
 
 	// update student comment
-	err := a.updateStudentCommentAndScore(ctx, op, &updateStudentCommentAndScoreInput{
+	err = a.updateStudentCommentAndScore(ctx, op, &updateStudentCommentAndScoreInput{
 		assessmentType: v2.AssessmentTypeReviewStudy,
 		scheduleID:     input.waitUpdatedAssessment.ScheduleID,
 		newScores:      newScores,
