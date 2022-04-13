@@ -164,6 +164,14 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 				Strings: []string{condition.StudentID},
 				Valid:   true,
 			},
+			CompleteAtGe: sql.NullInt64{
+				Int64: condition.CompleteStartAt,
+				Valid: condition.CompleteStartAt > 0,
+			},
+			CompleteAtLe: sql.NullInt64{
+				Int64: condition.CompleteEndAt,
+				Valid: condition.CompleteEndAt > 0,
+			},
 			Pager: dbo.Pager{
 				Page:     condition.Page,
 				PageSize: condition.PageSize,
@@ -210,13 +218,6 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 		result := make([]*v2.StudentAssessment, 0, len(userResults))
 		for _, item := range userResults {
 			status := item.Status.Compliant(ctx)
-			// TODO: refactor
-			if condition.Status != "" && status != condition.Status {
-				continue
-			}
-			if item.StudentFeedbackID==""{
-				continue
-			}
 			resultItem := &v2.StudentAssessment{
 				ID:                  item.ID,
 				Title:               item.Title,
@@ -229,7 +230,7 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 				Schedule:            nil,
 				FeedbackAttachments: nil,
 			}
-			if item.ReviewerID != "" && item.ReviewerComment != "" {
+			if item.ReviewerID != ""{
 				teacherComment := &v2.StudentAssessmentTeacher{
 					Teacher: &v2.StudentAssessmentTeacherInfo{
 						ID:         item.ReviewerID,
@@ -270,6 +271,7 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 					resultItem.FeedbackAttachments = append(resultItem.FeedbackAttachments, v2.StudentAssessmentAttachment{
 						ID:   attachment.AttachmentID,
 						Name: attachment.AttachmentName,
+						ReviewAttachmentID: attachment.ReviewAttachmentID,
 					})
 				}
 			}

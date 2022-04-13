@@ -26,9 +26,11 @@ type AssessmentUserResultDA struct {
 }
 
 type AssessmentUserResultDBViewCondition struct {
-	OrgID       sql.NullString
-	ScheduleIDs entity.NullStrings
-	UserIDs     entity.NullStrings
+	OrgID        sql.NullString
+	ScheduleIDs  entity.NullStrings
+	UserIDs      entity.NullStrings
+	CompleteAtGe sql.NullInt64
+	CompleteAtLe sql.NullInt64
 
 	OrderBy AssessmentUserResultOrderBy
 	Pager   dbo.Pager
@@ -68,6 +70,16 @@ where
 		wheres = append(wheres, "t3.schedule_id in (?)")
 		params = append(params, condition.ScheduleIDs.Strings)
 	}
+
+	if condition.CompleteAtGe.Valid{
+		wheres = append(wheres, "t1.complete_at >= ?")
+		params = append(params, condition.CompleteAtGe.Int64)
+	}
+	if condition.CompleteAtLe.Valid{
+		wheres = append(wheres, "t1.complete_at <= ?")
+		params = append(params, condition.CompleteAtLe.Int64)
+	}
+
 
 	commonSql += strings.Join(wheres, " and ")
 

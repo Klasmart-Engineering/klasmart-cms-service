@@ -424,6 +424,7 @@ type StudentAssessmentSchedule struct {
 type StudentAssessmentAttachment struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+	ReviewAttachmentID string `json:"review_attachment_id"`
 }
 
 type SearchStudentAssessmentsResponse struct {
