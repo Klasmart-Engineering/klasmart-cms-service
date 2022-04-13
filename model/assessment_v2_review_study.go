@@ -53,6 +53,12 @@ func (o *ReviewStudyAssessment) MatchCompleteRate() (map[string]float64, error) 
 	return NewOnlineStudyAssessmentPage(o.ags).MatchCompleteRate()
 }
 
+func (o *ReviewStudyAssessment) MatchRemainingTime() (map[string]int64, error) {
+	onlineStudy := NewOnlineStudyAssessmentPage(o.ags)
+
+	return onlineStudy.MatchRemainingTime()
+}
+
 func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiffContentStudentsReply, error) {
 	ctx := o.ags.ctx
 	//op := adc.op
