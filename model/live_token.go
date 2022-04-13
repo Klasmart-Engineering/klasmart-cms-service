@@ -112,6 +112,16 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 	if schedule.ClassType == entity.ScheduleClassTypeTask || (schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun) {
 		liveTokenInfo.Materials = make([]*entity.LiveMaterial, 0)
 	} else if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsReview {
+		now := time.Now().Unix()
+		if now > schedule.DueAt {
+			log.Warn(ctx, "Due date has expired",
+				log.Any("op", op),
+				log.Any("schedule", schedule),
+				log.Int64("time.Now", now),
+			)
+			return "", ErrGoLiveNotAllow
+		}
+
 		// review schedule live token
 		scheduleReview, err := da.GetScheduleReviewDA().GetScheduleReviewByScheduleIDAndStudentID(ctx, dbo.MustGetDB(ctx), scheduleID, op.UserID)
 		if err != nil {
