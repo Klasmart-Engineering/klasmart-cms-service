@@ -229,7 +229,7 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 				Schedule:            nil,
 				FeedbackAttachments: nil,
 			}
-			if item.ReviewerID !="" {
+			if item.ReviewerID !="" && item.ReviewerComment != "" {
 				teacherComment := &v2.StudentAssessmentTeacher{
 					Teacher: &v2.StudentAssessmentTeacherInfo{
 						ID:         item.ReviewerID,
