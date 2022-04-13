@@ -210,7 +210,8 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 		result := make([]*v2.StudentAssessment, 0, len(userResults))
 		for _, item := range userResults {
 			status := item.Status.Compliant(ctx)
-			if status != condition.Status {
+			// TODO: refactor
+			if condition.Status != "" && status != condition.Status {
 				continue
 			}
 			resultItem := &v2.StudentAssessment{
