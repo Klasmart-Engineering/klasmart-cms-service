@@ -2336,6 +2336,17 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 	if condition.ContentType == 0 {
 		contentTypes = []int{entity.ContentTypeMaterial, entity.ContentTypePlan}
 	}
+
+	// Avoid pulling the full table
+	if len(condition.IDs) == 0 &&
+		condition.OrgID == "" &&
+		len(contentTypes) == 0 &&
+		condition.CreateAtLe == 0 &&
+		condition.CreateAtGe == 0 {
+		log.Error(ctx, "invalid search condition", log.Any("condition", condition))
+		return nil, constant.ErrInvalidArgs
+	}
+
 	cdt := &da.ContentCondition{
 		IDS: entity.NullStrings{
 			Valid:   condition.IDs != nil,
@@ -2348,6 +2359,7 @@ func (cm *ContentModel) SearchSimplifyContentInternal(ctx context.Context, tx *d
 		CreateAtGe:     condition.CreateAtGe,
 		IncludeDeleted: true,
 	}
+
 	total, data, err := da.GetContentDA().SearchContent(ctx, tx, cdt)
 	if err != nil {
 		log.Error(ctx, "search content internal failed",

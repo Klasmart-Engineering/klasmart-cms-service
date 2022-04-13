@@ -913,6 +913,8 @@ func (s *Server) queryContentInternal(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		s.defaultErrorHandler(c, err)
 	}
