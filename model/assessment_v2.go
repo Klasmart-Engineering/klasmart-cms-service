@@ -214,6 +214,9 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 			if condition.Status != "" && status != condition.Status {
 				continue
 			}
+			if item.StudentFeedbackID==""{
+				continue
+			}
 			resultItem := &v2.StudentAssessment{
 				ID:                  item.ID,
 				Title:               item.Title,
@@ -226,22 +229,24 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 				Schedule:            nil,
 				FeedbackAttachments: nil,
 			}
-			teacherComment := &v2.StudentAssessmentTeacher{
-				Teacher: &v2.StudentAssessmentTeacherInfo{
-					ID:         item.ReviewerID,
-					GivenName:  "",
-					FamilyName: "",
-					Avatar:     "",
-				},
-				Comment: item.ReviewerComment,
-			}
+			if item.ReviewerID != "" && item.ReviewerComment != "" {
+				teacherComment := &v2.StudentAssessmentTeacher{
+					Teacher: &v2.StudentAssessmentTeacherInfo{
+						ID:         item.ReviewerID,
+						GivenName:  "",
+						FamilyName: "",
+						Avatar:     "",
+					},
+					Comment: item.ReviewerComment,
+				}
 
-			if teacherInfo, ok := teacherMap[item.ReviewerID]; ok {
-				teacherComment.Teacher.GivenName = teacherInfo.GivenName
-				teacherComment.Teacher.FamilyName = teacherInfo.FamilyName
-				teacherComment.Teacher.Avatar = teacherInfo.Avatar
+				if teacherInfo, ok := teacherMap[item.ReviewerID]; ok {
+					teacherComment.Teacher.GivenName = teacherInfo.GivenName
+					teacherComment.Teacher.FamilyName = teacherInfo.FamilyName
+					teacherComment.Teacher.Avatar = teacherInfo.Avatar
+				}
+				resultItem.TeacherComments = append(resultItem.TeacherComments, teacherComment)
 			}
-			resultItem.TeacherComments = append(resultItem.TeacherComments, teacherComment)
 
 			if scheduleInfo, ok := scheduleMap[item.ScheduleID]; ok {
 				scheduleAttachment := new(v2.StudentAssessmentAttachment)
