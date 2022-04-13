@@ -537,8 +537,8 @@ func LoadAMSConfig(ctx context.Context) {
 	}
 	config.AMS.AuthorizedKey = os.Getenv("user_service_api_key")
 	useDeprecatedQuery, _ := strconv.ParseBool(os.Getenv("use_deprecated_query"))
-	if useDeprecatedQuery {
-		config.AMS.UseDeprecatedQuery = true
+	if !useDeprecatedQuery {
+		config.AMS.UseDeprecatedQuery = false
 	}
 }
 
