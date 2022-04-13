@@ -536,10 +536,8 @@ func LoadAMSConfig(ctx context.Context) {
 		config.AMS.TokenVerifyKey = key
 	}
 	config.AMS.AuthorizedKey = os.Getenv("user_service_api_key")
-	useDeprecatedQuery, _ := strconv.ParseBool(os.Getenv("use_deprecated_query"))
-	if !useDeprecatedQuery {
-		config.AMS.UseDeprecatedQuery = false
-	}
+	useDeprecatedQuery, err := strconv.ParseBool(os.Getenv("use_deprecated_query"))
+	config.AMS.UseDeprecatedQuery = err != nil || useDeprecatedQuery
 }
 
 func LoadH5PServiceConfig(ctx context.Context) {
