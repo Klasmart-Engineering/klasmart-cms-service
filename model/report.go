@@ -110,8 +110,12 @@ func (m *reportModel) GetLearnerUsageOverview(ctx context.Context, op *entity.Op
 
 // region assessment
 
-func (m *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsAchievementReportRequest) (*entity.StudentsAchievementReportResponse, error) {
+func (m *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsAchievementReportRequest) (res *entity.StudentsAchievementReportResponse, err error) {
 	{
+		res = &entity.StudentsAchievementReportResponse{
+			Items:         []*entity.StudentAchievementReportItem{},
+			AssessmentIDs: []string{},
+		}
 		if !req.Status.Valid() {
 			log.Error(ctx, "list students report: invalid status", log.Any("req", req))
 			return nil, constant.ErrInvalidArgs
@@ -159,108 +163,48 @@ func (m *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 		return nil, err
 	}
 
-	assessmentIDs, err := m.getCompletedAssessmentIDs(ctx, tx, operator, req.ClassID, req.LessonPlanID)
+	items, err := da.GetReportDA().GetStudentOutcomeCount(ctx, operator, req)
 	if err != nil {
-		log.Error(ctx, "list student report: get assessment ids failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("req", req),
-		)
-		return nil, err
+		return
 	}
-
-	assessmentAttendances, err := m.getAssessmentCheckedStudents(ctx, tx, assessmentIDs)
-	if err != nil {
-		log.Error(ctx, "list student report: get checked assessment attendance failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("req", req),
-			log.Strings("assessment_ids", assessmentIDs),
-		)
-		return nil, err
-	}
-
-	var assessmentOutcomes []*entity.AssessmentOutcome
-	if err := da.GetAssessmentOutcomeDA().QueryTx(ctx, tx, &da.QueryAssessmentOutcomeConditions{
-		AssessmentIDs: entity.NullStrings{
-			Strings: assessmentIDs,
-			Valid:   true,
-		},
-		Checked: entity.NullBool{
-			Bool:  true,
-			Valid: true,
-		},
-	}, &assessmentOutcomes); err != nil {
-		log.Error(ctx, "ListStudentsReport: da.GetAssessmentOutcomeDA().QueryTx: get assessment outcomes failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("req", req),
-			log.Strings("assessment_ids", assessmentIDs),
-		)
-		return nil, err
-	}
-
-	outcomeAttendances, err := m.getOutcomeAttendancesIncludePartially(ctx, tx, assessmentIDs)
-	if err != nil {
-		log.Error(ctx, "list student report: call getOutcomeAttendances failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("req", req),
-			log.Strings("assessment_ids", assessmentIDs),
-		)
-		return nil, err
-	}
-
-	tr, err := m.makeLatestOutcomeIDsTranslator(ctx, tx, operator, m.getOutcomeIDs(assessmentOutcomes))
-	if err != nil {
-		log.Error(ctx, "list student report: make latest outcome ids translator failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("req", req),
-			log.Any("assessment_outcomes", assessmentOutcomes),
-		)
-		return nil, err
-	}
-
-	attendanceIDExistsMap := m.getAttendanceIDsExistMap(assessmentAttendances)
-	attendanceID2OutcomeIDsMap := m.getAttendanceID2OutcomeIDsMap(assessmentAttendances, assessmentOutcomes)
-	achievedAttendanceID2OutcomeIDsMap := m.getAchievedAttendanceID2OutcomeIDsMap(outcomeAttendances)
-	skipAttendanceID2OutcomeIDsMap := m.getSkipAttendanceID2OutcomeIDsMap(assessmentAttendances, assessmentOutcomes)
-	notAchievedAttendanceID2OutcomeIDsMap := m.getNotAchievedAttendanceID2OutcomeIDsMap(attendanceID2OutcomeIDsMap, achievedAttendanceID2OutcomeIDsMap, skipAttendanceID2OutcomeIDsMap)
-	log.Debug(ctx, "ListStudentsReport: print all map",
-		log.Any("attendance_id_exists_map", attendanceIDExistsMap),
-		log.Any("attendance_id_2_outcome_ids_map", attendanceID2OutcomeIDsMap),
-		log.Any("achieved_attendance_id_2_outcome_ids_map", achievedAttendanceID2OutcomeIDsMap),
-		log.Any("skip_attendance_id_2_outcome_ids_map", skipAttendanceID2OutcomeIDsMap),
-		log.Any("not_achieved_attendance_id_2_outcome_ids_map", notAchievedAttendanceID2OutcomeIDsMap),
-	)
-
-	var result = entity.StudentsAchievementReportResponse{AssessmentIDs: assessmentIDs}
-	for _, student := range students {
-		newItem := entity.StudentAchievementReportItem{StudentID: student.ID, StudentName: student.Name}
-		if !attendanceIDExistsMap[student.ID] {
-			newItem.Attend = false
-			result.Items = append(result.Items, &newItem)
-			continue
+	mRes := map[string]*entity.StudentAchievementReportItem{}
+	for _, item := range items {
+		if _, ok := mRes[item.StudentID]; !ok {
+			mRes[item.StudentID] = &entity.StudentAchievementReportItem{}
 		}
-		newItem.Attend = true
-		newItem.AchievedCount = len(tr(achievedAttendanceID2OutcomeIDsMap[student.ID]))
-		newItem.NotAttemptedCount = len(tr(skipAttendanceID2OutcomeIDsMap[student.ID]))
-		newItem.NotAchievedCount = len(tr(notAchievedAttendanceID2OutcomeIDsMap[student.ID]))
-		result.Items = append(result.Items, &newItem)
+
+		switch {
+		case item.CountOfNotAchieved == item.CountOfAll:
+			mRes[item.StudentID].NotAchievedCount++
+		case item.CountOfNotCovered == item.CountOfAll:
+			mRes[item.StudentID].NotAttemptedCount++
+		default:
+			mRes[item.StudentID].AchievedCount++
+		}
+	}
+	for _, student := range students {
+		item := &entity.StudentAchievementReportItem{
+			StudentID:         student.ID,
+			StudentName:       student.Name,
+			Attend:            false,
+			AchievedCount:     0,
+			NotAchievedCount:  0,
+			NotAttemptedCount: 0,
+		}
+		if _, ok := mRes[student.ID]; ok {
+			item.NotAchievedCount = mRes[student.ID].NotAchievedCount
+			item.AchievedCount = mRes[student.ID].AchievedCount
+			item.NotAttemptedCount = mRes[student.ID].NotAttemptedCount
+			if item.AchievedCount+item.NotAchievedCount > 0 {
+				item.Attend = true
+			}
+			res.Items = append(res.Items, mRes[student.ID])
+		}
+
+		res.Items = append(res.Items, item)
 	}
 
-	sortInterface := entity.NewSortingStudentReportItems(result.Items, req.Status)
-	switch req.SortBy {
-	case entity.ReportSortByDesc:
-		sort.Sort(sort.Reverse(sortInterface))
-	case entity.ReportSortByAsc:
-		fallthrough
-	default:
-		sort.Sort(sortInterface)
-	}
-
-	return &result, nil
+	return
 }
 
 func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.GetStudentAchievementReportRequest) (*entity.StudentAchievementReportResponse, error) {
