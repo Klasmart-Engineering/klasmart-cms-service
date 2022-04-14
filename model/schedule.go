@@ -89,7 +89,7 @@ type IScheduleModel interface {
 	CheckScheduleReviewData(ctx context.Context, op *entity.Operator, request *entity.CheckScheduleReviewDataRequest) (*entity.CheckScheduleReviewDataResponse, error)
 	UpdateScheduleReviewStatus(ctx context.Context, request *entity.UpdateScheduleReviewStatusRequest) error
 	GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleReview, error)
-	GetScheduleAttendance(ctx context.Context, timeframeFrom, timeframeTo int) ([]*entity.ScheduleAttendance, error)
+	GetScheduleAttendance(ctx context.Context, timeframeFrom, timeframeTo int, scheduleTypes []string) ([]*entity.ScheduleAttendance, error)
 }
 
 type scheduleModel struct {
@@ -3222,7 +3222,7 @@ func (s *scheduleModel) GetSuccessScheduleReview(ctx context.Context, op *entity
 	return scheduleReviews, nil
 }
 
-func (s *scheduleModel) GetScheduleAttendance(ctx context.Context, timeframeFrom, timeframeTo int) ([]*entity.ScheduleAttendance, error) {
+func (s *scheduleModel) GetScheduleAttendance(ctx context.Context, timeframeFrom, timeframeTo int, scheduleTypes []string) ([]*entity.ScheduleAttendance, error) {
 	daCondition := da.ScheduleCondition{
 		StartAtOrEndAtOrDueAtGe: sql.NullInt64{
 			Int64: int64(timeframeFrom),
@@ -3232,7 +3232,42 @@ func (s *scheduleModel) GetScheduleAttendance(ctx context.Context, timeframeFrom
 			Int64: int64(timeframeTo),
 			Valid: true,
 		},
+		ClassTypes: entity.NullStrings{
+			Strings: []string{},
+			Valid:   true,
+		},
 	}
+
+	if utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeClass)) {
+		daCondition.ClassTypes.Strings = append(daCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeOfflineClass))
+	}
+	if utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeLive)) {
+		daCondition.ClassTypes.Strings = append(daCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeOnlineClass))
+	}
+	if utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeTask)) {
+		daCondition.ClassTypes.Strings = append(daCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeTask))
+	}
+	if utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeHomefunStudy)) &&
+		!utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeStudy)) {
+		daCondition.ClassTypes.Strings = append(daCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeHomework))
+		daCondition.IsHomefun = sql.NullBool{
+			Bool:  true,
+			Valid: true,
+		}
+	}
+	if utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeStudy)) &&
+		!utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeHomefunStudy)) {
+		daCondition.ClassTypes.Strings = append(daCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeHomework))
+		daCondition.IsHomefun = sql.NullBool{
+			Bool:  false,
+			Valid: true,
+		}
+	}
+	if utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeStudy)) &&
+		utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeHomefunStudy)) {
+		daCondition.ClassTypes.Strings = append(daCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeHomework))
+	}
+
 	var schedules []*entity.Schedule
 	err := s.scheduleDA.Query(ctx, daCondition, &schedules)
 	if err != nil {

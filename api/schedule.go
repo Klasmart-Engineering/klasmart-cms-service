@@ -1561,6 +1561,7 @@ func (s *Server) updateScheduleReviewStatus(c *gin.Context) {
 // @Summary getScheduleAttendance
 // @ID getScheduleAttendance
 // @Description get schedule attendance
+// @Param schedule_types query string true "search schedule by schedule type, separated by commas" enums(live,class,study,home_fun_study,task)
 // @Param timeframe_from query integer true "search schedule by start_at, the time interval should not exceed 2 hours"
 // @Param timeframe_to query integer true "search schedule by end_at, the time interval should not exceed 2 hours"
 // @Produce json
@@ -1593,6 +1594,24 @@ func (s *Server) getScheduleAttendance(c *gin.Context) {
 		}
 	}
 
+	scheduleTypesStr := c.Query("schedule_types")
+	scheduleTypes := strings.Split(strings.TrimSpace(scheduleTypesStr), constant.StringArraySeparator)
+	for _, v := range scheduleTypes {
+		if !entity.ScheduleType(v).Valid() {
+			log.Error(ctx, "invalid schedule_type",
+				log.String("scheduleType", v))
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			return
+		}
+	}
+
+	if len(scheduleTypes) == 0 {
+		log.Error(ctx, "schedule_types is required",
+			log.String("scheduleTypesStr", scheduleTypesStr))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
 	timeframeFromStr := c.Query("timeframe_from")
 	timeframeToStr := c.Query("timeframe_to")
 	timeframeFrom, err := strconv.ParseInt(timeframeFromStr, 10, 64)
@@ -1619,7 +1638,7 @@ func (s *Server) getScheduleAttendance(c *gin.Context) {
 		return
 	}
 
-	result, err := model.GetScheduleModel().GetScheduleAttendance(ctx, int(timeframeFrom), int(timeframeTo))
+	result, err := model.GetScheduleModel().GetScheduleAttendance(ctx, int(timeframeFrom), int(timeframeTo), scheduleTypes)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
