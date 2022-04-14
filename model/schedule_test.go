@@ -236,7 +236,8 @@ func TestGetSuccessScheduleReview(t *testing.T) {
 func TestGetScheduleAttendance(t *testing.T) {
 	ctx := context.TODO()
 
-	result, err := GetScheduleModel().GetScheduleAttendance(ctx, 1649174400, 1650470399)
+	scheduleTypes := []string{"live", "study", "home_fun_study"}
+	result, err := GetScheduleModel().GetScheduleAttendance(ctx, 1649174400, 1650470399, scheduleTypes)
 	if err != nil {
 		t.Fatal(err)
 	}

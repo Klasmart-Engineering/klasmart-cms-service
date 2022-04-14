@@ -203,6 +203,32 @@ type RepeatEnd struct {
 	AfterTime  int64         `json:"after_time,omitempty"`
 }
 
+// TODO needs to be integrated with ScheduleClassType
+type ScheduleType string
+
+const (
+	ScheduleTypeLive         ScheduleType = "live"
+	ScheduleTypeClass        ScheduleType = "class"
+	ScheduleTypeStudy        ScheduleType = "study"
+	ScheduleTypeHomefunStudy ScheduleType = "home_fun_study"
+	ScheduleTypeReview       ScheduleType = "review"
+	ScheduleTypeTask         ScheduleType = "task"
+)
+
+func (s ScheduleType) Valid() bool {
+	switch s {
+	case ScheduleTypeLive,
+		ScheduleTypeClass,
+		ScheduleTypeStudy,
+		ScheduleTypeHomefunStudy,
+		ScheduleTypeReview,
+		ScheduleTypeTask:
+		return true
+	default:
+		return false
+	}
+}
+
 type ScheduleClassType string
 
 const (
