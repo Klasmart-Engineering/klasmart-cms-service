@@ -29,17 +29,16 @@ type AssessmentTool struct {
 }
 
 type AssessmentBatch struct {
-	assessmentMap        map[string]*v2.Assessment             // assessmentID
-	scheduleMap          map[string]*entity.Schedule           // scheduleID
-	scheduleRelationMap  map[string][]*entity.ScheduleRelation // scheduleID
-	assessmentUserMap    map[string][]*v2.AssessmentUser       // assessmentID
-	assessmentContentMap map[string][]*v2.AssessmentContent    // assessmentID
-	programMap           map[string]*entity.IDName             // programID
-	subjectMap           map[string]*entity.IDName             // subjectID
-	classMap             map[string]*entity.IDName             // classID
-	userMap              map[string]*entity.IDName             // userID
-	liveRoomMap          map[string]*external.RoomInfo         // roomID
-	lessPlanMap          map[string]*v2.AssessmentContentView  // lessPlanID
+	assessmentMap       map[string]*v2.Assessment             // assessmentID
+	scheduleMap         map[string]*entity.Schedule           // scheduleID
+	scheduleRelationMap map[string][]*entity.ScheduleRelation // scheduleID
+	assessmentUserMap   map[string][]*v2.AssessmentUser       // assessmentID
+	programMap          map[string]*entity.IDName             // programID
+	subjectMap          map[string]*entity.IDName             // subjectID
+	classMap            map[string]*entity.IDName             // classID
+	userMap             map[string]*entity.IDName             // userID
+	liveRoomMap         map[string]*external.RoomInfo         // roomID
+	lessPlanMap         map[string]*v2.AssessmentContentView  // lessPlanID
 
 	assessmentReviewerFeedbackMap map[string]*v2.AssessmentReviewerFeedback // assessmentUserID
 
@@ -176,7 +175,7 @@ func (at *AssessmentTool) initScheduleRelationMap() error {
 
 	result := make(map[string][]*entity.ScheduleRelation, len(scheduleIDs))
 	for _, item := range scheduleRelations {
-		result[item.ScheduleID] = append(at.scheduleRelationMap[item.ScheduleID], item)
+		result[item.ScheduleID] = append(result[item.ScheduleID], item)
 	}
 
 	at.scheduleRelationMap = result
@@ -226,8 +225,14 @@ func (at *AssessmentTool) GetAssessmentUserMap() (map[string][]*v2.AssessmentUse
 }
 func (at *AssessmentTool) initAssessmentUserMap() error {
 	result := make(map[string][]*v2.AssessmentUser, len(at.assessments))
-	for _, item := range at.assessmentUsers {
-		result[item.AssessmentID] = append(at.assessmentUserMap[item.AssessmentID], item)
+
+	assessmentUsers, err := at.GetAssessmentUsers()
+	if err != nil {
+		return err
+	}
+
+	for _, item := range assessmentUsers {
+		result[item.AssessmentID] = append(result[item.AssessmentID], item)
 	}
 
 	at.assessmentUserMap = result
@@ -632,7 +637,7 @@ func (at *AssessmentTool) GetKey(value []string) string {
 func (at *AssessmentTool) IsNeedConvertLatestContent() (bool, error) {
 	ctx := at.ctx
 
-	schedule, err := at.GetOneSchedule()
+	schedule, err := at.FirstGetSchedule()
 	if err != nil {
 		return false, err
 	}
@@ -706,20 +711,20 @@ func (at *AssessmentTool) convertContentOutcome(contents []*v2.AssessmentContent
 	return nil
 }
 
-func (at *AssessmentTool) GetOneLatestContentsFromSchedule() ([]*v2.AssessmentContentView, error) {
+func (at *AssessmentTool) FirstGetLatestContentsFromSchedule() ([]*v2.AssessmentContentView, error) {
 	if at.latestContentsFromSchedule == nil {
-		if err := at.initGetOneLatestContentsFromSchedule(); err != nil {
+		if err := at.initFirstGetLatestContentsFromSchedule(); err != nil {
 			return nil, err
 		}
 	}
 
 	return at.latestContentsFromSchedule, nil
 }
-func (at *AssessmentTool) initGetOneLatestContentsFromSchedule() error {
+func (at *AssessmentTool) initFirstGetLatestContentsFromSchedule() error {
 	ctx := at.ctx
 	op := at.op
 
-	schedule, err := at.GetOneSchedule()
+	schedule, err := at.FirstGetSchedule()
 	if err != nil {
 		return err
 	}
@@ -796,7 +801,7 @@ func (at *AssessmentTool) initGetOneLatestContentsFromSchedule() error {
 	return nil
 }
 
-func (at *AssessmentTool) GetOneSchedule() (*entity.Schedule, error) {
+func (at *AssessmentTool) FirstGetSchedule() (*entity.Schedule, error) {
 	scheduleMap, err := at.GetScheduleMap()
 	if err != nil {
 		return nil, err
@@ -810,9 +815,9 @@ func (at *AssessmentTool) GetOneSchedule() (*entity.Schedule, error) {
 	return schedule, nil
 }
 
-func (at *AssessmentTool) GetOneLockedContentsFromSchedule() ([]*v2.AssessmentContentView, error) {
+func (at *AssessmentTool) FirstGetLockedContentsFromSchedule() ([]*v2.AssessmentContentView, error) {
 	if at.lockedContentsFromSchedule == nil {
-		if err := at.initGetOneLockedContentsFromSchedule(); err != nil {
+		if err := at.initFirstGetLockedContentsFromSchedule(); err != nil {
 			return nil, err
 		}
 	}
@@ -820,15 +825,15 @@ func (at *AssessmentTool) GetOneLockedContentsFromSchedule() ([]*v2.AssessmentCo
 	return at.lockedContentsFromSchedule, nil
 }
 
-func (at *AssessmentTool) initGetOneLockedContentsFromSchedule() error {
-	schedule, err := at.GetOneSchedule()
+func (at *AssessmentTool) initFirstGetLockedContentsFromSchedule() error {
+	schedule, err := at.FirstGetSchedule()
 	if err != nil {
 		return err
 	}
 
 	at.lockedContentsFromSchedule = make([]*v2.AssessmentContentView, 0)
 
-	result, err := at.getLockedContentBySchedule(schedule)
+	result, err := at.firstGetLockedContentBySchedule(schedule)
 	if err != nil {
 		return err
 	}
@@ -843,7 +848,7 @@ func (at *AssessmentTool) initGetOneLockedContentsFromSchedule() error {
 	return nil
 }
 
-func (at *AssessmentTool) getLockedContentBySchedule(schedule *entity.Schedule) ([]*v2.AssessmentContentView, error) {
+func (at *AssessmentTool) firstGetLockedContentBySchedule(schedule *entity.Schedule) ([]*v2.AssessmentContentView, error) {
 	ctx := at.ctx
 
 	if !schedule.IsLockedLessonPlan() {
@@ -925,32 +930,32 @@ func (at *AssessmentTool) getLockedContentBySchedule(schedule *entity.Schedule) 
 	return result, nil
 }
 
-func (at *AssessmentTool) GetOneContentsFromSchedule() ([]*v2.AssessmentContentView, error) {
+func (at *AssessmentTool) FirstGetContentsFromSchedule() ([]*v2.AssessmentContentView, error) {
 	var result []*v2.AssessmentContentView
 	var err error
 	if ok, _ := at.IsNeedConvertLatestContent(); ok {
-		result, err = at.GetOneLatestContentsFromSchedule()
+		result, err = at.FirstGetLatestContentsFromSchedule()
 	} else {
-		result, err = at.GetOneLockedContentsFromSchedule()
+		result, err = at.FirstGetLockedContentsFromSchedule()
 	}
 
 	return result, err
 }
 
-func (at *AssessmentTool) GetOneOutcomeMapFromContent() (map[string]*entity.Outcome, error) {
+func (at *AssessmentTool) FirstGetOutcomeMapFromContent() (map[string]*entity.Outcome, error) {
 	if at.outcomeMapFromContent == nil {
-		if err := at.initGetOneOutcomeMapFromContent(); err != nil {
+		if err := at.initFirstGetOutcomeMapFromContent(); err != nil {
 			return nil, err
 		}
 	}
 
 	return at.outcomeMapFromContent, nil
 }
-func (at *AssessmentTool) initGetOneOutcomeMapFromContent() error {
+func (at *AssessmentTool) initFirstGetOutcomeMapFromContent() error {
 	ctx := at.ctx
 	op := at.op
 
-	contents, err := at.GetOneContentsFromSchedule()
+	contents, err := at.FirstGetContentsFromSchedule()
 	if err != nil {
 		return err
 	}
@@ -983,15 +988,15 @@ func (at *AssessmentTool) initGetOneOutcomeMapFromContent() error {
 	return nil
 }
 
-func (at *AssessmentTool) GetOneAssessmentContentMap() (map[string]*v2.AssessmentContent, error) {
+func (at *AssessmentTool) FirstGetAssessmentContentMap() (map[string]*v2.AssessmentContent, error) {
 	if at.contentMapFromAssessment == nil {
-		if err := at.initGetOneAssessmentContentMap(); err != nil {
+		if err := at.initFirstGetAssessmentContentMap(); err != nil {
 			return nil, err
 		}
 	}
 	return at.contentMapFromAssessment, nil
 }
-func (at *AssessmentTool) initGetOneAssessmentContentMap() error {
+func (at *AssessmentTool) initFirstGetAssessmentContentMap() error {
 	ctx := at.ctx
 
 	var assessmentContents []*v2.AssessmentContent
@@ -1037,20 +1042,20 @@ func (at *AssessmentTool) initGetOneAssessmentContentMap() error {
 	return nil
 }
 
-func (at *AssessmentTool) GetOneContentMapFromLiveRoom() (map[string]*RoomContentTree, error) {
+func (at *AssessmentTool) FirstGetContentMapFromLiveRoom() (map[string]*RoomContentTree, error) {
 	if at.contentMapFromLiveRoom == nil {
-		if err := at.initGetOneContentMapFromLiveRoom(); err != nil {
+		if err := at.initFirstGetContentMapFromLiveRoom(); err != nil {
 			return nil, err
 		}
 	}
 
 	return at.contentMapFromLiveRoom, nil
 }
-func (at *AssessmentTool) initGetOneContentMapFromLiveRoom() error {
+func (at *AssessmentTool) initFirstGetContentMapFromLiveRoom() error {
 	ctx := at.ctx
 	//op := adc.op
 
-	_, roomContents, err := at.GetOneRoomData()
+	_, roomContents, err := at.FirstGetRoomData()
 	if err != nil {
 		return err
 	}
@@ -1085,16 +1090,16 @@ func (at *AssessmentTool) initGetOneContentMapFromLiveRoom() error {
 	return nil
 }
 
-func (at *AssessmentTool) GetOneRoomData() (map[string][]*RoomUserScore, []*RoomContentTree, error) {
+func (at *AssessmentTool) FirstGetRoomData() (map[string][]*RoomUserScore, []*RoomContentTree, error) {
 	if at.roomUserScoreMap == nil || at.roomContentTree == nil {
-		if err := at.initGetOneRoomData(); err != nil {
+		if err := at.initFirstGetRoomData(); err != nil {
 			return nil, nil, err
 		}
 	}
 
 	return at.roomUserScoreMap, at.roomContentTree, nil
 }
-func (at *AssessmentTool) initGetOneRoomData() error {
+func (at *AssessmentTool) initFirstGetRoomData() error {
 	ctx := at.ctx
 	//op := adc.op
 
@@ -1124,16 +1129,16 @@ func (at *AssessmentTool) initGetOneRoomData() error {
 	return nil
 }
 
-func (at *AssessmentTool) GetOneCommentResultMap() (map[string]string, error) {
+func (at *AssessmentTool) FirstGetCommentResultMap() (map[string]string, error) {
 	if at.commentResultMap == nil {
-		if err := at.initGetOneCommentResultMap(); err != nil {
+		if err := at.initFirstGetCommentResultMap(); err != nil {
 			return nil, err
 		}
 	}
 
 	return at.commentResultMap, nil
 }
-func (at *AssessmentTool) initGetOneCommentResultMap() error {
+func (at *AssessmentTool) initFirstGetCommentResultMap() error {
 	ctx := at.ctx
 	//op := at.op
 
@@ -1170,16 +1175,16 @@ func (at *AssessmentTool) initGetOneCommentResultMap() error {
 	return nil
 }
 
-func (at *AssessmentTool) GetOneOutcomeFromAssessment() (map[string]*v2.AssessmentUserOutcome, error) {
+func (at *AssessmentTool) FirstGetOutcomeFromAssessment() (map[string]*v2.AssessmentUserOutcome, error) {
 	if at.outcomeMapFromAssessment == nil {
-		if err := at.initGetOneOutcomeFromAssessment(); err != nil {
+		if err := at.initFirstGetOutcomeFromAssessment(); err != nil {
 			return nil, err
 		}
 	}
 
 	return at.outcomeMapFromAssessment, nil
 }
-func (at *AssessmentTool) initGetOneOutcomeFromAssessment() error {
+func (at *AssessmentTool) initFirstGetOutcomeFromAssessment() error {
 	ctx := at.ctx
 
 	assessmentUserMap, err := at.GetAssessmentUserMap()
@@ -1227,15 +1232,15 @@ func (at *AssessmentTool) initGetOneOutcomeFromAssessment() error {
 	return nil
 }
 
-func (at *AssessmentTool) GetOneScheduleReviewMap() (map[string]*entity.ScheduleReview, error) {
+func (at *AssessmentTool) FirstGetScheduleReviewMap() (map[string]*entity.ScheduleReview, error) {
 	if at.scheduleReviewMap == nil {
-		if err := at.initGetOneScheduleReviewMap(); err != nil {
+		if err := at.initFirstGetScheduleReviewMap(); err != nil {
 			return nil, err
 		}
 	}
 	return at.scheduleReviewMap, nil
 }
-func (at *AssessmentTool) initGetOneScheduleReviewMap() error {
+func (at *AssessmentTool) initFirstGetScheduleReviewMap() error {
 	ctx := at.ctx
 	op := at.op
 
@@ -1257,22 +1262,22 @@ func (at *AssessmentTool) initGetOneScheduleReviewMap() error {
 	return nil
 }
 
-func (at *AssessmentTool) GetOneContentsFromScheduleReview() (map[string]*entity.ContentInfoInternal, error) {
+func (at *AssessmentTool) FirstGetContentsFromScheduleReview() (map[string]*entity.ContentInfoInternal, error) {
 	if at.contentMapFromScheduleReview == nil {
-		if err := at.initGetOneContentsFromScheduleReview(); err != nil {
+		if err := at.initFirstGetContentsFromScheduleReview(); err != nil {
 			return nil, err
 		}
 	}
 
 	return at.contentMapFromScheduleReview, nil
 }
-func (at *AssessmentTool) initGetOneContentsFromScheduleReview() error {
+func (at *AssessmentTool) initFirstGetContentsFromScheduleReview() error {
 	ctx := at.ctx
 	//op := at.op
 
 	contentIDs := make([]string, 0)
 	dedupContentID := make(map[string]struct{})
-	scheduleReviewMap, err := at.GetOneScheduleReviewMap()
+	scheduleReviewMap, err := at.FirstGetScheduleReviewMap()
 	if err != nil {
 		return err
 	}
@@ -1305,16 +1310,16 @@ func (at *AssessmentTool) initGetOneContentsFromScheduleReview() error {
 	return nil
 }
 
-func (at *AssessmentTool) GetOneOutcomesFromSchedule() ([]*entity.Outcome, error) {
+func (at *AssessmentTool) FirstGetOutcomesFromSchedule() ([]*entity.Outcome, error) {
 	if at.outcomesFromSchedule == nil {
-		if err := at.initGetOneOutcomesFromSchedule(); err != nil {
+		if err := at.initFirstGetOutcomesFromSchedule(); err != nil {
 			return nil, err
 		}
 	}
 
 	return at.outcomesFromSchedule, nil
 }
-func (at *AssessmentTool) initGetOneOutcomesFromSchedule() error {
+func (at *AssessmentTool) initFirstGetOutcomesFromSchedule() error {
 	ctx := at.ctx
 	op := at.op
 
@@ -1336,4 +1341,52 @@ func (at *AssessmentTool) initGetOneOutcomesFromSchedule() error {
 	at.outcomesFromSchedule = outcomes
 
 	return nil
+}
+
+func (at *AssessmentTool) summaryRoomScores(userScoreMap map[string][]*RoomUserScore, contentsReply []*v2.AssessmentContentReply) (map[string]float64, map[string]float64) {
+	contentSummaryTotalScoreMap := make(map[string]float64)
+	contentMap := make(map[string]*v2.AssessmentContentReply)
+	for _, content := range contentsReply {
+		if content.IgnoreCalculateScore {
+			continue
+		}
+		contentID := content.ContentID
+		if content.ContentType == v2.AssessmentContentTypeUnknown {
+			contentID = content.ParentID
+		}
+		contentSummaryTotalScoreMap[contentID] = contentSummaryTotalScoreMap[contentID] + content.MaxScore
+
+		contentMap[content.ContentID] = content
+	}
+
+	roomUserResultMap := make(map[string]*RoomUserScore)
+	roomUserSummaryScoreMap := make(map[string]float64)
+	for userID, scores := range userScoreMap {
+		for _, resultItem := range scores {
+			key := at.GetKey([]string{
+				userID,
+				resultItem.ContentUniqueID,
+			})
+			roomUserResultMap[key] = resultItem
+
+			if contentItem, ok := contentMap[resultItem.ContentUniqueID]; ok {
+				if contentItem.IgnoreCalculateScore {
+					continue
+				}
+				contentID := contentItem.ContentID
+				if contentItem.ContentType == v2.AssessmentContentTypeUnknown {
+					contentID = contentItem.ParentID
+				}
+
+				key2 := at.GetKey([]string{
+					userID,
+					contentID,
+				})
+				roomUserSummaryScoreMap[key2] = roomUserSummaryScoreMap[key2] + resultItem.Score
+			}
+		}
+	}
+
+	log.Debug(at.ctx, "summary score info", log.Any("contentSummaryTotalScoreMap", contentSummaryTotalScoreMap), log.Any("roomUserSummaryScoreMap", roomUserSummaryScoreMap))
+	return contentSummaryTotalScoreMap, roomUserSummaryScoreMap
 }
