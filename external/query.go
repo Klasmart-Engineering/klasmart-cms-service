@@ -39,7 +39,7 @@ func pageQuery[ResType ConnectionResponse](ctx context.Context, operator *entity
 		}
 		err := fetch(ctx, operator, pageInfo.Pager(Forward, PageDefaultCount), qString, &res)
 		if err != nil {
-			log.Error(ctx, "query: do failed",
+			log.Error(ctx, "query: fetch failed",
 				log.Err(err),
 				log.String("key", string(key)),
 				log.Any("filter", filter),
@@ -49,7 +49,7 @@ func pageQuery[ResType ConnectionResponse](ctx context.Context, operator *entity
 			return err
 		}
 
-		log.Debug(ctx, "query: do failed",
+		log.Debug(ctx, "query: fetch success",
 			log.Any("response", res),
 			log.String("key", string(key)),
 			log.Any("filter", filter),
