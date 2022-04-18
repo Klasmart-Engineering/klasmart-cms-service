@@ -93,6 +93,12 @@ func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiff
 	if err != nil {
 		return nil, err
 	}
+
+	commentResultMap, err := o.at.FirstGetCommentResultMap()
+	if err != nil {
+		return nil, err
+	}
+
 	roomData, ok := roomDataMap[o.at.first.ScheduleID]
 	studentRoomDataMap := make(map[string]map[string]*RoomUserScore)
 	roomContentMap := make(map[string]*RoomContentTree)
@@ -132,6 +138,10 @@ func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiff
 
 		if userInfo, ok := userInfoMap[userItem.UserID]; ok {
 			replyItem.StudentName = userInfo.Name
+		}
+
+		if comment, ok := commentResultMap[userItem.UserID]; ok {
+			replyItem.ReviewerComment = comment
 		}
 
 		if studentReviewItem, ok := studentReviewMap[userItem.UserID]; ok {
