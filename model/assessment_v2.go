@@ -226,11 +226,11 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 				CreateAt:            item.CreateAt,
 				UpdateAt:            item.UpdateAt,
 				CompleteAt:          item.CompleteAt,
-				TeacherComments:     make([]*v2.StudentAssessmentTeacher,0),
+				TeacherComments:     make([]*v2.StudentAssessmentTeacher, 0),
 				Schedule:            nil,
 				FeedbackAttachments: nil,
 			}
-			if item.ReviewerID != ""{
+			if item.ReviewerID != "" {
 				teacherComment := &v2.StudentAssessmentTeacher{
 					Teacher: &v2.StudentAssessmentTeacherInfo{
 						ID:         item.ReviewerID,
@@ -269,8 +269,8 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 			if feedbackAttachments, ok := feedbackMap[item.StudentFeedbackID]; ok {
 				for _, attachment := range feedbackAttachments {
 					resultItem.FeedbackAttachments = append(resultItem.FeedbackAttachments, v2.StudentAssessmentAttachment{
-						ID:   attachment.AttachmentID,
-						Name: attachment.AttachmentName,
+						ID:                 attachment.AttachmentID,
+						Name:               attachment.AttachmentName,
 						ReviewAttachmentID: attachment.ReviewAttachmentID,
 					})
 				}
@@ -340,13 +340,24 @@ func (a *assessmentModelV2) PageForHomePage(ctx context.Context, op *entity.Oper
 		return nil, err
 	}
 
-	ag := NewAssessmentGrainMul(ctx, op, assessments)
-	assessmentUserMap, err := ag.GetAssessmentUserMap()
+	if len(assessments) <= 0 {
+		return &v2.ListAssessmentsResultForHomePage{
+			Total: 0,
+			Items: make([]*v2.AssessmentItemForHomePage, 0),
+		}, nil
+	}
+
+	at, err := NewAssessmentTool(ctx, op, assessments)
 	if err != nil {
 		return nil, err
 	}
 
-	userMap, err := ag.GetUserMap()
+	assessmentUserMap, err := at.GetAssessmentUserMap()
+	if err != nil {
+		return nil, err
+	}
+
+	userMap, err := at.GetUserMap()
 	if err != nil {
 		return nil, err
 	}
@@ -496,20 +507,23 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		return ErrAssessmentHasCompleted
 	}
 
-	ags := NewAssessmentGrainSingle(ctx, op, waitUpdatedAssessment)
+	at, err := NewAssessmentTool(ctx, op, []*v2.Assessment{waitUpdatedAssessment})
+	if err != nil {
+		return err
+	}
 	if waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeOfflineStudy {
-		match := GetAssessmentDetailMatch(waitUpdatedAssessment.AssessmentType, ags)
+		match := GetAssessmentDetailMatch(waitUpdatedAssessment.AssessmentType, at)
 		return match.Update(req)
 	}
 
-	userIDAndUserTypeMap, err := ags.GetAssessmentUserWithUserIDAndUserTypeMap()
+	userIDAndUserTypeMap, err := at.GetAssessmentUserWithUserIDAndUserTypeMap()
 	if err != nil {
 		return err
 	}
 
 	waitUpdatedUsers := make([]*v2.AssessmentUser, 0)
 	for _, item := range req.Students {
-		existItem, ok := userIDAndUserTypeMap[ags.GetKey([]string{item.StudentID, v2.AssessmentUserTypeStudent.String()})]
+		existItem, ok := userIDAndUserTypeMap[at.GetKey([]string{item.StudentID, v2.AssessmentUserTypeStudent.String()})]
 		if !ok {
 			log.Warn(ctx, "student not exist", log.Any("userIDAndUserTypeMap", userIDAndUserTypeMap), log.Any("reqItem", item))
 			return constant.ErrInvalidArgs
@@ -522,7 +536,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		waitUpdatedUsers = append(waitUpdatedUsers, existItem)
 	}
 
-	roomDataMap, err := ags.GetRoomStudentScoresAndComments()
+	roomDataMap, err := at.GetRoomStudentScoresAndComments()
 	if err != nil {
 		return err
 	}
@@ -555,19 +569,19 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			waitUpdatedAssessment: waitUpdatedAssessment,
 			waitUpdatedUsers:      waitUpdatedUsers,
 			userIDAndUserTypeMap:  userIDAndUserTypeMap,
-			ag:                    ags,
+			at:                    at,
 			userRoomData:          userRoomData,
 			canSetScoreContentMap: canSetScoreContentMap,
 			studentCommentMap:     studentCommentMap,
 		})
 	}
 
-	scheduleContents, err := ags.SingleGetContentsFromSchedule()
+	scheduleContents, err := at.FirstGetContentsFromSchedule()
 	if err != nil {
 		return err
 	}
 
-	assessmentContentMap, err := ags.SingleGetAssessmentContentMap()
+	assessmentContentMap, err := at.FirstGetAssessmentContentMap()
 	if err != nil {
 		return err
 	}
@@ -635,7 +649,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		outcomeMap[item.ID] = item
 	}
 
-	outcomeFromAssessmentMap, err := ags.SingleGetOutcomeFromAssessment()
+	outcomeFromAssessmentMap, err := at.FirstGetOutcomeFromAssessment()
 	if err != nil {
 		return err
 	}
@@ -649,7 +663,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			if outcomeIDs, ok := contentOutcomeIDMap[contentItem.ContentID]; ok {
 				for _, outcomeID := range outcomeIDs {
 					if outcomeItem, ok := outcomeMap[outcomeID]; ok {
-						key := ags.GetKey([]string{userItem.ID, contentItem.ID, outcomeID})
+						key := at.GetKey([]string{userItem.ID, contentItem.ID, outcomeID})
 						if _, ok := outcomeFromAssessmentMap[key]; ok {
 							continue
 						}
@@ -691,7 +705,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			continue
 		}
 		// verify student data
-		assessmentUserItem, ok := userIDAndUserTypeMap[ags.GetKey([]string{stuItem.StudentID, v2.AssessmentUserTypeStudent.String()})]
+		assessmentUserItem, ok := userIDAndUserTypeMap[at.GetKey([]string{stuItem.StudentID, v2.AssessmentUserTypeStudent.String()})]
 		if !ok {
 			log.Warn(ctx, "student not exist", log.Any("userIDAndUserTypeMap", userIDAndUserTypeMap), log.Any("stuItem", stuItem))
 			return constant.ErrInvalidArgs
@@ -705,7 +719,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 						log.Warn(ctx, "student outcome status invalid", log.Any("req", req), log.Any("outcomeItem", outcomeItem))
 						return constant.ErrInvalidArgs
 					}
-					key := ags.GetKey([]string{assessmentUserItem.ID, assessmentContentItem.ID, outcomeItem.OutcomeID})
+					key := at.GetKey([]string{assessmentUserItem.ID, assessmentContentItem.ID, outcomeItem.OutcomeID})
 					if outcomeFromAssessmentItem, ok := outcomeFromAssessmentMap[key]; ok {
 						outcomeFromAssessmentItem.Status = outcomeItem.Status
 						outcomeFromAssessmentItem.UpdateAt = now
@@ -759,7 +773,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		scheduleID:     waitUpdatedAssessment.ScheduleID,
 		newScores:      newScores,
 		newComments:    newComments,
-		ag:             ags,
+		at:             at,
 	})
 	if err != nil {
 		return err
@@ -836,11 +850,11 @@ type updateStudentCommentAndScoreInput struct {
 	scheduleID     string
 	newScores      []*external.H5PSetScoreRequest
 	newComments    []*external.H5PAddRoomCommentRequest
-	ag             *AssessmentGrain
+	at             *AssessmentTool
 }
 
 func (a *assessmentModelV2) updateStudentCommentAndScore(ctx context.Context, op *entity.Operator, input *updateStudentCommentAndScoreInput) error {
-	match := GetAssessmentDetailMatch(input.assessmentType, input.ag)
+	match := GetAssessmentDetailMatch(input.assessmentType, input.at)
 	isAnyoneAttempted, _ := match.MatchAnyOneAttempted()
 	if !isAnyoneAttempted {
 		return nil
@@ -869,14 +883,14 @@ type updateReviewStudyAssessmentInput struct {
 	waitUpdatedAssessment *v2.Assessment
 	waitUpdatedUsers      []*v2.AssessmentUser
 	userIDAndUserTypeMap  map[string]*v2.AssessmentUser
-	ag                    *AssessmentGrain
+	at                    *AssessmentTool
 	userRoomData          map[string][]*external.H5PUserContentScore
 	canSetScoreContentMap map[string]*AllowEditScoreContent
 	studentCommentMap     map[string]string
 }
 
 func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op *entity.Operator, input updateReviewStudyAssessmentInput) error {
-	match := GetAssessmentDetailMatch(input.waitUpdatedAssessment.AssessmentType, input.ag)
+	match := GetAssessmentDetailMatch(input.waitUpdatedAssessment.AssessmentType, input.at)
 	remainingTimeMap, err := match.MatchRemainingTime()
 	if err != nil {
 		return err
@@ -905,7 +919,7 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 			continue
 		}
 		// verify student data
-		_, ok := input.userIDAndUserTypeMap[input.ag.GetKey([]string{stuItem.StudentID, v2.AssessmentUserTypeStudent.String()})]
+		_, ok := input.userIDAndUserTypeMap[input.at.GetKey([]string{stuItem.StudentID, v2.AssessmentUserTypeStudent.String()})]
 		if !ok {
 			log.Warn(ctx, "student not exist", log.Any("userIDAndUserTypeMap", input.userIDAndUserTypeMap), log.Any("stuItem", stuItem))
 			return constant.ErrInvalidArgs
@@ -953,7 +967,7 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 		scheduleID:     input.waitUpdatedAssessment.ScheduleID,
 		newScores:      newScores,
 		newComments:    newComments,
-		ag:             input.ag,
+		at:             input.at,
 	})
 	if err != nil {
 		return err

@@ -13,19 +13,19 @@ import (
 	"time"
 )
 
-func NewOfflineStudyAssessmentPage(ag *AssessmentGrain) IAssessmentMatch {
+func NewOfflineStudyAssessmentPage(at *AssessmentTool) IAssessmentMatch {
 	return &OfflineStudyAssessment{
-		ag:     ag,
+		at:     at,
 		action: AssessmentMatchActionPage,
-		base:   NewBaseAssessment(ag),
+		base:   NewBaseAssessment(at),
 	}
 }
 
-func NewOfflineStudyAssessmentDetail(ag *AssessmentGrain) IAssessmentMatch {
+func NewOfflineStudyAssessmentDetail(at *AssessmentTool) IAssessmentMatch {
 	return &OfflineStudyAssessment{
-		ag:     ag,
+		at:     at,
 		action: AssessmentMatchActionDetail,
-		base:   NewBaseAssessment(ag),
+		base:   NewBaseAssessment(at),
 	}
 }
 
@@ -33,7 +33,7 @@ type OfflineStudyAssessment struct {
 	EmptyAssessment
 
 	base   BaseAssessment
-	ag     *AssessmentGrain
+	at     *AssessmentTool
 	action AssessmentMatchAction
 }
 
@@ -50,14 +50,14 @@ func (o *OfflineStudyAssessment) MatchClass() (map[string]*entity.IDName, error)
 }
 
 func (o *OfflineStudyAssessment) MatchCompleteRate() (map[string]float64, error) {
-	ctx := o.ag.ctx
+	ctx := o.at.ctx
 
-	assessmentUserMap, err := o.ag.GetAssessmentUserMap()
+	assessmentUserMap, err := o.at.GetAssessmentUserMap()
 	if err != nil {
 		return nil, err
 	}
 
-	reviewerFeedbackMap, err := o.ag.GetReviewerFeedbackMap()
+	reviewerFeedbackMap, err := o.at.GetReviewerFeedbackMap()
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (o *OfflineStudyAssessment) MatchCompleteRate() (map[string]float64, error)
 	}
 
 	result := make(map[string]float64)
-	for _, item := range o.ag.assessments {
+	for _, item := range o.at.assessments {
 		stuTotal := studentCount[item.ID]
 		stuComplete := studentCompleteCount[item.ID]
 		if stuTotal == 0 || stuComplete == 0 {
@@ -97,13 +97,13 @@ func (o *OfflineStudyAssessment) MatchCompleteRate() (map[string]float64, error)
 }
 
 func (o *OfflineStudyAssessment) MatchRemainingTime() (map[string]int64, error) {
-	onlineStudy := NewOnlineStudyAssessmentPage(o.ag)
+	onlineStudy := NewOnlineStudyAssessmentPage(o.at)
 
 	return onlineStudy.MatchRemainingTime()
 }
 
 func (o *OfflineStudyAssessment) MatchOutcomes() (map[string]*v2.AssessmentOutcomeReply, error) {
-	outcomes, err := o.ag.SingleGetOutcomesFromSchedule()
+	outcomes, err := o.at.FirstGetOutcomesFromSchedule()
 	if err != nil {
 		return nil, err
 	}
@@ -130,21 +130,21 @@ func (o *OfflineStudyAssessment) MatchOutcomes() (map[string]*v2.AssessmentOutco
 }
 
 func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentContentReply) ([]*v2.AssessmentStudentReply, error) {
-	ctx := o.ag.ctx
-	op := o.ag.op
+	ctx := o.at.ctx
+	op := o.at.op
 
-	assessmentUsers, err := o.ag.GetAssessmentUsers()
+	assessmentUsers, err := o.at.GetAssessmentUsers()
 	if err != nil {
 		return nil, err
 	}
-	userMap, err := o.ag.GetUserMap()
+	userMap, err := o.at.GetUserMap()
 	if err != nil {
 		return nil, err
 	}
 
 	feedbackCond := &da.ScheduleFeedbackCondition{
 		ScheduleID: sql.NullString{
-			String: o.ag.assessment.ScheduleID,
+			String: o.at.first.ScheduleID,
 			Valid:  true,
 		},
 	}
@@ -157,17 +157,17 @@ func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCon
 		scheduleFeedbackMap[item.UserID] = append(scheduleFeedbackMap[item.UserID], item)
 	}
 
-	reviewerFeedbackMap, err := o.ag.amg.GetReviewerFeedbackMap()
+	reviewerFeedbackMap, err := o.at.GetReviewerFeedbackMap()
 	if err != nil {
 		return nil, err
 	}
 
-	assessmentOutcomeMap, err := o.ag.SingleGetOutcomeFromAssessment()
+	assessmentOutcomeMap, err := o.at.FirstGetOutcomeFromAssessment()
 	if err != nil {
 		return nil, err
 	}
 
-	outcomesFromSchedule, err := o.ag.SingleGetOutcomesFromSchedule()
+	outcomesFromSchedule, err := o.at.FirstGetOutcomesFromSchedule()
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +191,7 @@ func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCon
 		studentResultItem := new(v2.AssessmentStudentResultReply)
 		studentResultItem.Outcomes = make([]*v2.AssessmentStudentResultOutcomeReply, 0, len(outcomesFromSchedule))
 		for _, outcomeItem := range outcomesFromSchedule {
-			aoKey := o.ag.GetKey([]string{
+			aoKey := o.at.GetKey([]string{
 				item.ID,
 				"",
 				outcomeItem.ID,
@@ -252,13 +252,13 @@ func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCon
 }
 
 func (o *OfflineStudyAssessment) Update(req *v2.AssessmentUpdateReq) error {
-	ctx := o.ag.ctx
-	op := o.ag.op
+	ctx := o.at.ctx
+	op := o.at.op
 	now := time.Now().Unix()
 
 	log.Debug(ctx, "request data", log.Any("req", req))
 
-	waitUpdateAssessment := o.ag.assessment
+	waitUpdateAssessment := o.at.first
 
 	// verify assessment status
 	if !req.Action.Valid() {
@@ -286,7 +286,7 @@ func (o *OfflineStudyAssessment) Update(req *v2.AssessmentUpdateReq) error {
 	}
 
 	// prepare assessment user data
-	assessmentUserMap, err := o.ag.GetAssessmentUserWithUserIDAndUserTypeMap()
+	assessmentUserMap, err := o.at.GetAssessmentUserWithUserIDAndUserTypeMap()
 	if err != nil {
 		return err
 	}
@@ -303,7 +303,7 @@ func (o *OfflineStudyAssessment) Update(req *v2.AssessmentUpdateReq) error {
 			return constant.ErrInvalidArgs
 		}
 
-		stuKey := o.ag.GetKey([]string{
+		stuKey := o.at.GetKey([]string{
 			item.StudentID,
 			v2.AssessmentUserTypeStudent.String(),
 		})
@@ -325,7 +325,7 @@ func (o *OfflineStudyAssessment) Update(req *v2.AssessmentUpdateReq) error {
 		reqStuResultMap[assessmentUserItem.ID] = stuResult
 		reqReviewerCommentMap[assessmentUserItem.ID] = item.ReviewerComment
 		for _, outcomeReq := range stuResult.Outcomes {
-			reqStuOutcomeMap[o.ag.GetKey([]string{assessmentUserItem.ID, outcomeReq.OutcomeID})] = outcomeReq
+			reqStuOutcomeMap[o.at.GetKey([]string{assessmentUserItem.ID, outcomeReq.OutcomeID})] = outcomeReq
 		}
 
 		for _, assignItem := range stuResult.Assignments {
@@ -364,7 +364,7 @@ func (o *OfflineStudyAssessment) Update(req *v2.AssessmentUpdateReq) error {
 	waitUpdateUserOutcomes := make([]*v2.AssessmentUserOutcome, 0, len(userOutcomes))
 	// user outcomes
 	for _, item := range userOutcomes {
-		if reqStuOutcome, ok := reqStuOutcomeMap[o.ag.GetKey([]string{item.AssessmentUserID, item.OutcomeID})]; ok {
+		if reqStuOutcome, ok := reqStuOutcomeMap[o.at.GetKey([]string{item.AssessmentUserID, item.OutcomeID})]; ok {
 			if !reqStuOutcome.Status.Valid() {
 				log.Warn(ctx, "student outcome status invalid", log.Any("reqStuOutcome", reqStuOutcome), log.Any("req", req))
 				return constant.ErrInvalidArgs

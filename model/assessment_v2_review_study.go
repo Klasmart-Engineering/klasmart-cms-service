@@ -9,19 +9,19 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
 
-func NewReviewStudyAssessmentPage(ags *AssessmentGrain) IAssessmentMatch {
+func NewReviewStudyAssessmentPage(at *AssessmentTool) IAssessmentMatch {
 	return &ReviewStudyAssessment{
-		ags:    ags,
+		at:     at,
 		action: AssessmentMatchActionPage,
-		base:   NewBaseAssessment(ags),
+		base:   NewBaseAssessment(at),
 	}
 }
 
-func NewReviewStudyAssessmentDetail(ags *AssessmentGrain) IAssessmentMatch {
+func NewReviewStudyAssessmentDetail(at *AssessmentTool) IAssessmentMatch {
 	return &ReviewStudyAssessment{
-		ags:    ags,
+		at:     at,
 		action: AssessmentMatchActionDetail,
-		base:   NewBaseAssessment(ags),
+		base:   NewBaseAssessment(at),
 	}
 }
 
@@ -29,7 +29,7 @@ type ReviewStudyAssessment struct {
 	EmptyAssessment
 
 	base   BaseAssessment
-	ags    *AssessmentGrain
+	at     *AssessmentTool
 	action AssessmentMatchAction
 }
 
@@ -42,7 +42,7 @@ func (o *ReviewStudyAssessment) MatchSchedule() (map[string]*entity.Schedule, er
 }
 
 func (o *ReviewStudyAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
-	return NewOnlineStudyAssessmentPage(o.ags).MatchTeacher()
+	return NewOnlineStudyAssessmentPage(o.at).MatchTeacher()
 }
 
 func (o *ReviewStudyAssessment) MatchClass() (map[string]*entity.IDName, error) {
@@ -50,45 +50,50 @@ func (o *ReviewStudyAssessment) MatchClass() (map[string]*entity.IDName, error) 
 }
 
 func (o *ReviewStudyAssessment) MatchCompleteRate() (map[string]float64, error) {
-	return NewOnlineStudyAssessmentPage(o.ags).MatchCompleteRate()
+	return NewOnlineStudyAssessmentPage(o.at).MatchCompleteRate()
 }
 
 func (o *ReviewStudyAssessment) MatchRemainingTime() (map[string]int64, error) {
-	onlineStudy := NewOnlineStudyAssessmentPage(o.ags)
+	onlineStudy := NewOnlineStudyAssessmentPage(o.at)
 
 	return onlineStudy.MatchRemainingTime()
 }
 
 func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiffContentStudentsReply, error) {
-	ctx := o.ags.ctx
+	ctx := o.at.ctx
 	//op := adc.op
 
-	assessmentUserMap, err := o.ags.GetAssessmentUserMap()
+	assessmentUserMap, err := o.at.GetAssessmentUserMap()
 	if err != nil {
 		return nil, err
 	}
 
-	assessmentUsers, ok := assessmentUserMap[o.ags.assessment.ID]
+	assessmentUsers, ok := assessmentUserMap[o.at.first.ID]
 	if !ok {
-		log.Warn(ctx, "assessment users is empty", log.Any("assessment", o.ags.assessment))
+		log.Warn(ctx, "assessment users is empty", log.Any("assessment", o.at.first))
 		return nil, constant.ErrRecordNotFound
 	}
 
-	userInfoMap, err := o.ags.GetUserMap()
+	userInfoMap, err := o.at.GetUserMap()
 	if err != nil {
 		return nil, err
 	}
 
-	studentReviewMap, contentMap, err := o.ags.SingleGetContentsFromScheduleReview()
+	studentReviewMap, err := o.at.FirstGetScheduleReviewMap()
 	if err != nil {
 		return nil, err
 	}
 
-	roomDataMap, err := o.ags.GetRoomStudentScoresAndComments()
+	contentMap, err := o.at.FirstGetContentsFromScheduleReview()
 	if err != nil {
 		return nil, err
 	}
-	roomData, ok := roomDataMap[o.ags.assessment.ScheduleID]
+
+	roomDataMap, err := o.at.GetRoomStudentScoresAndComments()
+	if err != nil {
+		return nil, err
+	}
+	roomData, ok := roomDataMap[o.at.first.ScheduleID]
 	studentRoomDataMap := make(map[string]map[string]*RoomUserScore)
 	roomContentMap := make(map[string]*RoomContentTree)
 	if ok {
@@ -107,7 +112,7 @@ func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiff
 			}
 		}
 	} else {
-		log.Warn(ctx, "not found room data", log.Any("roomDataMap", roomDataMap), log.Any("assessment", o.ags.assessment))
+		log.Warn(ctx, "not found room data", log.Any("roomDataMap", roomDataMap), log.Any("assessment", o.at.first))
 	}
 
 	log.Debug(ctx, "student room data", log.Any("studentRoomDataMap", studentRoomDataMap))

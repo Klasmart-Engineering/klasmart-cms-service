@@ -171,8 +171,11 @@ func (a *assessmentInternalModel) LockAssessmentContentAndOutcome(ctx context.Co
 
 	now := time.Now().Unix()
 
-	ags := NewAssessmentGrainSingle(ctx, op, assessment)
-	contentsFromSchedule, err := ags.getLockedContentBySchedule(schedule)
+	at, err := NewAssessmentTool(ctx, op, []*v2.Assessment{assessment})
+	if err != nil {
+		return err
+	}
+	contentsFromSchedule, err := at.firstGetLockedContentBySchedule(schedule)
 	if err != nil {
 		return err
 	}
@@ -209,7 +212,7 @@ func (a *assessmentInternalModel) LockAssessmentContentAndOutcome(ctx context.Co
 	assessmentUserIDs := make([]string, 0)
 
 	if len(outcomeIDs) > 0 {
-		assessmentUserMap, err := ags.GetAssessmentUserMap()
+		assessmentUserMap, err := at.GetAssessmentUserMap()
 		if err != nil {
 			return err
 		}

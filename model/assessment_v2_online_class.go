@@ -9,19 +9,19 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
 
-func NewOnlineClassAssessmentPage(ag *AssessmentGrain) IAssessmentMatch {
+func NewOnlineClassAssessmentPage(at *AssessmentTool) IAssessmentMatch {
 	return &OnlineClassAssessment{
-		ag:     ag,
+		at:     at,
 		action: AssessmentMatchActionPage,
-		base:   NewBaseAssessment(ag),
+		base:   NewBaseAssessment(at),
 	}
 }
 
-func NewOnlineClassAssessmentDetail(ag *AssessmentGrain) IAssessmentMatch {
+func NewOnlineClassAssessmentDetail(at *AssessmentTool) IAssessmentMatch {
 	return &OnlineClassAssessment{
-		ag:     ag,
+		at:     at,
 		action: AssessmentMatchActionDetail,
-		base:   NewBaseAssessment(ag),
+		base:   NewBaseAssessment(at),
 	}
 }
 
@@ -29,7 +29,7 @@ type OnlineClassAssessment struct {
 	EmptyAssessment
 
 	base   BaseAssessment
-	ag     *AssessmentGrain
+	at     *AssessmentTool
 	action AssessmentMatchAction
 }
 
@@ -42,18 +42,18 @@ func (o *OnlineClassAssessment) MatchLessPlan() (map[string]*v2.AssessmentConten
 }
 
 func (o *OnlineClassAssessment) MatchProgram() (map[string]*entity.IDName, error) {
-	scheduleMap, err := o.ag.GetScheduleMap()
+	scheduleMap, err := o.at.GetScheduleMap()
 	if err != nil {
 		return nil, err
 	}
 
-	programMap, err := o.ag.GetProgramMap()
+	programMap, err := o.at.GetProgramMap()
 	if err != nil {
 		return nil, err
 	}
 
-	result := make(map[string]*entity.IDName, len(o.ag.assessments))
-	for _, item := range o.ag.assessments {
+	result := make(map[string]*entity.IDName, len(o.at.assessments))
+	for _, item := range o.at.assessments {
 		if schedule, ok := scheduleMap[item.ScheduleID]; ok {
 			result[item.ID] = programMap[schedule.ProgramID]
 		}
@@ -63,18 +63,18 @@ func (o *OnlineClassAssessment) MatchProgram() (map[string]*entity.IDName, error
 }
 
 func (o *OnlineClassAssessment) MatchSubject() (map[string][]*entity.IDName, error) {
-	relationMap, err := o.ag.GetScheduleRelationMap()
+	relationMap, err := o.at.GetScheduleRelationMap()
 	if err != nil {
 		return nil, err
 	}
 
-	subjectMap, err := o.ag.GetSubjectMap()
+	subjectMap, err := o.at.GetSubjectMap()
 	if err != nil {
 		return nil, err
 	}
 
-	result := make(map[string][]*entity.IDName, len(o.ag.assessments))
-	for _, item := range o.ag.assessments {
+	result := make(map[string][]*entity.IDName, len(o.at.assessments))
+	for _, item := range o.at.assessments {
 		if srItems, ok := relationMap[item.ScheduleID]; ok {
 			for _, srItem := range srItems {
 				if srItem.RelationType != entity.ScheduleRelationTypeSubject {
@@ -91,18 +91,18 @@ func (o *OnlineClassAssessment) MatchSubject() (map[string][]*entity.IDName, err
 }
 
 func (o *OnlineClassAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
-	assessmentUserMap, err := o.ag.GetAssessmentUserMap()
+	assessmentUserMap, err := o.at.GetAssessmentUserMap()
 	if err != nil {
 		return nil, err
 	}
 
-	userMap, err := o.ag.GetUserMap()
+	userMap, err := o.at.GetUserMap()
 	if err != nil {
 		return nil, err
 	}
 
-	result := make(map[string][]*entity.IDName, len(o.ag.assessments))
-	for _, item := range o.ag.assessments {
+	result := make(map[string][]*entity.IDName, len(o.at.assessments))
+	for _, item := range o.at.assessments {
 		if assUserItems, ok := assessmentUserMap[item.ID]; ok {
 			for _, assUserItem := range assUserItems {
 				if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
@@ -135,12 +135,12 @@ func (o *OnlineClassAssessment) MatchClass() (map[string]*entity.IDName, error) 
 }
 
 func (o *OnlineClassAssessment) MatchOutcomes() (map[string]*v2.AssessmentOutcomeReply, error) {
-	contents, err := o.ag.SingleGetContentsFromSchedule()
+	contents, err := o.at.FirstGetContentsFromSchedule()
 	if err != nil {
 		return nil, err
 	}
 
-	outcomeMap, err := o.ag.SingleGetOutcomeMapFromContent()
+	outcomeMap, err := o.at.FirstGetOutcomeMapFromContent()
 	if err != nil {
 		return nil, err
 	}
@@ -185,17 +185,17 @@ func (o *OnlineClassAssessment) MatchOutcomes() (map[string]*v2.AssessmentOutcom
 }
 
 func (o *OnlineClassAssessment) MatchContents() ([]*v2.AssessmentContentReply, error) {
-	libraryContents, err := o.ag.SingleGetContentsFromSchedule()
+	libraryContents, err := o.at.FirstGetContentsFromSchedule()
 	if err != nil {
 		return nil, err
 	}
 
-	assessmentContentMap, err := o.ag.SingleGetAssessmentContentMap()
+	assessmentContentMap, err := o.at.FirstGetAssessmentContentMap()
 	if err != nil {
 		return nil, err
 	}
 
-	roomContentMap, err := o.ag.SingleGetContentMapFromLiveRoom()
+	roomContentMap, err := o.at.FirstGetContentMapFromLiveRoom()
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +256,7 @@ func (o *OnlineClassAssessment) MatchContents() ([]*v2.AssessmentContentReply, e
 
 				for i, child := range roomContentItem.Children {
 					if child.SubContentID == "" {
-						log.Warn(o.ag.ctx, "sub content id is empty", log.Any("contentItem", item))
+						log.Warn(o.at.ctx, "sub content id is empty", log.Any("contentItem", item))
 						continue
 					}
 					o.appendContent(child, contentReplyItem, &result, contentReplyItem.Number, i+1)
@@ -273,34 +273,34 @@ func (o *OnlineClassAssessment) MatchContents() ([]*v2.AssessmentContentReply, e
 }
 
 func (o *OnlineClassAssessment) MatchStudents(contentsReply []*v2.AssessmentContentReply) ([]*v2.AssessmentStudentReply, error) {
-	ctx := o.ag.ctx
+	ctx := o.at.ctx
 
-	assessmentUserMap, err := o.ag.GetAssessmentUserMap()
+	assessmentUserMap, err := o.at.GetAssessmentUserMap()
 	if err != nil {
 		return nil, err
 	}
 
-	assessmentUsers, ok := assessmentUserMap[o.ag.assessment.ID]
+	assessmentUsers, ok := assessmentUserMap[o.at.first.ID]
 	if !ok {
 		return nil, constant.ErrRecordNotFound
 	}
 
-	commentResultMap, err := o.ag.SingleGetCommentResultMap()
+	commentResultMap, err := o.at.FirstGetCommentResultMap()
 	if err != nil {
 		return nil, err
 	}
 
-	assessmentOutcomeMap, err := o.ag.SingleGetOutcomeFromAssessment()
+	assessmentOutcomeMap, err := o.at.FirstGetOutcomeFromAssessment()
 	if err != nil {
 		return nil, err
 	}
 
-	userScoresMap, _, err := o.ag.SingleGetRoomData()
+	userScoresMap, _, err := o.at.FirstGetRoomData()
 	if err != nil {
 		return nil, err
 	}
 
-	userMap, err := o.ag.GetUserMap()
+	userMap, err := o.at.GetUserMap()
 	if err != nil {
 		return nil, err
 	}
@@ -308,7 +308,7 @@ func (o *OnlineClassAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 	roomUserResultMap := make(map[string]*RoomUserScore)
 	for userID, scores := range userScoresMap {
 		for _, scoreItem := range scores {
-			key := o.ag.GetKey([]string{
+			key := o.at.GetKey([]string{
 				userID,
 				scoreItem.ContentUniqueID,
 			})
@@ -316,14 +316,14 @@ func (o *OnlineClassAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 		}
 	}
 
-	contentScoreMap, studentScoreMap := o.base.summaryRoomScores(userScoresMap, contentsReply)
+	contentScoreMap, studentScoreMap := o.at.summaryRoomScores(userScoresMap, contentsReply)
 
-	contentMapFromAssessment, err := o.ag.SingleGetAssessmentContentMap()
+	contentMapFromAssessment, err := o.at.FirstGetAssessmentContentMap()
 	if err != nil {
 		return nil, err
 	}
 
-	outcomeMapFromContent, err := o.ag.SingleGetOutcomeMapFromContent()
+	outcomeMapFromContent, err := o.at.FirstGetOutcomeMapFromContent()
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +367,7 @@ func (o *OnlineClassAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 
 			var studentContentScore float32
 			if contentScoreItem, ok := contentScoreMap[contentID]; ok && contentScoreItem != 0 {
-				studentScoreKey := o.ag.GetKey([]string{
+				studentScoreKey := o.at.GetKey([]string{
 					item.UserID,
 					contentID,
 				})
@@ -380,7 +380,7 @@ func (o *OnlineClassAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 			for _, outcomeID := range content.OutcomeIDs {
 				var userOutcome *v2.AssessmentUserOutcome
 				if assessmentContent, ok := contentMapFromAssessment[contentID]; ok {
-					key := o.ag.GetKey([]string{
+					key := o.at.GetKey([]string{
 						item.ID,
 						assessmentContent.ID,
 						outcomeID,
@@ -390,8 +390,8 @@ func (o *OnlineClassAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 				userOutcomeReplyItem := &v2.AssessmentStudentResultOutcomeReply{
 					OutcomeID: outcomeID,
 				}
-				if o.ag.assessment.Status == v2.AssessmentStatusInDraft ||
-					o.ag.assessment.Status == v2.AssessmentStatusComplete {
+				if o.at.first.Status == v2.AssessmentStatusInDraft ||
+					o.at.first.Status == v2.AssessmentStatusComplete {
 					if userOutcome != nil && userOutcome.Status != "" {
 						userOutcomeReplyItem.Status = userOutcome.Status
 					} else {
@@ -414,7 +414,7 @@ func (o *OnlineClassAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 			}
 			resultReply.Outcomes = userOutcomeReply
 
-			roomKey := o.ag.GetKey([]string{
+			roomKey := o.at.GetKey([]string{
 				item.UserID,
 				content.RoomProvideContentID,
 			})
@@ -462,7 +462,7 @@ func (o *OnlineClassAssessment) appendContent(roomContent *RoomContentTree, mate
 	*result = append(*result, replyItem)
 	for i, item := range roomContent.Children {
 		if item.SubContentID == "" {
-			log.Warn(o.ag.ctx, "sub content id is empty", log.Any("contentItem", item))
+			log.Warn(o.at.ctx, "sub content id is empty", log.Any("contentItem", item))
 			continue
 		}
 		o.appendContent(item, materialItem, result, replyItem.Number, i+1)
