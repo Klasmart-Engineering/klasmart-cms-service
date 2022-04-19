@@ -43,6 +43,8 @@ type AssessmentBatch struct {
 	assessmentReviewerFeedbackMap map[string]*v2.AssessmentReviewerFeedback // assessmentUserID
 
 	assessmentUsers []*v2.AssessmentUser
+
+	scheduleStuReviewMap map[string]map[string]*entity.ScheduleReview // key:ScheduleID,StudentID
 }
 
 type AssessmentGetOne struct {
@@ -604,6 +606,36 @@ func (at *AssessmentTool) initReviewerFeedbackMap() error {
 	}
 
 	at.assessmentReviewerFeedbackMap = result
+
+	return nil
+}
+
+func (at *AssessmentTool) BatchGetScheduleReviewMap() (map[string]map[string]*entity.ScheduleReview, error) {
+	if at.scheduleStuReviewMap == nil {
+		if err := at.initBatchGetScheduleReviewMap(); err != nil {
+			return nil, err
+		}
+	}
+	return at.scheduleStuReviewMap, nil
+}
+func (at *AssessmentTool) initBatchGetScheduleReviewMap() error {
+	//ctx := at.ctx
+	//op := at.op
+
+	//studentReviews, err := GetScheduleModel().GetSuccessScheduleReview(ctx, op, at.first.ScheduleID)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	result := make(map[string]map[string]*entity.ScheduleReview)
+	//for _, item := range studentReviews {
+	//	if item.LiveLessonPlan == nil {
+	//		continue
+	//	}
+	//	result[item.StudentID] = item
+	//}
+
+	at.scheduleStuReviewMap = result
 
 	return nil
 }
