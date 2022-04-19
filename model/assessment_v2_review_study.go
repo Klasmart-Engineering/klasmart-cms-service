@@ -99,7 +99,7 @@ func (o *ReviewStudyAssessment) MatchCompleteRate() (map[string]float64, error) 
 			contentTotalCount += len(stuContentItem.LiveLessonPlan.LessonMaterials)
 		}
 
-		result[item.ID] = GetAssessmentExternalService().calcRoomCompleteRate2(ctx, roomData.ScoresByUser, contentTotalCount)
+		result[item.ID] = GetAssessmentExternalService().calcRoomCompleteRateWhenUseDiffContent(ctx, roomData.ScoresByUser, contentTotalCount)
 	}
 
 	return result, nil

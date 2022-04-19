@@ -209,7 +209,7 @@ func (aes *AssessmentExternalService) deconstructUserRoomInfo(userRoomInfos []*R
 }
 
 // TODO: refactor
-func (aes *AssessmentExternalService) calcRoomCompleteRate(ctx context.Context, userScores []*external.H5PUserScores, studentCount int) float64 {
+func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseSomeContent(ctx context.Context, userScores []*external.H5PUserScores, studentCount int) float64 {
 	attemptedCount := 0
 	contentCount := 0
 	contentMap := make(map[string]struct{})
@@ -225,6 +225,10 @@ func (aes *AssessmentExternalService) calcRoomCompleteRate(ctx context.Context, 
 
 		for _, scoreItem := range item.Scores {
 			if scoreItem.Content == nil {
+				continue
+			}
+
+			if scoreItem.Content.ParentID != "" {
 				continue
 			}
 
@@ -259,7 +263,7 @@ func (aes *AssessmentExternalService) calcRoomCompleteRate(ctx context.Context, 
 	return result
 }
 
-func (aes *AssessmentExternalService) calcRoomCompleteRate2(ctx context.Context, userScores []*external.H5PUserScores, contentTotalCount int) float64 {
+func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseDiffContent(ctx context.Context, userScores []*external.H5PUserScores, contentTotalCount int) float64 {
 	attemptedCount := 0
 	for _, item := range userScores {
 		if item.User == nil {

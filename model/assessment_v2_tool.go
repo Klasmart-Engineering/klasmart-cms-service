@@ -620,21 +620,30 @@ func (at *AssessmentTool) BatchGetScheduleReviewMap() (map[string]map[string]*en
 	return at.scheduleStuReviewMap, nil
 }
 func (at *AssessmentTool) initBatchGetScheduleReviewMap() error {
-	//ctx := at.ctx
-	//op := at.op
+	ctx := at.ctx
+	op := at.op
 
-	//studentReviews, err := GetScheduleModel().GetSuccessScheduleReview(ctx, op, at.first.ScheduleID)
-	//if err != nil {
-	//	return err
-	//}
-	//
+	scheduleIDs := make([]string, len(at.assessments))
+	for _, item := range at.assessments {
+		scheduleIDs = append(scheduleIDs, item.ScheduleID)
+	}
+
+	scheduleReviewMap, err := GetScheduleModel().GetSuccessScheduleReview(ctx, op, scheduleIDs)
+	if err != nil {
+		return err
+	}
+
 	result := make(map[string]map[string]*entity.ScheduleReview)
-	//for _, item := range studentReviews {
-	//	if item.LiveLessonPlan == nil {
-	//		continue
-	//	}
-	//	result[item.StudentID] = item
-	//}
+	for scheduleID, studentReviews := range scheduleReviewMap {
+		result[scheduleID] = make(map[string]*entity.ScheduleReview)
+		for _, reviewItem := range studentReviews {
+			if reviewItem.LiveLessonPlan == nil {
+				log.Warn(ctx, "student review content is empty", log.Any("studentReviewContent", reviewItem))
+				continue
+			}
+			result[scheduleID][reviewItem.StudentID] = reviewItem
+		}
+	}
 
 	at.scheduleStuReviewMap = result
 
@@ -1275,15 +1284,21 @@ func (at *AssessmentTool) FirstGetScheduleReviewMap() (map[string]*entity.Schedu
 }
 func (at *AssessmentTool) initFirstGetScheduleReviewMap() error {
 	ctx := at.ctx
-	op := at.op
+	//op := at.op
 
-	studentReviews, err := GetScheduleModel().GetSuccessScheduleReview(ctx, op, []string{at.first.ScheduleID})
+	scheduleReviewMap, err := at.BatchGetScheduleReviewMap()
 	if err != nil {
 		return err
 	}
 
+	studentReviews, ok := scheduleReviewMap[at.first.ScheduleID]
+	if !ok {
+		log.Warn(ctx, "schedule review info not found", log.Any("assessment", at.first))
+		return constant.ErrRecordNotFound
+	}
+
 	result := make(map[string]*entity.ScheduleReview)
-	for _, item := range studentReviews[at.first.ScheduleID] {
+	for _, item := range studentReviews {
 		if item.LiveLessonPlan == nil {
 			continue
 		}
