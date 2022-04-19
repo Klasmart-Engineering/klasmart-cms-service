@@ -18,7 +18,7 @@ import (
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/student_progress/app_insight_message [get]
+// @Router /reports/student_progress/app/insight_message [get]
 func (s *Server) getAppInsightMessage(c *gin.Context) {
 	ctx := c.Request.Context()
 	//op := s.getOperator(c)
