@@ -459,6 +459,10 @@ func (o *OnlineClassAssessment) appendContent(roomContent *RoomContentTree, mate
 		}
 	}
 
+	if len(roomContent.Children) > 0 {
+		replyItem.FileType = v2.AssessmentFileTypeHasChildContainer
+	}
+
 	*result = append(*result, replyItem)
 	for i, item := range roomContent.Children {
 		if item.SubContentID == "" {
