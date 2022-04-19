@@ -17,8 +17,21 @@ type LearnOutcomeAchievementResponse struct {
 
 	Items                                 LearnOutcomeAchievementResponseItemSlice `json:"items"`
 	StudentAchievedCounts                 map[string]Float64Slice                  `json:"-"`
-	UnselectSubjectsStudentAchievedCounts Float64Slice                  `json:"-"`
+	UnselectSubjectsStudentAchievedCounts Float64Slice                             `json:"-"`
+	LabelID                               string                                   `json:"label_id"`
+	LabelParams                           LearningOutcomeAchivementLabelParams     `json:"label_params"`
 }
+
+type LearningOutcomeAchivementLabelParams struct {
+	AchievedLoCount      float64 `json:"achieved_lo_count"`
+	LearntLoCount        float64 `json:"learnt_lo_count"`
+	LOCompareClass3week  float64 `json:"lo_compare_class_3_week"`
+	LOCompareLastWeek    float64 `json:"lo_compare_last_week"`
+	LOReviewCompareClass float64 `json:"lo_review_compare_class"`
+	LOCompareLast3Week   float64 `json:"lo_compare_last_3_week"`
+	LOCompareClass       float64 `json:"lo_compare_class"`
+}
+
 type LearnOutcomeAchievementResponseItemSlice []*LearnOutcomeAchievementResponseItem
 
 func (s *LearnOutcomeAchievementResponse) GetItem(tr TimeRange) (item *LearnOutcomeAchievementResponseItem) {

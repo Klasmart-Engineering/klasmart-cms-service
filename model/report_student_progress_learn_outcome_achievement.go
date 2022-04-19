@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -69,6 +68,67 @@ func (m *reportModel) GetStudentProgressLearnOutcomeAchievement(ctx context.Cont
 	}
 	res.ClassAverageAchievedCount = classAchievedCount.Avg()
 	res.UnSelectedSubjectsAverageAchieveCount = res.UnselectSubjectsStudentAchievedCounts.Avg()
-
+	labelID, labelParams, err := getLabelIDAndParams(res)
+	if err != nil {
+		return
+	}
+	res.LabelID = labelID
+	res.LabelParams = labelParams
 	return
+}
+
+func getLabelIDAndParams(res *entity.LearnOutcomeAchievementResponse) (labelID string, labelParams entity.LearningOutcomeAchivementLabelParams, err error) {
+	data := res.Items
+	if data[0].ClassAverageAchievedPercentage == 0 && data[0].FirstAchievedPercentage == 0 && data[0].ReAchievedPercentage == 0 &&
+		data[0].UnSelectedSubjectsAverageAchievedPercentage == 0 &&
+		data[1].ClassAverageAchievedPercentage == 0 && data[1].FirstAchievedPercentage == 0 && data[1].ReAchievedPercentage == 0 &&
+		data[1].UnSelectedSubjectsAverageAchievedPercentage == 0 &&
+		data[2].ClassAverageAchievedPercentage == 0 && data[2].FirstAchievedPercentage == 0 && data[2].ReAchievedPercentage == 0 &&
+		data[2].UnSelectedSubjectsAverageAchievedPercentage == 0 {
+		labelID = entity.LONew
+	} else if (getSum(data[1]) > data[1].ClassAverageAchievedPercentage &&
+		getSum(data[2]) > data[2].ClassAverageAchievedPercentage &&
+		getSum(data[3]) > data[3].ClassAverageAchievedPercentage) ||
+		(getSum(data[1]) < data[1].ClassAverageAchievedPercentage &&
+			getSum(data[2]) < data[2].ClassAverageAchievedPercentage &&
+			getSum(data[3]) < data[3].ClassAverageAchievedPercentage) {
+		if getSum(data[1]) > data[1].ClassAverageAchievedPercentage &&
+			getSum(data[2]) > data[2].ClassAverageAchievedPercentage &&
+			getSum(data[3]) > data[3].ClassAverageAchievedPercentage {
+			labelID = entity.LOHighClass3w
+		} else {
+			labelID = entity.LOLowClass3w
+		}
+
+	} else if getPercentage(data[3], data[2]) >= 20 || getPercentage(data[2], data[3]) >= 20 {
+		if getPercentage(data[3], data[2]) >= 20 {
+			labelID = entity.LOIncreasePreviousLargeW
+		} else {
+			labelID = entity.LODecreasePreviousLargeW
+		}
+	} else if (data[3].ReAchievedPercentage*100-data[3].ClassAverageAchievedPercentage*100 >= 10) ||
+		(data[3].ClassAverageAchievedPercentage*100-data[3].ReAchievedPercentage*100 >= 10) {
+		if data[3].ReAchievedPercentage*100-data[3].ClassAverageAchievedPercentage*100 >= 10 {
+			labelID = entity.LOHighClassReviewW
+		} else {
+			labelID = entity.LOLowClassReviewW
+		}
+	} else if (getPercentage(data[2], data[1]) > 0 && getPercentage(data[1], data[0]) > 0 && getPercentage(data[3], data[2]) > 0) ||
+		(getPercentage(data[2], data[1]) < 0 && getPercentage(data[1], data[0]) < 0 && getPercentage(data[3], data[2]) < 0) {
+		if getPercentage(data[2], data[1]) > 0 && getPercentage(data[3], data[2]) > 0 && getPercentage(data[1], data[0]) > 0 {
+			labelID = entity.LOIncrease3w
+		} else {
+			labelID = entity.LODecrease3w
+		}
+	}
+	return
+}
+
+func getPercentage(data1, data2 *entity.LearnOutcomeAchievementResponseItem) (result float64) {
+	return data1.FirstAchievedPercentage*100 + data1.ReAchievedPercentage*100 -
+		(data2.FirstAchievedPercentage*100 + data2.ReAchievedPercentage*100)
+}
+
+func getSum(data *entity.LearnOutcomeAchievementResponseItem) (result float64) {
+	return data.FirstAchievedPercentage*100 + data.ReAchievedPercentage*100
 }
