@@ -18,8 +18,8 @@ type LearnOutcomeAchievementResponse struct {
 	Items                                 LearnOutcomeAchievementResponseItemSlice `json:"items"`
 	StudentAchievedCounts                 map[string]Float64Slice                  `json:"-"`
 	UnselectSubjectsStudentAchievedCounts Float64Slice                             `json:"-"`
-	LabelID                               string                                   `json:"labelID"`
-	LabelParams                           string                                   `json:"labelParams"`
+	LabelID                               string                                   `json:"label_id"`
+	LabelParams                           string                                   `json:"label_params"`
 }
 type LearnOutcomeAchievementResponseItemSlice []*LearnOutcomeAchievementResponseItem
 

@@ -1,14 +1,16 @@
 package entity
 
-type ProgressInitRequest struct {
-	ClassID                 string      `json:"class_id" binding:"required"`
-	StudentID               string      `json:"student_id" binding:"required"`
-	SelectedSubjectIDList   []string    `json:"selected_subject_id_list" binding:"gt=0"`
-	UnSelectedSubjectIDList []string    `json:"un_selected_subject_id_list"`
-	Durations               []TimeRange `json:"durations" binding:"gt=0"`
+type AppInsightMessageRequest struct {
+	StudentID string `json:"student_id" binding:"required"`
+	OrgID     string `json:"org_id" binding:"required"`
+	EndTime   int    `json:"end_time"`
 }
 
-type ProgressInitResponse struct {
-	LabelID     string `json:"labelID"`
-	LabelParams string `json:"labelParams"`
+type AppInsightMessageResponse struct {
+	LearningOutcomeAchivementLabelID     string `json:"learning_outcome_achivement_label_id"`
+	LearningOutcomeAchivementLabelParams string `json:"learning_outcome_achivement_label_params"`
+	AttedanceLabelID                     string `json:"attedance_label_id"`
+	AttedanceLabelParams                 string `json:"attedance_label_params"`
+	AssignmentLabelID                    string `json:"assignment_label_id"`
+	AssignmentLabelParams                string `json:"assignment_label_params"`
 }

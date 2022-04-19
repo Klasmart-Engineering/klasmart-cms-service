@@ -11,8 +11,8 @@ type ClassAttendanceRequest struct {
 type ClassAttendanceResponse struct {
 	RequestStudentID string                         `json:"request_student_id"`
 	Items            []*ClassAttendanceResponseItem `json:"items"`
-	LabelID          string                         `json:"labelID"`
-	LabelParams      string                         `json:"labelParams"`
+	LabelID          string                         `json:"label_id"`
+	LabelParams      string                         `json:"label_params"`
 }
 
 type ClassAttendanceResponseItem struct {

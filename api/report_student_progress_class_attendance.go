@@ -11,7 +11,7 @@ import (
 
 // @Summary  getClassAttendance
 // @Tags reports/studentProgress
-// @ID getLearnOutcomeClassAttendance
+// @ID getClassAttendance
 // @Accept json
 // @Produce json
 // @Param request body entity.ClassAttendanceRequest true "request "

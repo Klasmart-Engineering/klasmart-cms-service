@@ -1,11 +1,6 @@
 package constant
 
 const (
-	WeekOption  = 0
-	MonthOption = 1
-)
-
-const (
 	LO_default                   = "report_msg_lo_default"
 	LO_new                       = "report_msg_lo_new"
 	LO_increase_previous_w       = "report_msg_lo_increase_previous_w"

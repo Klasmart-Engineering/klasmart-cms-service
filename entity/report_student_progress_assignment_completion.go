@@ -20,8 +20,8 @@ type AssignmentCompletionRate struct {
 
 type AssignmentResponse struct {
 	Assignments []*AssignmentCompletionRate `json:"assignments"`
-	LabelID     string                      `json:"labelID"`
-	LabelParams string                      `json:"labelParams"`
+	LabelID     string                      `json:"label_id"`
+	LabelParams string                      `json:"label_params"`
 }
 
 type StudentAssignmentStatus struct {

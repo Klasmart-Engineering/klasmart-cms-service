@@ -2,7 +2,7 @@ package model
 
 import (
 	"context"
-
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -69,6 +69,54 @@ func (m *reportModel) GetStudentProgressLearnOutcomeAchievement(ctx context.Cont
 	}
 	res.ClassAverageAchievedCount = classAchievedCount.Avg()
 	res.UnSelectedSubjectsAverageAchieveCount = res.UnselectSubjectsStudentAchievedCounts.Avg()
-
+	labelID, labelParams, err := getLabelIDAndParams(res)
+	if err != nil {
+		return
+	}
+	res.LabelID = labelID
+	res.LabelParams = labelParams
 	return
+}
+
+func getLabelIDAndParams(res *entity.LearnOutcomeAchievementResponse) (labelID string, labelParams string, err error) {
+	data := res.Items
+	if data[0].ClassAverageAchievedPercentage*100 == 0 && data[0].FirstAchievedPercentage*100 == 0 && data[0].ReAchievedPercentage*100 == 0 &&
+		data[0].UnSelectedSubjectsAverageAchievedPercentage*100 == 0 &&
+		data[1].ClassAverageAchievedPercentage*100 == 0 && data[1].FirstAchievedPercentage*100 == 0 && data[1].ReAchievedPercentage*100 == 0 &&
+		data[1].UnSelectedSubjectsAverageAchievedPercentage*100 == 0 &&
+		data[2].ClassAverageAchievedPercentage*100 == 0 && data[2].FirstAchievedPercentage*100 == 0 && data[2].ReAchievedPercentage*100 == 0 &&
+		data[2].UnSelectedSubjectsAverageAchievedPercentage*100 == 0 {
+		labelID = constant.LO_new
+		labelParams = ""
+	} else if ((data[1].FirstAchievedPercentage+data[1].ReAchievedPercentage) > data[1].ClassAverageAchievedPercentage &&
+		(data[2].FirstAchievedPercentage+data[2].ReAchievedPercentage) > data[2].ClassAverageAchievedPercentage &&
+		(data[3].FirstAchievedPercentage+data[3].ReAchievedPercentage) > data[3].ClassAverageAchievedPercentage) ||
+		((data[1].FirstAchievedPercentage+data[1].ReAchievedPercentage) < data[1].ClassAverageAchievedPercentage &&
+			(data[2].FirstAchievedPercentage+data[2].ReAchievedPercentage) < data[2].ClassAverageAchievedPercentage &&
+			(data[3].FirstAchievedPercentage+data[3].ReAchievedPercentage) < data[3].ClassAverageAchievedPercentage) {
+		if (data[1].FirstAchievedPercentage+data[1].ReAchievedPercentage) > data[1].ClassAverageAchievedPercentage &&
+			(data[2].FirstAchievedPercentage+data[2].ReAchievedPercentage) > data[2].ClassAverageAchievedPercentage &&
+			(data[3].FirstAchievedPercentage+data[3].ReAchievedPercentage) > data[3].ClassAverageAchievedPercentage {
+			labelID = constant.LO_high_class_3w
+			labelParams = ""
+		} else {
+			labelID = constant.LO_low_class_3w
+			labelParams = ""
+		}
+
+	} else if getPercentage(data[3], data[2]) >= 20 || getPercentage(data[2], data[3]) >= 20 {
+		if getPercentage(data[3], data[2]) >= 20 {
+			labelID = constant.LO_increase_previous_large_w
+			labelParams = ""
+		} else {
+			labelID = constant.LO_decrease_previous_large_w
+			labelParams = ""
+		}
+	}
+	return
+}
+
+func getPercentage(data1, data2 *entity.LearnOutcomeAchievementResponseItem) (result float64) {
+	return data1.FirstAchievedPercentage*100 + data1.ReAchievedPercentage*100 -
+		(data2.FirstAchievedPercentage*100 + data2.ReAchievedPercentage*100)
 }
