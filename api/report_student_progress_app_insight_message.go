@@ -23,9 +23,9 @@ func (s *Server) getAppInsightMessage(c *gin.Context) {
 	ctx := c.Request.Context()
 	//op := s.getOperator(c)
 	var request entity.AppInsightMessageRequest
-	err := c.ShouldBindJSON(&request)
+	err := c.ShouldBindQuery(&request)
 	if err != nil {
-		log.Warn(ctx, "getProgressInit: ShouldBindQuery failed",
+		log.Warn(ctx, "getAppInsightMessage: ShouldBindQuery failed",
 			log.Err(err),
 			log.Any("request", request))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
