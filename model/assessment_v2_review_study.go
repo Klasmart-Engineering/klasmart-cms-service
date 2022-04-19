@@ -254,6 +254,10 @@ func (o *ReviewStudyAssessment) appendStudentScore(roomContent *RoomContentTree,
 		}
 	}
 
+	if len(roomContent.Children) > 0 {
+		replyItem.Content.FileType = v2.AssessmentFileTypeHasChildContainer
+	}
+
 	*result = append(*result, replyItem)
 	for i, item := range roomContent.Children {
 		o.appendStudentScore(item, userContentScoreMap, materialItem, result, replyItem.Content.Number, i+1)
