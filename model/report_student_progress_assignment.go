@@ -31,10 +31,11 @@ func (t *reportModel) convertToTriLevelMap(sas []*entity.StudentAssignmentStatus
 }
 
 func (t *reportModel) GetAssignmentCompletion(ctx context.Context, op *entity.Operator, args *entity.AssignmentRequest) (entity.AssignmentResponse, error) {
+	var response entity.AssignmentResponse
 	results, err := da.GetReportDA().ListAssignments(ctx, op, args)
 	if err != nil {
 		log.Debug(ctx, "GetAssignmentCompletion: ListAssignments failed")
-		return nil, err
+		return response, err
 	}
 
 	mapResult := t.convertToTriLevelMap(results)
@@ -63,8 +64,8 @@ func (t *reportModel) GetAssignmentCompletion(ctx context.Context, op *entity.Op
 
 		res[i] = averageRate
 	}
-
-	return res, nil
+	response.Assignments = res
+	return response, nil
 }
 
 func (t *reportModel) calculateStudentSubjectAverage(ctx context.Context, raw map[string]map[string]map[string][]int64, duration, studentID string, subjectIDs []string) (bool, float64, int64, int64) {

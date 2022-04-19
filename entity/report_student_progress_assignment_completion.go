@@ -18,7 +18,11 @@ type AssignmentCompletionRate struct {
 	Duration                    TimeRange `json:"duration"`
 }
 
-type AssignmentResponse []*AssignmentCompletionRate
+type AssignmentResponse struct {
+	Assignments []*AssignmentCompletionRate `json:"assignments"`
+	LabelID     string                      `json:"labelID"`
+	LabelParams string                      `json:"labelParams"`
+}
 
 type StudentAssignmentStatus struct {
 	ClassID   string `json:"class_id" gorm:"column:class_id"`
