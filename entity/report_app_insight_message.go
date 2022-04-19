@@ -1,4 +1,4 @@
-package constant
+package entity
 
 const (
 	LO_default                   = "report_msg_lo_default"
