@@ -3,6 +3,9 @@ package model
 import (
 	"context"
 	"database/sql"
+	"strings"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -12,8 +15,6 @@ import (
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"strings"
-	"sync"
 )
 
 type AssessmentTool struct {
@@ -1244,13 +1245,13 @@ func (at *AssessmentTool) initFirstGetScheduleReviewMap() error {
 	ctx := at.ctx
 	op := at.op
 
-	studentReviews, err := GetScheduleModel().GetSuccessScheduleReview(ctx, op, at.first.ScheduleID)
+	studentReviews, err := GetScheduleModel().GetSuccessScheduleReview(ctx, op, []string{at.first.ScheduleID})
 	if err != nil {
 		return err
 	}
 
 	result := make(map[string]*entity.ScheduleReview)
-	for _, item := range studentReviews {
+	for _, item := range studentReviews[at.first.ScheduleID] {
 		if item.LiveLessonPlan == nil {
 			continue
 		}
