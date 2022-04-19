@@ -1198,7 +1198,8 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 		return err
 	}
 
-	if schedule.IsReview {
+	// if review schedule is pending
+	if schedule.IsReview && schedule.ReviewStatus == entity.ScheduleReviewStatusPending {
 		deleteScheduleReviewRequest := external.DeleteScheduleReviewRequest{
 			ScheduleIDs: []string{schedule.ID},
 		}
@@ -1208,15 +1209,11 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 				log.Err(err),
 				log.Any("deleteScheduleReviewRequest", deleteScheduleReviewRequest),
 			)
-			return err
-		}
-
-		if len(resp.Succeeded) != 1 && resp.Succeeded[0] != schedule.ID {
+		} else if len(resp.Succeeded) != 1 || resp.Succeeded[0] != schedule.ID {
 			log.Error(ctx, "delete schedule review failed",
 				log.Any("resp", resp),
 				log.Any("deleteScheduleReviewRequest", deleteScheduleReviewRequest),
 			)
-			return errors.New("delete schedule review failed")
 		}
 	}
 
