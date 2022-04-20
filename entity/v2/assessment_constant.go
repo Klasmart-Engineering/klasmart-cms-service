@@ -312,6 +312,16 @@ func (a AssessmentUserStatus) Valid() bool {
 	}
 }
 
+type AssessmentUserSystemStatus string
+
+const (
+	AssessmentUserSystemStatusNotStarted  AssessmentUserSystemStatus = "NotStarted"
+	AssessmentUserSystemStatusInProgress  AssessmentUserSystemStatus = "InProgress"
+	AssessmentUserSystemStatusDone        AssessmentUserSystemStatus = "Done"
+	AssessmentUserSystemStatusResubmitted AssessmentUserSystemStatus = "Resubmitted"
+	AssessmentUserSystemStatusCompleted   AssessmentUserSystemStatus = "Completed"
+)
+
 type AssessmentContentStatus string
 
 const (

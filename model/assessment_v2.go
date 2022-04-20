@@ -516,7 +516,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		return match.Update(req)
 	}
 
-	userIDAndUserTypeMap, err := at.GetAssessmentUserWithUserIDAndUserTypeMap()
+	userIDAndUserTypeMap, err := at.FirstGetAssessmentUserWithUserIDAndUserTypeMap()
 	if err != nil {
 		return err
 	}
