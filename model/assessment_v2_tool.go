@@ -3,6 +3,9 @@ package model
 import (
 	"context"
 	"database/sql"
+	"strings"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -12,8 +15,6 @@ import (
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"strings"
-	"sync"
 )
 
 type AssessmentTool struct {
@@ -43,6 +44,8 @@ type AssessmentBatch struct {
 	assessmentReviewerFeedbackMap map[string]*v2.AssessmentReviewerFeedback // assessmentUserID
 
 	assessmentUsers []*v2.AssessmentUser
+
+	scheduleStuReviewMap map[string]map[string]*entity.ScheduleReview // key:ScheduleID,StudentID
 }
 
 type AssessmentGetOne struct {
@@ -604,6 +607,45 @@ func (at *AssessmentTool) initReviewerFeedbackMap() error {
 	}
 
 	at.assessmentReviewerFeedbackMap = result
+
+	return nil
+}
+
+func (at *AssessmentTool) BatchGetScheduleReviewMap() (map[string]map[string]*entity.ScheduleReview, error) {
+	if at.scheduleStuReviewMap == nil {
+		if err := at.initBatchGetScheduleReviewMap(); err != nil {
+			return nil, err
+		}
+	}
+	return at.scheduleStuReviewMap, nil
+}
+func (at *AssessmentTool) initBatchGetScheduleReviewMap() error {
+	ctx := at.ctx
+	op := at.op
+
+	scheduleIDs := make([]string, len(at.assessments))
+	for _, item := range at.assessments {
+		scheduleIDs = append(scheduleIDs, item.ScheduleID)
+	}
+
+	scheduleReviewMap, err := GetScheduleModel().GetSuccessScheduleReview(ctx, op, scheduleIDs)
+	if err != nil {
+		return err
+	}
+
+	result := make(map[string]map[string]*entity.ScheduleReview)
+	for scheduleID, studentReviews := range scheduleReviewMap {
+		result[scheduleID] = make(map[string]*entity.ScheduleReview)
+		for _, reviewItem := range studentReviews {
+			if reviewItem.LiveLessonPlan == nil {
+				log.Warn(ctx, "student review content is empty", log.Any("studentReviewContent", reviewItem))
+				continue
+			}
+			result[scheduleID][reviewItem.StudentID] = reviewItem
+		}
+	}
+
+	at.scheduleStuReviewMap = result
 
 	return nil
 }
@@ -1242,11 +1284,17 @@ func (at *AssessmentTool) FirstGetScheduleReviewMap() (map[string]*entity.Schedu
 }
 func (at *AssessmentTool) initFirstGetScheduleReviewMap() error {
 	ctx := at.ctx
-	op := at.op
+	//op := at.op
 
-	studentReviews, err := GetScheduleModel().GetSuccessScheduleReview(ctx, op, at.first.ScheduleID)
+	scheduleReviewMap, err := at.BatchGetScheduleReviewMap()
 	if err != nil {
 		return err
+	}
+
+	studentReviews, ok := scheduleReviewMap[at.first.ScheduleID]
+	if !ok {
+		log.Warn(ctx, "schedule review info not found", log.Any("assessment", at.first))
+		return constant.ErrRecordNotFound
 	}
 
 	result := make(map[string]*entity.ScheduleReview)

@@ -88,7 +88,7 @@ type IScheduleModel interface {
 	GetScheduleRelationIDs(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleRelationIDs, error)
 	CheckScheduleReviewData(ctx context.Context, op *entity.Operator, request *entity.CheckScheduleReviewDataRequest) (*entity.CheckScheduleReviewDataResponse, error)
 	UpdateScheduleReviewStatus(ctx context.Context, request *entity.UpdateScheduleReviewStatusRequest) error
-	GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleReview, error)
+	GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]*entity.ScheduleReview, error)
 	GetScheduleAttendance(ctx context.Context, timeframeFrom, timeframeTo int, scheduleTypes []string) ([]*entity.ScheduleAttendance, error)
 }
 
@@ -3196,12 +3196,17 @@ func (s *scheduleModel) UpdateScheduleReviewStatus(ctx context.Context, request 
 	return nil
 }
 
-func (s *scheduleModel) GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleReview, error) {
+func (s *scheduleModel) GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]*entity.ScheduleReview, error) {
+	if len(scheduleIDs) == 0 {
+		return map[string][]*entity.ScheduleReview{}, nil
+	}
+
 	var scheduleReviews []*entity.ScheduleReview
+	scheduleReviewsMap := make(map[string][]*entity.ScheduleReview, len(scheduleIDs))
 	daCondition := da.ScheduleReviewCondition{
 		ScheduleIDs: entity.NullStrings{
 			Valid:   true,
-			Strings: []string{scheduleID},
+			Strings: scheduleIDs,
 		},
 		ReviewStatuses: entity.NullStrings{
 			Valid:   true,
@@ -3216,7 +3221,15 @@ func (s *scheduleModel) GetSuccessScheduleReview(ctx context.Context, op *entity
 		return nil, err
 	}
 
-	return scheduleReviews, nil
+	for _, v := range scheduleReviews {
+		if _, ok := scheduleReviewsMap[v.ScheduleID]; ok {
+			scheduleReviewsMap[v.ScheduleID] = append(scheduleReviewsMap[v.ScheduleID], v)
+		} else {
+			scheduleReviewsMap[v.ScheduleID] = []*entity.ScheduleReview{v}
+		}
+	}
+
+	return scheduleReviewsMap, nil
 }
 
 func (s *scheduleModel) GetScheduleAttendance(ctx context.Context, timeframeFrom, timeframeTo int, scheduleTypes []string) ([]*entity.ScheduleAttendance, error) {

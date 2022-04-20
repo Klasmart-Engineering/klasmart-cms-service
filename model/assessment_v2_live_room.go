@@ -208,7 +208,8 @@ func (aes *AssessmentExternalService) deconstructUserRoomInfo(userRoomInfos []*R
 	return result
 }
 
-func (aes *AssessmentExternalService) calcRoomCompleteRate(ctx context.Context, userScores []*external.H5PUserScores, studentCount int) float64 {
+// TODO: refactor
+func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseSomeContent(ctx context.Context, userScores []*external.H5PUserScores, studentCount int) float64 {
 	attemptedCount := 0
 	contentCount := 0
 	contentMap := make(map[string]struct{})
@@ -224,6 +225,10 @@ func (aes *AssessmentExternalService) calcRoomCompleteRate(ctx context.Context, 
 
 		for _, scoreItem := range item.Scores {
 			if scoreItem.Content == nil {
+				continue
+			}
+
+			if scoreItem.Content.ParentID != "" {
 				continue
 			}
 
@@ -248,6 +253,50 @@ func (aes *AssessmentExternalService) calcRoomCompleteRate(ctx context.Context, 
 			log.Warn(ctx, "calcRoomCompleteRate greater than 1",
 				log.Int("studentCount", studentCount),
 				log.Int("contentCount", contentCount),
+				log.Int("attemptedCount", attemptedCount),
+			)
+
+			result = 1
+		}
+	}
+
+	return result
+}
+
+func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseDiffContent(ctx context.Context, userScores []*external.H5PUserScores, contentTotalCount int) float64 {
+	attemptedCount := 0
+	for _, item := range userScores {
+		if item.User == nil {
+			continue
+		}
+
+		if len(item.Scores) <= 0 {
+			continue
+		}
+
+		for _, scoreItem := range item.Scores {
+			if scoreItem.Content == nil {
+				continue
+			}
+
+			if scoreItem.Content.ParentID != "" {
+				continue
+			}
+
+			if scoreItem.Seen {
+				attemptedCount++
+			}
+		}
+	}
+
+	var result float64
+
+	if contentTotalCount > 0 {
+		result = float64(attemptedCount) / float64(contentTotalCount)
+
+		if result > 1 {
+			log.Warn(ctx, "calcRoomCompleteRate greater than 1",
+				log.Int("contentTotalCount", contentTotalCount),
 				log.Int("attemptedCount", attemptedCount),
 			)
 

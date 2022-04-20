@@ -50,7 +50,59 @@ func (o *ReviewStudyAssessment) MatchClass() (map[string]*entity.IDName, error) 
 }
 
 func (o *ReviewStudyAssessment) MatchCompleteRate() (map[string]float64, error) {
-	return NewOnlineStudyAssessmentPage(o.at).MatchCompleteRate()
+	ctx := o.at.ctx
+
+	assessmentUserMap, err := o.at.GetAssessmentUserMap()
+	if err != nil {
+		return nil, err
+	}
+
+	studentCount := make(map[string]int)
+	for key, users := range assessmentUserMap {
+		for _, userItem := range users {
+			if userItem.UserType == v2.AssessmentUserTypeStudent {
+				studentCount[key]++
+			}
+		}
+	}
+
+	roomDataMap, err := o.at.GetRoomStudentScoresAndComments()
+	if err != nil {
+		return nil, err
+	}
+
+	// scheduleID,studentID
+	scheduleReviewMap, err := o.at.BatchGetScheduleReviewMap()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]float64)
+	for _, item := range o.at.assessments {
+		studentReviewContentMap, ok := scheduleReviewMap[item.ScheduleID]
+		if !ok {
+			log.Warn(ctx, "not found student content in schedule", log.Any("schedule", item))
+			continue
+		}
+
+		roomData, ok := roomDataMap[item.ScheduleID]
+		if !ok {
+			continue
+		}
+
+		var contentTotalCount int
+		for _, stuContentItem := range studentReviewContentMap {
+			if stuContentItem.LiveLessonPlan == nil {
+				log.Warn(ctx, "student content is empty", log.Any("stuContentItem", stuContentItem))
+				continue
+			}
+			contentTotalCount += len(stuContentItem.LiveLessonPlan.LessonMaterials)
+		}
+
+		result[item.ID] = GetAssessmentExternalService().calcRoomCompleteRateWhenUseDiffContent(ctx, roomData.ScoresByUser, contentTotalCount)
+	}
+
+	return result, nil
 }
 
 func (o *ReviewStudyAssessment) MatchRemainingTime() (map[string]int64, error) {

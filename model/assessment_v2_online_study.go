@@ -74,7 +74,7 @@ func (o *OnlineStudyAssessment) MatchCompleteRate() (map[string]float64, error) 
 	result := make(map[string]float64)
 	for _, item := range o.at.assessments {
 		if roomData, ok := roomDataMap[item.ScheduleID]; ok {
-			result[item.ID] = GetAssessmentExternalService().calcRoomCompleteRate(ctx, roomData.ScoresByUser, studentCount[item.ID])
+			result[item.ID] = GetAssessmentExternalService().calcRoomCompleteRateWhenUseSomeContent(ctx, roomData.ScoresByUser, studentCount[item.ID])
 		}
 	}
 
