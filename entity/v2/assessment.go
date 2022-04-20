@@ -221,7 +221,7 @@ type AssessmentContentReply struct {
 	MaxScore             float64                 `json:"max_score"`
 	H5PSubID             string                  `json:"h5p_sub_id"`
 	RoomProvideContentID string                  `json:"-"`
-	IgnoreCalculateScore bool                    `json:"-"`
+	//IgnoreCalculateScore bool                    `json:"-"`
 }
 
 type AssessmentOutcomeReply struct {
@@ -422,8 +422,8 @@ type StudentAssessmentSchedule struct {
 	Attachment *StudentAssessmentAttachment `json:"attachment,omitempty"`
 }
 type StudentAssessmentAttachment struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID                 string `json:"id"`
+	Name               string `json:"name"`
 	ReviewAttachmentID string `json:"review_attachment_id"`
 }
 
