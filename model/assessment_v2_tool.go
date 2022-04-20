@@ -1395,7 +1395,7 @@ func (at *AssessmentTool) summaryRoomScores(userScoreMap map[string][]*RoomUserS
 	contentSummaryTotalScoreMap := make(map[string]float64)
 	contentMap := make(map[string]*v2.AssessmentContentReply)
 	for _, content := range contentsReply {
-		if content.IgnoreCalculateScore {
+		if content.FileType == v2.AssessmentFileTypeHasChildContainer {
 			continue
 		}
 		contentID := content.ContentID
@@ -1418,9 +1418,10 @@ func (at *AssessmentTool) summaryRoomScores(userScoreMap map[string][]*RoomUserS
 			roomUserResultMap[key] = resultItem
 
 			if contentItem, ok := contentMap[resultItem.ContentUniqueID]; ok {
-				if contentItem.IgnoreCalculateScore {
+				if contentItem.FileType == v2.AssessmentFileTypeHasChildContainer {
 					continue
 				}
+
 				contentID := contentItem.ContentID
 				if contentItem.ContentType == v2.AssessmentContentTypeUnknown {
 					contentID = contentItem.ParentID

@@ -160,7 +160,7 @@ func (s Server) registeRoute() {
 		reports.POST("/reports/student_progress/learn_outcome_achievement", s.mustLogin, s.getLearnOutcomeAchievement)
 		reports.POST("/reports/student_progress/class_attendance", s.mustLogin, s.getClassAttendance)
 		reports.POST("/reports/student_progress/assignment_completion", s.mustLogin, s.getAssignmentsCompletion)
-
+		reports.GET("/reports/student_progress/app/insight_message", s.mustLogin, s.getAppInsightMessage)
 		reports.POST("/reports/learner_usage/overview", s.mustLogin, s.getLearnerUsageOverview)
 	}
 
