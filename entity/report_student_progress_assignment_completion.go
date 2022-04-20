@@ -25,13 +25,13 @@ type AssignmentResponse struct {
 }
 
 type AssignmentLabelParams struct {
-	AssignmentCompleteCount float64 `json:"assignment_complete_count"`
-	AssignmentCount         float64 `json:"assignment_count"`
+	AssignmentCompleteCount int64   `json:"assignment_complete_count"`
+	AssignmentCount         int64   `json:"assignment_count"`
 	AssignCompareClass3week float64 `json:"assign_compare_class_3_week"`
 	AssignCompareLastWeek   float64 `json:"assign_compare_last_week"`
 	AssignCompare3Week      float64 `json:"assign_compare_3_week"`
 	AssignCompareClass      float64 `json:"assign_compare_class"`
-	AssignCompleteCount     float64 `json:"assign_complete_count"`
+	AssignCompleteCount     int64   `json:"assign_complete_count"`
 }
 
 type StudentAssignmentStatus struct {
