@@ -23,8 +23,8 @@ type LearnOutcomeAchievementResponse struct {
 }
 
 type LearningOutcomeAchivementLabelParams struct {
-	AchievedLoCount      float64 `json:"achieved_lo_count"`
-	LearntLoCount        float64 `json:"learnt_lo_count"`
+	AchievedLoCount      int64   `json:"achieved_lo_count"`
+	LearntLoCount        int64   `json:"learnt_lo_count"`
 	LOCompareClass3week  float64 `json:"lo_compare_class_3_week"`
 	LOCompareLastWeek    float64 `json:"lo_compare_last_week"`
 	LOReviewCompareClass float64 `json:"lo_review_compare_class"`
