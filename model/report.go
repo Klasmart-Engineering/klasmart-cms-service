@@ -42,6 +42,7 @@ type IReportModel interface {
 	GetClassIDsCanViewReports(ctx context.Context, operator *entity.Operator, params external.TeacherViewPermissionParams) (classIDs []string, err error)
 	GetLearnerUsageOverview(ctx context.Context, op *entity.Operator, permissions map[external.PermissionName]bool, request *entity.LearnerUsageRequest) (response *entity.LearnerUsageResponse, err error)
 	GetLearnerReportOverview(ctx context.Context, op *entity.Operator, cond *entity.LearnerReportOverviewCondition) (res entity.LearnerReportOverview, err error)
+	GetAppInsightMessage(ctx context.Context, op *entity.Operator, req *entity.AppInsightMessageRequest) (res *entity.AppInsightMessageResponse, err error)
 }
 
 var (

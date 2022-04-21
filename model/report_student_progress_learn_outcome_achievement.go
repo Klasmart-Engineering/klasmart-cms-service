@@ -68,9 +68,11 @@ func (m *reportModel) GetStudentProgressLearnOutcomeAchievement(ctx context.Cont
 	}
 	res.ClassAverageAchievedCount = classAchievedCount.Avg()
 	res.UnSelectedSubjectsAverageAchieveCount = res.UnselectSubjectsStudentAchievedCounts.Avg()
-	labelID, labelParams := getLearnOutcomeAchievementLabelIDAndParams(res)
-	res.LabelID = labelID
-	res.LabelParams = labelParams
+	if len(req.Durations) == entity.Repoet4W {
+		labelID, labelParams := getLearnOutcomeAchievementLabelIDAndParams(res)
+		res.LabelID = labelID
+		res.LabelParams = labelParams
+	}
 	return
 }
 

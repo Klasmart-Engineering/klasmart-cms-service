@@ -1,11 +1,11 @@
 package api
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	"net/http"
 )
 
 // @Summary  getAppInsightMessage
@@ -39,8 +39,7 @@ func (s *Server) getAppInsightMessage(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
-
-	var result entity.AppInsightMessageResponse
+	result, err := model.GetReportModel().GetAppInsightMessage(ctx, op, &request)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
