@@ -63,6 +63,8 @@ type AssessmentGetOne struct {
 
 	roomUserScoreMap map[string][]*RoomUserScore // key: userID
 	roomContentTree  []*RoomContentTree
+
+	firstAssessmentUserMap map[string]*v2.AssessmentUser // key: userID+userType
 }
 
 func NewAssessmentTool(ctx context.Context, op *entity.Operator, assessments []*v2.Assessment) (*AssessmentTool, error) {
@@ -650,18 +652,28 @@ func (at *AssessmentTool) initBatchGetScheduleReviewMap() error {
 	return nil
 }
 
-func (at *AssessmentTool) GetAssessmentUserWithUserIDAndUserTypeMap() (map[string]*v2.AssessmentUser, error) {
+func (at *AssessmentTool) FirstGetAssessmentUserWithUserIDAndUserTypeMap() (map[string]*v2.AssessmentUser, error) {
+	if at.firstAssessmentUserMap == nil {
+		if err := at.initFirstGetAssessmentUserWithUserIDAndUserTypeMap(); err != nil {
+			return nil, err
+		}
+	}
+
+	return at.firstAssessmentUserMap, nil
+}
+
+func (at *AssessmentTool) initFirstGetAssessmentUserWithUserIDAndUserTypeMap() error {
 	ctx := at.ctx
 
 	assessmentUserMap, err := at.GetAssessmentUserMap()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	assessmentUsers, ok := assessmentUserMap[at.first.ID]
 	if !ok {
 		log.Error(ctx, "not found assessment users", log.Any("assessment", at.first), log.Any("assessmentUserMap", assessmentUserMap))
-		return nil, constant.ErrRecordNotFound
+		return constant.ErrRecordNotFound
 	}
 
 	result := make(map[string]*v2.AssessmentUser, len(assessmentUsers))
@@ -669,7 +681,9 @@ func (at *AssessmentTool) GetAssessmentUserWithUserIDAndUserTypeMap() (map[strin
 		result[at.GetKey([]string{item.UserID, item.UserType.String()})] = item
 	}
 
-	return result, nil
+	at.firstAssessmentUserMap = result
+
+	return nil
 }
 
 func (at *AssessmentTool) GetKey(value []string) string {
