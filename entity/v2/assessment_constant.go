@@ -315,11 +315,16 @@ func (a AssessmentUserStatus) Valid() bool {
 type AssessmentUserSystemStatus string
 
 const (
-	AssessmentUserSystemStatusNotStarted  AssessmentUserSystemStatus = "NotStarted"
-	AssessmentUserSystemStatusInProgress  AssessmentUserSystemStatus = "InProgress"
-	AssessmentUserSystemStatusDone        AssessmentUserSystemStatus = "Done"
+	// AssessmentUserSystemStatusNotStarted when create schedule
+	AssessmentUserSystemStatusNotStarted AssessmentUserSystemStatus = "NotStarted"
+	// AssessmentUserSystemStatusInProgress when student enter the live room
+	AssessmentUserSystemStatusInProgress AssessmentUserSystemStatus = "InProgress"
+	// AssessmentUserSystemStatusDone when student leave the live room  or submit homework
+	AssessmentUserSystemStatusDone AssessmentUserSystemStatus = "Done"
+	// AssessmentUserSystemStatusResubmitted when student leave the live room or submit homework again
 	AssessmentUserSystemStatusResubmitted AssessmentUserSystemStatus = "Resubmitted"
-	AssessmentUserSystemStatusCompleted   AssessmentUserSystemStatus = "Completed"
+	// AssessmentUserSystemStatusCompleted when teacher completed assessment
+	AssessmentUserSystemStatusCompleted AssessmentUserSystemStatus = "Completed"
 )
 
 type AssessmentContentStatus string
