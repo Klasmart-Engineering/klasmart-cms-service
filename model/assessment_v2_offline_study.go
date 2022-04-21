@@ -280,6 +280,7 @@ func (o *OfflineStudyAssessment) verifyUpdateRequest(req *v2.AssessmentUpdateReq
 	}
 
 	if len(req.Students) <= 0 {
+		log.Warn(ctx, "request students list is empty", log.Any("request", req))
 		return constant.ErrInvalidArgs
 	}
 
@@ -301,6 +302,8 @@ func (o *OfflineStudyAssessment) prepareAssessmentUpdateData(req *v2.AssessmentU
 		log.Warn(ctx, "req action is invalid", log.Any("req", req))
 		return nil, constant.ErrInvalidArgs
 	}
+
+	result.UpdateAt = now
 
 	return result, nil
 }
@@ -368,11 +371,12 @@ func (o *OfflineStudyAssessment) prepareUserOutcomesUpdateData(req *v2.Assessmen
 			log.Warn(ctx, "not found student in assessment", log.Any("studentItem", item), log.Any("assessmentUserMap", assessmentUserMap))
 			return nil, constant.ErrInvalidArgs
 		}
-		assessmentUserIDs = append(assessmentUserIDs, assessmentUserItem.ID)
 
 		if len(item.Results) <= 0 {
 			continue
 		}
+
+		assessmentUserIDs = append(assessmentUserIDs, assessmentUserItem.ID)
 		stuResult := item.Results[0]
 		for _, outcomeReq := range stuResult.Outcomes {
 			reqStuOutcomeMap[o.at.GetKey([]string{assessmentUserItem.ID, outcomeReq.OutcomeID})] = outcomeReq
