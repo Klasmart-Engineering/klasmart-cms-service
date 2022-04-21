@@ -16,7 +16,7 @@ import (
 // @Param class_id query string true "class_id"
 // @Param student_id query string true "student_id"
 // @Param org_id query string true "org_id"
-// @Param end_time query int false "end_time" default(0)
+// @Param end_time query int true "end_time" default(0)
 // @Success 200 {object} entity.AppInsightMessageResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
