@@ -533,6 +533,13 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			return constant.ErrInvalidArgs
 		}
 		existItem.StatusByUser = item.Status
+
+		if req.Action == v2.AssessmentActionComplete {
+			if existItem.StatusBySystem == v2.AssessmentUserSystemStatusDone || existItem.StatusBySystem == v2.AssessmentUserSystemStatusResubmitted {
+				existItem.StatusBySystem = v2.AssessmentUserSystemStatusCompleted
+			}
+		}
+		existItem.UpdateAt = now
 		waitUpdatedUsers = append(waitUpdatedUsers, existItem)
 	}
 

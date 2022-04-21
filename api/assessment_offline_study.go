@@ -1,16 +1,5 @@
 package api
 
-import (
-	"net/http"
-
-	"github.com/gin-gonic/gin"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-)
-
 // @Summary query user offline study(homeFun study)
 // @Description query user offline study
 // @Tags assessments
@@ -28,28 +17,28 @@ import (
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /user_offline_study [get]
-func (s *Server) queryUserOfflineStudy(c *gin.Context) {
-	ctx := c.Request.Context()
-	op := s.getOperator(c)
-	req := new(v2.AssessmentQueryReq)
-	if err := c.ShouldBind(req); err != nil {
-		return
-	}
-
-	if req.PageSize <= 0 || req.PageIndex <= 0 {
-		req.PageIndex = constant.DefaultPageIndex
-		req.PageSize = constant.DefaultPageSize
-	}
-
-	log.Debug(ctx, "queryUserOfflineStudy request", log.Any("req", req), log.Any("op", op))
-
-	result, err := model.GetAssessmentOfflineStudyModel().Page(ctx, op, req)
-	switch err {
-	case nil:
-		c.JSON(http.StatusOK, result)
-	case constant.ErrForbidden:
-		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
-	default:
-		s.defaultErrorHandler(c, err)
-	}
-}
+//func (s *Server) queryUserOfflineStudy(c *gin.Context) {
+//	ctx := c.Request.Context()
+//	op := s.getOperator(c)
+//	req := new(v2.AssessmentQueryReq)
+//	if err := c.ShouldBind(req); err != nil {
+//		return
+//	}
+//
+//	if req.PageSize <= 0 || req.PageIndex <= 0 {
+//		req.PageIndex = constant.DefaultPageIndex
+//		req.PageSize = constant.DefaultPageSize
+//	}
+//
+//	log.Debug(ctx, "queryUserOfflineStudy request", log.Any("req", req), log.Any("op", op))
+//
+//	result, err := model.GetAssessmentOfflineStudyModel().Page(ctx, op, req)
+//	switch err {
+//	case nil:
+//		c.JSON(http.StatusOK, result)
+//	case constant.ErrForbidden:
+//		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+//	default:
+//		s.defaultErrorHandler(c, err)
+//	}
+//}

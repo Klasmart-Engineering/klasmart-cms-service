@@ -17,7 +17,6 @@ import (
 
 type IAssessmentUserResultDA interface {
 	dbo.DataAccesser
-	PageByCondition(ctx context.Context, condition *UserResultPageCondition) (int64, []*v2.AssessmentUserResultDBView, error)
 	GetAssessmentUserResultDBView(ctx context.Context, condition *AssessmentUserResultDBViewCondition) (int64, []*v2.AssessmentUserResultDBView, error)
 }
 
@@ -71,15 +70,14 @@ where
 		params = append(params, condition.ScheduleIDs.Strings)
 	}
 
-	if condition.CompleteAtGe.Valid{
+	if condition.CompleteAtGe.Valid {
 		wheres = append(wheres, "t1.complete_at >= ?")
 		params = append(params, condition.CompleteAtGe.Int64)
 	}
-	if condition.CompleteAtLe.Valid{
+	if condition.CompleteAtLe.Valid {
 		wheres = append(wheres, "t1.complete_at <= ?")
 		params = append(params, condition.CompleteAtLe.Int64)
 	}
-
 
 	commonSql += strings.Join(wheres, " and ")
 

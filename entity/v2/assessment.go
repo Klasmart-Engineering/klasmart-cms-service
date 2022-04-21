@@ -99,10 +99,11 @@ type AssessmentAttendancesReq struct {
 }
 
 type ScheduleEndClassCallBackReq struct {
-	ScheduleID    string   `json:"schedule_id"`
-	AttendanceIDs []string `json:"attendance_ids"`
-	ClassLength   int      `json:"class_length"`
-	ClassEndAt    int64    `json:"class_end_time"`
+	ScheduleID    string                   `json:"schedule_id"`
+	AttendanceIDs []string                 `json:"attendance_ids"`
+	Action        AssessmentUserLiveAction `json:"action" enums:"EnterLiveRoom,LeaveLiveRoom"`
+	ClassLength   int                      `json:"class_length"`
+	ClassEndAt    int64                    `json:"class_end_time"`
 }
 
 // Valid implement jwt Claims interface
@@ -433,8 +434,8 @@ type SearchStudentAssessmentsResponse struct {
 }
 
 type AssessmentAnyoneAttemptedReply struct {
-	IsAnyoneAttempted bool
-	AssessmentStatus  AssessmentStatus
+	//IsAnyoneAttempted bool
+	AssessmentStatus AssessmentStatus
 }
 
 type AssessmentContentView struct {

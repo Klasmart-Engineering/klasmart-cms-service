@@ -108,7 +108,7 @@ func (o *OnlineClassAssessment) MatchTeacher() (map[string][]*entity.IDName, err
 				if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
 					continue
 				}
-				if assUserItem.StatusBySystem == v2.AssessmentUserStatusNotParticipate {
+				if assUserItem.StatusBySystem == v2.AssessmentUserSystemStatusNotStarted {
 					continue
 				}
 				resultItem := &entity.IDName{
@@ -334,7 +334,7 @@ func (o *OnlineClassAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 		if item.UserType == v2.AssessmentUserTypeTeacher {
 			continue
 		}
-		if item.StatusBySystem == v2.AssessmentUserStatusNotParticipate {
+		if item.StatusBySystem == v2.AssessmentUserSystemStatusNotStarted {
 			continue
 		}
 

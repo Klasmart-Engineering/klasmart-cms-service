@@ -410,3 +410,19 @@ func (s AssessmentAction) Valid() bool {
 	}
 	return false
 }
+
+type AssessmentUserLiveAction string
+
+const (
+	AssessmentUserLiveActionEnterLiveRoom AssessmentUserLiveAction = "EnterLiveRoom"
+	AssessmentUserLiveActionLeaveLiveRoom AssessmentUserLiveAction = "LeaveLiveRoom"
+)
+
+func (a AssessmentUserLiveAction) Valid() bool {
+	switch a {
+	case AssessmentUserLiveActionEnterLiveRoom,
+		AssessmentUserLiveActionLeaveLiveRoom:
+		return true
+	}
+	return false
+}

@@ -347,12 +347,8 @@ func (a *assessmentInternalModel) DeleteByScheduleIDsTx(ctx context.Context, op 
 	return err
 }
 
+// TODO:: refactor
 func (a *assessmentInternalModel) endClassCallbackUpdateAssessment(ctx context.Context, op *entity.Operator, req *v2.ScheduleEndClassCallBackReq, assessment *v2.Assessment) error {
-	attendanceReqMap := make(map[string]struct{})
-	for _, item := range req.AttendanceIDs {
-		attendanceReqMap[item] = struct{}{}
-	}
-
 	now := time.Now().Unix()
 
 	attendanceCondition := &assessmentV2.AssessmentUserCondition{
@@ -364,10 +360,11 @@ func (a *assessmentInternalModel) endClassCallbackUpdateAssessment(ctx context.C
 			Strings: req.AttendanceIDs,
 			Valid:   true,
 		},
-		StatusBySystem: sql.NullString{
-			String: v2.AssessmentUserStatusNotParticipate.String(),
-			Valid:  true,
-		},
+	}
+	var assessmentUsers []*v2.AssessmentUser
+	err := assessmentV2.GetAssessmentUserDA().Query(ctx, attendanceCondition, &assessmentUsers)
+	if err != nil {
+		return err
 	}
 
 	if assessment.Status == v2.AssessmentStatusNotStarted {
@@ -391,26 +388,53 @@ func (a *assessmentInternalModel) endClassCallbackUpdateAssessment(ctx context.C
 		assessment.ClassLength = req.ClassLength
 		assessment.ClassEndAt = req.ClassEndAt
 
+		for _, userItem := range assessmentUsers {
+			userItem.StatusBySystem = v2.AssessmentUserSystemStatusDone
+			userItem.StatusByUser = v2.AssessmentUserStatusParticipate
+			userItem.UpdateAt = now
+		}
+
 		return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 			_, err := assessmentV2.GetAssessmentDA().UpdateTx(ctx, tx, assessment)
 			if err != nil {
 				return err
 			}
 
-			err = assessmentV2.GetAssessmentUserDA().UpdateStatusTx(ctx, dbo.MustGetDB(ctx), attendanceCondition, v2.AssessmentUserStatusParticipate)
-			if err != nil {
-				return err
+			if len(assessmentUsers) > 0 {
+				_, err := assessmentV2.GetAssessmentUserDA().UpdateTx(ctx, tx, assessmentUsers)
+				if err != nil {
+					return err
+				}
 			}
 
 			return nil
 		})
 	} else if assessment.Status == v2.AssessmentStatusStarted {
-		err := assessmentV2.GetAssessmentUserDA().UpdateStatusTx(ctx, dbo.MustGetDB(ctx), attendanceCondition, v2.AssessmentUserStatusParticipate)
+		for _, userItem := range assessmentUsers {
+			if userItem.StatusBySystem == v2.AssessmentUserSystemStatusDone {
+				userItem.StatusBySystem = v2.AssessmentUserSystemStatusResubmitted
+			} else {
+				userItem.StatusBySystem = v2.AssessmentUserSystemStatusDone
+			}
+
+			userItem.StatusByUser = v2.AssessmentUserStatusParticipate
+			userItem.UpdateAt = now
+		}
+		_, err := assessmentV2.GetAssessmentUserDA().Update(ctx, assessmentUsers)
 		if err != nil {
 			return err
 		}
 	} else {
-		err := assessmentV2.GetAssessmentUserDA().UpdateSystemStatusTx(ctx, dbo.MustGetDB(ctx), attendanceCondition, v2.AssessmentUserStatusParticipate)
+		for _, userItem := range assessmentUsers {
+			if userItem.StatusBySystem == v2.AssessmentUserSystemStatusDone {
+				userItem.StatusBySystem = v2.AssessmentUserSystemStatusResubmitted
+			} else {
+				userItem.StatusBySystem = v2.AssessmentUserSystemStatusDone
+			}
+
+			userItem.UpdateAt = now
+		}
+		_, err := assessmentV2.GetAssessmentUserDA().Update(ctx, assessmentUsers)
 		if err != nil {
 			return err
 		}
@@ -457,34 +481,10 @@ func (a *assessmentInternalModel) AnyoneAttemptedByScheduleIDs(ctx context.Conte
 		assessmentIDs[i] = item.ID
 	}
 
-	assessmentUserCond := &assessmentV2.AssessmentUserCondition{
-		AssessmentIDs: entity.NullStrings{
-			Strings: assessmentIDs,
-			Valid:   true,
-		},
-		StatusBySystem: sql.NullString{
-			String: v2.AssessmentUserStatusParticipate.String(),
-			Valid:  true,
-		},
-	}
-	var assessmentUsers []*v2.AssessmentUser
-	err = assessmentV2.GetAssessmentUserDA().Query(ctx, assessmentUserCond, &assessmentUsers)
-	if err != nil {
-		log.Error(ctx, "query assessment user error", log.Err(err), log.Any("assessmentUserCond", assessmentUserCond), log.Any("op", op))
-		return nil, err
-	}
-	assessmentUserMap := make(map[string]bool)
-	for _, item := range assessmentUsers {
-		if _, ok := assessmentUserMap[item.AssessmentID]; !ok {
-			assessmentUserMap[item.AssessmentID] = true
-		}
-	}
-
 	result := make(map[string]*v2.AssessmentAnyoneAttemptedReply, len(assessments))
 	for _, item := range assessments {
 		resultItem := &v2.AssessmentAnyoneAttemptedReply{
-			IsAnyoneAttempted: assessmentUserMap[item.ID],
-			AssessmentStatus:  item.Status,
+			AssessmentStatus: item.Status,
 		}
 
 		result[item.ScheduleID] = resultItem
