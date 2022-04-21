@@ -116,9 +116,7 @@ func (a *assessmentInternalModel) AddWhenCreateSchedules(ctx context.Context, tx
 			CreateAt:       now,
 			MigrateFlag:    constant.AssessmentCurrentFlag,
 		}
-		if req.AssessmentType == v2.AssessmentTypeOfflineStudy {
-			assessmentItem.Status = v2.AssessmentStatusNotStarted
-		}
+
 		if req.AssessmentType == v2.AssessmentTypeReviewStudy {
 			assessmentItem.Status = v2.AssessmentStatusPending
 		}
@@ -132,7 +130,7 @@ func (a *assessmentInternalModel) AddWhenCreateSchedules(ctx context.Context, tx
 				AssessmentID:   assessmentItem.ID,
 				UserID:         userItem.UserID,
 				UserType:       userItem.UserType,
-				StatusBySystem: v2.AssessmentUserStatusNotParticipate,
+				StatusBySystem: v2.AssessmentUserSystemStatusNotStarted,
 				StatusByUser:   v2.AssessmentUserStatusParticipate,
 				CreateAt:       now,
 			}

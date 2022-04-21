@@ -26,12 +26,12 @@ func (Assessment) TableName() string {
 }
 
 type AssessmentUser struct {
-	ID             string               `gorm:"column:id;PRIMARY_KEY"`
-	AssessmentID   string               `gorm:"assessment_id"`
-	UserID         string               `gorm:"user_id"`
-	UserType       AssessmentUserType   `gorm:"user_type"`
-	StatusBySystem AssessmentUserStatus `gorm:"status_by_system"` // state of student attendance
-	StatusByUser   AssessmentUserStatus `gorm:"status_by_user"`   // status of student participation in assessment
+	ID             string                     `gorm:"column:id;PRIMARY_KEY"`
+	AssessmentID   string                     `gorm:"assessment_id"`
+	UserID         string                     `gorm:"user_id"`
+	UserType       AssessmentUserType         `gorm:"user_type"`
+	StatusBySystem AssessmentUserSystemStatus `gorm:"status_by_system"` // state of student attendance
+	StatusByUser   AssessmentUserStatus       `gorm:"status_by_user"`   // status of student participation in assessment
 
 	CreateAt int64 `gorm:"column:create_at;type:bigint"`
 	UpdateAt int64 `gorm:"column:update_at;type:bigint"`
