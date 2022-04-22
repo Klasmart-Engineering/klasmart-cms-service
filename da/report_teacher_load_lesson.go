@@ -32,7 +32,7 @@ from (
 			av.schedule_id ,
 			s.end_at -s.start_at as duratopn,
 			s.class_type ,
-			if(auv.status_by_system = ?,1,0) as is_attended 
+			if(auv.status_by_system != ?,1,0) as is_attended 
 		from assessments_users_v2 auv 
 		inner join assessments_v2 av on av.id = auv.assessment_id 
 		inner join schedules s on s.id = av.schedule_id 
@@ -60,7 +60,7 @@ group by teacher_id;
 		entity.ScheduleClassTypeOfflineClass,
 		entity.ScheduleClassTypeOnlineClass,
 		entity.ScheduleClassTypeOfflineClass,
-		v2.AssessmentUserStatusParticipate,
+		v2.AssessmentUserSystemStatusNotStarted,
 		entity.ScheduleRelationTypeClassRosterClass,
 		args.ClassIDs,
 		v2.AssessmentUserTypeTeacher,
@@ -100,7 +100,7 @@ from (
 			av.schedule_id ,
 			s.end_at -s.start_at as duration,
 			s.class_type ,
-			if(auv.status_by_system = ?,1,0) as is_attended 
+			if(auv.status_by_system != ?,1,0) as is_attended 
 	from assessments_users_v2 auv 
 	inner join assessments_v2 av on av.id = auv.assessment_id 
 	inner join schedules s on s.id = av.schedule_id 
@@ -131,7 +131,7 @@ from (
 		entity.ScheduleClassTypeOnlineClass,
 		entity.ScheduleClassTypeOfflineClass,
 		entity.ScheduleClassTypeOfflineClass,
-		v2.AssessmentUserStatusParticipate,
+		v2.AssessmentUserSystemStatusNotStarted,
 		entity.ScheduleRelationTypeClassRosterClass,
 		args.ClassIDs,
 		v2.AssessmentUserTypeTeacher,

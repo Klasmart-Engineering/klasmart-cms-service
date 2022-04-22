@@ -333,8 +333,8 @@ select av.id from assessments_v2 av where av.schedule_id in ({{.sbSchedule}})
 IF(av.status=?,?,?) as status,
 `, v2.AssessmentStatusComplete, entity.AssessmentStatusComplete, entity.AssessmentStatusInProgress)
 	sbAbsentSelect := NewSqlBuilder(ctx, `
-IF(sum(IF(auv.status_by_system =?,1,0))>0,0,1) as absent
-`, v2.AssessmentUserStatusParticipate)
+IF(sum(IF(auv.status_by_system != ?,1,0))>0,0,1) as absent
+`, v2.AssessmentUserSystemStatusNotStarted)
 	sbWhere := NewSqlBuilder(ctx, `
 and auv.user_type = ?
 and auv.user_id in (?)
@@ -479,7 +479,7 @@ group by user_id
 	if cond.StudentID.Valid {
 		sbWhereUserID = NewSqlBuilder(ctx, "and user_id =?", cond.StudentID.String)
 	}
-	sbSelectRate := NewSqlBuilder(ctx, "sum(if(status_by_system=?,1,0))/count(1) as rate ", v2.AssessmentUserStatusParticipate)
+	sbSelectRate := NewSqlBuilder(ctx, "sum(if(status_by_system!=?,1,0))/count(1) as rate ", v2.AssessmentUserSystemStatusNotStarted)
 	sb := NewSqlBuilder(ctx, sql).
 		Replace(ctx, "sbAssessmentOnlineClass", sbAssessmentOnlineClass).
 		Replace(ctx, "sbAssessmentStudy", sbAssessmentStudy).
