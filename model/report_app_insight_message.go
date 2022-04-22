@@ -9,6 +9,7 @@ import (
 )
 
 func (m *reportModel) GetAppInsightMessage(ctx context.Context, op *entity.Operator, req *entity.AppInsightMessageRequest) (res *entity.AppInsightMessageResponse, err error) {
+	res = &entity.AppInsightMessageResponse{}
 	var learningOutComeAchievementRequest *entity.LearnOutcomeAchievementRequest
 	var attendanceRequest *entity.ClassAttendanceRequest
 	var assignmentRequest *entity.AssignmentRequest
