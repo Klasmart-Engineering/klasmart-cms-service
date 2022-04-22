@@ -215,6 +215,12 @@ type TeacherReportCategory struct {
 	Items []string `json:"items"`
 }
 
+type TeacherReportItem struct {
+	CategoryID  string `json:"category_id" gorm:"column:category_id" `
+	OutcomeID   string `json:"outcome_id" gorm:"column:outcome_id" `
+	OutcomeName string `json:"outcome_name" gorm:"column:outcome_name" `
+}
+
 type TeacherReportSortByCount TeacherReport
 
 func (t *TeacherReportSortByCount) Len() int {
