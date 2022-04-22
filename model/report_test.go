@@ -36,3 +36,21 @@ func TestClassAttendance(t *testing.T) {
 		response.Items[0].ScheduledCount)
 	//fmt.Println(response.Items[1].Duration, response.Items[1].ClassAverageAttendancePercentage)
 }
+
+func TestAppInsightMessage(t *testing.T) {
+	ctx := context.Background()
+	request := entity.AppInsightMessageRequest{ClassID: "3702b30e-f72b-4ddc-a2c5-064343fdddba",
+		StudentID: "3ce8a5fa-f1aa-4f6a-8f4e-8703bdec789d",
+		EndTime:   1635091200}
+	op := &entity.Operator{
+		UserID: "afdfc0d9-ada9-4e66-b225-20f956d1a399",
+		OrgID:  "60c064cc-bbd8-4724-b3f6-b886dce4774f",
+		Token:  "",
+	}
+	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0NTc3ODIyNiwiaXNzIjoia2lkc2xvb3AifQ.pAQe9Iu0k7GCX_YW26rCqRHPpdBAEKRzL23qkVjdbpJzVLBSn7brep3JzIjqioA3OEx53JZ7JzaVnv7dAvabr4CIPtJwxdIvtM6RB0UfzcDTI0qSfEpAr-TVLvw2oomxwnt7YOEd3xRr-V7B-T9l0auGOdStJwWNG60q1gdwpg9t6q9KIqAlAuyUDIOthsUi7-sT-jPoZtpXV9Riog0pilEqqejo5y3wYE6U5Xu5tIupYbikpAPdsA1DCY4T5KC06j4ao1YEdumjGEbC2YUOS__THbEq-69R5Fgv1RiuL98nQESAmrGE0TItNEk0Bf1rhRNcC0xzxTukr-WgIP4Zqw"
+
+	response, err := GetReportModel().GetAppInsightMessage(ctx, op, &request)
+	fmt.Println(err)
+	fmt.Println(response)
+	//fmt.Println(response.Items[1].Duration, response.Items[1].ClassAverageAttendancePercentage)
+}

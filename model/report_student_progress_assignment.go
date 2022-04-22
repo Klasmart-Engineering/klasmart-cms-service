@@ -66,9 +66,11 @@ func (t *reportModel) GetAssignmentCompletion(ctx context.Context, op *entity.Op
 		result[i] = averageRate
 	}
 	res.Assignments = result
-	labelID, labelParams := getAssignmentLabelIDAndParams(res)
-	res.LabelID = labelID
-	res.LabelParams = labelParams
+	if len(args.Durations) == entity.Repoet4W {
+		labelID, labelParams := getAssignmentLabelIDAndParams(res)
+		res.LabelID = labelID
+		res.LabelParams = labelParams
+	}
 	return res, nil
 }
 

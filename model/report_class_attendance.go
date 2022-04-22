@@ -115,9 +115,11 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, op *entity.
 		}
 		response.Items = append(response.Items, classAttendanceResponseItem)
 	}
-	labelID, labelParams := getAttendanceLabelIDAndParams(response)
-	response.LabelID = labelID
-	response.LabelParams = labelParams
+	if len(request.Durations) == entity.Repoet4W {
+		labelID, labelParams := getAttendanceLabelIDAndParams(response)
+		response.LabelID = labelID
+		response.LabelParams = labelParams
+	}
 	return
 }
 func getAttendanceLabelIDAndParams(res *entity.ClassAttendanceResponse) (labelID string, labelParams entity.AttedanceLabelParams) {
