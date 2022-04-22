@@ -496,10 +496,7 @@ func (o *OfflineStudyAssessment) prepareReviewerFeedbacksUpdateData(req *v2.Asse
 			if comment, ok := reqReviewerCommentMap[item.AssessmentUserID]; ok {
 				item.ReviewerComment = comment
 			}
-			if req.Action == v2.AssessmentActionDraft {
-				item.Status = v2.UserResultProcessStatusDraft
-			} else if req.Action == v2.AssessmentActionComplete {
-				item.Status = v2.UserResultProcessStatusComplete
+			if req.Action == v2.AssessmentActionComplete {
 				item.CompleteAt = now
 			}
 			item.UpdateAt = now

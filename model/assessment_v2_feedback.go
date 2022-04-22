@@ -20,25 +20,25 @@ import (
 )
 
 var (
-	assessmentOfflineStudy     IAssessmentOfflineStudyModel
-	assessmentOfflineStudyOnce = sync.Once{}
+	_assessmentFeedbackModel     IAssessmentFeedbackModel
+	_assessmentFeedbackModelOnce = sync.Once{}
 
 	ErrOfflineStudyHasCompleted   = errors.New("home fun study has completed")
 	ErrOfflineStudyHasNewFeedback = errors.New("home fun study has new feedback")
 )
 
-type assessmentOfflineStudyModel struct {
+type assessmentFeedbackModel struct {
 	AmsServices external.AmsServices
 }
 
-type IAssessmentOfflineStudyModel interface {
+type IAssessmentFeedbackModel interface {
 	UserSubmitOfflineStudy(ctx context.Context, op *entity.Operator, req *v2.OfflineStudyUserResultAddReq) error
 
-	IsAnyOneCompleteByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]bool, error)
+	IsCompleteByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]bool, error)
 	GetUserResult(ctx context.Context, op *entity.Operator, scheduleIDs []string, userIDs []string) (map[string][]*v2.AssessmentUserResultDBView, error)
 }
 
-func (a *assessmentOfflineStudyModel) GetUserResult(ctx context.Context, op *entity.Operator, scheduleIDs []string, userIDs []string) (map[string][]*v2.AssessmentUserResultDBView, error) {
+func (a *assessmentFeedbackModel) GetUserResult(ctx context.Context, op *entity.Operator, scheduleIDs []string, userIDs []string) (map[string][]*v2.AssessmentUserResultDBView, error) {
 	_, userResults, err := assessmentV2.GetAssessmentUserResultDA().GetAssessmentUserResultDBView(ctx, &assessmentV2.AssessmentUserResultDBViewCondition{
 		OrgID: sql.NullString{
 			String: op.OrgID,
@@ -65,31 +65,21 @@ func (a *assessmentOfflineStudyModel) GetUserResult(ctx context.Context, op *ent
 	return result, nil
 }
 
-func (a *assessmentOfflineStudyModel) IsAnyOneCompleteByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]bool, error) {
-	_, userResults, err := assessmentV2.GetAssessmentUserResultDA().GetAssessmentUserResultDBView(ctx, &assessmentV2.AssessmentUserResultDBViewCondition{
-		OrgID: sql.NullString{
-			String: op.OrgID,
-			Valid:  true,
-		},
-		ScheduleIDs: entity.NullStrings{
-			Strings: scheduleIDs,
-			Valid:   true,
-		}})
+func (a *assessmentFeedbackModel) IsCompleteByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]bool, error) {
+	attemptedMap, err := GetAssessmentInternalModel().AnyoneAttemptedByScheduleIDs(ctx, op, scheduleIDs)
 	if err != nil {
 		return nil, err
 	}
+	result := make(map[string]bool, len(attemptedMap))
 
-	result := make(map[string]bool)
-	for _, item := range userResults {
-		if item.Status == v2.UserResultProcessStatusComplete {
-			result[item.ScheduleID] = true
-		}
+	for scheduleID, item := range attemptedMap {
+		result[scheduleID] = item.AssessmentStatus == v2.AssessmentStatusComplete
 	}
 
 	return result, nil
 }
 
-func (a *assessmentOfflineStudyModel) UserSubmitOfflineStudy(ctx context.Context, op *entity.Operator, req *v2.OfflineStudyUserResultAddReq) error {
+func (a *assessmentFeedbackModel) UserSubmitOfflineStudy(ctx context.Context, op *entity.Operator, req *v2.OfflineStudyUserResultAddReq) error {
 	var assessments []*v2.Assessment
 	err := assessmentV2.GetAssessmentDA().Query(ctx, &assessmentV2.AssessmentCondition{
 		ScheduleID: sql.NullString{
@@ -155,12 +145,8 @@ func (a *assessmentOfflineStudyModel) UserSubmitOfflineStudy(ctx context.Context
 	}
 }
 
-func (a *assessmentOfflineStudyModel) resubmitted(ctx context.Context, req *v2.OfflineStudyUserResultAddReq, reviewerFeedback *v2.AssessmentReviewerFeedback, assessmentUser *v2.AssessmentUser) error {
+func (a *assessmentFeedbackModel) resubmitted(ctx context.Context, req *v2.OfflineStudyUserResultAddReq, reviewerFeedback *v2.AssessmentReviewerFeedback, assessmentUser *v2.AssessmentUser) error {
 	now := time.Now().Unix()
-	if reviewerFeedback.Status == v2.UserResultProcessStatusComplete {
-		log.Warn(ctx, "user offline assessment is complete", log.Any("req", req))
-		return ErrOfflineStudyHasCompleted
-	}
 	reviewerFeedback.StudentFeedbackID = req.FeedbackID
 	reviewerFeedback.UpdateAt = now
 
@@ -194,12 +180,11 @@ func (a *assessmentOfflineStudyModel) resubmitted(ctx context.Context, req *v2.O
 	return nil
 }
 
-func (a *assessmentOfflineStudyModel) firstSubmit(ctx context.Context, op *entity.Operator, req *v2.OfflineStudyUserResultAddReq, assessment *v2.Assessment, assessmentUser *v2.AssessmentUser) error {
+func (a *assessmentFeedbackModel) firstSubmit(ctx context.Context, op *entity.Operator, req *v2.OfflineStudyUserResultAddReq, assessment *v2.Assessment, assessmentUser *v2.AssessmentUser) error {
 	now := time.Now().Unix()
 	userResult := &v2.AssessmentReviewerFeedback{
 		ID:                utils.NewID(),
 		AssessmentUserID:  assessmentUser.ID,
-		Status:            v2.UserResultProcessStatusStarted,
 		StudentFeedbackID: req.FeedbackID,
 		CreateAt:          now,
 	}
@@ -260,11 +245,11 @@ func (a *assessmentOfflineStudyModel) firstSubmit(ctx context.Context, op *entit
 	})
 }
 
-func GetAssessmentOfflineStudyModel() IAssessmentOfflineStudyModel {
-	assessmentOfflineStudyOnce.Do(func() {
-		assessmentOfflineStudy = &assessmentOfflineStudyModel{
+func GetAssessmentFeedbackModel() IAssessmentFeedbackModel {
+	_assessmentFeedbackModelOnce.Do(func() {
+		_assessmentFeedbackModel = &assessmentFeedbackModel{
 			AmsServices: external.GetAmsServices(),
 		}
 	})
-	return assessmentOfflineStudy
+	return _assessmentFeedbackModel
 }

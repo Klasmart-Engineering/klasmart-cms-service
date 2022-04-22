@@ -62,14 +62,14 @@ func (AssessmentContent) TableName() string {
 
 // CompleteAt and Status field need to be discarded
 type AssessmentReviewerFeedback struct {
-	ID                string                  `gorm:"column:id;PRIMARY_KEY"`
-	AssessmentUserID  string                  `gorm:"assessment_user_id"`
-	CompleteAt        int64                   `gorm:"complete_at"`
-	Status            UserResultProcessStatus `gorm:"status"`
-	ReviewerID        string                  `gorm:"reviewer_id"`
-	StudentFeedbackID string                  `gorm:"student_feedback_id"`
-	AssessScore       AssessmentUserAssess    `gorm:"assess_score"`
-	ReviewerComment   string                  `gorm:"reviewer_comment"`
+	ID               string `gorm:"column:id;PRIMARY_KEY"`
+	AssessmentUserID string `gorm:"assessment_user_id"`
+	CompleteAt       int64  `gorm:"complete_at"`
+	//Status            UserResultProcessStatus `gorm:"status"`
+	ReviewerID        string               `gorm:"reviewer_id"`
+	StudentFeedbackID string               `gorm:"student_feedback_id"`
+	AssessScore       AssessmentUserAssess `gorm:"assess_score"`
+	ReviewerComment   string               `gorm:"reviewer_comment"`
 
 	CreateAt int64 `gorm:"column:create_at;type:bigint"`
 	UpdateAt int64 `gorm:"column:update_at;type:bigint"`

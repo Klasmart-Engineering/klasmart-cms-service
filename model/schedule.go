@@ -1595,7 +1595,7 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 		return nil, err
 	}
 
-	completeHomefunStudyAssessmentMap, err := GetAssessmentOfflineStudyModel().IsAnyOneCompleteByScheduleIDs(ctx, op, homeFunScheduleIDs)
+	completeHomefunStudyAssessmentMap, err := GetAssessmentFeedbackModel().IsCompleteByScheduleIDs(ctx, op, homeFunScheduleIDs)
 	if err != nil {
 		log.Error(ctx, "judgment home fun anyone attempt error", log.Err(err), log.Any("scheduleIDs", homeFunScheduleIDs))
 		return nil, err
@@ -3682,7 +3682,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 	// check if the assessment completed, homefun homework
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun && !schedule.IsReview {
 		g.Go(func() error {
-			scheduleAssessmentMap, err := GetAssessmentOfflineStudyModel().IsAnyOneCompleteByScheduleIDs(ctx, operator, []string{schedule.ID})
+			scheduleAssessmentMap, err := GetAssessmentFeedbackModel().IsCompleteByScheduleIDs(ctx, operator, []string{schedule.ID})
 			if err != nil {
 				log.Error(ctx, "s.homefunStudyModel.Query error",
 					log.Err(err),
@@ -4247,7 +4247,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 	// check if the assessment completed, homefun homework
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun && !schedule.IsReview {
 		g.Go(func() error {
-			scheduleAssessmentMap, err := GetAssessmentOfflineStudyModel().IsAnyOneCompleteByScheduleIDs(ctx, operator, []string{schedule.ID})
+			scheduleAssessmentMap, err := GetAssessmentFeedbackModel().IsCompleteByScheduleIDs(ctx, operator, []string{schedule.ID})
 			if err != nil {
 				log.Error(ctx, "s.homefunStudyModel.Query error",
 					log.Err(err),
@@ -4403,7 +4403,7 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 	g.Go(func() error {
 		if len(homefunHomeworkIDs) > 0 {
 			var err error
-			scheduleCompleteAssessmentMap, err = GetAssessmentOfflineStudyModel().IsAnyOneCompleteByScheduleIDs(ctx, operator, homefunHomeworkIDs)
+			scheduleCompleteAssessmentMap, err = GetAssessmentFeedbackModel().IsCompleteByScheduleIDs(ctx, operator, homefunHomeworkIDs)
 			if err != nil {
 				log.Error(ctx, "s.homefunStudyModel.Query error",
 					log.Err(err),
@@ -4660,9 +4660,9 @@ func (s *scheduleModel) transformToScheduleTimeView(ctx context.Context, operato
 		}
 
 		if len(homefunHomeworkIDs) > 0 {
-			offlineStudyResult, err := GetAssessmentOfflineStudyModel().GetUserResult(ctx, operator, homefunHomeworkIDs, []string{operator.UserID})
+			offlineStudyResult, err := GetAssessmentFeedbackModel().GetUserResult(ctx, operator, homefunHomeworkIDs, []string{operator.UserID})
 			if err != nil {
-				log.Error(ctx, "GetAssessmentOfflineStudyModel().GetUserResult error",
+				log.Error(ctx, "GetAssessmentFeedbackModel().GetUserResult error",
 					log.Err(err),
 					log.Strings("homefunHomeworkIDs", homefunHomeworkIDs),
 					log.String("studentID", operator.UserID))
@@ -4671,10 +4671,10 @@ func (s *scheduleModel) transformToScheduleTimeView(ctx context.Context, operato
 
 			for scheduleID, homefunStudyAssessment := range offlineStudyResult {
 				if len(homefunStudyAssessment) > 0 {
-					switch homefunStudyAssessment[0].Status {
-					case v2.UserResultProcessStatusComplete:
+					switch homefunStudyAssessment[0].StudentStatus {
+					case v2.AssessmentUserSystemStatusCompleted:
 						assessmentStatusMap[scheduleID] = entity.AssessmentStatusComplete
-					case v2.UserResultProcessStatusStarted, v2.UserResultProcessStatusDraft:
+					case v2.AssessmentUserSystemStatusDone, v2.AssessmentUserSystemStatusResubmitted, v2.AssessmentUserSystemStatusInProgress:
 						assessmentStatusMap[scheduleID] = entity.AssessmentStatusInProgress
 					}
 				}
