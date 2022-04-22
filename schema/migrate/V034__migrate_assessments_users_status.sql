@@ -1,4 +1,4 @@
--- update OfflineStudy data in assessments_users_v2 table
+-- update OfflineStudy status_by_system data in assessments_users_v2 table
 update assessments_users_v2,
     (select
     assessments_users_v2.id,
@@ -19,7 +19,7 @@ where
     assessments_users_v2.id = t1.id
   and assessments_users_v2.id <>"";
 
--- update OnlineClass,OfflineClass,OnlineStudy,ReviewStudy data in assessments_users_v2 table
+-- update OnlineClass,OfflineClass,OnlineStudy,ReviewStudy status_by_system data in assessments_users_v2 table
 update assessments_users_v2,
     (select
     assessments_users_v2.id id,
@@ -82,4 +82,21 @@ where assessments_v2.delete_at = 0
     or (assessments_v2.assessment_type = 'OfflineClass' and assessments_v2.status in ('Started','Draft','Complete'))
     or (assessments_v2.assessment_type = 'OnlineStudy'));
 
--- delete status field in assessments_reviewer_feedback_v2 table
+-- take the complete_at of the last student as the complete_at of the entire assessment
+update
+    assessments_v2,
+    (select
+    assessments_users_v2.assessment_id,
+    max(assessments_reviewer_feedback_v2.complete_at) complete_at
+    from
+    assessments_users_v2
+    inner join
+    assessments_reviewer_feedback_v2
+    on
+    assessments_users_v2.id = assessments_reviewer_feedback_v2.assessment_user_id
+    where assessments_reviewer_feedback_v2.status='Complete'
+    group by assessments_users_v2.assessment_id) t1
+set assessments_v2.complete_at = t1.complete_at
+where assessments_v2.id = t1.assessment_id
+  and assessments_v2.complete_at=0
+  and assessments_v2.status = 'Complete';

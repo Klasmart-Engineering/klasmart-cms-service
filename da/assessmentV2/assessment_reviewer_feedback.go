@@ -82,7 +82,7 @@ where
 	commonSql += strings.Join(wheres, " and ")
 
 	countSql := fmt.Sprintf("%s %s", "select count(*)", commonSql)
-	dataSql := fmt.Sprintf("%s %s", "select t1.*,t2.user_id,t3.id assessment_id,t3.schedule_id,t3.title", commonSql)
+	dataSql := fmt.Sprintf("%s %s", "select t1.*,t2.user_id,t2.status_by_system stu_status, t3.id assessment_id,t3.schedule_id,t3.title", commonSql)
 
 	var result []*v2.AssessmentUserResultDBView
 	var err error

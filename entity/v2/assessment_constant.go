@@ -327,6 +327,10 @@ const (
 	AssessmentUserSystemStatusCompleted AssessmentUserSystemStatus = "Completed"
 )
 
+func (a AssessmentUserSystemStatus) String() string {
+	return string(a)
+}
+
 type AssessmentContentStatus string
 
 const (

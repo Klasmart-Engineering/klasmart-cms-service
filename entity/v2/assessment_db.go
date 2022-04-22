@@ -60,6 +60,7 @@ func (AssessmentContent) TableName() string {
 	return constant.TableNameAssessmentsContentsV2
 }
 
+// CompleteAt and Status field need to be discarded
 type AssessmentReviewerFeedback struct {
 	ID                string                  `gorm:"column:id;PRIMARY_KEY"`
 	AssessmentUserID  string                  `gorm:"assessment_user_id"`
@@ -97,8 +98,9 @@ func (AssessmentUserOutcome) TableName() string {
 
 type AssessmentUserResultDBView struct {
 	AssessmentReviewerFeedback
-	ScheduleID   string `gorm:"schedule_id"`
-	AssessmentID string `gorm:"assessment_id"`
-	UserID       string `gorm:"user_id"`
-	Title        string `gorm:"title"`
+	ScheduleID    string                     `gorm:"schedule_id"`
+	AssessmentID  string                     `gorm:"assessment_id"`
+	UserID        string                     `gorm:"user_id"`
+	Title         string                     `gorm:"title"`
+	StudentStatus AssessmentUserSystemStatus `gorm:"stu_status"`
 }
