@@ -543,7 +543,7 @@ func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, o
 	if len(teacherIDs) < 1 {
 		return
 	}
-	items, err := da.GetReportDA().GetTeacherReportItems(ctx, tx, teacherIDs...)
+	items, err := da.GetReportDA().GetTeacherReportItems(ctx, tx, operator, teacherIDs...)
 	if err != nil {
 		return
 	}

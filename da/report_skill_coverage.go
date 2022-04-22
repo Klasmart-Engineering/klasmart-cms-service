@@ -8,10 +8,10 @@ import (
 )
 
 type ISkillCoverage interface {
-	GetTeacherReportItems(ctx context.Context, tx *dbo.DBContext, teacherIDs ...string) (items []*entity.TeacherReportItem, err error)
+	GetTeacherReportItems(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, teacherIDs ...string) (items []*entity.TeacherReportItem, err error)
 }
 
-func (r *ReportDA) GetTeacherReportItems(ctx context.Context, tx *dbo.DBContext, teacherIDs ...string) (items []*entity.TeacherReportItem, err error) {
+func (r *ReportDA) GetTeacherReportItems(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, teacherIDs ...string) (items []*entity.TeacherReportItem, err error) {
 	items = []*entity.TeacherReportItem{}
 	sql := `
 select 	 
@@ -30,10 +30,10 @@ where auv1.assessment_id in (
 	where auv.user_id in (?)
 	and auv.user_type = ?
 	and (
-	    (auv.status_by_user  = ? and av.assessment_type  in ('OnlineStudy') ) 
-	    or (auv.status_by_system ='Participate' and av.assessment_type  in ('OnlineClass','OfflineClass','OfflineStudy'))
+	    (auv.status_by_user  = ? and av.assessment_type  in (?) ) 
+	    or (auv.status_by_system = ? and av.assessment_type  in (?))
 	)
-	and av.org_id ='60c064cc-bbd8-4724-b3f6-b886dce4774f'
+	and av.org_id = ?
 	and av.delete_at =0 
 ) 
 `
@@ -50,6 +50,7 @@ where auv1.assessment_id in (
 			v2.AssessmentTypeOfflineClass,
 			v2.AssessmentTypeOfflineStudy,
 		},
+		op.OrgID,
 	}
 	err = r.QueryRawSQL(ctx, &items, sql, args...)
 	if err != nil {
