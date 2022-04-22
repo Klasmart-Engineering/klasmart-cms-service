@@ -3,8 +3,8 @@ update assessments_users_v2,
     (select
     assessments_users_v2.id,
     if(assessments_reviewer_feedback_v2.status is null,'NotStarted',
-    if(assessments_reviewer_feedback_v2.status = 'Complete','Completed',
-    if(assessments_reviewer_feedback_v2.status in ('Started','Draft'),'Done',assessments_reviewer_feedback_v2.status))) status
+    if(assessments_v2.status = 'Complete','Completed',
+    if(assessments_reviewer_feedback_v2.status in ('Started','Draft','Complete'),'Done',assessments_reviewer_feedback_v2.status))) status
     from
     assessments_v2
     inner join assessments_users_v2
