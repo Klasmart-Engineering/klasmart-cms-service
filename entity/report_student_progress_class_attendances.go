@@ -16,8 +16,8 @@ type ClassAttendanceResponse struct {
 }
 
 type AttedanceLabelParams struct {
-	AttendedCount          float64 `json:"attended_count"`
-	ScheduledCount         float64 `json:"scheduled_count"`
+	AttendedCount          int     `json:"attended_count"`
+	ScheduledCount         int     `json:"scheduled_count"`
 	LOCompareClass3week    float64 `json:"lo_compare_class_3_week"`
 	AttendCompareLastWeek  float64 `json:"attend_compare_last_week"`
 	AttendCompareLast3Week float64 `json:"attend_compare_last_3_week"`

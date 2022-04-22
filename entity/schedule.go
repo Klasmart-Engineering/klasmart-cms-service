@@ -414,8 +414,7 @@ func (s ScheduleStatus) GetScheduleStatus(input ScheduleStatusInput) ScheduleSta
 	switch input.ClassType {
 	case ScheduleClassTypeHomework, ScheduleClassTypeTask:
 		if input.DueAt > 0 {
-			endAt := utils.TodayEndByTimeStamp(input.DueAt, time.Local).Unix()
-			if endAt < time.Now().Unix() {
+			if input.DueAt < time.Now().Unix() {
 				status = ScheduleStatusClosed
 			}
 		}

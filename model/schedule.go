@@ -989,12 +989,11 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 	case entity.ScheduleClassTypeHomework, entity.ScheduleClassTypeTask:
 		if schedule.DueAt > 0 {
 			now := time.Now().Unix()
-			dueAtEnd := utils.TodayEndByTimeStamp(schedule.DueAt, time.Local).Unix()
-			if dueAtEnd < now {
+			if schedule.DueAt < now {
 				log.Warn(ctx, "checkScheduleStatus: the due_at time has expired",
 					log.Any("schedule", schedule),
 					log.Any("now", now),
-					log.Any("dueAtEnd", dueAtEnd),
+					log.Any("schedule.DueAt", schedule.DueAt),
 				)
 				return nil, ErrScheduleEditMissTimeForDueAt
 			}
