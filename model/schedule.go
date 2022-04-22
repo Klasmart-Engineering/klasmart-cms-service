@@ -4671,7 +4671,7 @@ func (s *scheduleModel) transformToScheduleTimeView(ctx context.Context, operato
 
 			for scheduleID, homefunStudyAssessment := range offlineStudyResult {
 				if len(homefunStudyAssessment) > 0 {
-					switch homefunStudyAssessment[0].StudentStatus {
+					switch homefunStudyAssessment[0].StatusBySystem {
 					case v2.AssessmentUserSystemStatusCompleted:
 						assessmentStatusMap[scheduleID] = entity.AssessmentStatusComplete
 					case v2.AssessmentUserSystemStatusDone, v2.AssessmentUserSystemStatusResubmitted, v2.AssessmentUserSystemStatusInProgress:

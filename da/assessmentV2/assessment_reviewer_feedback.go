@@ -71,18 +71,18 @@ where
 	}
 
 	if condition.CompleteAtGe.Valid {
-		wheres = append(wheres, "t1.complete_at >= ?")
+		wheres = append(wheres, "t3.complete_at >= ?")
 		params = append(params, condition.CompleteAtGe.Int64)
 	}
 	if condition.CompleteAtLe.Valid {
-		wheres = append(wheres, "t1.complete_at <= ?")
+		wheres = append(wheres, "t3.complete_at <= ?")
 		params = append(params, condition.CompleteAtLe.Int64)
 	}
 
 	commonSql += strings.Join(wheres, " and ")
 
 	countSql := fmt.Sprintf("%s %s", "select count(*)", commonSql)
-	dataSql := fmt.Sprintf("%s %s", "select t1.*,t2.user_id,t2.status_by_system stu_status, t3.id assessment_id,t3.schedule_id,t3.title", commonSql)
+	dataSql := fmt.Sprintf("%s %s", "select t1.*,t2.user_id,t2.status_by_system, t3.id assessment_id,t3.schedule_id,t3.title,t3.complete_at", commonSql)
 
 	var result []*v2.AssessmentUserResultDBView
 	var err error
@@ -97,7 +97,7 @@ where
 		}
 
 		offset, limit := condition.Pager.Offset()
-		dataSql += fmt.Sprintf(" order by %s LIMIT %d OFFSET %d ", condition.OrderBy.ToSQL(), limit, offset)
+		dataSql += fmt.Sprintf(" order by t3.%s LIMIT %d OFFSET %d ", condition.OrderBy.ToSQL(), limit, offset)
 
 		err = tx.Raw(dataSql, params...).Scan(&result).Error
 		if err != nil {
