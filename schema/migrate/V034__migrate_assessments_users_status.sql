@@ -100,3 +100,6 @@ set assessments_v2.complete_at = t1.complete_at
 where assessments_v2.id = t1.assessment_id
   and assessments_v2.complete_at=0
   and assessments_v2.status = 'Complete';
+
+-- create user_id index in assessments_users_v2 table
+CREATE INDEX user_id ON assessments_users_v2 (user_id);

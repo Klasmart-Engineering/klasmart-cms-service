@@ -217,7 +217,6 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 
 		result := make([]*v2.StudentAssessment, 0, len(userResults))
 		for _, item := range userResults {
-			//status := item.Status.Compliant(ctx)
 			status := item.StatusBySystem.String()
 			resultItem := &v2.StudentAssessment{
 				ID:                  item.ID,
