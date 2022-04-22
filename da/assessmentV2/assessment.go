@@ -51,10 +51,6 @@ func (a *assessmentDA) DeleteByScheduleIDsTx(ctx context.Context, tx *dbo.DBCont
 	return nil
 }
 
-func (a *assessmentDA) First(ctx context.Context, condition *AssessmentCondition) (*v2.Assessment, error) {
-	panic("implement me")
-}
-
 type AssessmentCondition struct {
 	OrgID          sql.NullString
 	ScheduleID     sql.NullString

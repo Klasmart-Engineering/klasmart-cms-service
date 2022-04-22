@@ -335,6 +335,15 @@ func (o *OfflineStudyAssessment) prepareAssessmentUsersUpdateData(req *v2.Assess
 			return nil, constant.ErrInvalidArgs
 		}
 		assessmentUserItem.StatusByUser = item.Status
+
+		if req.Action == v2.AssessmentActionComplete {
+			if assessmentUserItem.StatusBySystem == v2.AssessmentUserSystemStatusDone ||
+				assessmentUserItem.StatusBySystem == v2.AssessmentUserSystemStatusResubmitted {
+
+				assessmentUserItem.StatusBySystem = v2.AssessmentUserSystemStatusCompleted
+			}
+		}
+
 		assessmentUserItem.UpdateAt = now
 		result = append(result, assessmentUserItem)
 	}
@@ -486,12 +495,6 @@ func (o *OfflineStudyAssessment) prepareReviewerFeedbacksUpdateData(req *v2.Asse
 			}
 			if comment, ok := reqReviewerCommentMap[item.AssessmentUserID]; ok {
 				item.ReviewerComment = comment
-			}
-			if req.Action == v2.AssessmentActionDraft {
-				item.Status = v2.UserResultProcessStatusDraft
-			} else if req.Action == v2.AssessmentActionComplete {
-				item.Status = v2.UserResultProcessStatusComplete
-				item.CompleteAt = now
 			}
 			item.UpdateAt = now
 

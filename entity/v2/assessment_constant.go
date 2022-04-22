@@ -327,6 +327,10 @@ const (
 	AssessmentUserSystemStatusCompleted AssessmentUserSystemStatus = "Completed"
 )
 
+func (a AssessmentUserSystemStatus) String() string {
+	return string(a)
+}
+
 type AssessmentContentStatus string
 
 const (
@@ -406,6 +410,22 @@ func (s AssessmentAction) Valid() bool {
 	switch s {
 	case AssessmentActionDraft,
 		AssessmentActionComplete:
+		return true
+	}
+	return false
+}
+
+type AssessmentUserLiveAction string
+
+const (
+	AssessmentUserLiveActionEnterLiveRoom AssessmentUserLiveAction = "EnterLiveRoom"
+	AssessmentUserLiveActionLeaveLiveRoom AssessmentUserLiveAction = "LeaveLiveRoom"
+)
+
+func (a AssessmentUserLiveAction) Valid() bool {
+	switch a {
+	case AssessmentUserLiveActionEnterLiveRoom,
+		AssessmentUserLiveActionLeaveLiveRoom:
 		return true
 	}
 	return false

@@ -112,9 +112,9 @@ func (s Server) registeRoute() {
 		assessments.POST("/assessments", s.addAssessment)
 
 		// offlineStudy
-		assessments.GET("/user_offline_study", s.mustLogin, s.queryUserOfflineStudy)
-		assessments.GET("/user_offline_study/:id", s.mustLogin, s.getUserOfflineStudyByID)
-		assessments.PUT("/user_offline_study/:id", s.mustLogin, s.updateUserOfflineStudy)
+		//assessments.GET("/user_offline_study", s.mustLogin, s.queryUserOfflineStudy)
+		//assessments.GET("/user_offline_study/:id", s.mustLogin, s.getUserOfflineStudyByID)
+		//assessments.PUT("/user_offline_study/:id", s.mustLogin, s.updateUserOfflineStudy)
 
 		// home page
 		assessments.GET("/assessments_summary", s.mustLogin, s.getAssessmentsSummary)

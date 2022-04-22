@@ -217,7 +217,8 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 
 		result := make([]*v2.StudentAssessment, 0, len(userResults))
 		for _, item := range userResults {
-			status := item.Status.Compliant(ctx)
+			//status := item.Status.Compliant(ctx)
+			status := item.StatusBySystem.String()
 			resultItem := &v2.StudentAssessment{
 				ID:                  item.ID,
 				Title:               item.Title,
@@ -533,6 +534,13 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			return constant.ErrInvalidArgs
 		}
 		existItem.StatusByUser = item.Status
+
+		if req.Action == v2.AssessmentActionComplete {
+			if existItem.StatusBySystem == v2.AssessmentUserSystemStatusDone || existItem.StatusBySystem == v2.AssessmentUserSystemStatusResubmitted {
+				existItem.StatusBySystem = v2.AssessmentUserSystemStatusCompleted
+			}
+		}
+		existItem.UpdateAt = now
 		waitUpdatedUsers = append(waitUpdatedUsers, existItem)
 	}
 
