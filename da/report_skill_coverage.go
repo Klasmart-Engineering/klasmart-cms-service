@@ -31,7 +31,7 @@ where auv1.assessment_id in (
 	and auv.user_type = ?
 	and (
 	    (auv.status_by_user  = ? and av.assessment_type  in (?) ) 
-	    or (auv.status_by_system = ? and av.assessment_type  in (?))
+	    or (auv.status_by_system != ? and av.assessment_type  in (?))
 	)
 	and av.org_id = ?
 	and av.delete_at =0 
@@ -44,7 +44,7 @@ where auv1.assessment_id in (
 		v2.AssessmentUserTypeTeacher,
 		v2.AssessmentUserStatusParticipate,
 		v2.AssessmentTypeOnlineStudy,
-		v2.AssessmentUserStatusParticipate,
+		v2.AssessmentUserSystemStatusNotStarted,
 		[]interface{}{
 			v2.AssessmentTypeOnlineClass,
 			v2.AssessmentTypeOfflineClass,
