@@ -110,8 +110,8 @@ select
 		and sr.relation_type in (?)
 		and sr.relation_id = ?
 	)
-	and s.class_type in ( ? )
-	and av.status =  ?	
+	and s.class_type in (?)
+	and av.status = ?	
 `,
 		time.Now().Add(constant.ScheduleAllowGoLiveTime).Unix(),
 		req.LessonPlanID,
