@@ -74,10 +74,19 @@ func TestGetAssessmentUserResultDBView(t *testing.T) {
 	total, result, err := GetAssessmentUserResultDA().GetAssessmentUserResultDBView(ctx, &AssessmentUserResultDBViewCondition{
 		UserIDs: entity.NullStrings{
 			Strings: []string{"aea0e494-e56f-417e-99a7-81774c879bf8"},
+			Valid:   true,
 		},
 		OrgID: sql.NullString{
 			String: "f27efd10-000e-4542-bef2-0ccda39b93d3",
 			Valid:  true,
+		},
+		CompleteAtGe: sql.NullInt64{
+			Int64: 11,
+			Valid: true,
+		},
+		CompleteAtLe: sql.NullInt64{
+			Int64: 0,
+			Valid: true,
 		},
 		OrderBy: NewAssessmentUserResultOrderBy("-complete_at"),
 		Pager: dbo.Pager{

@@ -99,10 +99,11 @@ type AssessmentAttendancesReq struct {
 }
 
 type ScheduleEndClassCallBackReq struct {
-	ScheduleID    string   `json:"schedule_id"`
-	AttendanceIDs []string `json:"attendance_ids"`
-	ClassLength   int      `json:"class_length"`
-	ClassEndAt    int64    `json:"class_end_time"`
+	ScheduleID    string                   `json:"schedule_id"`
+	AttendanceIDs []string                 `json:"attendance_ids"`
+	Action        AssessmentUserLiveAction `json:"action" enums:"EnterLiveRoom,LeaveLiveRoom"`
+	ClassLength   int                      `json:"class_length"`
+	ClassEndAt    int64                    `json:"class_end_time"`
 }
 
 // Valid implement jwt Claims interface
@@ -174,6 +175,7 @@ type AssessmentStudentReply struct {
 	StudentID       string                          `json:"student_id"`
 	StudentName     string                          `json:"student_name"`
 	Status          AssessmentUserStatus            `json:"status" enums:"Participate,NotParticipate"`
+	ProcessStatus   AssessmentUserSystemStatus      `json:"process_status"`
 	ReviewerComment string                          `json:"reviewer_comment"`
 	Results         []*AssessmentStudentResultReply `json:"results"`
 	//OfflineStudyResult *StudentOfflineStudyResult      `json:"offline_study_result,omitempty"`
@@ -221,7 +223,7 @@ type AssessmentContentReply struct {
 	MaxScore             float64                 `json:"max_score"`
 	H5PSubID             string                  `json:"h5p_sub_id"`
 	RoomProvideContentID string                  `json:"-"`
-	IgnoreCalculateScore bool                    `json:"-"`
+	//IgnoreCalculateScore bool                    `json:"-"`
 }
 
 type AssessmentOutcomeReply struct {
@@ -395,8 +397,9 @@ func (a AssessmentTypeCompliant) ToAssessmentType(ctx context.Context) (Assessme
 type StudentAssessment struct {
 	ID                  string                        `json:"id"`
 	Title               string                        `json:"title"`
+	Type                AssessmentType                `json:"type" enums:"OfflineClass,OnlineClass,OnlineStudy,OfflineStudy,ReviewStudy"`
 	Score               int                           `json:"score"`
-	Status              string                        `json:"status"`
+	Status              AssessmentUserSystemStatus    `json:"status" enums:"NotStarted,InProgress,Done,Resubmitted,Completed"`
 	CreateAt            int64                         `json:"create_at"`
 	UpdateAt            int64                         `json:"update_at"`
 	CompleteAt          int64                         `json:"complete_at"`
@@ -422,8 +425,8 @@ type StudentAssessmentSchedule struct {
 	Attachment *StudentAssessmentAttachment `json:"attachment,omitempty"`
 }
 type StudentAssessmentAttachment struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID                 string `json:"id"`
+	Name               string `json:"name"`
 	ReviewAttachmentID string `json:"review_attachment_id"`
 }
 
@@ -433,8 +436,8 @@ type SearchStudentAssessmentsResponse struct {
 }
 
 type AssessmentAnyoneAttemptedReply struct {
-	IsAnyoneAttempted bool
-	AssessmentStatus  AssessmentStatus
+	//IsAnyoneAttempted bool
+	AssessmentStatus AssessmentStatus
 }
 
 type AssessmentContentView struct {

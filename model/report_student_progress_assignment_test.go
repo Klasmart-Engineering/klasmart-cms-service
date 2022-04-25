@@ -20,7 +20,7 @@ func TestGetAssignmentCompletion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i := range res {
-		fmt.Printf("%#v\n", res[i])
+	for i := range res.Assignments {
+		fmt.Printf("%#v\n", res.Assignments[i])
 	}
 }

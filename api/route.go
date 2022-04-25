@@ -112,9 +112,9 @@ func (s Server) registeRoute() {
 		assessments.POST("/assessments", s.addAssessment)
 
 		// offlineStudy
-		assessments.GET("/user_offline_study", s.mustLogin, s.queryUserOfflineStudy)
-		assessments.GET("/user_offline_study/:id", s.mustLogin, s.getUserOfflineStudyByID)
-		assessments.PUT("/user_offline_study/:id", s.mustLogin, s.updateUserOfflineStudy)
+		//assessments.GET("/user_offline_study", s.mustLogin, s.queryUserOfflineStudy)
+		//assessments.GET("/user_offline_study/:id", s.mustLogin, s.getUserOfflineStudyByID)
+		//assessments.PUT("/user_offline_study/:id", s.mustLogin, s.updateUserOfflineStudy)
 
 		// home page
 		assessments.GET("/assessments_summary", s.mustLogin, s.getAssessmentsSummary)
@@ -160,7 +160,7 @@ func (s Server) registeRoute() {
 		reports.POST("/reports/student_progress/learn_outcome_achievement", s.mustLogin, s.getLearnOutcomeAchievement)
 		reports.POST("/reports/student_progress/class_attendance", s.mustLogin, s.getClassAttendance)
 		reports.POST("/reports/student_progress/assignment_completion", s.mustLogin, s.getAssignmentsCompletion)
-
+		reports.GET("/reports/student_progress/app/insight_message", s.mustLogin, s.getAppInsightMessage)
 		reports.POST("/reports/learner_usage/overview", s.mustLogin, s.getLearnerUsageOverview)
 	}
 

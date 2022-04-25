@@ -312,6 +312,25 @@ func (a AssessmentUserStatus) Valid() bool {
 	}
 }
 
+type AssessmentUserSystemStatus string
+
+const (
+	// AssessmentUserSystemStatusNotStarted when create schedule
+	AssessmentUserSystemStatusNotStarted AssessmentUserSystemStatus = "NotStarted"
+	// AssessmentUserSystemStatusInProgress when student enter the live room
+	AssessmentUserSystemStatusInProgress AssessmentUserSystemStatus = "InProgress"
+	// AssessmentUserSystemStatusDone when student leave the live room  or submit homework
+	AssessmentUserSystemStatusDone AssessmentUserSystemStatus = "Done"
+	// AssessmentUserSystemStatusResubmitted when student leave the live room or submit homework again
+	AssessmentUserSystemStatusResubmitted AssessmentUserSystemStatus = "Resubmitted"
+	// AssessmentUserSystemStatusCompleted when teacher completed assessment
+	AssessmentUserSystemStatusCompleted AssessmentUserSystemStatus = "Completed"
+)
+
+func (a AssessmentUserSystemStatus) String() string {
+	return string(a)
+}
+
 type AssessmentContentStatus string
 
 const (
@@ -391,6 +410,22 @@ func (s AssessmentAction) Valid() bool {
 	switch s {
 	case AssessmentActionDraft,
 		AssessmentActionComplete:
+		return true
+	}
+	return false
+}
+
+type AssessmentUserLiveAction string
+
+const (
+	AssessmentUserLiveActionEnterLiveRoom AssessmentUserLiveAction = "EnterLiveRoom"
+	AssessmentUserLiveActionLeaveLiveRoom AssessmentUserLiveAction = "LeaveLiveRoom"
+)
+
+func (a AssessmentUserLiveAction) Valid() bool {
+	switch a {
+	case AssessmentUserLiveActionEnterLiveRoom,
+		AssessmentUserLiveActionLeaveLiveRoom:
 		return true
 	}
 	return false

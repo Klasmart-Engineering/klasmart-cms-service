@@ -44,7 +44,7 @@ func (s *Server) addScheduleFeedback(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrOnlyStudentCanSubmitFeedback:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	case model.ErrHomeFunStudyHasCompleted:
+	case model.ErrOfflineStudyHasCompleted:
 		c.JSON(http.StatusBadRequest, L(ScheduleFeedbackCompleted))
 	default:
 		s.defaultErrorHandler(c, err)

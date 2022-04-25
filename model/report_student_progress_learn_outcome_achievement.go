@@ -2,10 +2,9 @@ package model
 
 import (
 	"context"
-
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"math"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
@@ -69,6 +68,117 @@ func (m *reportModel) GetStudentProgressLearnOutcomeAchievement(ctx context.Cont
 	}
 	res.ClassAverageAchievedCount = classAchievedCount.Avg()
 	res.UnSelectedSubjectsAverageAchieveCount = res.UnselectSubjectsStudentAchievedCounts.Avg()
-
+	if len(req.Durations) == entity.Repoet4W {
+		labelID, labelParams := getLearnOutcomeAchievementLabelIDAndParams(res)
+		res.LabelID = labelID
+		res.LabelParams = labelParams
+	}
 	return
+}
+
+func getLearnOutcomeAchievementLabelIDAndParams(res *entity.LearnOutcomeAchievementResponse) (labelID string, labelParams entity.LearningOutcomeAchivementLabelParams) {
+	data := res.Items
+	if data[0].ClassAverageAchievedPercentage == 0 && data[0].FirstAchievedPercentage == 0 && data[0].ReAchievedPercentage == 0 &&
+		data[0].UnSelectedSubjectsAverageAchievedPercentage == 0 &&
+		data[1].ClassAverageAchievedPercentage == 0 && data[1].FirstAchievedPercentage == 0 && data[1].ReAchievedPercentage == 0 &&
+		data[1].UnSelectedSubjectsAverageAchievedPercentage == 0 &&
+		data[2].ClassAverageAchievedPercentage == 0 && data[2].FirstAchievedPercentage == 0 && data[2].ReAchievedPercentage == 0 &&
+		data[2].UnSelectedSubjectsAverageAchievedPercentage == 0 {
+		labelID = entity.LONew
+		labelParams.AchievedLoCount = data[3].FirstAchievedCount + data[3].ReAchievedCount
+		labelParams.LearntLoCount = data[3].FirstAchievedCount + data[3].ReAchievedCount + data[3].UnAchievedCount
+	} else if (getSum(data[1]) > data[1].ClassAverageAchievedPercentage*100 &&
+		getSum(data[2]) > data[2].ClassAverageAchievedPercentage*100 &&
+		getSum(data[3]) > data[3].ClassAverageAchievedPercentage*100) ||
+		(getSum(data[1]) < data[1].ClassAverageAchievedPercentage*100 &&
+			getSum(data[2]) < data[2].ClassAverageAchievedPercentage*100 &&
+			getSum(data[3]) < data[3].ClassAverageAchievedPercentage*100) {
+		if getSum(data[1]) > data[1].ClassAverageAchievedPercentage*100 &&
+			getSum(data[2]) > data[2].ClassAverageAchievedPercentage*100 &&
+			getSum(data[3]) > data[3].ClassAverageAchievedPercentage*100 {
+			labelID = entity.LOHighClass3w
+			labelParams.LOCompareClass3week = math.Ceil(getResult(data[3], data[2], data[1]) / 3)
+		} else {
+			labelID = entity.LOLowClass3w
+			labelParams.LOCompareClass3week = math.Ceil(getAdverseResult(data[3], data[2], data[1]) / 3)
+		}
+
+	} else if getPercentage(data[3], data[2]) >= 20 || getPercentage(data[2], data[3]) >= 20 {
+		if getPercentage(data[3], data[2]) >= 20 {
+			labelID = entity.LOIncreasePreviousLargeW
+			labelParams.LOCompareLastWeek = math.Ceil(getPercentage(data[3], data[2]))
+		} else {
+			labelID = entity.LODecreasePreviousLargeW
+			labelParams.LOCompareLastWeek = math.Ceil(getPercentage(data[2], data[3]))
+		}
+	} else if (data[3].ReAchievedPercentage*100-data[3].ClassAverageAchievedPercentage*100 >= 10) ||
+		(data[3].ClassAverageAchievedPercentage*100-data[3].ReAchievedPercentage*100 >= 10) {
+		if data[3].ReAchievedPercentage*100-data[3].ClassAverageAchievedPercentage*100 >= 10 {
+			labelID = entity.LOHighClassReviewW
+			labelParams.LOReviewCompareClass = math.Ceil((data[3].ReAchievedPercentage - data[3].ClassAverageAchievedPercentage) * 100)
+		} else {
+			labelID = entity.LOLowClassReviewW
+			labelParams.LOReviewCompareClass = math.Ceil((data[3].ClassAverageAchievedPercentage - data[3].ReAchievedPercentage) * 100)
+		}
+	} else if (getPercentage(data[2], data[1]) > 0 && getPercentage(data[1], data[0]) > 0 && getPercentage(data[3], data[2]) > 0) ||
+		(getPercentage(data[2], data[1]) < 0 && getPercentage(data[1], data[0]) < 0 && getPercentage(data[3], data[2]) < 0) {
+		if getPercentage(data[2], data[1]) > 0 && getPercentage(data[3], data[2]) > 0 && getPercentage(data[1], data[0]) > 0 {
+			labelID = entity.LOIncrease3w
+			labelParams.LOCompareLast3Week = math.Ceil(getPercentage(data[3], data[0]))
+		} else {
+			labelID = entity.LODecrease3w
+			labelParams.LOCompareLast3Week = math.Ceil(getPercentage(data[0], data[3]))
+		}
+	} else if getSum(data[3]) > data[3].ClassAverageAchievedPercentage*100 || getSum(data[3]) < data[3].ClassAverageAchievedPercentage*100 {
+		if getSum(data[3]) > data[3].ClassAverageAchievedPercentage*100 {
+			labelID = entity.LOHighClassW
+			labelParams.LOCompareClass = math.Ceil(getSum(data[3]) - data[3].ClassAverageAchievedPercentage*100)
+		} else {
+			labelID = entity.LOLowClassW
+			labelParams.LOCompareClass = math.Ceil(data[3].ClassAverageAchievedPercentage*100 - getSum(data[3]))
+		}
+	} else if (getPercentage(data[3], data[2]) < 20 && getPercentage(data[3], data[2]) > 0) ||
+		(getPercentage(data[2], data[3]) < 20 && getPercentage(data[2], data[3]) > 0) {
+		if getPercentage(data[3], data[2]) < 20 && getPercentage(data[3], data[2]) > 0 {
+			labelID = entity.LOIncreasePreviousW
+			labelParams.LOCompareLastWeek = math.Ceil(getPercentage(data[3], data[2]))
+		} else {
+			labelID = entity.LODecreasePreviousW
+			labelParams.LOCompareLastWeek = math.Ceil(getPercentage(data[2], data[3]))
+		}
+	} else {
+		labelID = entity.LODefault
+		labelParams.AchievedLoCount = data[3].FirstAchievedCount + data[3].ReAchievedCount
+		labelParams.LearntLoCount = data[3].FirstAchievedCount + data[3].ReAchievedCount + data[3].UnAchievedCount
+	}
+	return
+}
+
+func getPercentage(data1, data2 *entity.LearnOutcomeAchievementResponseItem) (result float64) {
+	return (data1.FirstAchievedPercentage + data1.ReAchievedPercentage -
+		(data2.FirstAchievedPercentage + data2.ReAchievedPercentage)) * 100
+}
+
+func getSum(data *entity.LearnOutcomeAchievementResponseItem) (result float64) {
+	return (data.FirstAchievedPercentage + data.ReAchievedPercentage) * 100
+}
+
+func getResult(data1, data2, data3 *entity.LearnOutcomeAchievementResponseItem) (result float64) {
+	return (data1.FirstAchievedPercentage + data1.ReAchievedPercentage -
+		data1.ClassAverageAchievedPercentage +
+		(data2.FirstAchievedPercentage +
+			data2.ReAchievedPercentage -
+			data2.ClassAverageAchievedPercentage) +
+		(data3.FirstAchievedPercentage +
+			data3.ReAchievedPercentage -
+			data3.ClassAverageAchievedPercentage)) * 100
+}
+
+func getAdverseResult(data1, data2, data3 *entity.LearnOutcomeAchievementResponseItem) (result float64) {
+	return (data1.ClassAverageAchievedPercentage -
+		(data1.FirstAchievedPercentage + data1.ReAchievedPercentage) +
+		(data2.ClassAverageAchievedPercentage -
+			(data2.FirstAchievedPercentage + data2.ReAchievedPercentage)) +
+		(data3.ClassAverageAchievedPercentage -
+			(data3.FirstAchievedPercentage + data3.ReAchievedPercentage))) * 100
 }

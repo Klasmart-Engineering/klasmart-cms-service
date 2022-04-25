@@ -81,18 +81,11 @@ func (s *scheduleFeedbackModel) GetNewest(ctx context.Context, op *entity.Operat
 	}
 	result.Assignments = assignments
 
-	offlineStudyResultMap, err := GetAssessmentOfflineStudyModel().GetUserResult(ctx, op, []string{scheduleID}, []string{userID})
-	if err == constant.ErrRecordNotFound {
-		log.Error(ctx, "not found home fun", log.Err(err), log.Any("op", op), log.Any("feedback", feedback))
-		return nil, ErrFeedbackNotGenerateAssessment
-	}
+	isCompletedScheduleMap, err := GetAssessmentFeedbackModel().IsCompleteByScheduleIDs(ctx, op, []string{scheduleID})
 	if err != nil {
-		log.Error(ctx, "get home fun study  error", log.Err(err), log.Any("op", op), log.Any("feedback", feedback))
 		return nil, err
 	}
-	if offlineStudyResultItem, ok := offlineStudyResultMap[scheduleID]; ok && len(offlineStudyResultItem) > 0 {
-		result.IsAllowSubmit = offlineStudyResultItem[0].Status != v2.UserResultProcessStatusComplete
-	}
+	result.IsAllowSubmit = !isCompletedScheduleMap[scheduleID]
 
 	return result, nil
 }
@@ -243,7 +236,7 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 			UserID:     op.UserID,
 			FeedbackID: feedback.ID,
 		}
-		err = GetAssessmentOfflineStudyModel().UserSubmitOfflineStudy(ctx, op, offlineStudyAddReq)
+		err = GetAssessmentFeedbackModel().UserSubmitOfflineStudy(ctx, op, offlineStudyAddReq)
 		if err != nil {
 			return "", err
 		}

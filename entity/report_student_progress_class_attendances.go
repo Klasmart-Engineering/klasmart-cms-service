@@ -11,6 +11,17 @@ type ClassAttendanceRequest struct {
 type ClassAttendanceResponse struct {
 	RequestStudentID string                         `json:"request_student_id"`
 	Items            []*ClassAttendanceResponseItem `json:"items"`
+	LabelID          string                         `json:"label_id"`
+	LabelParams      AttedanceLabelParams           `json:"label_params"`
+}
+
+type AttedanceLabelParams struct {
+	AttendedCount          int     `json:"attended_count"`
+	ScheduledCount         int     `json:"scheduled_count"`
+	LOCompareClass3week    float64 `json:"lo_compare_class_3_week"`
+	AttendCompareLastWeek  float64 `json:"attend_compare_last_week"`
+	AttendCompareLast3Week float64 `json:"attend_compare_last_3_week"`
+	LOCompareClass         float64 `json:"lo_compare_class"`
 }
 
 type ClassAttendanceResponseItem struct {

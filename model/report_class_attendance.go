@@ -4,6 +4,7 @@ import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"math"
 )
 
 func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, op *entity.Operator, request *entity.ClassAttendanceRequest) (response *entity.ClassAttendanceResponse, err error) {
@@ -114,5 +115,105 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, op *entity.
 		}
 		response.Items = append(response.Items, classAttendanceResponseItem)
 	}
+	if len(request.Durations) == entity.Repoet4W {
+		labelID, labelParams := getAttendanceLabelIDAndParams(response)
+		response.LabelID = labelID
+		response.LabelParams = labelParams
+	}
 	return
+}
+func getAttendanceLabelIDAndParams(res *entity.ClassAttendanceResponse) (labelID string, labelParams entity.AttedanceLabelParams) {
+	data := res.Items
+	if data[0].AttendancePercentage == 0 &&
+		data[0].ClassAverageAttendancePercentage == 0 &&
+		data[0].UnSelectedSubjectsAverageAttendancePercentage == 0 &&
+		data[1].AttendancePercentage == 0 &&
+		data[1].ClassAverageAttendancePercentage == 0 &&
+		data[1].UnSelectedSubjectsAverageAttendancePercentage == 0 &&
+		data[2].AttendancePercentage == 0 &&
+		data[2].ClassAverageAttendancePercentage == 0 &&
+		data[2].UnSelectedSubjectsAverageAttendancePercentage == 0 {
+		labelID = entity.AttNew
+		labelParams.AttendedCount = data[3].AttendedCount
+		labelParams.ScheduledCount = data[3].ScheduledCount
+	} else if (data[1].AttendancePercentage > data[1].ClassAverageAttendancePercentage &&
+		data[2].AttendancePercentage > data[2].ClassAverageAttendancePercentage &&
+		data[3].AttendancePercentage > data[3].ClassAverageAttendancePercentage) ||
+		(data[1].AttendancePercentage < data[1].ClassAverageAttendancePercentage &&
+			data[2].AttendancePercentage < data[2].ClassAverageAttendancePercentage &&
+			data[3].AttendancePercentage < data[3].ClassAverageAttendancePercentage) {
+		if data[1].AttendancePercentage > data[1].ClassAverageAttendancePercentage &&
+			data[2].AttendancePercentage > data[2].ClassAverageAttendancePercentage &&
+			data[3].AttendancePercentage > data[3].ClassAverageAttendancePercentage {
+			labelID = entity.AttHighClass3w
+			labelParams.LOCompareClass3week = math.Ceil(getSub(data[3], data[2], data[1]) / 3)
+		} else {
+			labelID = entity.AttLowClass3w
+			labelParams.LOCompareClass3week = math.Ceil(getAbverseSub(data[3], data[2], data[1]) / 3)
+		}
+
+	} else if getSubResult(data[3], data[2]) >= 20 || getSubResult(data[2], data[3]) >= 20 {
+		if getSubResult(data[3], data[2]) >= 20 {
+			labelID = entity.AttIncreasePreviousLargeW
+			labelParams.AttendCompareLastWeek = math.Ceil(getSubResult(data[3], data[2]))
+		} else {
+			labelID = entity.AttDecreasePreviousLargeW
+			labelParams.AttendCompareLastWeek = math.Ceil(getSubResult(data[2], data[3]))
+		}
+	} else if (getSubResult(data[2], data[1]) > 0 && getSubResult(data[1], data[0]) > 0 && getSubResult(data[3], data[2]) > 0) ||
+		(getSubResult(data[2], data[1]) < 0 && getSubResult(data[1], data[0]) < 0 && getSubResult(data[3], data[2]) < 0) {
+		if getSubResult(data[1], data[0]) > 0 && getSubResult(data[2], data[1]) > 0 && getSubResult(data[3], data[2]) > 0 {
+			labelID = entity.AttIncrease3w
+			labelParams.AttendCompareLast3Week = math.Ceil(getSubResult(data[3], data[0]))
+		} else {
+			labelID = entity.AttDecrease3w
+			labelParams.AttendCompareLast3Week = math.Ceil(getSubResult(data[0], data[3]))
+		}
+	} else if data[3].AttendancePercentage > data[3].ClassAverageAttendancePercentage ||
+		data[3].AttendancePercentage < data[3].ClassAverageAttendancePercentage {
+		if data[3].AttendancePercentage > data[3].ClassAverageAttendancePercentage {
+			labelID = entity.AttHighClassW
+			labelParams.LOCompareClass = math.Ceil((data[3].AttendancePercentage - data[3].ClassAverageAttendancePercentage) * 100)
+		} else {
+			labelID = entity.AttLowClassW
+			labelParams.LOCompareClass = math.Ceil((data[3].ClassAverageAttendancePercentage - data[3].AttendancePercentage) * 100)
+		}
+	} else if (getSubResult(data[3], data[2]) < 20 && getSubResult(data[3], data[2]) > 0) ||
+		(getSubResult(data[2], data[3]) < 20 && getSubResult(data[2], data[3]) > 0) {
+		if getSubResult(data[3], data[2]) < 20 && getSubResult(data[3], data[2]) > 0 {
+			labelID = entity.AttIncreasePreviousW
+			labelParams.AttendCompareLastWeek = math.Ceil(getSubResult(data[3], data[2]))
+		} else {
+			labelID = entity.AttDecreasePreviousW
+			labelParams.AttendCompareLastWeek = math.Ceil(getSubResult(data[2], data[3]))
+		}
+
+	} else {
+		labelID = entity.AttDefault
+		labelParams.AttendedCount = data[3].AttendedCount
+		labelParams.ScheduledCount = data[3].ScheduledCount
+	}
+	return
+}
+
+func getSub(data1, data2, data3 *entity.ClassAttendanceResponseItem) (result float64) {
+	return (data1.AttendancePercentage -
+		data1.ClassAverageAttendancePercentage +
+		(data2.AttendancePercentage -
+			data2.ClassAverageAttendancePercentage) +
+		(data3.AttendancePercentage -
+			data3.ClassAverageAttendancePercentage)) * 100
+}
+
+func getAbverseSub(data1, data2, data3 *entity.ClassAttendanceResponseItem) (result float64) {
+	return (data1.ClassAverageAttendancePercentage -
+		data1.AttendancePercentage +
+		(data2.ClassAverageAttendancePercentage -
+			data2.AttendancePercentage) +
+		(data3.ClassAverageAttendancePercentage -
+			data3.AttendancePercentage)) * 100
+}
+
+func getSubResult(data1, data2 *entity.ClassAttendanceResponseItem) (result float64) {
+	return (data1.AttendancePercentage - data2.AttendancePercentage) * 100
 }
