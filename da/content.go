@@ -50,7 +50,7 @@ func GetContentDA() IContentDA {
 			mysqlDA: new(ContentMySQLDA),
 		}
 
-		cache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
+		contentFolderCache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
 			RedisKeyPrefix:  RedisKeyPrefixContentFolderQuery,
 			Expiration:      constant.ContentFolderQueryCacheExpiration,
 			RefreshDuration: constant.ContentFolderQueryCacheRefreshDuration,
@@ -59,7 +59,18 @@ func GetContentDA() IContentDA {
 			log.Panic(context.Background(), "create content and folder cache failed", log.Err(err))
 		}
 
-		da.contentFolderCache = cache
+		da.contentFolderCache = contentFolderCache
+
+		sharedContentCache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
+			RedisKeyPrefix:  RedisKeyPrefixSharedContent,
+			Expiration:      constant.SharedContentQueryCacheExpiration,
+			RefreshDuration: constant.SharedContentQueryCacheRefreshDuration,
+			RawQuery:        da.searchContent})
+		if err != nil {
+			log.Panic(context.Background(), "create shared content cache failed", log.Err(err))
+		}
+
+		da.sharedContentCache = sharedContentCache
 
 		contentDA = da
 	})
@@ -71,6 +82,7 @@ type ContentDA struct {
 	redisDA            IContentRedis
 	mysqlDA            *ContentMySQLDA
 	contentFolderCache *utils.LazyRefreshCache
+	sharedContentCache *utils.LazyRefreshCache
 }
 
 func (c ContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co entity.Content) (string, error) {
@@ -110,7 +122,38 @@ func (c ContentDA) GetContentByIDList(ctx context.Context, tx *dbo.DBContext, ci
 }
 
 func (c ContentDA) SearchContent(ctx context.Context, tx *dbo.DBContext, condition *ContentCondition) (int, []*entity.Content, error) {
-	return c.mysqlDA.SearchContent(ctx, tx, condition)
+	if !config.Get().RedisConfig.OpenCache {
+		return c.mysqlDA.SearchContent(ctx, tx, condition)
+	}
+
+	response := &searchContentResponse{Records: []*entity.Content{}}
+
+	err := c.sharedContentCache.Get(ctx, condition, response)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return response.Total, response.Records, nil
+}
+
+type searchContentResponse struct {
+	Total   int `json:"total"`
+	Records []*entity.Content
+}
+
+func (c ContentDA) searchContent(ctx context.Context, condition interface{}) (interface{}, error) {
+	request, ok := condition.(*ContentCondition)
+	if !ok {
+		log.Error(ctx, "invalid request", log.Any("condition", condition))
+		return nil, constant.ErrInvalidArgs
+	}
+
+	total, records, err := c.mysqlDA.SearchContent(ctx, dbo.MustGetDB(ctx), request)
+	if err != nil {
+		return nil, err
+	}
+
+	return &searchContentResponse{Total: total, Records: records}, nil
 }
 
 func (c ContentDA) SearchContentUnSafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (int, []*entity.Content, error) {
