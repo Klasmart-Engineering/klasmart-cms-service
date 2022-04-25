@@ -27,7 +27,7 @@ func (s *Server) getAppInsightMessage(c *gin.Context) {
 	op := s.getOperator(c)
 	var request entity.AppInsightMessageRequest
 	err := c.ShouldBindQuery(&request)
-	if err != nil {
+	if err != nil || request.ClassID == "" || request.StudentID == "" || request.OrgID == "" {
 		log.Warn(ctx, "getAppInsightMessage: ShouldBindQuery failed",
 			log.Err(err),
 			log.Any("request", request))
