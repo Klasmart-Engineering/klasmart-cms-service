@@ -23,8 +23,8 @@ var (
 	_assessmentFeedbackModel     IAssessmentFeedbackModel
 	_assessmentFeedbackModelOnce = sync.Once{}
 
-	ErrOfflineStudyHasCompleted   = errors.New("home fun study has completed")
-	ErrOfflineStudyHasNewFeedback = errors.New("home fun study has new feedback")
+	ErrOfflineStudyHasCompleted = errors.New("home fun study has completed")
+	//ErrOfflineStudyHasNewFeedback = errors.New("home fun study has new feedback")
 )
 
 type assessmentFeedbackModel struct {
