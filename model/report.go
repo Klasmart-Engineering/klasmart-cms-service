@@ -198,7 +198,6 @@ func (m *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 			if item.AchievedCount+item.NotAchievedCount > 0 {
 				item.Attend = true
 			}
-			res.Items = append(res.Items, mRes[student.ID])
 		}
 
 		res.Items = append(res.Items, item)
