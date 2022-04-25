@@ -393,23 +393,13 @@ fragment scoresByUser on Room {
 		//return nil, response.Errors
 	}
 
-	for _, studentScores := range data {
-		for _, scoreByUser := range studentScores.ScoresByUser {
-			for _, score := range scoreByUser.Scores {
-				for _, teacherScore := range score.TeacherScores {
-					// date is saved in milliseconds, we are more used to processing by seconds
-					teacherScore.Date = teacherScore.Date / 1000
-				}
-			}
-		}
-	}
-
 	//scores := make(map[string][]*H5PUserScores, len(data))
 	for index := range roomIDs {
 		dataItem := data[fmt.Sprintf("q%d", indexMapping[index])]
 		if dataItem == nil {
-			log.Error(ctx, "user content score not found", log.String("roomID", roomIDs[index]))
-			return nil, constant.ErrRecordNotFound
+			log.Warn(ctx, "user content score not found", log.String("roomID", roomIDs[index]))
+			//return nil, constant.ErrRecordNotFound
+			dataItem = new(RoomInfo)
 		}
 
 		result[roomIDs[index]] = dataItem

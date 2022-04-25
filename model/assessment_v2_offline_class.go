@@ -165,10 +165,11 @@ func (o *OfflineClassAssessment) MatchStudents(contents []*v2.AssessmentContentR
 		}
 
 		studentReply := &v2.AssessmentStudentReply{
-			StudentID:   item.UserID,
-			StudentName: studentInfo.Name,
-			Status:      item.StatusByUser,
-			Results:     nil,
+			StudentID:     item.UserID,
+			StudentName:   studentInfo.Name,
+			Status:        item.StatusByUser,
+			ProcessStatus: item.StatusBySystem,
+			Results:       nil,
 		}
 
 		for _, content := range contents {

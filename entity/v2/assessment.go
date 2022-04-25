@@ -175,6 +175,7 @@ type AssessmentStudentReply struct {
 	StudentID       string                          `json:"student_id"`
 	StudentName     string                          `json:"student_name"`
 	Status          AssessmentUserStatus            `json:"status" enums:"Participate,NotParticipate"`
+	ProcessStatus   AssessmentUserSystemStatus      `json:"process_status"`
 	ReviewerComment string                          `json:"reviewer_comment"`
 	Results         []*AssessmentStudentResultReply `json:"results"`
 	//OfflineStudyResult *StudentOfflineStudyResult      `json:"offline_study_result,omitempty"`
@@ -396,8 +397,9 @@ func (a AssessmentTypeCompliant) ToAssessmentType(ctx context.Context) (Assessme
 type StudentAssessment struct {
 	ID                  string                        `json:"id"`
 	Title               string                        `json:"title"`
+	Type                AssessmentType                `json:"type" enums:"OfflineClass,OnlineClass,OnlineStudy,OfflineStudy,ReviewStudy"`
 	Score               int                           `json:"score"`
-	Status              string                        `json:"status"`
+	Status              AssessmentUserSystemStatus    `json:"status" enums:"NotStarted,InProgress,Done,Resubmitted,Completed"`
 	CreateAt            int64                         `json:"create_at"`
 	UpdateAt            int64                         `json:"update_at"`
 	CompleteAt          int64                         `json:"complete_at"`
