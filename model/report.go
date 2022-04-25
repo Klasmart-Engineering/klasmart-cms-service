@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"sort"
 	"sync"
 	"time"
 
@@ -536,7 +537,126 @@ func (m *reportModel) GetLearningOutcomeOverView(ctx context.Context, condition 
 	}
 	return
 }
+
+func (m *reportModel) GetTeacherReportOld(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, teacherIDs ...string) (*entity.TeacherReport, error) {
+	if len(teacherIDs) < 1 {
+		return &entity.TeacherReport{
+			Categories: []*entity.TeacherReportCategory{},
+		}, nil
+	}
+	var assessmentIDs []string
+	{
+
+		assessments, err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
+			OrgID: entity.NullString{
+				String: operator.OrgID,
+				Valid:  true,
+			},
+			TeacherIDs: entity.NullStrings{
+				Strings: teacherIDs,
+				Valid:   true,
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		for _, item := range assessments {
+			assessmentIDs = append(assessmentIDs, item.ID)
+		}
+	}
+	var outcomes []*entity.Outcome
+	{
+		var assessmentOutcomes []*entity.AssessmentOutcome
+		if err := da.GetAssessmentOutcomeDA().QueryTx(ctx, tx, &da.QueryAssessmentOutcomeConditions{
+			AssessmentIDs: entity.NullStrings{
+				Strings: assessmentIDs,
+				Valid:   true,
+			},
+			Checked: entity.NullBool{
+				Bool:  true,
+				Valid: true,
+			},
+		}, &assessmentOutcomes); err != nil {
+			log.Error(ctx, "GetTeacherReport: da.GetAssessmentOutcomeDA().QueryTx: get assessment outcomes failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Strings("assessment_ids", assessmentIDs),
+			)
+			return nil, err
+		}
+
+		outcomeIDs := m.getOutcomeIDs(assessmentOutcomes)
+		oidTr, err := m.makeLatestOutcomeIDsTranslator(ctx, tx, operator, outcomeIDs)
+		if err != nil {
+			log.Error(ctx, "GetTeacherReport: make latest outcome ids translator failed",
+				log.Err(err),
+				log.Any("outcome_ids", outcomeIDs),
+				log.Any("operator", operator),
+			)
+		}
+		outcomeIDs = oidTr(outcomeIDs)
+		outcomes, err = GetOutcomeModel().GetByIDs(ctx, operator, tx, outcomeIDs)
+		if err != nil {
+			log.Error(ctx, "get teacher report: get learning outcome failed by ids",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Any("teacher_ids", teacherIDs),
+			)
+			return nil, err
+		}
+	}
+	categoryIDToNameMap := map[string]string{}
+	{
+		developmentalList, err := external.GetCategoryServiceProvider().GetByOrganization(ctx, operator)
+		if err != nil {
+			log.Error(ctx, "get teacher report: query all developmental failed",
+				log.Err(err),
+				log.Any("teacher_ids", teacherIDs),
+				log.Any("operator", operator),
+			)
+			return nil, err
+		}
+		for _, item := range developmentalList {
+			categoryIDToNameMap[item.ID] = item.Name
+		}
+	}
+	result := &entity.TeacherReport{}
+	{
+		developmentalID2OutcomeCountMap := map[string][]*entity.Outcome{}
+		for _, outcome := range outcomes {
+			for _, category := range outcome.Categories {
+				developmentalID2OutcomeCountMap[category] = append(developmentalID2OutcomeCountMap[category], outcome)
+			}
+		}
+		for developmentalID, outcomes := range developmentalID2OutcomeCountMap {
+			newItem := &entity.TeacherReportCategory{
+				Name: categoryIDToNameMap[developmentalID],
+			}
+			for _, outcome := range outcomes {
+				newItem.Items = append(newItem.Items, outcome.Name)
+			}
+			result.Categories = append(result.Categories, newItem)
+		}
+		sort.Sort((*entity.TeacherReportSortByCount)(result))
+	}
+	return result, nil
+}
+
 func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, teacherIDs ...string) (res *entity.TeacherReport, err error) {
+	// for debug only
+	resOld, errOld := m.GetTeacherReportOld(ctx, tx, operator, teacherIDs...)
+	defer func() {
+		log.Info(ctx, "GetTeacherReport result",
+			log.Any("Ooperator", operator),
+			log.Any("teacherIDs", teacherIDs),
+			log.Any("resOld", resOld),
+			log.Any("errOld", errOld),
+			log.Any("res", res),
+			log.Any("err", err),
+		)
+	}()
+
 	res = &entity.TeacherReport{
 		Categories: []*entity.TeacherReportCategory{},
 	}
