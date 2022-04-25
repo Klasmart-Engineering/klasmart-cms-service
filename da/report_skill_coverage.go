@@ -21,7 +21,7 @@ select
 from assessments_users_outcomes_v2 auov 
 inner join assessments_users_v2 auv1 on auov.assessment_user_id =auv1.id 
 inner join learning_outcomes lo on lo.id = auov.outcome_id 
-inner join outcomes_relations or2 on or2.master_id = auov.outcome_id and or2.master_type = ? and or2.relation_type = ?
+inner join outcomes_relations or2 on or2.master_id = auov.outcome_id and or2.relation_type = ?
 where auv1.assessment_id in (
 	select 
 		av.id 
@@ -38,7 +38,6 @@ where auv1.assessment_id in (
 ) 
 `
 	args := []interface{}{
-		entity.OutcomeType,
 		entity.CategoryType,
 		teacherIDs,
 		v2.AssessmentUserTypeTeacher,
