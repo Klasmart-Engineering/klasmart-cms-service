@@ -130,7 +130,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 		viewData.SubjectIDs = nil
 	}
 
-	schedule, err := viewData.ToSchedule(ctx)
+	schedule, err := viewData.ToSchedule(ctx, op)
 
 	relationInput := &entity.ScheduleRelationInput{
 		ClassRosterClassID:     viewData.ClassID,
@@ -833,8 +833,6 @@ func (s *scheduleModel) prepareScheduleUpdateData(ctx context.Context, op *entit
 	newSchedule.Description = viewData.Description
 	newSchedule.DueAt = viewData.DueAt
 	newSchedule.ClassType = viewData.ClassType
-	newSchedule.CreatedID = op.UserID
-	newSchedule.CreatedAt = time.Now().Unix()
 	newSchedule.UpdatedID = op.UserID
 	newSchedule.UpdatedAt = time.Now().Unix()
 	newSchedule.DeletedID = ""
