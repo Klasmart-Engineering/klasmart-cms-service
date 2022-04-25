@@ -23,6 +23,7 @@ type ReportDA struct {
 	BaseDA
 	learnerReportOverviewCache   *LazyRefreshCache
 	learningOutcomeOverviewCache *LazyRefreshCache
+	teacherUsageOverviewCache    *LazyRefreshCache
 }
 
 var _reportDA *ReportDA
@@ -53,6 +54,17 @@ func GetReportDA() IReportDA {
 		}
 
 		_reportDA.learningOutcomeOverviewCache = learningOutcomeOverviewCache
+
+		teacherUsageOverviewCache, err := NewLazyRefreshCache(&LazyRefreshCacheOption{
+			RedisKeyPrefix:  RedisKeyPrefixReportTeacherUsageOverview,
+			Expiration:      constant.ReportQueryCacheExpiration,
+			RefreshDuration: constant.ReportQueryCacheRefreshDuration,
+			RawQuery:        _reportDA.getTeacherUsageOverview})
+		if err != nil {
+			log.Panic(context.Background(), "create teacher usage overview cache failed", log.Err(err))
+		}
+
+		_reportDA.teacherUsageOverviewCache = teacherUsageOverviewCache
 
 	})
 	return _reportDA
