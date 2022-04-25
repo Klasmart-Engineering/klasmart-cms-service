@@ -177,12 +177,9 @@ func (s *Server) getAssessmentsSummary(c *gin.Context) {
 // @ID getStudentAssessments
 // @Accept json
 // @Produce json
-// @Param type query string true "type search"
-// @Param status query string false "status search"
-// @Param order_by query string false "order by"
-// @Param teacher_id query string false "teacher id search"
-// @Param assessment_id query string false "assessment id search"
-// @Param schedule_ids query string false "schedule ids search"
+// @Param type query string true "type search, OfflineStudy:home_fun_study" enums(OfflineClass,OnlineClass,OnlineStudy,OfflineStudy,home_fun_study,ReviewStudy)
+// @Param status query string false "status search" enums(NotStarted,InProgress,Done,Resubmitted,Completed)
+// @Param order_by query string false "order by" enums(create_at,-create_at,submit_at,-submit_at,complete_at,-complete_at) default(-create_at)
 // @Param create_at_ge query string false "create_at greater search"
 // @Param create_at_le query string false "create_at less search"
 // @Param update_at_le query string false "update_at greater search"

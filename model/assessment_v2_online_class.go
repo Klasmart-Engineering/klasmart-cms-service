@@ -348,10 +348,11 @@ func (o *OnlineClassAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 		}
 
 		studentReply := &v2.AssessmentStudentReply{
-			StudentID:   item.UserID,
-			StudentName: studentInfo.Name,
-			Status:      item.StatusByUser,
-			Results:     nil,
+			StudentID:     item.UserID,
+			StudentName:   studentInfo.Name,
+			Status:        item.StatusByUser,
+			ProcessStatus: item.StatusBySystem,
+			Results:       nil,
 		}
 		studentReply.ReviewerComment = commentResultMap[item.UserID]
 

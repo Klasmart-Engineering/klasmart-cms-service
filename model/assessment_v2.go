@@ -45,6 +45,7 @@ type IAssessmentModelV2 interface {
 	// home page
 	StatisticsCount(ctx context.Context, op *entity.Operator, req *v2.StatisticsCountReq) (*v2.AssessmentsSummary, error)
 	QueryTeacherFeedback(ctx context.Context, op *entity.Operator, condition *v2.StudentQueryAssessmentConditions) (int64, []*v2.StudentAssessment, error)
+	QueryStudentAssessment(ctx context.Context, op *entity.Operator, condition *v2.StudentQueryAssessmentConditions) (int64, []*v2.StudentAssessment, error)
 	PageForHomePage(ctx context.Context, op *entity.Operator, req *v2.AssessmentQueryReq) (*v2.ListAssessmentsResultForHomePage, error)
 }
 
@@ -217,7 +218,7 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 
 		result := make([]*v2.StudentAssessment, 0, len(userResults))
 		for _, item := range userResults {
-			status := item.StatusBySystem.String()
+			status := item.StatusBySystem
 			resultItem := &v2.StudentAssessment{
 				ID:                  item.ID,
 				Title:               item.Title,
@@ -282,6 +283,10 @@ func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity
 		return total, result, nil
 	}
 
+	return 0, nil, nil
+}
+
+func (a *assessmentModelV2) QueryStudentAssessment(ctx context.Context, op *entity.Operator, condition *v2.StudentQueryAssessmentConditions) (int64, []*v2.StudentAssessment, error) {
 	return 0, nil, nil
 }
 

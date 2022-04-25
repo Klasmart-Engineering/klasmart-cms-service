@@ -179,9 +179,10 @@ func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCon
 		}
 
 		resultItem := &v2.AssessmentStudentReply{
-			StudentID: item.UserID,
-			Status:    item.StatusByUser,
-			Results:   make([]*v2.AssessmentStudentResultReply, 0),
+			StudentID:     item.UserID,
+			Status:        item.StatusByUser,
+			ProcessStatus: item.StatusBySystem,
+			Results:       make([]*v2.AssessmentStudentResultReply, 0),
 		}
 
 		if userInfo, ok := userMap[item.UserID]; ok && userInfo != nil {
