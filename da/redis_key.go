@@ -36,6 +36,7 @@ const (
 	RedisKeyPrefixReportLearnerReportOverview   = "report:learner:overview"
 	RedisKeyPrefixReportLearningOutcomeOverview = "report:learning:outcome:overview"
 	RedisKeyPrefixReportTeacherUsageOverview    = "report:teacher:usage:overview"
+	RedisKeyPrefixReportSkillCoverage           = "report:skill:coverage"
 )
 
 const (
