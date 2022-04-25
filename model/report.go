@@ -567,6 +567,7 @@ func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, o
 		mOutcome, ok := mCategory[name]
 		if !ok {
 			mOutcome = map[string]bool{}
+			mCategory[name] = mOutcome
 		}
 		mOutcome[item.OutcomeName] = true
 	}

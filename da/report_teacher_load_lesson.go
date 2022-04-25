@@ -279,7 +279,7 @@ func (r *ReportDA) GetTeacherLoadItems(ctx context.Context, op *entity.Operator,
 select 
 	auv.user_id as teacher_id,
 	count(1) as total_lessons, 
-	sum(if(auv.status_by_system='NotParticipate',1,0)) as missed_lessons
+	sum(if(auv.status_by_system=?,1,0)) as missed_lessons
 from assessments_users_v2 auv  
 inner join assessments_v2 av on av.id =auv.assessment_id  
 inner join schedules s on s.id =av.schedule_id 
@@ -292,6 +292,7 @@ and av.org_id = ?
 group by auv.user_id 
 `
 	args := []interface{}{
+		v2.AssessmentUserSystemStatusNotStarted,
 		entity.ScheduleRelationTypeClassRosterClass,
 		classIDs,
 		v2.AssessmentUserTypeTeacher,
