@@ -2,6 +2,7 @@ package da
 
 import (
 	"context"
+	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -86,8 +87,91 @@ func (r *ReportDA) GetLearnerOutcomeOverview(ctx context.Context, condition *Lea
 type ILearningOutcomeReport interface {
 	GetLessonPlanFilter(ctx context.Context, op *entity.Operator, classID string) (items []*entity.ScheduleShortInfo, err error)
 	GetLearnerOutcomeOverview(ctx context.Context, condition *LearningOutcomeOverviewQueryCondition) (int, []*entity.StudentOutcomeAchievedCount, error)
+	GetStudentOutcomeCount(ctx context.Context, op *entity.Operator, req entity.ListStudentsAchievementReportRequest) (items []*entity.StudentOutcomeCountItem, err error)
 }
 
+func (r *ReportDA) GetStudentOutcomeCount(ctx context.Context, op *entity.Operator, req entity.ListStudentsAchievementReportRequest) (items []*entity.StudentOutcomeCountItem, err error) {
+	items = []*entity.StudentOutcomeCountItem{}
+	sbAssessmentID := NewSqlBuilder(ctx, `
+select 
+		av.id
+	from schedules s 
+	inner join assessments_v2 av on av.schedule_id =s.id 
+	
+	where s.start_at < ?
+	and s.lesson_plan_id in (
+		select id from cms_contents cc where cc.latest_id in (
+			select latest_id from cms_contents where id=?
+		)
+	)
+	and EXISTS (
+		select 1 from schedules_relations sr 
+		where sr.schedule_id =s.id 
+		and sr.relation_type in (?)
+		and sr.relation_id = ?
+	)
+	and s.class_type in (?)
+	and av.status = ?	
+`,
+		time.Now().Add(constant.ScheduleAllowGoLiveTime).Unix(),
+		req.LessonPlanID,
+		[]interface{}{
+			entity.ScheduleRelationTypeClassRosterClass,
+			entity.ScheduleRelationTypeParticipantClass,
+		},
+		req.ClassID,
+		[]interface{}{
+			entity.ScheduleClassTypeOnlineClass,
+			entity.ScheduleClassTypeOfflineClass,
+			entity.ScheduleClassTypeHomework,
+		},
+		v2.AssessmentStatusComplete,
+	)
+	sbSelect := NewSqlBuilder(ctx, `
+auv.user_id as student_id,
+	auov.outcome_id,
+	sum(IF(auov.status=?,1,0)) as count_of_unknown,
+  	sum(IF(auov.status=?,1,0)) as count_of_achieved,
+  	sum(IF(auov.status=?,1,0)) as count_of_not_covered,
+  	sum(IF(auov.status=?,1,0)) as count_of_not_achieved,
+  	count(1) as count_of_all 
+`,
+		v2.AssessmentUserOutcomeStatusUnknown,
+		v2.AssessmentUserOutcomeStatusAchieved,
+		v2.AssessmentUserOutcomeStatusNotCovered,
+		v2.AssessmentUserOutcomeStatusNotAchieved,
+	)
+	sql := `
+select 
+	{{.sbSelect}}
+from assessments_users_outcomes_v2 auov  
+inner join assessments_users_v2 auv on auv.id=auov.assessment_user_id  
+inner join assessments_v2 av on av.id = auv.assessment_id 
+inner join schedules s on s.id =  av.schedule_id 
+where auv.assessment_id in (
+	 {{.sbAssessmentID}}
+)
+{{.sbWhere}}
+group by auv.user_id,auov.outcome_id
+`
+	sbWhere := NewSqlBuilder(ctx, ` 
+and auv.user_type=? 
+`, v2.AssessmentUserTypeStudent)
+
+	sb := NewSqlBuilder(ctx, sql).
+		Replace(ctx, "sbSelect", sbSelect).
+		Replace(ctx, "sbAssessmentID", sbAssessmentID).
+		Replace(ctx, "sbWhere", sbWhere)
+	sql, args, err := sb.Build(ctx)
+	if err != nil {
+		return
+	}
+	err = r.QueryRawSQL(ctx, &items, sql, args...)
+	if err != nil {
+		return
+	}
+	return
+}
 func (r *ReportDA) getLearningOutcomeOverview(ctx context.Context, condition interface{}) (interface{}, error) {
 	qc, ok := condition.(*LearningOutcomeOverviewQueryCondition)
 	if !ok {

@@ -1,6 +1,11 @@
 package entity
 
 const (
+	Repoet4W = 4 //4 weeks
+	Repoet6M = 6 //6 months
+)
+
+const (
 	//Learing Outcome Achivemen
 	LODefault                = "report_msg_lo_default"
 	LONew                    = "report_msg_lo_new"
