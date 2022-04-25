@@ -286,7 +286,7 @@ func (r *ReportDA) GetTeacherLoadItems(ctx context.Context, op *entity.Operator,
 	}
 
 	response := []*entity.TeacherLoadItem{}
-	err := r.teacherUsageOverviewCache.Get(ctx, request, response)
+	err := r.teacherUsageOverviewCache.Get(ctx, request, &response)
 	if err != nil {
 		return nil, err
 	}
