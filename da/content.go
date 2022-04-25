@@ -9,6 +9,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type IContentDA interface {
@@ -49,7 +50,7 @@ func GetContentDA() IContentDA {
 			mysqlDA: new(ContentMySQLDA),
 		}
 
-		cache, err := NewLazyRefreshCache(&LazyRefreshCacheOption{
+		cache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
 			RedisKeyPrefix:  RedisKeyPrefixContentFolderQuery,
 			Expiration:      constant.ContentFolderQueryCacheExpiration,
 			RefreshDuration: constant.ContentFolderQueryCacheRefreshDuration,
@@ -69,7 +70,7 @@ func GetContentDA() IContentDA {
 type ContentDA struct {
 	redisDA            IContentRedis
 	mysqlDA            *ContentMySQLDA
-	contentFolderCache *LazyRefreshCache
+	contentFolderCache *utils.LazyRefreshCache
 }
 
 func (c ContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co entity.Content) (string, error) {

@@ -6,6 +6,7 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type IReportDA interface {
@@ -21,10 +22,10 @@ type IReportDA interface {
 }
 type ReportDA struct {
 	BaseDA
-	learnerReportOverviewCache   *LazyRefreshCache
-	learningOutcomeOverviewCache *LazyRefreshCache
-	teacherUsageOverviewCache    *LazyRefreshCache
-	skillCoverageCache           *LazyRefreshCache
+	learnerReportOverviewCache   *utils.LazyRefreshCache
+	learningOutcomeOverviewCache *utils.LazyRefreshCache
+	teacherUsageOverviewCache    *utils.LazyRefreshCache
+	skillCoverageCache           *utils.LazyRefreshCache
 }
 
 var _reportDA *ReportDA
@@ -34,7 +35,7 @@ func GetReportDA() IReportDA {
 	_reportDAOnce.Do(func() {
 		_reportDA = new(ReportDA)
 
-		learnerReportOverviewCache, err := NewLazyRefreshCache(&LazyRefreshCacheOption{
+		learnerReportOverviewCache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
 			RedisKeyPrefix:  RedisKeyPrefixReportLearnerReportOverview,
 			Expiration:      constant.ReportQueryCacheExpiration,
 			RefreshDuration: constant.ReportQueryCacheRefreshDuration,
@@ -45,7 +46,7 @@ func GetReportDA() IReportDA {
 
 		_reportDA.learnerReportOverviewCache = learnerReportOverviewCache
 
-		learningOutcomeOverviewCache, err := NewLazyRefreshCache(&LazyRefreshCacheOption{
+		learningOutcomeOverviewCache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
 			RedisKeyPrefix:  RedisKeyPrefixReportLearningOutcomeOverview,
 			Expiration:      constant.ReportQueryCacheExpiration,
 			RefreshDuration: constant.ReportQueryCacheRefreshDuration,
@@ -56,7 +57,7 @@ func GetReportDA() IReportDA {
 
 		_reportDA.learningOutcomeOverviewCache = learningOutcomeOverviewCache
 
-		teacherUsageOverviewCache, err := NewLazyRefreshCache(&LazyRefreshCacheOption{
+		teacherUsageOverviewCache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
 			RedisKeyPrefix:  RedisKeyPrefixReportTeacherUsageOverview,
 			Expiration:      constant.ReportQueryCacheExpiration,
 			RefreshDuration: constant.ReportQueryCacheRefreshDuration,
@@ -67,7 +68,7 @@ func GetReportDA() IReportDA {
 
 		_reportDA.teacherUsageOverviewCache = teacherUsageOverviewCache
 
-		skillCoverageCache, err := NewLazyRefreshCache(&LazyRefreshCacheOption{
+		skillCoverageCache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
 			RedisKeyPrefix:  RedisKeyPrefixReportSkillCoverage,
 			Expiration:      constant.ReportQueryCacheExpiration,
 			RefreshDuration: constant.ReportQueryCacheRefreshDuration,
