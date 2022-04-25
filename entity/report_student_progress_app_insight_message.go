@@ -1,10 +1,10 @@
 package entity
 
 type AppInsightMessageRequest struct {
-	ClassID   string `json:"class_id" binding:"required"`
-	StudentID string `json:"student_id" binding:"required"`
-	OrgID     string `json:"org_id" binding:"required"`
-	EndTime   int    `json:"end_time"`
+	ClassID   string `json:"class_id" binding:"required" form:"class_id"`
+	StudentID string `json:"student_id" binding:"required" form:"student_id"`
+	OrgID     string `json:"org_id" binding:"required" form:"org_id"`
+	EndTime   int    `json:"end_time" form:"end_time"`
 }
 
 type AppInsightMessageResponse struct {
