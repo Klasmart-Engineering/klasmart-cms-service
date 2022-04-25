@@ -1,4 +1,4 @@
-package da
+package utils
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"github.com/go-redis/redis/v8"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"gitlab.badanamu.com.cn/calmisland/ro"
 )
 
@@ -55,7 +54,7 @@ func (c LazyRefreshCache) Get(ctx context.Context, request, response interface{}
 		return nil
 	}
 
-	hash, err := utils.Hash(request)
+	hash, err := Hash(request)
 	if err != nil {
 		log.Warn(ctx, "caculate request hash failed", log.Err(err), log.Any("request", request))
 		return err
@@ -92,7 +91,7 @@ func (c LazyRefreshCache) Get(ctx context.Context, request, response interface{}
 
 	// cache refresh trigger
 	go func() {
-		ctxClone := utils.CloneContextWithTrace(ctx)
+		ctxClone := CloneContextWithTrace(ctx)
 
 		defer func() {
 			if err1 := recover(); err1 != nil {
