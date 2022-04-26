@@ -263,7 +263,7 @@ func TestMoveSubFolderToAllProcess(t *testing.T) {
 func TestQuerySharedContents(t *testing.T) {
 	operator := fakeOperator()
 	operator.OrgID = "100"
-	total, data, err := GetContentModel().SearchAuthedContent(context.Background(), dbo.MustGetDB(context.Background()),
+	total, data, err := GetContentModel().SearchSharedContent(context.Background(), dbo.MustGetDB(context.Background()),
 		&entity.ContentConditionRequest{}, operator)
 
 	assert.NoError(t, err)

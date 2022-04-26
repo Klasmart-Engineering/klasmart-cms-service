@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 )
 
 func TestLazyRefreshCache_Get(t *testing.T) {
@@ -26,7 +25,7 @@ func TestLazyRefreshCache_Get(t *testing.T) {
 	cast := time.Second * 1
 
 	cache, _ := NewLazyRefreshCache(&LazyRefreshCacheOption{
-		RedisKeyPrefix:  da.RedisKeyPrefixContentFolderQuery,
+		RedisKeyPrefix:  "content:folder:query",
 		RefreshDuration: time.Second * 5,
 		RawQuery: func(ctx context.Context, input interface{}) (interface{}, error) {
 			condition := input.(*request)
@@ -79,7 +78,7 @@ func BenchmarkLazyRefreshCache_Get(b *testing.B) {
 	cast := time.Second * 1
 
 	cache, _ := NewLazyRefreshCache(&LazyRefreshCacheOption{
-		RedisKeyPrefix:  da.RedisKeyPrefixContentFolderQuery,
+		RedisKeyPrefix:  "content:folder:query",
 		RefreshDuration: time.Second * 5,
 		RawQuery: func(ctx context.Context, input interface{}) (interface{}, error) {
 			condition := input.(*request)

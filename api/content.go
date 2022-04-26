@@ -623,8 +623,8 @@ func (s *Server) queryContent(c *gin.Context) {
 	}
 }
 
-// @Summary queryAuthContent
-// @ID queryAuthContent
+// @Summary querySharedContent
+// @ID querySharedContent
 // @Description query authed content by condition
 // @Accept json
 // @Produce json
@@ -643,11 +643,11 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents_authed [get]
-func (s *Server) queryAuthContent(c *gin.Context) {
+func (s *Server) querySharedContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := s.queryContentCondition(c, op)
-	total, results, err := model.GetContentModel().SearchAuthedContent(ctx, dbo.MustGetDB(ctx), &condition, op)
+	total, results, err := model.GetContentModel().SearchSharedContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, s.convertQueryContentResult(ctx, &entity.ContentInfoWithDetailsResponse{
