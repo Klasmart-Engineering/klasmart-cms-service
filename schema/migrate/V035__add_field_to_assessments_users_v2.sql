@@ -32,7 +32,7 @@ where
 
 -- update OnlineClass,OfflineClass,OnlineStudy,ReviewStudy assessments_users
 update assessments_users_v2,assessments_v2
-set assessments_users_v2.done_at = if(assessments_v2.update_at<>0,assessments_v2.update_at,assessments_v2.create_at)
+set assessments_users_v2.done_at = assessments_v2.create_at
 where
     assessments_v2.assessment_type in ('OnlineClass','OfflineClass','OnlineStudy','ReviewStudy')
   and
