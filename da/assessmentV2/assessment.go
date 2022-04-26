@@ -51,13 +51,25 @@ func (a *assessmentDA) DeleteByScheduleIDsTx(ctx context.Context, tx *dbo.DBCont
 	return nil
 }
 
+type StudentIDsAndStatus struct {
+	StudentID sql.NullString
+	Status    sql.NullString
+}
 type AssessmentCondition struct {
-	OrgID          sql.NullString
-	ScheduleID     sql.NullString
-	ScheduleIDs    entity.NullStrings
-	Status         entity.NullStrings
-	AssessmentType sql.NullString
-	TeacherIDs     entity.NullStrings
+	OrgID               sql.NullString
+	ScheduleID          sql.NullString
+	ScheduleIDs         entity.NullStrings
+	Status              entity.NullStrings
+	AssessmentType      sql.NullString
+	TeacherIDs          entity.NullStrings
+	StudentIDsAndStatus *StudentIDsAndStatus
+
+	UpdateAtGe   sql.NullInt64
+	UpdateAtLe   sql.NullInt64
+	CreatedAtGe  sql.NullInt64
+	CreatedAtLe  sql.NullInt64
+	CompleteAtGe sql.NullInt64
+	CompleteAtLe sql.NullInt64
 
 	OrderBy AssessmentOrderBy
 	Pager   dbo.Pager
@@ -96,7 +108,7 @@ func (c AssessmentCondition) GetConditions() ([]string, []interface{}) {
 	if c.TeacherIDs.Valid {
 		sql := fmt.Sprintf(`
 exists(select 1 from %s where 
-user_id in (?) and 
+user_id = ? and 
 %s.assessment_id = %s.id and 
 %s.user_type = ? and
 %s.status_by_user = ?)`,
@@ -108,6 +120,55 @@ user_id in (?) and
 		)
 		wheres = append(wheres, sql)
 		params = append(params, c.TeacherIDs.Strings, v2.AssessmentUserTypeTeacher, v2.AssessmentUserStatusParticipate)
+	}
+
+	if c.StudentIDsAndStatus != nil {
+		sql := fmt.Sprintf(`
+exists(select 1 from %s where 
+user_id = ? and 
+%s.assessment_id = %s.id and 
+%s.user_type = ?`,
+			constant.TableNameAssessmentsUsersV2,
+			constant.TableNameAssessmentsUsersV2,
+			constant.TableNameAssessmentV2,
+			constant.TableNameAssessmentsUsersV2,
+		)
+		params = append(params, c.StudentIDsAndStatus.StudentID.String, v2.AssessmentUserTypeStudent)
+		if c.StudentIDsAndStatus.Status.Valid {
+			sql = fmt.Sprintf("%s and %s.status_by_system = ?", sql, constant.TableNameAssessmentsUsersV2)
+			params = append(params, c.StudentIDsAndStatus.Status.String)
+		}
+
+		sql += ")"
+
+		wheres = append(wheres, sql)
+	}
+
+	if c.CreatedAtGe.Valid {
+		wheres = append(wheres, "create_at >= ?")
+		params = append(params, c.CreatedAtGe.Int64)
+	}
+	if c.CreatedAtLe.Valid {
+		wheres = append(wheres, "create_at <= ?")
+		params = append(params, c.CreatedAtLe.Int64)
+	}
+
+	if c.CompleteAtGe.Valid {
+		wheres = append(wheres, "complete_at >= ?")
+		params = append(params, c.CompleteAtGe.Int64)
+	}
+	if c.CompleteAtLe.Valid {
+		wheres = append(wheres, "complete_at <= ?")
+		params = append(params, c.CompleteAtLe.Int64)
+	}
+
+	if c.UpdateAtGe.Valid {
+		wheres = append(wheres, "update_at >= ?")
+		params = append(params, c.UpdateAtGe.Int64)
+	}
+	if c.UpdateAtLe.Valid {
+		wheres = append(wheres, "update_at <= ?")
+		params = append(params, c.UpdateAtLe.Int64)
 	}
 
 	if c.DeleteAt.Valid {
