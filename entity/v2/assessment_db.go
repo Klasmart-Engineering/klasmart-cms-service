@@ -111,3 +111,11 @@ type AssessmentUserResultDBView struct {
 	StatusBySystem AssessmentUserSystemStatus `gorm:"status_by_system"`
 	CompleteAt     int64                      `gorm:"complete_at"`
 }
+
+type StudentAssessmentDBView struct {
+	AssessmentID   string         `gorm:"assessment_id"`
+	Title          string         `gorm:"title"`
+	AssessmentType AssessmentType `gorm:"assessment_type"`
+	ScheduleID     string         `gorm:"schedule_id"`
+	AssessmentUser
+}

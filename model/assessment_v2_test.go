@@ -211,16 +211,16 @@ func TestQueryTeacherFeedback(t *testing.T) {
 		OrgID:  "f27efd10-000e-4542-bef2-0ccda39b93d3",
 		Token:  "",
 	}
-	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFlYTBlNDk0LWU1NmYtNDE3ZS05OWE3LTgxNzc0Yzg3OWJmOCIsImVtYWlsIjoic3R1MDJfMDAxQHlvcG1haWwuY29tIiwiZXhwIjoxNjUwOTM5ODQ1LCJpc3MiOiJraWRzbG9vcCJ9.MZN5O-8UX-zTKhs6zDav4sqCBv46DqCJDzYQt7jA0Sn6qYEQq8nonOIdNBkux6GVc4I7ShEZ712wyg_E4v_l4Vb4crdXac4Scy80mLCFDu1Ui8YebXu1jSP-k5OlAOD1nlZGjz-mnGdXGoeTtPzE0Tt85XhaKI4pvD0gQuOKEVZQ1eDzCsjv_DVB5gWvHUuJPYFW5oN8rdYppV9za2HVZ8w_oA4JAXETPt5dB62v-J90O7C2__sXrRKO7ScMpH_fp5vnGxmvxrlqRYTNf1-BHK6Y2BH2SsQcmEZqPXzprxs_1upmMwBsXQ2Gvw_s3KrzgG5x7B13NTeOEfMap50BiA"
+	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFlYTBlNDk0LWU1NmYtNDE3ZS05OWE3LTgxNzc0Yzg3OWJmOCIsImVtYWlsIjoic3R1MDJfMDAxQHlvcG1haWwuY29tIiwiZXhwIjoxNjUwOTYyNzA4LCJpc3MiOiJraWRzbG9vcCJ9.ZXwqpJV_0wDk_AmSOsQnwSTfP8V7X9lT1EXbNYf8JBBPKwgTQ412LNwtrBmDpNNL5hUq6YOt4iW1zA5IB3vVCX90x0AYzknU39Q2HPuONzaIxkHPVZI3tYLn00-rYdncDYK1XiJbv_APp4D0qC9JuSEn7aGF6OzvU31uCkSk9ab_ZE2tsJogA7ueqhNzlzWCOZ_vsx5ggZULT2_YBL2JHojYHfsPoCDrphkJm3gT3b6w7FIQozgL89fOLmTMPWabQ5zaJo95VZRj3GFESiFTr6Ld6SFfuMlSfxRvkkrCAHuSCDjoNVYBwR4iweCvs31i9ul3bAm02hC5OYQN5SGrWg"
 
 	total, result, err := GetAssessmentModelV2().QueryStudentAssessment(ctx, op, &v2.StudentQueryAssessmentConditions{
-		OrgID:       "f27efd10-000e-4542-bef2-0ccda39b93d3",
-		StudentID:   "aea0e494-e56f-417e-99a7-81774c879bf8",
-		ScheduleIDs: []string{"61249b0b8217ac62053ede9a", "61249d928217ac62053edfc2", "6125b30c4196280adf6424a4"},
-		ClassType:   "OnlineStudy",
-		OrderBy:     "-complete_at",
-		Page:        1,
-		PageSize:    5,
+		OrgID:     "f27efd10-000e-4542-bef2-0ccda39b93d3",
+		StudentID: "aea0e494-e56f-417e-99a7-81774c879bf8",
+		//ScheduleIDs: []string{"61249b0b8217ac62053ede9a", "61249d928217ac62053edfc2", "6125b30c4196280adf6424a4"},
+		ClassType: "OfflineStudy",
+		OrderBy:   "-complete_at",
+		Page:      1,
+		PageSize:  5,
 	})
 
 	if err != nil {

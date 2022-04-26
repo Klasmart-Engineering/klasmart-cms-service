@@ -154,7 +154,16 @@ func (a *assessmentModelV2) QueryStudentAssessment(ctx context.Context, op *enti
 		assessmentType = v2.AssessmentTypeOfflineStudy
 	}
 
-	condition := &assessmentV2.AssessmentCondition{
+	// Compatible with old fields
+	if req.CompleteStartAt > 0 && req.CompletedGe == 0 {
+		req.CompletedGe = req.CompleteStartAt
+	}
+	//Compatible with old fields
+	if req.CompleteEndAt > 0 && req.CompletedLe == 0 {
+		req.CompletedLe = req.CompleteEndAt
+	}
+
+	condition := &assessmentV2.StudentAssessmentCondition{
 		OrgID: sql.NullString{
 			String: op.OrgID,
 			Valid:  true,
@@ -171,41 +180,51 @@ func (a *assessmentModelV2) QueryStudentAssessment(ctx context.Context, op *enti
 			Strings: []string{req.TeacherID},
 			Valid:   req.TeacherID != "",
 		},
-		StudentIDsAndStatus: &assessmentV2.StudentIDsAndStatus{
-			StudentID: sql.NullString{
-				String: req.StudentID,
-				Valid:  true,
-			},
-			Status: sql.NullString{
-				String: req.Status,
-				Valid:  req.Status != "",
-			},
+		StudentID: sql.NullString{
+			String: req.StudentID,
+			Valid:  true,
+		},
+		Status: entity.NullStrings{
+			Strings: []string{req.Status},
+			Valid:   req.Status != "",
 		},
 		CreatedAtGe: sql.NullInt64{
-			Int64: req.CreatedStartAt,
-			Valid: req.CreatedStartAt > 0,
+			Int64: req.CreatedGe,
+			Valid: req.CreatedGe > 0,
 		},
 		CreatedAtLe: sql.NullInt64{
-			Int64: req.CreatedEndAt,
-			Valid: req.CreatedEndAt > 0,
+			Int64: req.CreatedLe,
+			Valid: req.CreatedLe > 0,
 		},
-		UpdateAtGe: sql.NullInt64{
-			Int64: req.UpdateStartAt,
-			Valid: req.UpdateStartAt > 0,
+
+		DoneAtGe: sql.NullInt64{
+			Int64: req.DoneGe,
+			Valid: req.DoneGe > 0,
 		},
-		UpdateAtLe: sql.NullInt64{
-			Int64: req.UpdateEndAt,
-			Valid: req.UpdateEndAt > 0,
+		DoneAtLe: sql.NullInt64{
+			Int64: req.DoneLe,
+			Valid: req.DoneLe > 0,
 		},
+
+		ResubmittedAtGe: sql.NullInt64{
+			Int64: req.ResubmittedGe,
+			Valid: req.ResubmittedGe > 0,
+		},
+		ResubmittedAtLe: sql.NullInt64{
+			Int64: req.ResubmittedLe,
+			Valid: req.ResubmittedLe > 0,
+		},
+
 		CompleteAtGe: sql.NullInt64{
-			Int64: req.CompleteStartAt,
-			Valid: req.CompleteStartAt > 0,
+			Int64: req.CompletedGe,
+			Valid: req.CompletedGe > 0,
 		},
 		CompleteAtLe: sql.NullInt64{
-			Int64: req.CompleteEndAt,
-			Valid: req.CompleteEndAt > 0,
+			Int64: req.CompletedLe,
+			Valid: req.CompletedLe > 0,
 		},
-		OrderBy: assessmentV2.NewAssessmentOrderBy(req.OrderBy),
+
+		OrderBy: assessmentV2.StudentAssessmentOrderBy(req.OrderBy),
 		Pager: dbo.Pager{
 			Page:     req.Page,
 			PageSize: req.PageSize,
@@ -214,25 +233,24 @@ func (a *assessmentModelV2) QueryStudentAssessment(ctx context.Context, op *enti
 
 	log.Debug(ctx, "condition", log.Any("req", req), log.Any("condition", condition), log.Any("op", op))
 
-	var assessments []*v2.Assessment
-	total, err := assessmentV2.GetAssessmentDA().Page(ctx, condition, &assessments)
+	total, studentAssessments, err := assessmentV2.GetAssessmentDA().PageStudentAssessment(ctx, condition)
 	if err != nil {
 		log.Error(ctx, "query assessment error", log.Any("req", req), log.Any("condition", condition), log.Any("op", op))
 		return 0, nil, err
 	}
 
-	if len(assessments) <= 0 {
+	if len(studentAssessments) <= 0 {
 		return 0, make([]*v2.StudentAssessment, 0), nil
 	}
 
 	if assessmentType == v2.AssessmentTypeOfflineStudy {
-		result, err := a.fillOfflineStudy(ctx, op, assessments, req)
+		result, err := a.fillOfflineStudy(ctx, op, studentAssessments)
 		if err != nil {
 			return 0, nil, err
 		}
 		return total, result, err
 	} else {
-		result, err := a.fillNoneOfflineStudy(ctx, op, assessments, req)
+		result, err := a.fillNoneOfflineStudy(ctx, op, studentAssessments)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -240,63 +258,28 @@ func (a *assessmentModelV2) QueryStudentAssessment(ctx context.Context, op *enti
 	}
 }
 
-func (a *assessmentModelV2) fillNoneOfflineStudy(ctx context.Context, op *entity.Operator, assessments []*v2.Assessment, req *v2.StudentQueryAssessmentConditions) ([]*v2.StudentAssessment, error) {
-	scheduleIDs := make([]string, len(assessments))
-	assessmentIDs := make([]string, len(assessments))
-	for i, item := range assessments {
+func (a *assessmentModelV2) fillNoneOfflineStudy(ctx context.Context, op *entity.Operator, stuAssessments []*v2.StudentAssessmentDBView) ([]*v2.StudentAssessment, error) {
+	scheduleIDs := make([]string, len(stuAssessments))
+	for i, item := range stuAssessments {
 		scheduleIDs[i] = item.ScheduleID
-		assessmentIDs[i] = item.ID
 	}
 	scheduleMap, err := a.querySchedulesMap(ctx, scheduleIDs)
 	if err != nil {
 		return nil, err
 	}
 
-	userCondition := &assessmentV2.AssessmentUserCondition{
-		AssessmentIDs: entity.NullStrings{
-			Strings: assessmentIDs,
-			Valid:   true,
-		},
-		UserIDs: entity.NullStrings{
-			Strings: []string{req.StudentID},
-			Valid:   true,
-		},
-		UserType: sql.NullString{
-			String: v2.AssessmentUserTypeStudent.String(),
-			Valid:  true,
-		},
-	}
+	result := make([]*v2.StudentAssessment, len(stuAssessments))
 
-	var assessmentUsers []*v2.AssessmentUser
-	err = assessmentV2.GetAssessmentUserDA().Query(ctx, userCondition, &assessmentUsers)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(assessmentUsers) <= 0 {
-		return nil, constant.ErrRecordNotFound
-	}
-
-	assessmentUserIDs := make([]string, len(assessmentUsers))
-	// key: assessment_id
-	assessmentUserMapAssessmentIDKey := make(map[string]*v2.AssessmentUser, len(assessmentUsers))
-	for i, item := range assessmentUsers {
-		assessmentUserIDs[i] = item.ID
-		assessmentUserMapAssessmentIDKey[item.AssessmentID] = item
-	}
-
-	result := make([]*v2.StudentAssessment, len(assessments))
-
-	for i, item := range assessments {
+	for i, item := range stuAssessments {
 		replyItem := &v2.StudentAssessment{
 			ID:                  item.ID,
 			Title:               item.Title,
 			Type:                item.AssessmentType,
 			Score:               0,
-			Status:              v2.AssessmentUserSystemStatusNotStarted,
+			Status:              item.StatusBySystem,
 			CreateAt:            item.CreateAt,
 			UpdateAt:            item.UpdateAt,
-			CompleteAt:          item.CompleteAt,
+			CompleteAt:          item.CompletedAt,
 			TeacherComments:     make([]*v2.StudentAssessmentTeacher, 0),
 			Schedule:            new(v2.StudentAssessmentSchedule),
 			FeedbackAttachments: make([]*v2.StudentAssessmentAttachment, 0),
@@ -305,11 +288,8 @@ func (a *assessmentModelV2) fillNoneOfflineStudy(ctx context.Context, op *entity
 
 		schedule, ok := scheduleMap[item.ScheduleID]
 		if !ok {
+			log.Warn(ctx, "not found schedule", log.Any("stuAssessmentItem", item), log.Any("scheduleMap", scheduleMap))
 			continue
-		}
-
-		if assessmentUserItem, ok := assessmentUserMapAssessmentIDKey[item.ID]; ok {
-			replyItem.Status = assessmentUserItem.StatusBySystem
 		}
 
 		replyItem.Schedule = &v2.StudentAssessmentSchedule{
@@ -473,51 +453,22 @@ func (m *assessmentModelV2) queryAssessmentComments(ctx context.Context, operato
 	return comments, nil
 }
 
-func (a *assessmentModelV2) fillOfflineStudy(ctx context.Context, op *entity.Operator, assessments []*v2.Assessment, req *v2.StudentQueryAssessmentConditions) ([]*v2.StudentAssessment, error) {
-	scheduleIDs := make([]string, len(assessments))
-	assessmentIDs := make([]string, len(assessments))
-	for i, item := range assessments {
+func (a *assessmentModelV2) fillOfflineStudy(ctx context.Context, op *entity.Operator, stuAssessments []*v2.StudentAssessmentDBView) ([]*v2.StudentAssessment, error) {
+	scheduleIDs := make([]string, len(stuAssessments))
+	for i, item := range stuAssessments {
 		scheduleIDs[i] = item.ScheduleID
-		assessmentIDs[i] = item.ID
 	}
 	scheduleMap, err := a.querySchedulesMap(ctx, scheduleIDs)
 	if err != nil {
 		return nil, err
 	}
-	userCondition := &assessmentV2.AssessmentUserCondition{
-		AssessmentIDs: entity.NullStrings{
-			Strings: assessmentIDs,
-			Valid:   true,
-		},
-		UserIDs: entity.NullStrings{
-			Strings: []string{req.StudentID},
-			Valid:   true,
-		},
-		UserType: sql.NullString{
-			String: v2.AssessmentUserTypeStudent.String(),
-			Valid:  true,
-		},
-	}
 
-	var assessmentUsers []*v2.AssessmentUser
-	err = assessmentV2.GetAssessmentUserDA().Query(ctx, userCondition, &assessmentUsers)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(assessmentUsers) <= 0 {
-		return nil, constant.ErrRecordNotFound
-	}
-
-	assessmentUserIDs := make([]string, len(assessmentUsers))
+	assessmentUserIDs := make([]string, 0, len(stuAssessments))
 	// key: id
-	assessmentUserMap := make(map[string]*v2.AssessmentUser, len(assessmentUsers))
-	// key: assessment_id
-	assessmentUserMapAssessmentIDKey := make(map[string]*v2.AssessmentUser, len(assessmentUsers))
-	for i, item := range assessmentUsers {
-		assessmentUserIDs[i] = item.ID
+	assessmentUserMap := make(map[string]*v2.StudentAssessmentDBView, len(stuAssessments))
+	for _, item := range stuAssessments {
+		assessmentUserIDs = append(assessmentUserIDs, item.ID)
 		assessmentUserMap[item.ID] = item
-		assessmentUserMapAssessmentIDKey[item.AssessmentID] = item
 	}
 	reviewerFeedbackCond := &assessmentV2.AssessmentUserResultCondition{
 		AssessmentUserIDs: entity.NullStrings{
@@ -536,12 +487,7 @@ func (a *assessmentModelV2) fillOfflineStudy(ctx context.Context, op *entity.Ope
 	feedbackIDs := make([]string, 0, len(reviewerFeedbacks))
 	teacherIDs := make([]string, 0)
 	for _, item := range reviewerFeedbacks {
-		assessmentUserItem, ok := assessmentUserMap[item.AssessmentUserID]
-		if !ok {
-			log.Warn(ctx, "not found assessment user data", log.Any("assessmentUserMap", assessmentUserMap), log.Any("reviewerFeedbacks", reviewerFeedbacks))
-			continue
-		}
-		reviewerFeedbackMap[assessmentUserItem.AssessmentID] = item
+		reviewerFeedbackMap[item.AssessmentUserID] = item
 		feedbackIDs = append(feedbackIDs, item.StudentFeedbackID)
 		teacherIDs = append(teacherIDs, item.ReviewerID)
 	}
@@ -557,18 +503,21 @@ func (a *assessmentModelV2) fillOfflineStudy(ctx context.Context, op *entity.Ope
 		return nil, err
 	}
 
-	result := make([]*v2.StudentAssessment, len(assessments))
+	result := make([]*v2.StudentAssessment, len(stuAssessments))
 
-	for i, item := range assessments {
+	for i, item := range stuAssessments {
 		replyItem := &v2.StudentAssessment{
-			ID:                  item.ID,
+			ID:                  item.AssessmentID,
 			Title:               item.Title,
 			Type:                item.AssessmentType,
 			Score:               0,
-			Status:              v2.AssessmentUserSystemStatusNotStarted,
+			Status:              item.StatusBySystem,
 			CreateAt:            item.CreateAt,
 			UpdateAt:            item.UpdateAt,
-			CompleteAt:          item.CompleteAt,
+			InProgressAt:        item.InProgressAt,
+			DoneAt:              item.DoneAt,
+			ResubmittedAt:       item.ResubmittedAt,
+			CompleteAt:          item.CompletedAt,
 			TeacherComments:     make([]*v2.StudentAssessmentTeacher, 0),
 			Schedule:            new(v2.StudentAssessmentSchedule),
 			FeedbackAttachments: make([]*v2.StudentAssessmentAttachment, 0),
@@ -582,12 +531,7 @@ func (a *assessmentModelV2) fillOfflineStudy(ctx context.Context, op *entity.Ope
 
 		if reviewerFeedbackItem, ok := reviewerFeedbackMap[item.ID]; ok {
 			replyItem.Score = int(reviewerFeedbackItem.AssessScore)
-		}
-		if assessmentUserItem, ok := assessmentUserMapAssessmentIDKey[item.ID]; ok {
-			replyItem.Status = assessmentUserItem.StatusBySystem
-		}
 
-		if reviewerFeedbackItem, ok := reviewerFeedbackMap[item.ID]; ok {
 			teacherCommentItem := &v2.StudentAssessmentTeacher{
 				Teacher: new(v2.StudentAssessmentTeacherInfo),
 				Comment: reviewerFeedbackItem.ReviewerComment,
