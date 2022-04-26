@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"strings"
 	"text/template"
 
@@ -48,7 +49,10 @@ func (n *NullableOrganization) RelatedIDs() []*cache.RelatedEntity {
 }
 
 func GetOrganizationServiceProvider() OrganizationServiceProvider {
-	return &AmsOrganizationService{}
+	if config.Get().AMS.UseDeprecatedQuery {
+		return &AmsOrganizationService{}
+	}
+	return &AmsOrganizationConnectionService{}
 }
 
 type AmsOrganizationService struct{}

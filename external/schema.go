@@ -24,14 +24,16 @@ var (
 type UUID string
 type UUIDOperator OperatorType
 type StringOperator OperatorType
+type UUIDExclusiveOperator OperatorType
 
 type UUIDFilter struct {
 	Operator UUIDOperator `json:"operator" gqls:"operator,noquoted"`
 	Value    UUID         `json:"value" gqls:"value"`
 }
 
-type UserFilter struct {
-	UserID UUIDFilter `json:"userId" gqls:"userId"`
+type UUIDExclusiveFilter struct {
+	Operator UUIDExclusiveOperator `json:"operator" gqls:"operator,noquoted"`
+	Value    UUID                  `json:"value" gqls:"value"`
 }
 
 type StringFilter struct {
@@ -53,6 +55,10 @@ type ClassFilter struct {
 	TeacherID      *UUIDFilter   `json:"teacherId,omitempty" gqls:"teacherId,omitempty"`
 }
 
+type Branding struct {
+	IconImageURL string `json:"iconImageURL,omitempty"`
+	PrimaryColor string `json:"primaryColor,omitempty"`
+}
 type PageInfo struct {
 	HasNextPage     bool   `json:"hasNextPage"`
 	HasPreviousPage bool   `json:"hasPreviousPage"`
@@ -80,13 +86,6 @@ func (pageInfo *PageInfo) BackwardCursor() string {
 		return pageInfo.StartCursor
 	}
 	return ""
-}
-
-type UserConnectionNode struct {
-	ID         string   `json:"id"`
-	GivenName  string   `json:"givenName"`
-	FamilyName string   `json:"familyName"`
-	Status     APStatus `json:"status"`
 }
 
 type UserConnectionEdge struct {
@@ -305,6 +304,7 @@ type FilterOfType string
 
 const (
 	OrganizationsConnectionType FilterOfType = "organizationsConnection"
+	UsersConnectionType         FilterOfType = "usersConnection"
 	ProgramsConnectionType      FilterOfType = "programsConnection"
 	SubjectsConnectionType      FilterOfType = "subjectsConnection"
 	CategoriesConnectionType    FilterOfType = "categoriesConnection"

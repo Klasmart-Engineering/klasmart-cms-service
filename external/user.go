@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"strings"
 	"sync"
 
@@ -58,15 +59,18 @@ func (n *NullableUser) RelatedIDs() []*cache.RelatedEntity {
 }
 
 var (
-	_amsUserService *AmsUserService
+	_amsUserService UserServiceProvider
 	_amsUserOnce    sync.Once
 )
 
 func GetUserServiceProvider() UserServiceProvider {
 	_amsUserOnce.Do(func() {
-		_amsUserService = &AmsUserService{}
+		if config.Get().AMS.UseDeprecatedQuery {
+			_amsUserService = &AmsUserService{}
+		} else {
+			_amsUserService = &AmsUserConnectionService{}
+		}
 	})
-
 	return _amsUserService
 }
 
