@@ -425,7 +425,7 @@ type StudentAssessmentTeacherInfo struct {
 type StudentAssessmentSchedule struct {
 	ID         string                     `json:"id"`
 	Title      string                     `json:"title"`
-	Type       string                     `json:"type"`
+	Type       string                     `json:"type" enums:"OnlineClass,OfflineClass,Homework"`
 	Attachment *StudentScheduleAttachment `json:"attachment,omitempty"`
 }
 type StudentScheduleAttachment struct {
