@@ -152,7 +152,7 @@ func (a *assessmentFeedbackModel) resubmitted(ctx context.Context, req *v2.Offli
 
 	assessmentUser.StatusBySystem = v2.AssessmentUserSystemStatusResubmitted
 	assessmentUser.UpdateAt = now
-
+	assessmentUser.ResubmittedAt = now
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		_, err := assessmentV2.GetAssessmentUserResultDA().UpdateTx(ctx, tx, reviewerFeedback)
 		if err != nil {
@@ -215,6 +215,7 @@ func (a *assessmentFeedbackModel) firstSubmit(ctx context.Context, op *entity.Op
 
 	assessmentUser.StatusBySystem = v2.AssessmentUserSystemStatusDone
 	assessmentUser.UpdateAt = now
+	assessmentUser.DoneAt = now
 	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		if assessment.Status == v2.AssessmentStatusNotStarted {
 			assessment.Status = v2.AssessmentStatusStarted

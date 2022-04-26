@@ -883,6 +883,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		if req.Action == v2.AssessmentActionComplete {
 			if existItem.StatusBySystem == v2.AssessmentUserSystemStatusDone || existItem.StatusBySystem == v2.AssessmentUserSystemStatusResubmitted {
 				existItem.StatusBySystem = v2.AssessmentUserSystemStatusCompleted
+				existItem.CompletedAt = now
 			}
 		}
 		existItem.UpdateAt = now

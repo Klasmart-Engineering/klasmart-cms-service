@@ -348,6 +348,29 @@ func (a *assessmentInternalModel) DeleteByScheduleIDsTx(ctx context.Context, op 
 }
 
 // TODO:: refactor
+func (a *assessmentInternalModel) UpdateAssessmentUserStatusTime(ctx context.Context, waitUpdateAssessmentUsers []*v2.AssessmentUser) error {
+	now := time.Now().Unix()
+	for _, item := range waitUpdateAssessmentUsers {
+		switch item.StatusBySystem {
+		case v2.AssessmentUserSystemStatusNotStarted:
+		case v2.AssessmentUserSystemStatusInProgress:
+			if item.InProgressAt == 0 {
+				item.InProgressAt = now
+			}
+		case v2.AssessmentUserSystemStatusDone:
+			if item.DoneAt == 0 {
+				item.DoneAt = now
+			}
+		case v2.AssessmentUserSystemStatusResubmitted:
+			item.ResubmittedAt = now
+		case v2.AssessmentUserSystemStatusCompleted:
+			if item.CompletedAt == 0 {
+				item.CompletedAt = now
+			}
+		}
+	}
+	return nil
+}
 func (a *assessmentInternalModel) endClassCallbackUpdateAssessment(ctx context.Context, op *entity.Operator, req *v2.ScheduleEndClassCallBackReq, assessment *v2.Assessment) error {
 	now := time.Now().Unix()
 
@@ -394,6 +417,10 @@ func (a *assessmentInternalModel) endClassCallbackUpdateAssessment(ctx context.C
 			userItem.UpdateAt = now
 		}
 
+		err = a.UpdateAssessmentUserStatusTime(ctx, assessmentUsers)
+		if err != nil {
+			return err
+		}
 		return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 			_, err := assessmentV2.GetAssessmentDA().UpdateTx(ctx, tx, assessment)
 			if err != nil {
@@ -420,6 +447,10 @@ func (a *assessmentInternalModel) endClassCallbackUpdateAssessment(ctx context.C
 			userItem.StatusByUser = v2.AssessmentUserStatusParticipate
 			userItem.UpdateAt = now
 		}
+		err = a.UpdateAssessmentUserStatusTime(ctx, assessmentUsers)
+		if err != nil {
+			return err
+		}
 		_, err := assessmentV2.GetAssessmentUserDA().Update(ctx, assessmentUsers)
 		if err != nil {
 			return err
@@ -433,6 +464,10 @@ func (a *assessmentInternalModel) endClassCallbackUpdateAssessment(ctx context.C
 			}
 
 			userItem.UpdateAt = now
+		}
+		err = a.UpdateAssessmentUserStatusTime(ctx, assessmentUsers)
+		if err != nil {
+			return err
 		}
 		_, err := assessmentV2.GetAssessmentUserDA().Update(ctx, assessmentUsers)
 		if err != nil {
