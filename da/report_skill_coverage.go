@@ -26,7 +26,7 @@ func (r *ReportDA) GetTeacherReportItems(ctx context.Context, tx *dbo.DBContext,
 	}
 
 	items = []*entity.TeacherReportItem{}
-	err = r.teacherUsageOverviewCache.Get(ctx, request, &items)
+	err = r.skillCoverageCache.Get(ctx, request, &items)
 	if err != nil {
 		return nil, err
 	}
