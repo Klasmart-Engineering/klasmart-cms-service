@@ -44,8 +44,7 @@ type IAssessmentModelV2 interface {
 
 	// home page
 	StatisticsCount(ctx context.Context, op *entity.Operator, req *v2.StatisticsCountReq) (*v2.AssessmentsSummary, error)
-	QueryTeacherFeedback(ctx context.Context, op *entity.Operator, condition *v2.StudentQueryAssessmentConditions) (int64, []*v2.StudentAssessment, error)
-	QueryStudentAssessment(ctx context.Context, op *entity.Operator, condition *v2.StudentQueryAssessmentConditions) (int64, []*v2.StudentAssessment, error)
+	QueryStudentAssessment(ctx context.Context, op *entity.Operator, condition *v2.StudentQueryAssessmentConditions) (int, []*v2.StudentAssessment, error)
 	PageForHomePage(ctx context.Context, op *entity.Operator, req *v2.AssessmentQueryReq) (*v2.ListAssessmentsResultForHomePage, error)
 }
 
@@ -144,150 +143,492 @@ func (a *assessmentModelV2) GetByID(ctx context.Context, op *entity.Operator, id
 	return result, nil
 }
 
-func (a *assessmentModelV2) QueryTeacherFeedback(ctx context.Context, op *entity.Operator, condition *v2.StudentQueryAssessmentConditions) (int64, []*v2.StudentAssessment, error) {
-	assessmentType, err := condition.ClassType.ToAssessmentType(ctx)
-	if err != nil {
-		return 0, nil, constant.ErrInvalidArgs
+func (a *assessmentModelV2) QueryStudentAssessment(ctx context.Context, op *entity.Operator, req *v2.StudentQueryAssessmentConditions) (int, []*v2.StudentAssessment, error) {
+	assessmentType := v2.AssessmentType(req.ClassType)
+	if req.ClassType != v2.AssessmentTypeCompliantOfflineStudy.String() {
+		if !assessmentType.Valid(ctx) {
+			log.Warn(ctx, "assessment class type is invalid", log.Any("req_condition", req))
+			return 0, nil, constant.ErrInvalidArgs
+		}
+	} else {
+		assessmentType = v2.AssessmentTypeOfflineStudy
 	}
 
-	if condition.Page < 0 || condition.PageSize < 0 {
-		log.Warn(ctx, "condition page or pageSize invalid", log.Any("condition", condition))
-		return 0, nil, constant.ErrInvalidArgs
+	condition := &assessmentV2.AssessmentCondition{
+		OrgID: sql.NullString{
+			String: op.OrgID,
+			Valid:  true,
+		},
+		ScheduleIDs: entity.NullStrings{
+			Strings: req.ScheduleIDs,
+			Valid:   len(req.ScheduleIDs) > 0,
+		},
+		AssessmentType: sql.NullString{
+			String: assessmentType.String(),
+			Valid:  true,
+		},
+		TeacherIDs: entity.NullStrings{
+			Strings: []string{req.TeacherID},
+			Valid:   req.TeacherID != "",
+		},
+		StudentIDsAndStatus: &assessmentV2.StudentIDsAndStatus{
+			StudentID: sql.NullString{
+				String: req.StudentID,
+				Valid:  true,
+			},
+			Status: sql.NullString{
+				String: req.Status,
+				Valid:  req.Status != "",
+			},
+		},
+		CreatedAtGe: sql.NullInt64{
+			Int64: req.CreatedStartAt,
+			Valid: req.CreatedStartAt > 0,
+		},
+		CreatedAtLe: sql.NullInt64{
+			Int64: req.CreatedEndAt,
+			Valid: req.CreatedEndAt > 0,
+		},
+		UpdateAtGe: sql.NullInt64{
+			Int64: req.UpdateStartAt,
+			Valid: req.UpdateStartAt > 0,
+		},
+		UpdateAtLe: sql.NullInt64{
+			Int64: req.UpdateEndAt,
+			Valid: req.UpdateEndAt > 0,
+		},
+		CompleteAtGe: sql.NullInt64{
+			Int64: req.CompleteStartAt,
+			Valid: req.CompleteStartAt > 0,
+		},
+		CompleteAtLe: sql.NullInt64{
+			Int64: req.CompleteEndAt,
+			Valid: req.CompleteEndAt > 0,
+		},
+		OrderBy: assessmentV2.NewAssessmentOrderBy(req.OrderBy),
+		Pager: dbo.Pager{
+			Page:     req.Page,
+			PageSize: req.PageSize,
+		},
+	}
+
+	log.Debug(ctx, "condition", log.Any("req", req), log.Any("condition", condition), log.Any("op", op))
+
+	var assessments []*v2.Assessment
+	total, err := assessmentV2.GetAssessmentDA().Page(ctx, condition, &assessments)
+	if err != nil {
+		log.Error(ctx, "query assessment error", log.Any("req", req), log.Any("condition", condition), log.Any("op", op))
+		return 0, nil, err
+	}
+
+	if len(assessments) <= 0 {
+		return 0, make([]*v2.StudentAssessment, 0), nil
 	}
 
 	if assessmentType == v2.AssessmentTypeOfflineStudy {
-		total, userResults, err := assessmentV2.GetAssessmentUserResultDA().GetAssessmentUserResultDBView(ctx, &assessmentV2.AssessmentUserResultDBViewCondition{
-			OrgID: sql.NullString{
-				String: condition.OrgID,
-				Valid:  true,
-			},
-			UserIDs: entity.NullStrings{
-				Strings: []string{condition.StudentID},
-				Valid:   true,
-			},
-			CompleteAtGe: sql.NullInt64{
-				Int64: condition.CompleteStartAt,
-				Valid: condition.CompleteStartAt > 0,
-			},
-			CompleteAtLe: sql.NullInt64{
-				Int64: condition.CompleteEndAt,
-				Valid: condition.CompleteEndAt > 0,
-			},
-			Pager: dbo.Pager{
-				Page:     condition.Page,
-				PageSize: condition.PageSize,
-			},
-		})
+		result, err := a.fillOfflineStudy(ctx, op, assessments, req)
 		if err != nil {
 			return 0, nil, err
 		}
-
-		scheduleIDs := make([]string, 0)
-		feedbackIDs := make([]string, 0)
-		teacherIDs := make([]string, 0)
-
-		dedupMap := make(map[string]struct{})
-		for _, item := range userResults {
-			if _, ok := dedupMap[item.ScheduleID]; !ok {
-				scheduleIDs = append(scheduleIDs, item.ScheduleID)
-			}
-			if _, ok := dedupMap[item.StudentFeedbackID]; !ok {
-				feedbackIDs = append(feedbackIDs, item.StudentFeedbackID)
-			}
-			if _, ok := dedupMap[item.ReviewerID]; !ok && item.ReviewerID != "" {
-				teacherIDs = append(teacherIDs, item.ReviewerID)
-			}
-
-			dedupMap[item.ScheduleID] = struct{}{}
-			dedupMap[item.StudentFeedbackID] = struct{}{}
-			dedupMap[item.ReviewerID] = struct{}{}
-		}
-
-		scheduleMap, err := a.querySchedulesMap(ctx, scheduleIDs)
+		return total, result, err
+	} else {
+		result, err := a.fillNoneOfflineStudy(ctx, op, assessments, req)
 		if err != nil {
 			return 0, nil, err
 		}
-		feedbackMap, err := a.queryFeedbackInfo(ctx, op, feedbackIDs)
-		if err != nil {
-			return 0, nil, err
+		return total, result, err
+	}
+}
+
+func (a *assessmentModelV2) fillNoneOfflineStudy(ctx context.Context, op *entity.Operator, assessments []*v2.Assessment, req *v2.StudentQueryAssessmentConditions) ([]*v2.StudentAssessment, error) {
+	scheduleIDs := make([]string, len(assessments))
+	assessmentIDs := make([]string, len(assessments))
+	for i, item := range assessments {
+		scheduleIDs[i] = item.ScheduleID
+		assessmentIDs[i] = item.ID
+	}
+	scheduleMap, err := a.querySchedulesMap(ctx, scheduleIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	userCondition := &assessmentV2.AssessmentUserCondition{
+		AssessmentIDs: entity.NullStrings{
+			Strings: assessmentIDs,
+			Valid:   true,
+		},
+		UserIDs: entity.NullStrings{
+			Strings: []string{req.StudentID},
+			Valid:   true,
+		},
+		UserType: sql.NullString{
+			String: v2.AssessmentUserTypeStudent.String(),
+			Valid:  true,
+		},
+	}
+
+	var assessmentUsers []*v2.AssessmentUser
+	err = assessmentV2.GetAssessmentUserDA().Query(ctx, userCondition, &assessmentUsers)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(assessmentUsers) <= 0 {
+		return nil, constant.ErrRecordNotFound
+	}
+
+	assessmentUserIDs := make([]string, len(assessmentUsers))
+	// key: assessment_id
+	assessmentUserMapAssessmentIDKey := make(map[string]*v2.AssessmentUser, len(assessmentUsers))
+	for i, item := range assessmentUsers {
+		assessmentUserIDs[i] = item.ID
+		assessmentUserMapAssessmentIDKey[item.AssessmentID] = item
+	}
+
+	result := make([]*v2.StudentAssessment, len(assessments))
+
+	for i, item := range assessments {
+		replyItem := &v2.StudentAssessment{
+			ID:                  item.ID,
+			Title:               item.Title,
+			Type:                item.AssessmentType,
+			Score:               0,
+			Status:              v2.AssessmentUserSystemStatusNotStarted,
+			CreateAt:            item.CreateAt,
+			UpdateAt:            item.UpdateAt,
+			CompleteAt:          item.CompleteAt,
+			TeacherComments:     make([]*v2.StudentAssessmentTeacher, 0),
+			Schedule:            new(v2.StudentAssessmentSchedule),
+			FeedbackAttachments: make([]*v2.StudentAssessmentAttachment, 0),
 		}
-		teacherMap, err := external.GetUserServiceProvider().BatchGetMap(ctx, op, teacherIDs)
-		if err != nil {
-			return 0, nil, err
+		result[i] = replyItem
+
+		schedule, ok := scheduleMap[item.ScheduleID]
+		if !ok {
+			continue
 		}
 
-		result := make([]*v2.StudentAssessment, 0, len(userResults))
-		for _, item := range userResults {
-			status := item.StatusBySystem
-			resultItem := &v2.StudentAssessment{
-				ID:                  item.ID,
-				Title:               item.Title,
-				Score:               int(item.AssessScore),
-				Status:              status,
-				CreateAt:            item.CreateAt,
-				UpdateAt:            item.UpdateAt,
-				CompleteAt:          item.CompleteAt,
-				TeacherComments:     make([]*v2.StudentAssessmentTeacher, 0),
-				Schedule:            nil,
-				FeedbackAttachments: nil,
-			}
-			if item.ReviewerID != "" {
-				teacherComment := &v2.StudentAssessmentTeacher{
-					Teacher: &v2.StudentAssessmentTeacherInfo{
-						ID:         item.ReviewerID,
-						GivenName:  "",
-						FamilyName: "",
-						Avatar:     "",
-					},
-					Comment: item.ReviewerComment,
-				}
+		if assessmentUserItem, ok := assessmentUserMapAssessmentIDKey[item.ID]; ok {
+			replyItem.Status = assessmentUserItem.StatusBySystem
+		}
 
-				if teacherInfo, ok := teacherMap[item.ReviewerID]; ok {
-					teacherComment.Teacher.GivenName = teacherInfo.GivenName
-					teacherComment.Teacher.FamilyName = teacherInfo.FamilyName
-					teacherComment.Teacher.Avatar = teacherInfo.Avatar
-				}
-				resultItem.TeacherComments = append(resultItem.TeacherComments, teacherComment)
-			}
+		replyItem.Schedule = &v2.StudentAssessmentSchedule{
+			ID:         schedule.ID,
+			Title:      schedule.Title,
+			Type:       string(schedule.ClassType),
+			Attachment: new(v2.StudentScheduleAttachment),
+		}
+	}
 
-			if scheduleInfo, ok := scheduleMap[item.ScheduleID]; ok {
-				scheduleAttachment := new(v2.StudentAssessmentAttachment)
-				err := json.Unmarshal([]byte(scheduleInfo.Attachment), scheduleAttachment)
-				if err != nil {
-					log.Error(ctx, "Unmarshal schedule attachment failed",
-						log.Err(err),
-						log.Any("scheduleInfo", scheduleInfo),
-					)
-					return 0, nil, err
-				}
-				resultItem.Schedule = &v2.StudentAssessmentSchedule{
-					ID:         scheduleInfo.ID,
-					Title:      scheduleInfo.Title,
-					Type:       string(scheduleInfo.ClassType),
-					Attachment: scheduleAttachment,
+	return result, nil
+}
+
+func (a *assessmentModelV2) fillNoneOfflineStudyWithRoomInfo(ctx context.Context, op *entity.Operator, assessments []*v2.Assessment, req *v2.StudentQueryAssessmentConditions) ([]*v2.StudentAssessment, error) {
+	scheduleIDs := make([]string, len(assessments))
+	assessmentIDs := make([]string, len(assessments))
+	for i, item := range assessments {
+		scheduleIDs[i] = item.ScheduleID
+		assessmentIDs[i] = item.ID
+	}
+	scheduleMap, err := a.querySchedulesMap(ctx, scheduleIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	userCondition := &assessmentV2.AssessmentUserCondition{
+		AssessmentIDs: entity.NullStrings{
+			Strings: assessmentIDs,
+			Valid:   true,
+		},
+		UserIDs: entity.NullStrings{
+			Strings: []string{req.StudentID},
+			Valid:   true,
+		},
+		UserType: sql.NullString{
+			String: v2.AssessmentUserTypeStudent.String(),
+			Valid:  true,
+		},
+	}
+
+	var assessmentUsers []*v2.AssessmentUser
+	err = assessmentV2.GetAssessmentUserDA().Query(ctx, userCondition, &assessmentUsers)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(assessmentUsers) <= 0 {
+		return nil, constant.ErrRecordNotFound
+	}
+
+	assessmentUserIDs := make([]string, len(assessmentUsers))
+	// key: assessment_id
+	assessmentUserMapAssessmentIDKey := make(map[string]*v2.AssessmentUser, len(assessmentUsers))
+	for i, item := range assessmentUsers {
+		assessmentUserIDs[i] = item.ID
+		assessmentUserMapAssessmentIDKey[item.AssessmentID] = item
+	}
+
+	commentMap, err := a.queryAssessmentComments(ctx, op, scheduleIDs, req.StudentID)
+	if err != nil {
+		log.Error(ctx, "queryAssessmentComments failed",
+			log.Err(err),
+			log.Strings("scheduleIDs", scheduleIDs),
+			log.Any("req", req),
+		)
+		return nil, err
+	}
+	teacherIDs := make([]string, 0)
+	for _, commentItem := range commentMap {
+		for key, _ := range commentItem {
+			teacherIDs = append(teacherIDs, key)
+		}
+	}
+	teacherIDs = utils.SliceDeduplicationExcludeEmpty(teacherIDs)
+	teacherMap, err := external.GetUserServiceProvider().BatchGetMap(ctx, op, teacherIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*v2.StudentAssessment, len(assessments))
+
+	for i, item := range assessments {
+		replyItem := &v2.StudentAssessment{
+			ID:                  item.ID,
+			Title:               item.Title,
+			Type:                item.AssessmentType,
+			Score:               0,
+			Status:              "",
+			CreateAt:            item.CreateAt,
+			UpdateAt:            item.UpdateAt,
+			CompleteAt:          item.CompleteAt,
+			TeacherComments:     make([]*v2.StudentAssessmentTeacher, 0),
+			Schedule:            new(v2.StudentAssessmentSchedule),
+			FeedbackAttachments: make([]*v2.StudentAssessmentAttachment, 0),
+		}
+		result[i] = replyItem
+
+		schedule, ok := scheduleMap[item.ScheduleID]
+		if !ok {
+			continue
+		}
+
+		if assessmentUserItem, ok := assessmentUserMapAssessmentIDKey[item.ID]; ok {
+			replyItem.Status = assessmentUserItem.StatusBySystem
+		}
+
+		if teacherCommentMap, ok := commentMap[item.ScheduleID]; ok {
+			teacherCommentItem := &v2.StudentAssessmentTeacher{
+				Teacher: new(v2.StudentAssessmentTeacherInfo),
+			}
+			for teacherID, comment := range teacherCommentMap {
+				teacherCommentItem.Teacher.ID = teacherID
+				teacherCommentItem.Comment = comment
+
+				if teacherInfo, ok := teacherMap[teacherID]; ok {
+					teacherCommentItem.Teacher.FamilyName = teacherInfo.FamilyName
+					teacherCommentItem.Teacher.GivenName = teacherInfo.GivenName
+					teacherCommentItem.Teacher.Avatar = teacherInfo.Avatar
 				}
 			}
-			if feedbackAttachments, ok := feedbackMap[item.StudentFeedbackID]; ok {
+			replyItem.TeacherComments = append(replyItem.TeacherComments, teacherCommentItem)
+		}
+
+		replyItem.Schedule = &v2.StudentAssessmentSchedule{
+			ID:         schedule.ID,
+			Title:      schedule.Title,
+			Type:       string(schedule.ClassType),
+			Attachment: new(v2.StudentScheduleAttachment),
+		}
+	}
+
+	return result, nil
+}
+
+func (m *assessmentModelV2) queryAssessmentComments(ctx context.Context, operator *entity.Operator, scheduleIDs []string, studentID string) (map[string]map[string]string, error) {
+	commentMap, err := getAssessmentH5P().batchGetRoomCommentObjectMap(ctx, operator, scheduleIDs)
+	if err != nil {
+		log.Error(ctx, "getAssessmentH5p.batchGetRoomCommentMap failed",
+			log.Err(err),
+			log.Strings("scheduleIDs", scheduleIDs),
+		)
+		return nil, err
+	}
+	comments := make(map[string]map[string]string)
+	for i := range scheduleIDs {
+		if commentMap[scheduleIDs[i]] != nil {
+			studentComments := commentMap[scheduleIDs[i]][studentID]
+			comments[scheduleIDs[i]] = make(map[string]string)
+			for j := range studentComments {
+				if studentComments[j] == nil {
+					continue
+				}
+				log.Debug(ctx, "test info",
+					log.Any("comments", comments),
+					log.Any("scheduleID", scheduleIDs[i]),
+					log.Any("studentComment", studentComments[j]))
+				comments[scheduleIDs[i]][studentComments[j].TeacherID] = studentComments[j].Comment
+			}
+		}
+	}
+	return comments, nil
+}
+
+func (a *assessmentModelV2) fillOfflineStudy(ctx context.Context, op *entity.Operator, assessments []*v2.Assessment, req *v2.StudentQueryAssessmentConditions) ([]*v2.StudentAssessment, error) {
+	scheduleIDs := make([]string, len(assessments))
+	assessmentIDs := make([]string, len(assessments))
+	for i, item := range assessments {
+		scheduleIDs[i] = item.ScheduleID
+		assessmentIDs[i] = item.ID
+	}
+	scheduleMap, err := a.querySchedulesMap(ctx, scheduleIDs)
+	if err != nil {
+		return nil, err
+	}
+	userCondition := &assessmentV2.AssessmentUserCondition{
+		AssessmentIDs: entity.NullStrings{
+			Strings: assessmentIDs,
+			Valid:   true,
+		},
+		UserIDs: entity.NullStrings{
+			Strings: []string{req.StudentID},
+			Valid:   true,
+		},
+		UserType: sql.NullString{
+			String: v2.AssessmentUserTypeStudent.String(),
+			Valid:  true,
+		},
+	}
+
+	var assessmentUsers []*v2.AssessmentUser
+	err = assessmentV2.GetAssessmentUserDA().Query(ctx, userCondition, &assessmentUsers)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(assessmentUsers) <= 0 {
+		return nil, constant.ErrRecordNotFound
+	}
+
+	assessmentUserIDs := make([]string, len(assessmentUsers))
+	// key: id
+	assessmentUserMap := make(map[string]*v2.AssessmentUser, len(assessmentUsers))
+	// key: assessment_id
+	assessmentUserMapAssessmentIDKey := make(map[string]*v2.AssessmentUser, len(assessmentUsers))
+	for i, item := range assessmentUsers {
+		assessmentUserIDs[i] = item.ID
+		assessmentUserMap[item.ID] = item
+		assessmentUserMapAssessmentIDKey[item.AssessmentID] = item
+	}
+	reviewerFeedbackCond := &assessmentV2.AssessmentUserResultCondition{
+		AssessmentUserIDs: entity.NullStrings{
+			Strings: assessmentUserIDs,
+			Valid:   true,
+		}}
+	var reviewerFeedbacks []*v2.AssessmentReviewerFeedback
+	err = assessmentV2.GetAssessmentUserResultDA().Query(ctx, reviewerFeedbackCond, &reviewerFeedbacks)
+	if err != nil {
+		log.Error(ctx, "query reviewer feedback error", log.Any("reviewerFeedbackCond", reviewerFeedbackCond))
+		return nil, err
+	}
+
+	// key: assessment id
+	reviewerFeedbackMap := make(map[string]*v2.AssessmentReviewerFeedback)
+	feedbackIDs := make([]string, 0, len(reviewerFeedbacks))
+	teacherIDs := make([]string, 0)
+	for _, item := range reviewerFeedbacks {
+		assessmentUserItem, ok := assessmentUserMap[item.AssessmentUserID]
+		if !ok {
+			log.Warn(ctx, "not found assessment user data", log.Any("assessmentUserMap", assessmentUserMap), log.Any("reviewerFeedbacks", reviewerFeedbacks))
+			continue
+		}
+		reviewerFeedbackMap[assessmentUserItem.AssessmentID] = item
+		feedbackIDs = append(feedbackIDs, item.StudentFeedbackID)
+		teacherIDs = append(teacherIDs, item.ReviewerID)
+	}
+
+	studentFeedbackMap, err := a.queryFeedbackInfo(ctx, op, feedbackIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	teacherIDs = utils.SliceDeduplicationExcludeEmpty(teacherIDs)
+	teacherMap, err := external.GetUserServiceProvider().BatchGetMap(ctx, op, teacherIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*v2.StudentAssessment, len(assessments))
+
+	for i, item := range assessments {
+		replyItem := &v2.StudentAssessment{
+			ID:                  item.ID,
+			Title:               item.Title,
+			Type:                item.AssessmentType,
+			Score:               0,
+			Status:              v2.AssessmentUserSystemStatusNotStarted,
+			CreateAt:            item.CreateAt,
+			UpdateAt:            item.UpdateAt,
+			CompleteAt:          item.CompleteAt,
+			TeacherComments:     make([]*v2.StudentAssessmentTeacher, 0),
+			Schedule:            new(v2.StudentAssessmentSchedule),
+			FeedbackAttachments: make([]*v2.StudentAssessmentAttachment, 0),
+		}
+		result[i] = replyItem
+
+		schedule, ok := scheduleMap[item.ScheduleID]
+		if !ok {
+			continue
+		}
+
+		if reviewerFeedbackItem, ok := reviewerFeedbackMap[item.ID]; ok {
+			replyItem.Score = int(reviewerFeedbackItem.AssessScore)
+		}
+		if assessmentUserItem, ok := assessmentUserMapAssessmentIDKey[item.ID]; ok {
+			replyItem.Status = assessmentUserItem.StatusBySystem
+		}
+
+		if reviewerFeedbackItem, ok := reviewerFeedbackMap[item.ID]; ok {
+			teacherCommentItem := &v2.StudentAssessmentTeacher{
+				Teacher: new(v2.StudentAssessmentTeacherInfo),
+				Comment: reviewerFeedbackItem.ReviewerComment,
+			}
+			teacherCommentItem.Teacher.ID = reviewerFeedbackItem.ReviewerID
+			if teacherInfo, ok := teacherMap[reviewerFeedbackItem.ReviewerID]; ok {
+				teacherCommentItem.Teacher.FamilyName = teacherInfo.FamilyName
+				teacherCommentItem.Teacher.GivenName = teacherInfo.GivenName
+				teacherCommentItem.Teacher.Avatar = teacherInfo.Avatar
+			}
+			replyItem.TeacherComments = append(replyItem.TeacherComments, teacherCommentItem)
+
+			if feedbackAttachments, ok := studentFeedbackMap[reviewerFeedbackItem.StudentFeedbackID]; ok {
 				for _, attachment := range feedbackAttachments {
-					resultItem.FeedbackAttachments = append(resultItem.FeedbackAttachments, v2.StudentAssessmentAttachment{
+					replyItem.FeedbackAttachments = append(replyItem.FeedbackAttachments, &v2.StudentAssessmentAttachment{
 						ID:                 attachment.AttachmentID,
 						Name:               attachment.AttachmentName,
 						ReviewAttachmentID: attachment.ReviewAttachmentID,
 					})
 				}
 			}
-
-			result = append(result, resultItem)
 		}
 
-		return total, result, nil
+		scheduleAttachment := new(v2.StudentScheduleAttachment)
+		err := json.Unmarshal([]byte(schedule.Attachment), scheduleAttachment)
+		if err != nil {
+			log.Error(ctx, "Unmarshal schedule attachment failed",
+				log.Err(err),
+				log.Any("schedule", schedule),
+			)
+			return nil, err
+		}
+		replyItem.Schedule = &v2.StudentAssessmentSchedule{
+			ID:         schedule.ID,
+			Title:      schedule.Title,
+			Type:       string(schedule.ClassType),
+			Attachment: scheduleAttachment,
+		}
 	}
 
-	return 0, nil, nil
-}
-
-func (a *assessmentModelV2) QueryStudentAssessment(ctx context.Context, op *entity.Operator, condition *v2.StudentQueryAssessmentConditions) (int64, []*v2.StudentAssessment, error) {
-	return 0, nil, nil
+	return result, nil
 }
 
 func (a *assessmentModelV2) StatisticsCount(ctx context.Context, op *entity.Operator, req *v2.StatisticsCountReq) (*v2.AssessmentsSummary, error) {

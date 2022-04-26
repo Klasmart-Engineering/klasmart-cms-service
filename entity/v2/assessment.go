@@ -362,7 +362,7 @@ type StudentQueryAssessmentConditions struct {
 	CompleteStartAt int64 `form:"complete_at_ge"`
 	CompleteEndAt   int64 `form:"complete_at_le"`
 
-	ClassType AssessmentTypeCompliant `form:"type"`
+	ClassType string `form:"type"`
 
 	OrderBy  string `form:"order_by"`
 	Page     int    `form:"page"`
@@ -394,18 +394,22 @@ func (a AssessmentTypeCompliant) ToAssessmentType(ctx context.Context) (Assessme
 	}
 }
 
+func (a AssessmentTypeCompliant) String() string {
+	return string(a)
+}
+
 type StudentAssessment struct {
-	ID                  string                        `json:"id"`
-	Title               string                        `json:"title"`
-	Type                AssessmentType                `json:"type" enums:"OfflineClass,OnlineClass,OnlineStudy,OfflineStudy,ReviewStudy"`
-	Score               int                           `json:"score"`
-	Status              AssessmentUserSystemStatus    `json:"status" enums:"NotStarted,InProgress,Done,Resubmitted,Completed"`
-	CreateAt            int64                         `json:"create_at"`
-	UpdateAt            int64                         `json:"update_at"`
-	CompleteAt          int64                         `json:"complete_at"`
-	TeacherComments     []*StudentAssessmentTeacher   `json:"teacher_comments"`
-	Schedule            *StudentAssessmentSchedule    `json:"schedule"`
-	FeedbackAttachments []StudentAssessmentAttachment `json:"student_attachments"`
+	ID                  string                         `json:"id"`
+	Title               string                         `json:"title"`
+	Type                AssessmentType                 `json:"type" enums:"OfflineClass,OnlineClass,OnlineStudy,OfflineStudy,ReviewStudy"`
+	Score               int                            `json:"score"`
+	Status              AssessmentUserSystemStatus     `json:"status" enums:"NotStarted,InProgress,Done,Resubmitted,Completed"`
+	CreateAt            int64                          `json:"create_at"`
+	UpdateAt            int64                          `json:"update_at"`
+	CompleteAt          int64                          `json:"complete_at"`
+	TeacherComments     []*StudentAssessmentTeacher    `json:"teacher_comments"`
+	Schedule            *StudentAssessmentSchedule     `json:"schedule"`
+	FeedbackAttachments []*StudentAssessmentAttachment `json:"student_attachments"`
 }
 type StudentAssessmentTeacher struct {
 	Teacher *StudentAssessmentTeacherInfo `json:"teacher"`
@@ -419,10 +423,14 @@ type StudentAssessmentTeacherInfo struct {
 	Avatar     string `json:"avatar"`
 }
 type StudentAssessmentSchedule struct {
-	ID         string                       `json:"id"`
-	Title      string                       `json:"title"`
-	Type       string                       `json:"type"`
-	Attachment *StudentAssessmentAttachment `json:"attachment,omitempty"`
+	ID         string                     `json:"id"`
+	Title      string                     `json:"title"`
+	Type       string                     `json:"type" enums:"OnlineClass,OfflineClass,Homework"`
+	Attachment *StudentScheduleAttachment `json:"attachment,omitempty"`
+}
+type StudentScheduleAttachment struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 type StudentAssessmentAttachment struct {
 	ID                 string `json:"id"`
@@ -432,7 +440,7 @@ type StudentAssessmentAttachment struct {
 
 type SearchStudentAssessmentsResponse struct {
 	List  []*StudentAssessment `json:"list"`
-	Total int64                `json:"total"`
+	Total int                  `json:"total"`
 }
 
 type AssessmentAnyoneAttemptedReply struct {
