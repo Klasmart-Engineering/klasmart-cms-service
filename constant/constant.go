@@ -168,9 +168,6 @@ const (
 const (
 	ContentFolderQueryCacheRefreshDuration = time.Minute
 	ContentFolderQueryCacheExpiration      = 0 // never expire
-
-	SharedContentQueryCacheExpiration      = time.Minute * 10
-	SharedContentQueryCacheRefreshDuration = time.Minute
 )
 
 const (

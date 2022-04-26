@@ -4,7 +4,7 @@ const (
 	RedisKeyPrefixContentId          = "content:id"
 	RedisKeyPrefixContentLock        = "content:lock"
 	RedisKeyPrefixContentReview      = "content:review"
-	RedisKeyPrefixSharedContent      = "content:shared"
+	RedisKeyPrefixContentAuth        = "content:auth"
 	RedisKeyPrefixContentFolderQuery = "content:folder:query"
 
 	RedisKeyPrefixScheduleID        = "schedule:id"
