@@ -144,6 +144,10 @@ query {
 	}
 
 	for _, studentComments := range data {
+		if studentComments == nil {
+			continue
+		}
+
 		for _, teacherComments := range studentComments.TeacherCommentsByStudent {
 			for _, comment := range teacherComments.TeacherComments {
 				// date is saved in milliseconds, we are more used to processing by seconds

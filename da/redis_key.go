@@ -4,7 +4,7 @@ const (
 	RedisKeyPrefixContentId          = "content:id"
 	RedisKeyPrefixContentLock        = "content:lock"
 	RedisKeyPrefixContentReview      = "content:review"
-	RedisKeyPrefixContentAuth        = "content:auth"
+	RedisKeyPrefixSharedContent      = "content:shared"
 	RedisKeyPrefixContentFolderQuery = "content:folder:query"
 
 	RedisKeyPrefixScheduleID        = "schedule:id"
@@ -35,6 +35,8 @@ const (
 
 	RedisKeyPrefixReportLearnerReportOverview   = "report:learner:overview"
 	RedisKeyPrefixReportLearningOutcomeOverview = "report:learning:outcome:overview"
+	RedisKeyPrefixReportTeacherUsageOverview    = "report:teacher:usage:overview"
+	RedisKeyPrefixReportSkillCoverage           = "report:skill:coverage"
 )
 
 const (

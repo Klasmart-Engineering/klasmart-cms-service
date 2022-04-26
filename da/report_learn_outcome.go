@@ -100,8 +100,10 @@ select
 	
 	where s.start_at < ?
 	and s.lesson_plan_id in (
+		select ?
+		union all
 		select id from cms_contents cc where cc.latest_id in (
-			select latest_id from cms_contents where id=?
+			select latest_id from cms_contents where id=?  and latest_id not in ('','-')
 		)
 	)
 	and EXISTS (
@@ -114,6 +116,7 @@ select
 	and av.status = ?	
 `,
 		time.Now().Add(constant.ScheduleAllowGoLiveTime).Unix(),
+		req.LessonPlanID,
 		req.LessonPlanID,
 		[]interface{}{
 			entity.ScheduleRelationTypeClassRosterClass,

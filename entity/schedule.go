@@ -506,7 +506,7 @@ type ScheduleEditValidation struct {
 	IsReview               bool
 }
 
-func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
+func (s *ScheduleAddView) ToSchedule(ctx context.Context, op *Operator) (*Schedule, error) {
 	schedule := &Schedule{
 		ID:              utils.NewID(),
 		Title:           s.Title,
@@ -529,6 +529,8 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 		ReviewStatus:    "",
 		ContentStartAt:  s.ContentStartAt,
 		ContentEndAt:    s.ContentEndAt,
+		CreatedID:       op.UserID,
+		UpdatedID:       op.UserID,
 	}
 
 	if s.IsReview {
