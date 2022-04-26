@@ -350,17 +350,24 @@ type StudentQueryAssessmentConditions struct {
 	OrgID       string   `form:"org_id"`
 	StudentID   string   `form:"student_id"`
 	TeacherID   string   `form:"teacher_id"`
-	ScheduleID  string   `form:"schedule_id"`
 	ScheduleIDs []string `form:"schedule_ids"`
 	Status      string   `form:"status"`
 
-	CreatedStartAt int64 `form:"create_at_ge"`
-	CreatedEndAt   int64 `form:"create_at_le"`
-
-	UpdateStartAt   int64 `form:"update_at_ge"`
-	UpdateEndAt     int64 `form:"update_at_le"`
+	// deprecated
 	CompleteStartAt int64 `form:"complete_at_ge"`
-	CompleteEndAt   int64 `form:"complete_at_le"`
+	// deprecated
+	CompleteEndAt int64 `form:"complete_at_le"`
+
+	CreatedGe     int64 `form:"created_ge"`
+	CreatedLe     int64 `form:"created_le"`
+	inProgressGe  int64 `form:"in_progress_ge"`
+	inProgressLe  int64 `form:"in_progress_le"`
+	DoneGe        int64 `form:"done_ge"`
+	DoneLe        int64 `form:"done_le"`
+	ResubmittedGe int64 `form:"resubmitted_ge"`
+	ResubmittedLe int64 `form:"resubmitted_le"`
+	CompletedGe   int64 `form:"completed_ge"`
+	CompletedLe   int64 `form:"completed_le"`
 
 	ClassType string `form:"type"`
 
@@ -406,6 +413,9 @@ type StudentAssessment struct {
 	Status              AssessmentUserSystemStatus     `json:"status" enums:"NotStarted,InProgress,Done,Resubmitted,Completed"`
 	CreateAt            int64                          `json:"create_at"`
 	UpdateAt            int64                          `json:"update_at"`
+	InProgressAt        int64                          `json:"in_progress_at"`
+	DoneAt              int64                          `json:"done_at"`
+	ResubmittedAt       int64                          `json:"resubmitted_at"`
 	CompleteAt          int64                          `json:"complete_at"`
 	TeacherComments     []*StudentAssessmentTeacher    `json:"teacher_comments"`
 	Schedule            *StudentAssessmentSchedule     `json:"schedule"`

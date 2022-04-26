@@ -340,8 +340,8 @@ func (o *OfflineStudyAssessment) prepareAssessmentUsersUpdateData(req *v2.Assess
 		if req.Action == v2.AssessmentActionComplete {
 			if assessmentUserItem.StatusBySystem == v2.AssessmentUserSystemStatusDone ||
 				assessmentUserItem.StatusBySystem == v2.AssessmentUserSystemStatusResubmitted {
-
 				assessmentUserItem.StatusBySystem = v2.AssessmentUserSystemStatusCompleted
+				assessmentUserItem.CompletedAt = now
 			}
 		}
 

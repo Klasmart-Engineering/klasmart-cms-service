@@ -33,6 +33,12 @@ type AssessmentUser struct {
 	StatusBySystem AssessmentUserSystemStatus `gorm:"status_by_system"` // state of student attendance
 	StatusByUser   AssessmentUserStatus       `gorm:"status_by_user"`   // status of student participation in assessment
 
+	// The time at which the student's status occurred while participating in the course
+	InProgressAt  int64 `gorm:"column:in_progress_at;type:bigint"`
+	DoneAt        int64 `gorm:"column:done_at;type:bigint"`
+	ResubmittedAt int64 `gorm:"column:resubmitted_at;type:bigint"`
+	CompletedAt   int64 `gorm:"column:completed_at;type:bigint"`
+
 	CreateAt int64 `gorm:"column:create_at;type:bigint"`
 	UpdateAt int64 `gorm:"column:update_at;type:bigint"`
 	DeleteAt int64 `gorm:"column:delete_at;type:bigint"`
@@ -104,4 +110,12 @@ type AssessmentUserResultDBView struct {
 	Title          string                     `gorm:"title"`
 	StatusBySystem AssessmentUserSystemStatus `gorm:"status_by_system"`
 	CompleteAt     int64                      `gorm:"complete_at"`
+}
+
+type StudentAssessmentDBView struct {
+	AssessmentID   string         `gorm:"assessment_id"`
+	Title          string         `gorm:"title"`
+	AssessmentType AssessmentType `gorm:"assessment_type"`
+	ScheduleID     string         `gorm:"schedule_id"`
+	AssessmentUser
 }
