@@ -58,7 +58,7 @@ func (s Server) registeRoute() {
 		content.GET("/contents_private", s.mustLogin, s.queryPrivateContent)
 		content.GET("/contents_pending", s.mustLogin, s.queryPendingContent)
 		content.GET("/contents_folders", s.mustLogin, s.queryFolderContent)
-		content.GET("/contents_authed", s.mustLogin, s.queryAuthContent)
+		content.GET("/contents_authed", s.mustLogin, s.querySharedContent)
 
 		content.PUT("/contents_bulk/publish", s.mustLogin, s.publishContentBulk)
 		content.DELETE("/contents_bulk", s.mustLogin, s.deleteContentBulk)

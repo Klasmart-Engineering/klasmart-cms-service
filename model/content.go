@@ -9,6 +9,7 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -135,7 +136,7 @@ type IContentModel interface {
 	BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error
 
 	//For authed content
-	SearchAuthedContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
+	SearchSharedContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 
 	CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (ContentData, error)
 	ConvertContentObj(ctx context.Context, tx *dbo.DBContext, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error)
@@ -335,6 +336,7 @@ func (cm *ContentModel) GetSpecifiedLessonPlan(ctx context.Context, tx *dbo.DBCo
 }
 
 type ContentModel struct {
+	sharedContentQueryCache *utils.LazyRefreshCache
 }
 
 func (cm *ContentModel) UpdateSharedContentsCount(ctx context.Context, tx *dbo.DBContext, contentIDs []string, operator *entity.Operator) error {
@@ -1170,8 +1172,17 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 	return err
 }
 
-//TODO:For authed content => implement search auth content => done
-func (cm *ContentModel) SearchAuthedContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
+type searchSharedContentRequest struct {
+	Condition *entity.ContentConditionRequest
+	Operator  *entity.Operator
+}
+
+type searchSharedContentResponse struct {
+	Total    int
+	Contents []*entity.ContentInfoWithDetails
+}
+
+func (cm *ContentModel) SearchSharedContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	//set condition with authed flag
 	condition.AuthedOrgID = entity.NullStrings{
 		Strings: []string{user.OrgID, constant.ShareToAll},
@@ -1179,7 +1190,39 @@ func (cm *ContentModel) SearchAuthedContent(ctx context.Context, tx *dbo.DBConte
 	}
 
 	condition.PublishStatus = []string{entity.ContentStatusPublished}
-	return cm.searchContent(ctx, tx, condition, user)
+
+	if !config.Get().RedisConfig.OpenCache {
+		return cm.searchContent(ctx, tx, condition, user)
+	}
+
+	request := &searchSharedContentRequest{
+		Condition: condition,
+		Operator:  user,
+	}
+
+	response := &searchSharedContentResponse{Contents: []*entity.ContentInfoWithDetails{}}
+
+	err := cm.sharedContentQueryCache.Get(ctx, request, response)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return response.Total, response.Contents, nil
+}
+
+func (cm *ContentModel) searchSharedContent(ctx context.Context, condition interface{}) (interface{}, error) {
+	request, ok := condition.(*searchSharedContentRequest)
+	if !ok {
+		log.Error(ctx, "invalid request", log.Any("condition", condition))
+		return nil, constant.ErrInvalidArgs
+	}
+
+	total, records, err := cm.searchContent(ctx, dbo.MustGetDB(ctx), request.Condition, request.Operator)
+	if err != nil {
+		return nil, err
+	}
+
+	return &searchSharedContentResponse{Total: total, Contents: records}, nil
 }
 
 func (cm *ContentModel) PublishContentTx(ctx context.Context, cid string, scope []string, user *entity.Operator) error {
@@ -4071,7 +4114,21 @@ var (
 
 func GetContentModel() IContentModel {
 	_contentModelOnce.Do(func() {
-		_contentModel = new(ContentModel)
+		m := new(ContentModel)
+
+		sharedContentCache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
+			RedisKeyPrefix:  da.RedisKeyPrefixContentShared,
+			Expiration:      constant.SharedContentQueryCacheExpiration,
+			RefreshDuration: constant.SharedContentQueryCacheRefreshDuration,
+			RawQuery:        m.searchSharedContent})
+		if err != nil {
+			log.Panic(context.Background(), "create shared content query cache failed", log.Err(err))
+		}
+
+		m.sharedContentQueryCache = sharedContentCache
+
+		_contentModel = m
 	})
+
 	return _contentModel
 }
