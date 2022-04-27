@@ -68,10 +68,16 @@ func TestAmsOrganizationService_GetByPermission(t *testing.T) {
 	}
 }
 
+//var orgID = "60c064cc-bbd8-4724-b3f6-b886dce4774f"
+var userID = "000d653d-7961-447c-8d66-ad8c4a40eae6"
+var orgToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MTA1OTk4NCwiaXNzIjoia2lkc2xvb3AifQ.hwwRFLcJTqD6Ohr80GF95de1yVgTO_7mg5sTHVRIJTTrzZGzRD-J6nAgBxBGZUv2zWIN-FYgholBrxiv1P2JmbDFlSq8P5KRp67R3N8Lp5NMNcFpOL5qEDHTzUlfm0RhhFsF_MvVGu5LXsdxvPWx2t8FVxz3ofN1frJd4TRCuXBus2O9G5Uk_VOd6imSoTNKhbTXmt0U5WnuOhKT8jmKu4iHodhJfxWbmOPUvTMwR2_L4XSwKs6Nv5AbvduZqyUUebkCtLT5KKEhM3JfDGRsikjkACtwetQhb_8zAAFimBRoF2A2AHw_AkvhME5eJ98p451fLnIMARnwUcIYIloS7A"
+
 func TestAmsOrganizationService_GetByUserID(t *testing.T) {
+	testOperator.Token = orgToken
+	//testOperator.OrgID = orgID
 	orgs, err := GetOrganizationServiceProvider().GetByUserID(context.TODO(),
 		testOperator,
-		"335e0577-99cb-5d88-b5e1-dfdb14d5d4c2",
+		userID,
 		WithStatus(Active))
 	if err != nil {
 		t.Errorf("GetOrganizationServiceProvider().GetByUserID() error = %v", err)

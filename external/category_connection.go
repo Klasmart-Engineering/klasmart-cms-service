@@ -7,7 +7,11 @@ type CategoryFilter struct {
 	OR     []CategoryFilter `json:"OR,omitempty" gqls:"OR,omitempty"`
 }
 
-func (CategoryFilter) FilterType() FilterOfType {
+func (CategoryFilter) FilterName() FilterType {
+	return CategoryFilterType
+}
+
+func (CategoryFilter) ConnectionName() ConnectionType {
 	return CategoriesConnectionType
 }
 

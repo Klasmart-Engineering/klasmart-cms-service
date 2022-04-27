@@ -25,7 +25,11 @@ type GradeFilter struct {
 	OR             []GradeFilter  `gqls:"OR,omitempty"`
 }
 
-func (GradeFilter) FilterType() FilterOfType {
+func (GradeFilter) FilterName() FilterType {
+	return GradeFilterType
+}
+
+func (GradeFilter) ConnectionName() ConnectionType {
 	return GradesConnectionType
 }
 
@@ -83,7 +87,7 @@ func (gcs AmsGradeConnectionService) GetByProgram(ctx context.Context, operator 
 
 	var grades []*Grade
 	var pages []GradesConnectionResponse
-	err := pageQuery(ctx, operator, filter.FilterType(), filter, &pages)
+	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
 		log.Error(ctx, "get grade by program failed",
 			log.Err(err),
@@ -128,7 +132,7 @@ func (gcs AmsGradeConnectionService) GetByOrganization(ctx context.Context, oper
 
 	var grades []*Grade
 	var pages []GradesConnectionResponse
-	err := pageQuery(ctx, operator, filter.FilterType(), filter, &pages)
+	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
 		log.Error(ctx, "get grade by organization failed",
 			log.Err(err),

@@ -25,8 +25,12 @@ var _amsRoleService RoleServiceProvider
 
 func GetRoleServiceProvider() RoleServiceProvider {
 	_roleOnce.Do(func() {
-		_amsRoleService = &AmsRoleService{
-			client: chlorine.NewClient(config.Get().AMS.EndPoint),
+		if config.Get().AMS.UseDeprecatedQuery {
+			_amsRoleService = &AmsRoleService{
+				client: chlorine.NewClient(config.Get().AMS.EndPoint),
+			}
+		} else {
+			_amsRoleService = &AmsRoleConnectionService{}
 		}
 	})
 

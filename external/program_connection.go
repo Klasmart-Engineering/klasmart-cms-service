@@ -22,7 +22,11 @@ type ProgramFilter struct {
 	OR             []ProgramFilter     `gqls:"OR,omitempty"`
 }
 
-func (ProgramFilter) FilterType() FilterOfType {
+func (ProgramFilter) FilterName() FilterType {
+	return ProgramFilterType
+}
+
+func (ProgramFilter) ConnectionName() ConnectionType {
 	return ProgramsConnectionType
 }
 
@@ -76,7 +80,7 @@ func (pcs AmsProgramConnectionService) GetByOrganization(ctx context.Context, op
 
 	var programs []*Program
 	var pages []ProgramsConnectionResponse
-	err := pageQuery(ctx, operator, filter.FilterType(), filter, &pages)
+	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
 		log.Error(ctx, "get programs by ids failed",
 			log.Err(err),

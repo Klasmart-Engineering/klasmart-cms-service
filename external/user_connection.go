@@ -25,7 +25,11 @@ type UserFilter struct {
 	OR                     []UserFilter         `json:"OR,omitempty" gqls:"OR,omitempty"`
 }
 
-func (UserFilter) FilterType() FilterOfType {
+func (UserFilter) FilterName() FilterType {
+	return UserFilterType
+}
+
+func (UserFilter) ConnectionName() ConnectionType {
 	return UsersConnectionType
 }
 
@@ -69,7 +73,7 @@ func (aucs AmsUserConnectionService) GetByOrganization(ctx context.Context, oper
 	}
 
 	var pages []UsersConnectionResponse
-	err := pageQuery(ctx, operator, filter.FilterType(), filter, &pages)
+	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
 		log.Error(ctx, "get users by organization failed",
 			log.Err(err),
@@ -102,7 +106,7 @@ func (aucs AmsUserConnectionService) GetOnlyUnderOrgUsers(ctx context.Context, o
 	}
 
 	var pages []UsersConnectionResponse
-	err := pageQuery(ctx, op, filter.FilterType(), filter, &pages)
+	err := pageQuery(ctx, op, filter, &pages)
 	if err != nil {
 		log.Error(ctx, "get only under org users failed",
 			log.Err(err),

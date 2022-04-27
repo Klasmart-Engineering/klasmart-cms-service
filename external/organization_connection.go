@@ -2,6 +2,7 @@ package external
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
@@ -19,7 +20,11 @@ type OrganizationFilter struct {
 	OR            []OrganizationFilter `json:"OR,omitempty" gqls:"OR,omitempty"`
 }
 
-func (OrganizationFilter) FilterType() FilterOfType {
+func (OrganizationFilter) FilterName() FilterType {
+	return OrganizationFilterType
+}
+
+func (OrganizationFilter) ConnectionName() ConnectionType {
 	return OrganizationsConnectionType
 }
 
@@ -64,5 +69,40 @@ func (pcs OrganizationsConnectionResponse) GetPageInfo() *ConnectionPageInfo {
 }
 
 func (aocs AmsOrganizationConnectionService) GetByUserID(ctx context.Context, operator *entity.Operator, id string, options ...APOption) ([]*Organization, error) {
-	panic("implement me")
+	condition := NewCondition(options...)
+	filter := OrganizationFilter{
+		UserID: &UUIDFilter{
+			Operator: UUIDOperator(OperatorTypeEq),
+			Value:    UUID(id),
+		},
+		Status: &StringFilter{
+			Operator: StringOperator(OperatorTypeEq),
+			Value:    Active.String(),
+		},
+	}
+
+	if condition.Status.Valid {
+		filter.Status.Value = condition.Status.Status.String()
+	}
+	var pages []OrganizationsConnectionResponse
+	err := pageQuery(ctx, operator, filter, &pages)
+	if err != nil {
+		log.Error(ctx, "get age by program failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("filter", filter))
+		return nil, err
+	}
+	var organizations []*Organization
+	for _, page := range pages {
+		for _, v := range page.Edges {
+			org := Organization{
+				ID:     v.Node.ID,
+				Name:   v.Node.Name,
+				Status: APStatus(v.Node.Status),
+			}
+			organizations = append(organizations, &org)
+		}
+	}
+	return organizations, nil
 }

@@ -19,7 +19,11 @@ type SubjectFilter struct {
 	OR             []SubjectFilter `json:"OR,omitempty" gqls:"OR,omitempty"`
 }
 
-func (SubjectFilter) FilterType() FilterOfType {
+func (SubjectFilter) FilterName() FilterType {
+	return SubjectFilterType
+}
+
+func (SubjectFilter) ConnectionName() ConnectionType {
 	return SubjectsConnectionType
 }
 
@@ -73,7 +77,7 @@ func (scs AmsSubjectConnectionService) GetByProgram(ctx context.Context, operato
 	}
 	var subjects []*Subject
 	var pages []SubjectsConnectionResponse
-	err := pageQuery(ctx, operator, filter.FilterType(), filter, &pages)
+	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
 		log.Error(ctx, "get subject by program failed",
 			log.Err(err),
@@ -118,7 +122,7 @@ func (scs AmsSubjectConnectionService) GetByOrganization(ctx context.Context, op
 	}
 	var subjects []*Subject
 	var pages []SubjectsConnectionResponse
-	err := pageQuery(ctx, operator, filter.FilterType(), filter, &pages)
+	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
 		log.Error(ctx, "get subject by organization failed",
 			log.Err(err),

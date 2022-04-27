@@ -23,7 +23,11 @@ type AgeRangeFilter struct {
 	OR                []AgeRangeFilter     `json:"OR,omitempty" gqls:"OR,omitempty"`
 }
 
-func (AgeRangeFilter) FilterType() FilterOfType {
+func (AgeRangeFilter) FilterName() FilterType {
+	return AgeRangeFilterType
+}
+
+func (AgeRangeFilter) ConnectionName() ConnectionType {
 	return AgeRangesConnectionType
 }
 
@@ -71,7 +75,7 @@ func (acs AmsAgeConnectionService) GetByProgram(ctx context.Context, operator *e
 		}
 	}
 	var pages []AgesConnectionResponse
-	err := pageQuery(ctx, operator, filter.FilterType(), filter, &pages)
+	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
 		log.Error(ctx, "get age by program failed",
 			log.Err(err),
@@ -118,7 +122,7 @@ func (acs AmsAgeConnectionService) GetByOrganization(ctx context.Context, operat
 	}
 
 	var pages []AgesConnectionResponse
-	err := pageQuery(ctx, operator, filter.FilterType(), filter, &pages)
+	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
 		log.Error(ctx, "get age by organization failed",
 			log.Err(err),

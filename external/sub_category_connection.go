@@ -15,7 +15,11 @@ type SubcategoryFilter struct {
 	OR             []SubcategoryFilter `json:"OR,omitempty" gqls:"OR,omitempty"`
 }
 
-func (SubcategoryFilter) FilterType() FilterOfType {
+func (SubcategoryFilter) FilterName() FilterType {
+	return SubcategoryFilterType
+}
+
+func (SubcategoryFilter) ConnectionName() ConnectionType {
 	return SubcategoriesConnectionType
 }
 
@@ -70,7 +74,7 @@ func (sccs AmsSubCategoryConnectionService) GetByCategory(ctx context.Context, o
 
 	var subCategories []*SubCategory
 	var pages []SubcategoriesConnectionResponse
-	err := pageQuery(ctx, operator, filter.FilterType(), filter, &pages)
+	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
 		log.Error(ctx, "get subcategory by category failed",
 			log.Err(err),
@@ -116,7 +120,7 @@ func (sccs AmsGradeConnectionService) AmsSubCategoryConnectionService(ctx contex
 
 	var subCategories []*SubCategory
 	var pages []SubcategoriesConnectionResponse
-	err := pageQuery(ctx, operator, filter.FilterType(), filter, &pages)
+	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
 		log.Error(ctx, "get subcategory by organization failed",
 			log.Err(err),
