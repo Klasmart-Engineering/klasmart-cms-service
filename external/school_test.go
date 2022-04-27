@@ -43,10 +43,13 @@ func TestAmsSchoolService_GetByClasses(t *testing.T) {
 	}
 }
 
+var schToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MTA2ODgwMCwiaXNzIjoia2lkc2xvb3AifQ.sfkWoTqW5FkPXqr3KaneY-_SnifmwcLjfYzAf-DlTjEconMZfZcv8e6VMYbhVTf_1KDLnn0JKkJ87ijz6lkOzoiPwcdIvyZyUK0Ie_-2p4zdn9BkeIeExFKItahBaGN9ojYM8SwrAo8RSnn_5yO6UA63m0e747eS0uO2FKb1fmbMAzfhg_MOo0HLDzDoll_sHOhofMSTM01RFY2Q10RKshmBggqwhlgLzV4EVOIQ6kWvUB9G271H6eBqEh7gBQfAhQ5ey1rJsFbcnqAOq-MXJf6Vej-4UVNVpvH78BCbnAaqe-N0eTVPR56hlnwokyD9jEtu4UrkDuCeiagmqT2aGQ"
+
 func TestAmsSchoolService_GetByOrganizationID(t *testing.T) {
+	testOperator.Token = schToken
 	schools, err := GetSchoolServiceProvider().GetByOrganizationID(context.TODO(),
 		testOperator,
-		"9e285fc9-50fd-4cf2-ba5b-3f191c3338b4",
+		orgID,
 		WithStatus(Active))
 	if err != nil {
 		t.Errorf("GetSchoolServiceProvider().GetByOrganizationID() error = %v", err)
@@ -90,6 +93,7 @@ func TestAmsSchoolService_GetByPermission(t *testing.T) {
 }
 
 func TestAmsSchoolService_GetByOperator(t *testing.T) {
+	testOperator.Token = schToken
 	schools, err := GetSchoolServiceProvider().GetByOperator(context.TODO(),
 		testOperator,
 		WithStatus(Active))

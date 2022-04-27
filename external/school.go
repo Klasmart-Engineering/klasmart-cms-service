@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"strings"
 	"sync"
 
@@ -52,17 +53,21 @@ func (n *NullableSchool) RelatedIDs() []*cache.RelatedEntity {
 }
 
 var (
-	_amsSchoolService *AmsSchoolService
+	_amsSchoolService SchoolServiceProvider
 	_amsSchoolOnce    sync.Once
 )
 
 func GetSchoolServiceProvider() SchoolServiceProvider {
 	_amsSchoolOnce.Do(func() {
-		_amsSchoolService = &AmsSchoolService{
-			BaseCacheKey: kl2cache.KeyByStrings{
-				"kl2cache",
-				"AmsSchoolService",
-			},
+		if config.Get().AMS.UseDeprecatedQuery {
+			_amsSchoolService = &AmsSchoolService{
+				BaseCacheKey: kl2cache.KeyByStrings{
+					"kl2cache",
+					"AmsSchoolService",
+				},
+			}
+		} else {
+			_amsSchoolService = &AmsSchoolConnectionService{}
 		}
 	})
 

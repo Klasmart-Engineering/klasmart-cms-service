@@ -72,31 +72,31 @@ func (ascs AmsSchoolConnectionService) GetByOrganizationID(ctx context.Context, 
 	var pages []SchoolsConnectionResponse
 	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
-		log.Error(ctx, "get age by program failed",
+		log.Error(ctx, "get school by organization failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("filter", filter))
 		return nil, err
 	}
-	var organizations []*School
+	var schools []*School
 	for _, page := range pages {
 		for _, v := range page.Edges {
-			org := School{
+			sch := School{
 				ID:     v.Node.ID,
 				Name:   v.Node.Name,
 				Status: APStatus(v.Node.Status),
 			}
-			organizations = append(organizations, &org)
+			schools = append(schools, &sch)
 		}
 	}
-	return organizations, nil
+	return schools, nil
 }
-func (ascs AmsSchoolConnectionService) GetByUserID(ctx context.Context, operator *entity.Operator, id string, options ...APOption) ([]*School, error) {
+func (ascs AmsSchoolConnectionService) GetByOperator(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*School, error) {
 	condition := NewCondition(options...)
 	filter := SchoolFilter{
 		UserID: &UUIDFilter{
 			Operator: UUIDOperator(OperatorTypeEq),
-			Value:    UUID(id),
+			Value:    UUID(operator.UserID),
 		},
 		Status: &StringFilter{
 			Operator: StringOperator(OperatorTypeEq),
@@ -110,22 +110,22 @@ func (ascs AmsSchoolConnectionService) GetByUserID(ctx context.Context, operator
 	var pages []SchoolsConnectionResponse
 	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
-		log.Error(ctx, "get age by program failed",
+		log.Error(ctx, "get school by user failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("filter", filter))
 		return nil, err
 	}
-	var organizations []*School
+	var schools []*School
 	for _, page := range pages {
 		for _, v := range page.Edges {
-			org := School{
+			sch := School{
 				ID:     v.Node.ID,
 				Name:   v.Node.Name,
 				Status: APStatus(v.Node.Status),
 			}
-			organizations = append(organizations, &org)
+			schools = append(schools, &sch)
 		}
 	}
-	return organizations, nil
+	return schools, nil
 }

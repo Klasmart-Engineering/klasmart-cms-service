@@ -4,6 +4,7 @@ import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"sync"
 )
 
 type ClassFilter struct {
@@ -60,49 +61,94 @@ type AmsClassConnectionService struct {
 	AmsClassService
 }
 
-func (accs AmsClassConnectionService) GetByUserID(ctx context.Context, operator *entity.Operator, userID string, options ...APOption) ([]*Class, error) {
-	condition := NewCondition(options...)
-	filter := ClassFilter{
-		Status: &StringFilter{
-			Operator: StringOperator(OperatorTypeEq),
-			Value:    Active.String(),
-		},
-	}
-
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
-	}
-	filter.OR = []ClassFilter{
-		{StudentID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(userID)}},
-		{TeacherID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(userID)}},
-	}
-
-	var pages []ClassesConnectionResponse
-	err := pageQuery(ctx, operator, filter, &pages)
+func (accs AmsClassConnectionService) query(ctx context.Context, operator *entity.Operator, filter ClassFilter, pages *[]ClassesConnectionResponse) error {
+	err := pageQuery(ctx, operator, filter, pages)
 	if err != nil {
-		log.Error(ctx, "get age by program failed",
+		log.Error(ctx, "query class failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("filter", filter))
-		return nil, err
+		return err
 	}
+	return nil
+}
+
+func (accs AmsClassConnectionService) GetByUserID(ctx context.Context, operator *entity.Operator, userID string, options ...APOption) ([]*Class, error) {
+	condition := NewCondition(options...)
+	statusFilter := StringFilter{
+		Operator: StringOperator(OperatorTypeEq),
+		Value:    Active.String(),
+	}
+
+	if condition.Status.Valid {
+		statusFilter.Value = condition.Status.Status.String()
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	studentFilter := ClassFilter{
+		Status:    &statusFilter,
+		StudentID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(userID)},
+	}
+	var studentPages []ClassesConnectionResponse
+	var stuClassErr error
+	go func() {
+		stuClassErr = accs.query(ctx, operator, studentFilter, &studentPages)
+		wg.Done()
+	}()
+
+	teacherFilter := ClassFilter{
+		Status:    &statusFilter,
+		TeacherID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(userID)},
+	}
+	var teacherPages []ClassesConnectionResponse
+	var teacherClassErr error
+	go func() {
+		teacherClassErr = accs.query(ctx, operator, teacherFilter, &teacherPages)
+		wg.Done()
+	}()
+
+	if stuClassErr != nil {
+		log.Error(ctx, "get class by user failed",
+			log.Err(stuClassErr),
+			log.Any("operator", operator),
+			log.Any("filter", studentFilter))
+		return nil, stuClassErr
+	}
+	if teacherClassErr != nil {
+		log.Error(ctx, "get class by user failed",
+			log.Err(teacherClassErr),
+			log.Any("operator", operator),
+			log.Any("filter", teacherFilter))
+		return nil, teacherClassErr
+	}
+
 	var classes []*Class
-	for _, page := range pages {
+	for _, page := range studentPages {
 		for _, v := range page.Edges {
 			class := Class{
 				ID:       v.Node.ID,
 				Name:     v.Node.Name,
 				Status:   APStatus(v.Node.Status),
-				JoinType: IsTeaching, // IsStudy
+				JoinType: IsStudy,
+			}
+			classes = append(classes, &class)
+		}
+	}
+	for _, page := range teacherPages {
+		for _, v := range page.Edges {
+			class := Class{
+				ID:       v.Node.ID,
+				Name:     v.Node.Name,
+				Status:   APStatus(v.Node.Status),
+				JoinType: IsTeaching,
 			}
 			classes = append(classes, &class)
 		}
 	}
 	return classes, nil
 }
-func (accs AmsClassConnectionService) GetByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string, options ...APOption) (map[string][]*Class, error) {
-	panic("implement me")
-}
+
 func (accs AmsClassConnectionService) GetByOrganizationIDs(ctx context.Context, operator *entity.Operator, orgIDs []string, options ...APOption) (map[string][]*Class, error) {
 	condition := NewCondition(options...)
 	filter := ClassFilter{
@@ -193,7 +239,6 @@ func (accs AmsClassConnectionService) GetBySchoolIDs(ctx context.Context, operat
 func (accs AmsClassConnectionService) GetOnlyUnderOrgClasses(ctx context.Context, operator *entity.Operator, orgID string) ([]*NullableClass, error) {
 
 	filter := ClassFilter{
-		//Status:         &StringFilter{Operator: StringOperator(OperatorTypeEq), Value: Active.String()},
 		OrganizationID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(orgID)},
 		SchoolID:       &UUIDExclusiveFilter{Operator: UUIDExclusiveOperator(OperatorTypeIsNull)},
 	}
@@ -201,7 +246,7 @@ func (accs AmsClassConnectionService) GetOnlyUnderOrgClasses(ctx context.Context
 	var pages []ClassesConnectionResponse
 	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
-		log.Error(ctx, "get class by organization failed",
+		log.Error(ctx, "get only under org class failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("filter", filter))
