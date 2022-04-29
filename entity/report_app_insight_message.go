@@ -6,6 +6,9 @@ const (
 )
 
 const (
+	//All
+	ReportInsightMessageNoData = "report_msg_no_data"
+
 	//Learing Outcome Achivemen
 	LODefault                = "report_msg_lo_default"
 	LONew                    = "report_msg_lo_new"
