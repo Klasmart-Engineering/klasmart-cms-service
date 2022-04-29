@@ -2,6 +2,7 @@ package external
 
 import (
 	"context"
+	"fmt"
 	"testing"
 )
 
@@ -42,8 +43,6 @@ func TestAmsSchoolService_GetByClasses(t *testing.T) {
 		}
 	}
 }
-
-var schToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MTA2ODgwMCwiaXNzIjoia2lkc2xvb3AifQ.sfkWoTqW5FkPXqr3KaneY-_SnifmwcLjfYzAf-DlTjEconMZfZcv8e6VMYbhVTf_1KDLnn0JKkJ87ijz6lkOzoiPwcdIvyZyUK0Ie_-2p4zdn9BkeIeExFKItahBaGN9ojYM8SwrAo8RSnn_5yO6UA63m0e747eS0uO2FKb1fmbMAzfhg_MOo0HLDzDoll_sHOhofMSTM01RFY2Q10RKshmBggqwhlgLzV4EVOIQ6kWvUB9G271H6eBqEh7gBQfAhQ5ey1rJsFbcnqAOq-MXJf6Vej-4UVNVpvH78BCbnAaqe-N0eTVPR56hlnwokyD9jEtu4UrkDuCeiagmqT2aGQ"
 
 func TestAmsSchoolService_GetByOrganizationID(t *testing.T) {
 	testOperator.Token = schToken
@@ -115,44 +114,23 @@ func TestAmsSchoolService_GetByOperator(t *testing.T) {
 	}
 }
 
-func TestAmsSchoolService_GetByUsers(t *testing.T) {
-	userInfos, err := GetUserServiceProvider().GetByOrganization(context.TODO(), testOperator, testOperator.OrgID)
-	if err != nil {
-		t.Error("GetUserServiceProvider.GetByOrganization error")
-		return
-	}
-	userIDs := make([]string, len(userInfos))
-	for i, item := range userInfos {
-		userIDs[i] = item.ID
-	}
-	userIDs = append(userIDs, userIDs...)
-	userIDs = append(userIDs, userIDs...)
-	schools, err := GetSchoolServiceProvider().GetByUsers(context.TODO(),
-		testOperator,
-		testOperator.OrgID,
-		userIDs,
-		WithStatus(Active))
-	if err != nil {
-		t.Errorf("GetSchoolServiceProvider().GetByUsers() error = %v", err)
-		return
-	}
+var schToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MTI0NDg1NywiaXNzIjoia2lkc2xvb3AifQ.tlvFpzi2zm9R6NOwTYc4ctGtrkgpqqGABvnzTB6K9G1xrLQ5tSdZm6o6UGTJZZVLS3-QLgB4Nn4zhwX95yi6o4IC1ehRyvcK8gUgoDgD1BiI0pxjQwtId6-8yXhTkC5VyRQyh13nzkFAIOcP7W_JlNJEpbaOHTASRsu6CJndKnSZGvCrYU1FEo1HX28k1mzzo1NHmlrmobvIlzwUpM-Qcskd_qXlP7XHdz399kTHuedXeMbLzIMee1wluAJFMT0lBwpjBN5JGH39RhpFl65JSUfWj9h_7_UjSlKqrjdH2o04dt77GVkjsBADCNKnQtwu8VRIrETqNykkkA4_lOuqjQ"
 
-	if len(schools) == 0 {
-		t.Error("GetSchoolServiceProvider().GetByUsers() get empty slice")
-		return
+func TestAmsSchoolService_GetByUsers(t *testing.T) {
+	ctx := context.Background()
+	testOperator.Token = schToken
+	//orgID := "6300b3c5-8936-497e-ba1f-d67164b59c65"
+	IDs := []string{
+		"1dd1d0b4-df1a-4486-bd6c-a89f9b92f779",
+		"1e200965-df57-461e-8af3-e255886e8e41",
 	}
-	count := 0
-	for key, school := range schools {
-		if school == nil {
-			t.Error("GetSchoolServiceProvider().GetByUsers() get null")
-			return
-		}
-		t.Logf("%s:%d", key, len(school))
-		if len(school) == 0 {
-			count++
-		}
+	result, err := GetSchoolServiceProvider().GetByUsers(ctx, testOperator, orgID, IDs)
+	if err != nil {
+		t.Fatal(err)
 	}
-	t.Log(count)
+	for k, v := range result {
+		fmt.Println(k, v)
+	}
 }
 
 func TestAmsSchoolService_BatchGet(t *testing.T) {

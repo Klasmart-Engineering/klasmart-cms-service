@@ -42,6 +42,10 @@ type GraphQLRequest struct {
 	Header http.Header
 }
 
+type GraphQLSubResponse struct {
+	Data   interface{}  `json:"data,omitempty"`
+	Errors GraphQLError `json:"errors,omitempty"`
+}
 type OptionFunc func(*GraphQLRequest)
 
 func RequestToken(token string) OptionFunc {

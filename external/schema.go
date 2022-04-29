@@ -388,7 +388,8 @@ type ConnectionResponse interface {
 	AgesConnectionResponse |
 	ClassesConnectionResponse |
 	SchoolsConnectionResponse |
-	UsersConnectionResponse
+	UsersConnectionResponse |
+	SchoolMembershipsConnectionResponse
 
 	GetPageInfo() *ConnectionPageInfo
 }
