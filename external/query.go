@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"net/http"
 	"sync"
@@ -66,7 +67,7 @@ func fetch[ResType ConnectionResponse](ctx context.Context, operator *entity.Ope
 			log.Any("pager", pager),
 			log.String("query", query),
 			log.Any("operator", operator))
-		return err
+		return constant.ErrGraphQLHttpNotOK
 	}
 
 	if err != nil {
@@ -162,7 +163,7 @@ func subFetch(ctx context.Context, operator *entity.Operator, argument SubTempla
 			log.Err(res.Errors),
 			log.Int("status_code", statusCode),
 			log.Any("operator", operator))
-		return err
+		return constant.ErrGraphQLHttpNotOK
 	}
 
 	if err != nil {

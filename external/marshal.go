@@ -21,39 +21,10 @@ func marshalFiled(ctx context.Context, v interface{}) (string, error) {
 		if rev.Kind() == reflect.Slice {
 			result, err := sliceField(ctx, rev)
 			if err != nil {
-				// TODO
+				log.Error(ctx, "fields: sliceField failed", log.Err(err))
+				return "", err
 			}
 			values = append(values, result)
-			//for i := 0; i < rev.Type().Elem().NumField(); i++ {
-			//	f := rev.Type().Elem().Field(i)
-			//	name := f.Name
-			//	tags, ok := f.Tag.Lookup("gqls")
-			//	if ok {
-			//		name, _, _ = strings.Cut(tags, ",")
-			//	}
-			//	//fmt.Println(name, f.Type.Kind())
-			//	values = append(values, name)
-			//	switch f.Type.Kind() {
-			//	case reflect.Slice:
-			//		result, err := structField(ctx, f.Type.Elem())
-			//		if err != nil {
-			//			log.Error(ctx, "fields: struct failed",
-			//				log.Err(err),
-			//				log.String("slice", name))
-			//			return "", err
-			//		}
-			//		values = append(values, result)
-			//	case reflect.Struct:
-			//		result, err := structField(ctx, f.Type)
-			//		if err != nil {
-			//			log.Error(ctx, "fields: struct failed",
-			//				log.Err(err),
-			//				log.String("struct", name))
-			//			return "", err
-			//		}
-			//		values = append(values, result)
-			//	}
-			//}
 		}
 	} else if rv.Kind() == reflect.Map {
 		rev := rv.Type().Elem()
