@@ -298,7 +298,7 @@ func (c AssessmentCondition) GetConditions() ([]string, []interface{}) {
 	if c.TeacherIDs.Valid {
 		sql := fmt.Sprintf(`
 exists(select 1 from %s where 
-user_id = ? and 
+user_id in (?) and 
 %s.assessment_id = %s.id and 
 %s.user_type = ? and
 %s.status_by_user = ?)`,
