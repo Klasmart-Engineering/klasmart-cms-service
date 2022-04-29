@@ -124,7 +124,11 @@ func (m *reportModel) ClassAttendanceStatistics(ctx context.Context, op *entity.
 }
 func getAttendanceLabelIDAndParams(res *entity.ClassAttendanceResponse) (labelID string, labelParams entity.AttedanceLabelParams) {
 	data := res.Items
-	if data[0].AttendancePercentage == 0 &&
+	if data[3].AttendancePercentage == 0 &&
+		data[3].ClassAverageAttendancePercentage == 0 &&
+		data[3].UnSelectedSubjectsAverageAttendancePercentage == 0 {
+		labelID = entity.NoData
+	} else if data[0].AttendancePercentage == 0 &&
 		data[0].ClassAverageAttendancePercentage == 0 &&
 		data[0].UnSelectedSubjectsAverageAttendancePercentage == 0 &&
 		data[1].AttendancePercentage == 0 &&

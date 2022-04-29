@@ -78,7 +78,10 @@ func (m *reportModel) GetStudentProgressLearnOutcomeAchievement(ctx context.Cont
 
 func getLearnOutcomeAchievementLabelIDAndParams(res *entity.LearnOutcomeAchievementResponse) (labelID string, labelParams entity.LearningOutcomeAchivementLabelParams) {
 	data := res.Items
-	if data[0].ClassAverageAchievedPercentage == 0 && data[0].FirstAchievedPercentage == 0 && data[0].ReAchievedPercentage == 0 &&
+	if data[3].ClassAverageAchievedPercentage == 0 && data[3].FirstAchievedPercentage == 0 && data[3].ReAchievedPercentage == 0 &&
+		data[3].UnSelectedSubjectsAverageAchievedPercentage == 0 {
+		labelID = entity.NoData
+	} else if data[0].ClassAverageAchievedPercentage == 0 && data[0].FirstAchievedPercentage == 0 && data[0].ReAchievedPercentage == 0 &&
 		data[0].UnSelectedSubjectsAverageAchievedPercentage == 0 &&
 		data[1].ClassAverageAchievedPercentage == 0 && data[1].FirstAchievedPercentage == 0 && data[1].ReAchievedPercentage == 0 &&
 		data[1].UnSelectedSubjectsAverageAchievedPercentage == 0 &&
