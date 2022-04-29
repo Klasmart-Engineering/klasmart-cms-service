@@ -80,7 +80,7 @@ func getLearnOutcomeAchievementLabelIDAndParams(res *entity.LearnOutcomeAchievem
 	data := res.Items
 	if data[3].ClassAverageAchievedPercentage == 0 && data[3].FirstAchievedPercentage == 0 && data[3].ReAchievedPercentage == 0 &&
 		data[3].UnSelectedSubjectsAverageAchievedPercentage == 0 {
-		labelID = entity.NoData
+		labelID = entity.ReportInsightMessageNoData
 	} else if data[0].ClassAverageAchievedPercentage == 0 && data[0].FirstAchievedPercentage == 0 && data[0].ReAchievedPercentage == 0 &&
 		data[0].UnSelectedSubjectsAverageAchievedPercentage == 0 &&
 		data[1].ClassAverageAchievedPercentage == 0 && data[1].FirstAchievedPercentage == 0 && data[1].ReAchievedPercentage == 0 &&

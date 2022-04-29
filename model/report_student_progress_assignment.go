@@ -159,7 +159,7 @@ func getAssignmentLabelIDAndParams(res entity.AssignmentResponse) (labelID strin
 	data := res.Assignments
 	if data[3].ClassDesignatedSubject == 0 && data[3].StudentDesignatedSubject == 0 &&
 		data[3].StudentNonDesignatedSubject == 0 {
-		labelID = entity.NoData
+		labelID = entity.ReportInsightMessageNoData
 	} else if data[0].ClassDesignatedSubject == 0 && data[0].StudentDesignatedSubject == 0 &&
 		data[0].StudentNonDesignatedSubject == 0 &&
 		data[1].ClassDesignatedSubject == 0 &&

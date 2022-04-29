@@ -7,7 +7,7 @@ const (
 
 const (
 	//All
-	NoData = "report_msg_no_data"
+	ReportInsightMessageNoData = "report_msg_no_data"
 
 	//Learing Outcome Achivemen
 	LODefault                = "report_msg_lo_default"

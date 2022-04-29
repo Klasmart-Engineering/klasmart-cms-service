@@ -127,7 +127,7 @@ func getAttendanceLabelIDAndParams(res *entity.ClassAttendanceResponse) (labelID
 	if data[3].AttendancePercentage == 0 &&
 		data[3].ClassAverageAttendancePercentage == 0 &&
 		data[3].UnSelectedSubjectsAverageAttendancePercentage == 0 {
-		labelID = entity.NoData
+		labelID = entity.ReportInsightMessageNoData
 	} else if data[0].AttendancePercentage == 0 &&
 		data[0].ClassAverageAttendancePercentage == 0 &&
 		data[0].UnSelectedSubjectsAverageAttendancePercentage == 0 &&
