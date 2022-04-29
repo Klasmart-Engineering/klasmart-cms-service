@@ -550,7 +550,6 @@ type QuerySharedContentV2Item struct {
 	Name          string               `json:"name"`
 	Thumbnail     string               `json:"thumbnail"`
 	AuthorName    string               `json:"author_name"`
-	Data          string               `json:"data"`
 	Author        string               `json:"author"`
 	PublishStatus ContentPublishStatus `json:"publish_status"`
 	SuggestTime   int                  `json:"suggest_time"`
