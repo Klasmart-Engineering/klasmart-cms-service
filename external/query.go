@@ -225,6 +225,12 @@ func subPageQuery[ResType ConnectionResponse](ctx context.Context, operator *ent
 			return err
 		}
 
+		log.Debug(ctx, "subPageQuery success",
+			log.Any("template", templateArgument),
+			log.Any("id_variable", IDVariable),
+			log.Any("cursor_variable", CursorVariable),
+			log.Any("response", res))
+
 		variableName := make(map[string]string)
 		IDsMap := make(map[string]string)
 		CursorsMap := make(map[string]string)

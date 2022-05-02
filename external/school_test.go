@@ -6,41 +6,21 @@ import (
 	"testing"
 )
 
+// 0ff7769f-cc94-4a80-a780-dcb0947db18b
+// 00429737-f515-4348-b24f-919c2f82a2aa
 func TestAmsSchoolService_GetByClasses(t *testing.T) {
-	orgClassMap, err := GetClassServiceProvider().GetByOrganizationIDs(context.TODO(), testOperator, []string{testOperator.OrgID})
+	ctx := context.Background()
+	testOperator.Token = schToken
+	IDs := []string{
+		"0ff7769f-cc94-4a80-a780-dcb0947db18b",
+		"00429737-f515-4348-b24f-919c2f82a2aa",
+	}
+	result, err := GetSchoolServiceProvider().GetByClasses(ctx, testOperator, IDs)
 	if err != nil {
-		t.Errorf("error = %v", err)
-		return
+		t.Fatal(err)
 	}
-	orgClassList, ok := orgClassMap[testOperator.OrgID]
-	if !ok || len(orgClassList) <= 0 {
-		t.Errorf("error = %v", err)
-		return
-	}
-	orgClassIDs := make([]string, len(orgClassList))
-	for i, item := range orgClassList {
-		orgClassIDs[i] = item.ID
-	}
-	t.Log(len(orgClassIDs))
-	schools, err := GetSchoolServiceProvider().GetByClasses(context.TODO(),
-		testOperator,
-		orgClassIDs,
-		WithStatus(Active))
-	if err != nil {
-		t.Errorf("GetSchoolServiceProvider().GetByClasses() error = %v", err)
-		return
-	}
-
-	if len(schools) == 0 {
-		t.Error("GetSchoolServiceProvider().GetByClasses() get empty slice")
-		return
-	}
-
-	for _, school := range schools {
-		if school == nil {
-			t.Error("GetSchoolServiceProvider().GetByClasses() get null")
-			return
-		}
+	for k, v := range result {
+		fmt.Println(k, v)
 	}
 }
 
@@ -114,12 +94,11 @@ func TestAmsSchoolService_GetByOperator(t *testing.T) {
 	}
 }
 
-var schToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MTI0NTc1NywiaXNzIjoia2lkc2xvb3AifQ.o-LJMTvAF_OFTZ-oaSnwJcsRIyGpUqeZ5AZr1BR8v_OQ_EiMJnj-ONWpJDMdXq9Z3DWNBu78nIWtsit34k1Rrqk4vA8BzPd19KN6rrLQ9pJ4y2zKT3IKS68_qu3PvI-JhUscqw_xDQG7Av8SrSB8QHVUoKyder_hh1ErUdUzl0CXWbeUqHoHEXMlj8REkNv3mOedEW-f2Vea-gfCqlOVWb-9d5Up6qfpo79ynbXJM3fLpIPBnQVMnO0EWvA_YsBz1QYDRPFYUcqw5pd0eUmpZB-4YatFnpcr9VRZk3TuWgHcNEijL56CyIM7k-WKsh0Q-Ijom6o3KSJYsuIrIqdjxQ"
+var schToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MTI4NjQzMSwiaXNzIjoia2lkc2xvb3AifQ.hrlqM9vbxyHfoolKwlGTJwFBlReHzJiaEy2Gdepm1bIR2O9XjzBQoasyUGAoK_hS5I8uXuad_Ilo354MzugQJIXJN1GWRiw03UDcvJAqbxuXecHtdCkLzes48wCPRV2KDuo9gTJkTQCEpsYxdDzyu-bOKY5vTEALenn79-HnLQULaKRLcGLw6N8ePk0fKUEuLtvIFOc40QhJkNbGNtM4dj-Ux8kyR-j6wof7tCy6BZG7MyjUKPaCKzdFpgaw673pOWCia_G0xGCT29nD_OLROxZdb6SueFT0DXVE4Gpki3fywbgVJt4ZRoeuh2AqsP5nMhimGxrHRaxg7q8ygJKtHQ"
 
 func TestAmsSchoolService_GetByUsers(t *testing.T) {
 	ctx := context.Background()
 	testOperator.Token = schToken
-	//orgID := "6300b3c5-8936-497e-ba1f-d67164b59c65"
 	IDs := []string{
 		"1dd1d0b4-df1a-4486-bd6c-a89f9b92f779",
 		"1e200965-df57-461e-8af3-e255886e8e41",

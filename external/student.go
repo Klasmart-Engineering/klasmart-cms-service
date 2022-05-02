@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"strings"
 	"sync"
 
@@ -46,13 +47,17 @@ func (n *NullableStudent) RelatedIDs() []*cache.RelatedEntity {
 }
 
 var (
-	_amsStudentService *AmsStudentService
+	_amsStudentService StudentServiceProvider
 	_amsStudentOnce    sync.Once
 )
 
 func GetStudentServiceProvider() StudentServiceProvider {
 	_amsStudentOnce.Do(func() {
-		_amsStudentService = &AmsStudentService{}
+		if config.Get().AMS.UseDeprecatedQuery {
+			_amsStudentService = &AmsStudentService{}
+		} else {
+			_amsStudentService = &AmsStudentConnectionService{}
+		}
 	})
 
 	return _amsStudentService

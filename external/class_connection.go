@@ -4,6 +4,7 @@ import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 )
 
@@ -61,179 +62,193 @@ type AmsClassConnectionService struct {
 	AmsClassService
 }
 
-func (accs AmsClassConnectionService) query(ctx context.Context, operator *entity.Operator, filter ClassFilter, pages *[]ClassesConnectionResponse) error {
-	err := pageQuery(ctx, operator, filter, pages)
+func (accs AmsClassConnectionService) GetByUserID(ctx context.Context, operator *entity.Operator, userID string, options ...APOption) ([]*Class, error) {
+	classesMap, err := accs.GetByUserIDs(ctx, operator, []string{userID}, options...)
 	if err != nil {
-		log.Error(ctx, "query class failed",
+		log.Error(ctx, "GetByUserID: GetByUserIDs failed",
 			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("filter", filter))
-		return err
+			log.String("user", userID))
+		return nil, err
 	}
-	return nil
+	return classesMap[userID], nil
 }
 
-func (accs AmsClassConnectionService) GetByUserID(ctx context.Context, operator *entity.Operator, userID string, options ...APOption) ([]*Class, error) {
+func (accs AmsClassConnectionService) getByTeacherIDs(ctx context.Context, operator *entity.Operator, IDs []string, options ...APOption) (map[string][]*Class, error) {
+	result := make(map[string][]ClassesConnectionResponse)
+	err := subPageQuery(ctx, operator, "userNode", "classesTeachingConnection", IDs, result)
+	if err != nil {
+		log.Error(ctx, "getByTeacherIDs: subPageQuery failed",
+			log.Err(err),
+			log.Strings("user_ids", IDs))
+		return nil, err
+	}
+
 	condition := NewCondition(options...)
-	statusFilter := StringFilter{
-		Operator: StringOperator(OperatorTypeEq),
-		Value:    Active.String(),
+	classesMap := make(map[string][]*Class)
+	for k, pages := range result {
+		for _, page := range pages {
+			for _, edge := range page.Edges {
+				class := Class{
+					ID:       edge.Node.ID,
+					Name:     edge.Node.Name,
+					Status:   APStatus(edge.Node.Status),
+					JoinType: IsTeaching,
+				}
+				if condition.Status.Valid && condition.Status.Status != class.Status {
+					continue
+				} else if condition.Status.Valid && class.Status != Active {
+					// only status = "Active" data is returned by default
+					continue
+				}
+				classesMap[k] = append(classesMap[k], &class)
+			}
+		}
+	}
+	return classesMap, nil
+}
+
+func (accs AmsClassConnectionService) getByStudentIDs(ctx context.Context, operator *entity.Operator, IDs []string, options ...APOption) (map[string][]*Class, error) {
+	result := make(map[string][]ClassesConnectionResponse)
+	err := subPageQuery(ctx, operator, "userNode", "classesStudyingConnection", IDs, result)
+	if err != nil {
+		log.Error(ctx, "getByStudentIDs: subPageQuery failed",
+			log.Err(err),
+			log.Strings("user_ids", IDs))
+		return nil, err
 	}
 
-	if condition.Status.Valid {
-		statusFilter.Value = condition.Status.Status.String()
+	condition := NewCondition(options...)
+	classesMap := make(map[string][]*Class)
+	for k, pages := range result {
+		for _, page := range pages {
+			for _, edge := range page.Edges {
+				class := Class{
+					ID:       edge.Node.ID,
+					Name:     edge.Node.Name,
+					Status:   APStatus(edge.Node.Status),
+					JoinType: IsTeaching,
+				}
+				if condition.Status.Valid && condition.Status.Status != class.Status {
+					continue
+				} else if condition.Status.Valid && class.Status != Active {
+					// only status = "Active" data is returned by default
+					continue
+				}
+				classesMap[k] = append(classesMap[k], &class)
+			}
+		}
 	}
+	return classesMap, nil
+}
 
+func (accs AmsClassConnectionService) GetByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string, options ...APOption) (map[string][]*Class, error) {
+	IDs := utils.SliceDeduplicationExcludeEmpty(userIDs)
 	var wg sync.WaitGroup
 	wg.Add(2)
-	studentFilter := ClassFilter{
-		Status:    &statusFilter,
-		StudentID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(userID)},
-	}
-	var studentPages []ClassesConnectionResponse
-	var stuClassErr error
+	var tErr, sErr error
+	var teachClasses, studyClasses map[string][]*Class
 	go func() {
-		stuClassErr = accs.query(ctx, operator, studentFilter, &studentPages)
+		teachClasses, tErr = accs.getByTeacherIDs(ctx, operator, IDs, options...)
 		wg.Done()
 	}()
-
-	teacherFilter := ClassFilter{
-		Status:    &statusFilter,
-		TeacherID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(userID)},
-	}
-	var teacherPages []ClassesConnectionResponse
-	var teacherClassErr error
 	go func() {
-		teacherClassErr = accs.query(ctx, operator, teacherFilter, &teacherPages)
+		studyClasses, sErr = accs.getByStudentIDs(ctx, operator, IDs, options...)
 		wg.Done()
 	}()
-
-	if stuClassErr != nil {
-		log.Error(ctx, "get class by user failed",
-			log.Err(stuClassErr),
-			log.Any("operator", operator),
-			log.Any("filter", studentFilter))
-		return nil, stuClassErr
+	wg.Wait()
+	if tErr != nil {
+		log.Error(ctx, "GetByUserIDs: subPageQuery failed",
+			log.Err(tErr),
+			log.Strings("user_ids", userIDs))
+		return nil, tErr
 	}
-	if teacherClassErr != nil {
-		log.Error(ctx, "get class by user failed",
-			log.Err(teacherClassErr),
-			log.Any("operator", operator),
-			log.Any("filter", teacherFilter))
-		return nil, teacherClassErr
+	if sErr != nil {
+		log.Error(ctx, "GetByUserIDs: subPageQuery failed",
+			log.Err(sErr),
+			log.Strings("user_ids", userIDs))
+		return nil, sErr
 	}
-
-	var classes []*Class
-	for _, page := range studentPages {
-		for _, v := range page.Edges {
-			class := Class{
-				ID:       v.Node.ID,
-				Name:     v.Node.Name,
-				Status:   APStatus(v.Node.Status),
-				JoinType: IsStudy,
-			}
-			classes = append(classes, &class)
+	var classesMap map[string][]*Class
+	for _, k := range IDs {
+		if teachClasses[k] == nil && studyClasses[k] != nil {
+			classesMap[k] = studyClasses[k]
+		}
+		if teachClasses[k] != nil && studyClasses[k] == nil {
+			classesMap[k] = teachClasses[k]
+		}
+		if teachClasses[k] != nil && studyClasses[k] != nil {
+			classesMap[k] = teachClasses[k]
+			classesMap[k] = append(classesMap[k], studyClasses[k]...)
 		}
 	}
-	for _, page := range teacherPages {
-		for _, v := range page.Edges {
-			class := Class{
-				ID:       v.Node.ID,
-				Name:     v.Node.Name,
-				Status:   APStatus(v.Node.Status),
-				JoinType: IsTeaching,
-			}
-			classes = append(classes, &class)
-		}
-	}
-	return classes, nil
+	return classesMap, nil
 }
-
 func (accs AmsClassConnectionService) GetByOrganizationIDs(ctx context.Context, operator *entity.Operator, orgIDs []string, options ...APOption) (map[string][]*Class, error) {
-	condition := NewCondition(options...)
-	filter := ClassFilter{
-		Status: &StringFilter{
-			Operator: StringOperator(OperatorTypeEq),
-			Value:    Active.String(),
-		},
-	}
-
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
-	}
-	filterOrgs := make([]ClassFilter, 0, len(orgIDs))
-	for _, id := range orgIDs {
-		fo := ClassFilter{OrganizationID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(id)}}
-		filterOrgs = append(filterOrgs, fo)
-	}
-	filter.OR = filterOrgs
-	var pages []ClassesConnectionResponse
-	err := pageQuery(ctx, operator, filter, &pages)
+	result := make(map[string][]ClassesConnectionResponse)
+	IDs := utils.SliceDeduplicationExcludeEmpty(orgIDs)
+	err := subPageQuery(ctx, operator, "organizationNode", "classesConnection", IDs, result)
 	if err != nil {
-		log.Error(ctx, "get class by organization failed",
+		log.Error(ctx, "GetByOrganizationIDs: subPageQuery failed",
 			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("filter", filter))
+			log.Strings("organization_ids", orgIDs))
 		return nil, err
 	}
-	var classes []*Class
-	for _, page := range pages {
-		for _, v := range page.Edges {
-			class := Class{
-				ID:       v.Node.ID,
-				Name:     v.Node.Name,
-				Status:   APStatus(v.Node.Status),
-				JoinType: IsTeaching, // IsStudy
+
+	condition := NewCondition(options...)
+	classesMap := make(map[string][]*Class)
+	for k, pages := range result {
+		for _, page := range pages {
+			for _, edge := range page.Edges {
+				class := Class{
+					ID:     edge.Node.ID,
+					Name:   edge.Node.Name,
+					Status: APStatus(edge.Node.Status),
+				}
+				if condition.Status.Valid && condition.Status.Status != class.Status {
+					continue
+				} else if condition.Status.Valid && class.Status != Active {
+					// only status = "Active" data is returned by default
+					continue
+				}
+				classesMap[k] = append(classesMap[k], &class)
 			}
-			classes = append(classes, &class)
 		}
 	}
-
-	panic("implement me")
-	//return classes, nil
+	return classesMap, nil
 }
-func (accs AmsClassConnectionService) GetBySchoolIDs(ctx context.Context, operator *entity.Operator, schoolIDs []string, options ...APOption) (map[string][]*Class, error) {
-	condition := NewCondition(options...)
-	filter := ClassFilter{
-		Status: &StringFilter{
-			Operator: StringOperator(OperatorTypeEq),
-			Value:    Active.String(),
-		},
-	}
 
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
-	}
-	filterSchs := make([]ClassFilter, 0, len(schoolIDs))
-	for _, id := range schoolIDs {
-		vuuid := UUID(id)
-		fo := ClassFilter{SchoolID: &UUIDExclusiveFilter{Operator: UUIDExclusiveOperator(OperatorTypeEq), Value: &vuuid}}
-		filterSchs = append(filterSchs, fo)
-	}
-	filter.OR = filterSchs
-	var pages []ClassesConnectionResponse
-	err := pageQuery(ctx, operator, filter, &pages)
+func (accs AmsClassConnectionService) GetBySchoolIDs(ctx context.Context, operator *entity.Operator, schoolIDs []string, options ...APOption) (map[string][]*Class, error) {
+	result := make(map[string][]ClassesConnectionResponse)
+	IDs := utils.SliceDeduplicationExcludeEmpty(schoolIDs)
+	err := subPageQuery(ctx, operator, "schoolNode", "classesConnection", IDs, result)
 	if err != nil {
-		log.Error(ctx, "get class by organization failed",
+		log.Error(ctx, "GetBySchoolIDs: subPageQuery failed",
 			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("filter", filter))
+			log.Strings("school_ids", schoolIDs))
 		return nil, err
 	}
-	var classes []*Class
-	for _, page := range pages {
-		for _, v := range page.Edges {
-			class := Class{
-				ID:       v.Node.ID,
-				Name:     v.Node.Name,
-				Status:   APStatus(v.Node.Status),
-				JoinType: IsTeaching, // IsStudy
+
+	condition := NewCondition(options...)
+	classesMap := make(map[string][]*Class)
+	for k, pages := range result {
+		for _, page := range pages {
+			for _, edge := range page.Edges {
+				class := Class{
+					ID:     edge.Node.ID,
+					Name:   edge.Node.Name,
+					Status: APStatus(edge.Node.Status),
+				}
+				if condition.Status.Valid && condition.Status.Status != class.Status {
+					continue
+				} else if condition.Status.Valid && class.Status != Active {
+					// only status = "Active" data is returned by default
+					continue
+				}
+				classesMap[k] = append(classesMap[k], &class)
 			}
-			classes = append(classes, &class)
 		}
 	}
-
-	panic("implement me")
+	return classesMap, nil
 }
 
 func (accs AmsClassConnectionService) GetOnlyUnderOrgClasses(ctx context.Context, operator *entity.Operator, orgID string) ([]*NullableClass, error) {

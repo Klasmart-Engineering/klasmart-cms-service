@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"strings"
 	"sync"
 
@@ -49,13 +50,17 @@ func (n *NullableTeacher) RelatedIDs() []*cache.RelatedEntity {
 }
 
 var (
-	_amsTeacherService *AmsTeacherService
+	_amsTeacherService TeacherServiceProvider
 	_amsTeacherOnce    sync.Once
 )
 
 func GetTeacherServiceProvider() TeacherServiceProvider {
 	_amsTeacherOnce.Do(func() {
-		_amsTeacherService = &AmsTeacherService{}
+		if config.Get().AMS.UseDeprecatedQuery {
+			_amsTeacherService = &AmsTeacherService{}
+		} else {
+			_amsTeacherService = &AmsTeacherConnectionService{}
+		}
 	})
 
 	return _amsTeacherService

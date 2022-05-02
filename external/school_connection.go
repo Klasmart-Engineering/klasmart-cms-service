@@ -92,9 +92,42 @@ func (ascs AmsSchoolConnectionService) GetByOrganizationID(ctx context.Context, 
 	}
 	return schools, nil
 }
+
+func (ascs AmsSchoolConnectionService) GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName, options ...APOption) ([]*School, error) {
+
+	schools, err := ascs.GetByOperator(ctx, operator)
+	if err != nil {
+		log.Error(ctx, "GetByPermission: GetByOperator failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.String("permission", string(permissionName)))
+		return nil, err
+	}
+	permissions, err := GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, []PermissionName{permissionName})
+	if err != nil {
+		log.Error(ctx, "GetByPermission: HasOrganizationPermissions failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.String("permission", string(permissionName)))
+		return nil, err
+	}
+	if !permissions[permissionName] {
+		log.Debug(ctx, "GetByPermission: Has no permission",
+			log.Any("operator", operator),
+			log.Any("schools", schools),
+			log.String("permission", string(permissionName)))
+		return []*School{}, err
+	}
+	return schools, nil
+}
+
 func (ascs AmsSchoolConnectionService) GetByOperator(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*School, error) {
 	condition := NewCondition(options...)
 	filter := SchoolFilter{
+		OrganizationId: &UUIDFilter{
+			Operator: UUIDOperator(OperatorTypeEq),
+			Value:    UUID(operator.OrgID),
+		},
 		UserID: &UUIDFilter{
 			Operator: UUIDOperator(OperatorTypeEq),
 			Value:    UUID(operator.UserID),
@@ -158,6 +191,10 @@ func (ascs AmsSchoolConnectionService) GetByUsers(ctx context.Context, operator 
 	IDs := utils.SliceDeduplicationExcludeEmpty(userIDs)
 	err := subPageQuery(ctx, operator, "userNode", "schoolMembershipsConnection", IDs, result)
 	if err != nil {
+		log.Error(ctx, "GetByUsers: subPageQuery failed",
+			log.Err(err),
+			log.String("org_id", orgID),
+			log.Strings("user_ids", userIDs))
 		return nil, err
 	}
 	condition := NewCondition(options...)
@@ -180,6 +217,39 @@ func (ascs AmsSchoolConnectionService) GetByUsers(ctx context.Context, operator 
 					ID:     node.ID,
 					Name:   node.Name,
 					Status: APStatus(node.Status),
+				}
+				schoolsMap[k] = append(schoolsMap[k], school)
+			}
+		}
+	}
+	return schoolsMap, nil
+}
+
+func (ascs AmsSchoolConnectionService) GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string, options ...APOption) (map[string][]*School, error) {
+	result := make(map[string][]SchoolsConnectionResponse)
+	IDs := utils.SliceDeduplicationExcludeEmpty(classIDs)
+	err := subPageQuery(ctx, operator, "classNode", "schoolsConnection", IDs, result)
+	if err != nil {
+		log.Error(ctx, "GetByClasses: subPageQuery failed",
+			log.Err(err),
+			log.Strings("class_ids", classIDs))
+		return nil, err
+	}
+	condition := NewCondition(options...)
+	schoolsMap := make(map[string][]*School)
+	for k, pages := range result {
+		for _, page := range pages {
+			for _, edge := range page.Edges {
+				if condition.Status.Valid && condition.Status.Status != APStatus(edge.Node.Status) {
+					continue
+				} else if !condition.Status.Valid && APStatus(edge.Node.Status) != Active {
+					// only status = "Active" data is returned by default
+					continue
+				}
+				school := &School{
+					ID:     edge.Node.ID,
+					Name:   edge.Node.Name,
+					Status: APStatus(edge.Node.Status),
 				}
 				schoolsMap[k] = append(schoolsMap[k], school)
 			}
