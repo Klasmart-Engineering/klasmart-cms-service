@@ -17,7 +17,7 @@ func NewOfflineStudyAssessmentPage(at *AssessmentTool) IAssessmentMatch {
 	return &OfflineStudyAssessment{
 		at:     at,
 		action: AssessmentMatchActionPage,
-		base:   NewBaseAssessment(at),
+		base:   NewBaseAssessment(at, AssessmentMatchActionPage),
 	}
 }
 
@@ -25,7 +25,7 @@ func NewOfflineStudyAssessmentDetail(at *AssessmentTool) IAssessmentMatch {
 	return &OfflineStudyAssessment{
 		at:     at,
 		action: AssessmentMatchActionDetail,
-		base:   NewBaseAssessment(at),
+		base:   NewBaseAssessment(at, AssessmentMatchActionDetail),
 	}
 }
 
@@ -137,10 +137,6 @@ func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCon
 	if err != nil {
 		return nil, err
 	}
-	userMap, err := o.at.GetUserMap()
-	if err != nil {
-		return nil, err
-	}
 
 	feedbackCond := &da.ScheduleFeedbackCondition{
 		ScheduleID: sql.NullString{
@@ -183,10 +179,6 @@ func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCon
 			Status:        item.StatusByUser,
 			ProcessStatus: item.StatusBySystem,
 			Results:       make([]*v2.AssessmentStudentResultReply, 0),
-		}
-
-		if userInfo, ok := userMap[item.UserID]; ok && userInfo != nil {
-			resultItem.StudentName = userInfo.Name
 		}
 
 		studentResultItem := new(v2.AssessmentStudentResultReply)

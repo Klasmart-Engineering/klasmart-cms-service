@@ -647,7 +647,7 @@ func (a *assessmentModelV2) PageForHomePage(ctx context.Context, op *entity.Oper
 		return nil, err
 	}
 
-	userMap, err := at.GetUserMap()
+	userMap, err := at.GetTeacherMap()
 	if err != nil {
 		return nil, err
 	}
