@@ -95,7 +95,7 @@ func (sccs AmsSubCategoryConnectionService) GetByCategory(ctx context.Context, o
 	}
 	return subCategories, nil
 }
-func (sccs AmsGradeConnectionService) AmsSubCategoryConnectionService(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*SubCategory, error) {
+func (sccs AmsSubCategoryConnectionService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*SubCategory, error) {
 	condition := NewCondition(options...)
 
 	filter := SubcategoryFilter{

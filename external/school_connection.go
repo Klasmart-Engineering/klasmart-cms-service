@@ -83,9 +83,10 @@ func (ascs AmsSchoolConnectionService) GetByOrganizationID(ctx context.Context, 
 	for _, page := range pages {
 		for _, v := range page.Edges {
 			sch := School{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
+				ID:             v.Node.ID,
+				Name:           v.Node.Name,
+				Status:         APStatus(v.Node.Status),
+				OrganizationId: v.Node.OrganizationId,
 			}
 			schools = append(schools, &sch)
 		}
@@ -94,7 +95,6 @@ func (ascs AmsSchoolConnectionService) GetByOrganizationID(ctx context.Context, 
 }
 
 func (ascs AmsSchoolConnectionService) GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName, options ...APOption) ([]*School, error) {
-
 	schools, err := ascs.GetByOperator(ctx, operator)
 	if err != nil {
 		log.Error(ctx, "GetByPermission: GetByOperator failed",
@@ -154,9 +154,10 @@ func (ascs AmsSchoolConnectionService) GetByOperator(ctx context.Context, operat
 	for _, page := range pages {
 		for _, v := range page.Edges {
 			sch := School{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
+				ID:             v.Node.ID,
+				Name:           v.Node.Name,
+				Status:         APStatus(v.Node.Status),
+				OrganizationId: v.Node.OrganizationId,
 			}
 			schools = append(schools, &sch)
 		}

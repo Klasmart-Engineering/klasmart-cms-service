@@ -148,12 +148,12 @@ func (accs AmsClassConnectionService) GetByUserIDs(ctx context.Context, operator
 	var tErr, sErr error
 	var teachClasses, studyClasses map[string][]*Class
 	go func() {
+		defer wg.Done()
 		teachClasses, tErr = accs.getByTeacherIDs(ctx, operator, IDs, options...)
-		wg.Done()
 	}()
 	go func() {
+		defer wg.Done()
 		studyClasses, sErr = accs.getByStudentIDs(ctx, operator, IDs, options...)
-		wg.Done()
 	}()
 	wg.Wait()
 	if tErr != nil {

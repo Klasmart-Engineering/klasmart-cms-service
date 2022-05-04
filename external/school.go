@@ -34,9 +34,10 @@ type SchoolServiceProvider interface {
 }
 
 type School struct {
-	ID     string   `json:"id"`
-	Name   string   `json:"name"`
-	Status APStatus `json:"status"`
+	ID             string   `json:"id"`
+	Name           string   `json:"name"`
+	Status         APStatus `json:"status"`
+	OrganizationId string   `json:"organizationId" gqls:"organizationId"`
 }
 
 type NullableSchool struct {
