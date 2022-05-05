@@ -11,6 +11,52 @@ type AmsTeacherConnectionService struct {
 	AmsTeacherService
 }
 
+func (ascs AmsTeacherConnectionService) GetByOrganization(ctx context.Context, operator *entity.Operator, organizationID string) ([]*Teacher, error) {
+	teacherMap, err := ascs.GetByOrganizations(ctx, operator, []string{organizationID})
+	if err != nil {
+		log.Error(ctx, "GetByOrganization: GetByOrganizations failed",
+			log.Err(err),
+			log.String("organization", organizationID))
+		return nil, err
+	}
+	return teacherMap[organizationID], nil
+}
+func (ascs AmsTeacherConnectionService) GetByOrganizations(ctx context.Context, operator *entity.Operator, organizationIDs []string) (map[string][]*Teacher, error) {
+	classes, err := GetClassServiceProvider().GetByOrganizationIDs(ctx, operator, organizationIDs)
+	if err != nil {
+		log.Error(ctx, "GetByOrganizations: get classes failed",
+			log.Err(err),
+			log.Strings("organization_ids", organizationIDs))
+		return nil, err
+	}
+	clsOrgMap := make(map[string]string)
+	var clsIDs []string
+	for k, v := range classes {
+		for _, cls := range v {
+			clsOrgMap[cls.ID] = k
+			clsIDs = append(clsIDs, cls.ID)
+		}
+	}
+	if len(clsIDs) == 0 {
+		log.Debug(ctx, "GetByOrganizations: class is empty",
+			log.Strings("organization_ids", organizationIDs))
+		return map[string][]*Teacher{}, nil
+	}
+	classTeachers, err := ascs.GetByClasses(ctx, operator, clsIDs)
+	if err != nil {
+		log.Error(ctx, "GetByOrganizations: GetByClasses failed",
+			log.Err(err),
+			log.Strings("organization_ids", organizationIDs))
+		return nil, err
+	}
+	organizationTeachers := make(map[string][]*Teacher)
+	for k, v := range classTeachers {
+		if org, ok := clsOrgMap[k]; ok {
+			organizationTeachers[org] = append(organizationTeachers[org], v...)
+		}
+	}
+	return organizationTeachers, nil
+}
 func (ascs AmsTeacherConnectionService) GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*Teacher, error) {
 	result := make(map[string][]UsersConnectionResponse)
 	IDs := utils.SliceDeduplicationExcludeEmpty(classIDs)
