@@ -84,6 +84,10 @@ func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *
 		PageSize: req.PageSize,
 	}
 
+	if req.QueryType == v2.QueryTypeTeacherID {
+		// For the query key data, there is currently no check to see if there is permission to query.
+		condition.TeacherIDs.Strings = []string{req.QueryKey}
+	}
 	if req.QueryType == v2.QueryTypeTeacherName {
 		teachers, err := external.GetTeacherServiceProvider().Query(ctx, op, op.OrgID, req.QueryKey)
 		if err != nil {
