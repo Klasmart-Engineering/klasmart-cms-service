@@ -545,14 +545,14 @@ type QuerySharedContentV2Response struct {
 }
 type QuerySharedContentV2Item struct {
 	ID            string               `json:"id"`
-	Path          string               `json:"path"`
+	DirPath       string               `json:"dir_path"`
 	ContentType   ContentType          `json:"content_type"`
 	Name          string               `json:"name"`
 	Thumbnail     string               `json:"thumbnail"`
 	AuthorName    string               `json:"author_name"`
 	Author        string               `json:"author"`
 	PublishStatus ContentPublishStatus `json:"publish_status"`
-	SuggestTime   int                  `json:"suggest_time"`
+	ItemsCount    int                  `json:"items_count"`
 }
 
 type FolderContentInfoWithDetailsResponse struct {
