@@ -265,6 +265,7 @@ func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseSomeContent(ctx
 
 func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseDiffContent(ctx context.Context, userScores []*external.H5PUserScores, contentTotalCount int) float64 {
 	attemptedCount := 0
+	childCount := 0
 	for _, item := range userScores {
 		if item.User == nil {
 			continue
@@ -279,20 +280,26 @@ func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseDiffContent(ctx
 				continue
 			}
 
-			if scoreItem.Content.ParentID != "" {
+			// At present, the review types are all h5p types
+			if scoreItem.Content.FileType != external.FileTypeH5P {
 				continue
 			}
 
 			if scoreItem.Seen {
 				attemptedCount++
 			}
+
+			if scoreItem.Content.ParentID != "" {
+				childCount++
+			}
 		}
 	}
 
 	var result float64
 
+	// number of attempts /（parent count + child count）
 	if contentTotalCount > 0 {
-		result = float64(attemptedCount) / float64(contentTotalCount)
+		result = float64(attemptedCount) / float64(contentTotalCount+childCount)
 
 		if result > 1 {
 			log.Warn(ctx, "calcRoomCompleteRate greater than 1",
