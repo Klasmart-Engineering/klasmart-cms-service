@@ -87,6 +87,7 @@ func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *
 	if req.QueryType == v2.QueryTypeTeacherID {
 		// For the query key data, there is currently no check to see if there is permission to query.
 		condition.TeacherIDs.Strings = []string{req.QueryKey}
+		condition.TeacherIDs.Valid = true
 	}
 	if req.QueryType == v2.QueryTypeTeacherName {
 		teachers, err := external.GetTeacherServiceProvider().Query(ctx, op, op.OrgID, req.QueryKey)
@@ -98,6 +99,7 @@ func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *
 		for i, item := range teachers {
 			condition.TeacherIDs.Strings[i] = item.ID
 		}
+		condition.TeacherIDs.Valid = true
 	}
 
 	var assessments []*v2.Assessment
