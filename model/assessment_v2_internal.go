@@ -7,12 +7,10 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da/assessmentV2"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strings"
 	"sync"
@@ -41,16 +39,16 @@ type IAssessmentInternalModelV2 interface {
 }
 
 func (a *assessmentInternalModel) ScheduleEndClassCallback(ctx context.Context, op *entity.Operator, req *v2.ScheduleEndClassCallBackReq) error {
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixScheduleID, req.ScheduleID)
-	if err != nil {
-		log.Error(ctx, "ScheduleEndClassCallback: lock fail",
-			log.Err(err),
-			log.Any("req", req),
-		)
-		return err
-	}
-	locker.Lock()
-	defer locker.Unlock()
+	//locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixScheduleID, req.ScheduleID)
+	//if err != nil {
+	//	log.Error(ctx, "ScheduleEndClassCallback: lock fail",
+	//		log.Err(err),
+	//		log.Any("req", req),
+	//	)
+	//	return err
+	//}
+	//locker.Lock()
+	//defer locker.Unlock()
 
 	req.AttendanceIDs = utils.SliceDeduplicationExcludeEmpty(req.AttendanceIDs)
 	if req.ScheduleID == "" || len(req.AttendanceIDs) <= 0 {

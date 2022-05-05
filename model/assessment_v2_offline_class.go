@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
@@ -12,7 +11,7 @@ func NewOfflineClassAssessmentPage(at *AssessmentTool) IAssessmentMatch {
 	return &OfflineClassAssessment{
 		at:     at,
 		action: AssessmentMatchActionPage,
-		base:   NewBaseAssessment(at),
+		base:   NewBaseAssessment(at, AssessmentMatchActionPage),
 	}
 }
 
@@ -20,7 +19,7 @@ func NewOfflineClassAssessmentDetail(at *AssessmentTool) IAssessmentMatch {
 	return &OfflineClassAssessment{
 		at:     at,
 		action: AssessmentMatchActionDetail,
-		base:   NewBaseAssessment(at),
+		base:   NewBaseAssessment(at, AssessmentMatchActionDetail),
 	}
 }
 
@@ -116,12 +115,7 @@ func (o *OfflineClassAssessment) MatchContents() ([]*v2.AssessmentContentReply, 
 }
 
 func (o *OfflineClassAssessment) MatchStudents(contents []*v2.AssessmentContentReply) ([]*v2.AssessmentStudentReply, error) {
-	ctx := o.at.ctx
-
-	userMap, err := o.at.GetUserMap()
-	if err != nil {
-		return nil, err
-	}
+	//ctx := o.at.ctx
 
 	assessmentUserMap, err := o.at.GetAssessmentUserMap()
 	if err != nil {
@@ -155,18 +149,9 @@ func (o *OfflineClassAssessment) MatchStudents(contents []*v2.AssessmentContentR
 			continue
 		}
 
-		studentInfo, ok := userMap[item.UserID]
-		if !ok {
-			log.Warn(ctx, "not found user info from user service", log.Any("item", item), log.Any("userMap", userMap))
-			studentInfo = &entity.IDName{
-				ID:   item.UserID,
-				Name: "",
-			}
-		}
-
 		studentReply := &v2.AssessmentStudentReply{
 			StudentID:     item.UserID,
-			StudentName:   studentInfo.Name,
+			StudentName:   "",
 			Status:        item.StatusByUser,
 			ProcessStatus: item.StatusBySystem,
 			Results:       nil,

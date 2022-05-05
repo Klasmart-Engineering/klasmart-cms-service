@@ -13,7 +13,7 @@ func NewOnlineStudyAssessmentPage(at *AssessmentTool) IAssessmentMatch {
 	return &OnlineStudyAssessment{
 		at:     at,
 		action: AssessmentMatchActionPage,
-		base:   NewBaseAssessment(at),
+		base:   NewBaseAssessment(at, AssessmentMatchActionPage),
 	}
 }
 
@@ -21,7 +21,7 @@ func NewOnlineStudyAssessmentDetail(at *AssessmentTool) IAssessmentMatch {
 	return &OnlineStudyAssessment{
 		at:     at,
 		action: AssessmentMatchActionDetail,
-		base:   NewBaseAssessment(at),
+		base:   NewBaseAssessment(at, AssessmentMatchActionDetail),
 	}
 }
 
@@ -146,11 +146,6 @@ func (o *OnlineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 		return nil, err
 	}
 
-	userMap, err := o.at.GetUserMap()
-	if err != nil {
-		return nil, err
-	}
-
 	roomUserResultMap := make(map[string]*RoomUserScore)
 	for userID, scores := range userScoreMap {
 		for _, resultItem := range scores {
@@ -181,18 +176,9 @@ func (o *OnlineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 			continue
 		}
 
-		studentInfo, ok := userMap[item.UserID]
-		if !ok {
-			log.Warn(ctx, "not found user info from user service", log.Any("item", item), log.Any("userMap", userMap))
-			studentInfo = &entity.IDName{
-				ID:   item.UserID,
-				Name: "",
-			}
-		}
-
 		studentReply := &v2.AssessmentStudentReply{
 			StudentID:     item.UserID,
-			StudentName:   studentInfo.Name,
+			StudentName:   "",
 			Status:        item.StatusByUser,
 			ProcessStatus: item.StatusBySystem,
 			Results:       nil,

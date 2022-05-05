@@ -13,7 +13,7 @@ func NewReviewStudyAssessmentPage(at *AssessmentTool) IAssessmentMatch {
 	return &ReviewStudyAssessment{
 		at:     at,
 		action: AssessmentMatchActionPage,
-		base:   NewBaseAssessment(at),
+		base:   NewBaseAssessment(at, AssessmentMatchActionPage),
 	}
 }
 
@@ -21,7 +21,7 @@ func NewReviewStudyAssessmentDetail(at *AssessmentTool) IAssessmentMatch {
 	return &ReviewStudyAssessment{
 		at:     at,
 		action: AssessmentMatchActionDetail,
-		base:   NewBaseAssessment(at),
+		base:   NewBaseAssessment(at, AssessmentMatchActionDetail),
 	}
 }
 
@@ -126,11 +126,6 @@ func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiff
 		return nil, constant.ErrRecordNotFound
 	}
 
-	userInfoMap, err := o.at.GetUserMap()
-	if err != nil {
-		return nil, err
-	}
-
 	studentReviewMap, err := o.at.FirstGetScheduleReviewMap()
 	if err != nil {
 		return nil, err
@@ -186,10 +181,6 @@ func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiff
 			Status:          userItem.StatusByUser,
 			ReviewerComment: "",
 			Results:         make([]*v2.DiffContentStudentResultReply, 0),
-		}
-
-		if userInfo, ok := userInfoMap[userItem.UserID]; ok {
-			replyItem.StudentName = userInfo.Name
 		}
 
 		if comment, ok := commentResultMap[userItem.UserID]; ok {

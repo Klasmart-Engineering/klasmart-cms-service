@@ -414,16 +414,16 @@ func (at *AssessmentTool) initClassMap() error {
 	return nil
 }
 
-func (at *AssessmentTool) GetUserMap() (map[string]*entity.IDName, error) {
+func (at *AssessmentTool) GetTeacherMap() (map[string]*entity.IDName, error) {
 	if at.userMap == nil {
-		if err := at.initUserMap(); err != nil {
+		if err := at.initTeacherMap(); err != nil {
 			return nil, err
 		}
 	}
 
 	return at.userMap, nil
 }
-func (at *AssessmentTool) initUserMap() error {
+func (at *AssessmentTool) initTeacherMap() error {
 	ctx := at.ctx
 	op := at.op
 
@@ -436,6 +436,9 @@ func (at *AssessmentTool) initUserMap() error {
 	deDupMap := make(map[string]struct{})
 
 	for _, auItem := range assessmentUsers {
+		if auItem.UserType != v2.AssessmentUserTypeTeacher {
+			continue
+		}
 		if _, ok := deDupMap[auItem.UserID]; !ok {
 			deDupMap[auItem.UserID] = struct{}{}
 			userIDs = append(userIDs, auItem.UserID)

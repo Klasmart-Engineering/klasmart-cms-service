@@ -34,9 +34,10 @@ const (
 	AssessmentMatchActionDetail
 )
 
-func NewBaseAssessment(at *AssessmentTool) BaseAssessment {
+func NewBaseAssessment(at *AssessmentTool, action AssessmentMatchAction) BaseAssessment {
 	return BaseAssessment{
-		at: at,
+		at:     at,
+		action: action,
 	}
 }
 
@@ -49,7 +50,8 @@ func NewBaseAssessment(at *AssessmentTool) BaseAssessment {
 //}
 
 type BaseAssessment struct {
-	at *AssessmentTool
+	at     *AssessmentTool
+	action AssessmentMatchAction
 }
 
 func (o *BaseAssessment) MatchAnyOneAttempted() (bool, error) {
@@ -126,9 +128,12 @@ func (o *BaseAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
 		return nil, err
 	}
 
-	userMap, err := o.at.GetUserMap()
-	if err != nil {
-		return nil, err
+	userMap := make(map[string]*entity.IDName)
+	if o.action == AssessmentMatchActionPage {
+		userMap, err = o.at.GetTeacherMap()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	result := make(map[string][]*entity.IDName, len(o.at.assessments))
