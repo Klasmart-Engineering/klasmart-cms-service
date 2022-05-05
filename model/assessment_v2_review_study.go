@@ -42,7 +42,7 @@ func (o *ReviewStudyAssessment) MatchSchedule() (map[string]*entity.Schedule, er
 }
 
 func (o *ReviewStudyAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
-	return NewOnlineStudyAssessmentPage(o.at).MatchTeacher()
+	return o.base.MatchTeacher()
 }
 
 func (o *ReviewStudyAssessment) MatchClass() (map[string]*entity.IDName, error) {

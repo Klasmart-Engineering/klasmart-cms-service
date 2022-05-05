@@ -84,6 +84,10 @@ func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *
 		PageSize: req.PageSize,
 	}
 
+	if req.QueryType == v2.QueryTypeTeacherID {
+		// For the query key data, there is currently no check to see if there is permission to query.
+		condition.TeacherIDs.Strings = []string{req.QueryKey}
+	}
 	if req.QueryType == v2.QueryTypeTeacherName {
 		teachers, err := external.GetTeacherServiceProvider().Query(ctx, op, op.OrgID, req.QueryKey)
 		if err != nil {
@@ -442,10 +446,6 @@ func (m *assessmentModelV2) queryAssessmentComments(ctx context.Context, operato
 				if studentComments[j] == nil {
 					continue
 				}
-				log.Debug(ctx, "test info",
-					log.Any("comments", comments),
-					log.Any("scheduleID", scheduleIDs[i]),
-					log.Any("studentComment", studentComments[j]))
 				comments[scheduleIDs[i]][studentComments[j].TeacherID] = studentComments[j].Comment
 			}
 		}
@@ -1088,46 +1088,36 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		waitAddAssessmentOutcomes = append(waitAddAssessmentOutcomes, item)
 	}
 
-	log.Debug(ctx, "wait update contents",
-		log.Any("waitAddAssessmentOutcomeMap", waitAddAssessmentOutcomeMap),
-		log.Any("waitUpdateAssessmentOutcomes", waitUpdateAssessmentOutcomes),
-		log.Any("outcomeFromAssessmentMap", outcomeFromAssessmentMap))
-
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		if _, err := assessmentV2.GetAssessmentDA().UpdateTx(ctx, tx, waitUpdatedAssessment); err != nil {
 			return err
 		}
 
 		if len(waitUpdatedUsers) > 0 {
-			log.Debug(ctx, "wait update users", log.Any("waitUpdatedUsers", waitUpdatedUsers))
 			if _, err = assessmentV2.GetAssessmentUserDA().UpdateTx(ctx, tx, waitUpdatedUsers); err != nil {
 				return err
 			}
 		}
 
 		if len(waitAddContents) > 0 {
-			log.Debug(ctx, "wait add contents", log.Any("waitAddContents", waitAddContents))
 			if _, err = assessmentV2.GetAssessmentContentDA().InsertTx(ctx, tx, waitAddContents); err != nil {
 				return err
 			}
 		}
 
 		if len(waitUpdateContents) > 0 {
-			log.Debug(ctx, "wait update contents", log.Any("waitUpdateContents", waitUpdateContents))
 			if _, err = assessmentV2.GetAssessmentContentDA().UpdateTx(ctx, tx, waitUpdateContents); err != nil {
 				return err
 			}
 		}
 
 		if len(waitAddAssessmentOutcomes) > 0 {
-			log.Debug(ctx, "wait add outcomes", log.Any("waitAddAssessmentOutcomes", waitAddAssessmentOutcomes))
 			if _, err = assessmentV2.GetAssessmentUserOutcomeDA().InsertTx(ctx, tx, waitAddAssessmentOutcomes); err != nil {
 				return err
 			}
 		}
 
 		if len(waitUpdateAssessmentOutcomes) > 0 {
-			log.Debug(ctx, "wait update outcomes", log.Any("waitUpdateAssessmentOutcomes", waitUpdateAssessmentOutcomes))
 			if _, err = assessmentV2.GetAssessmentUserOutcomeDA().UpdateTx(ctx, tx, waitUpdateAssessmentOutcomes); err != nil {
 				return err
 			}

@@ -23,8 +23,8 @@ import (
 // @Accept json
 // @Produce json
 // @Param status query string false "status search,multiple states are separated by commas,optional value is NotStarted,Started,Draft,Complete"
-// @Param query_key query string false "query key fuzzy search"
-// @Param query_type query string false "query type" enums(TeacherName)
+// @Param query_key query string false "query key search"
+// @Param query_type query string false "query type" enums(TeacherID)
 // @Param assessment_type query string true "assessment type, value:OnlineClass,OfflineClass,OnlineStudy,ReviewStudy,OfflineStudy"
 // @Param page query int false "page number" default(1)
 // @Param page_size query integer false "page size" format(int) default(10)

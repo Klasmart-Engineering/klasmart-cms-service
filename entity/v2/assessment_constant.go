@@ -171,6 +171,7 @@ func GetAssessmentTypeByScheduleType(ctx context.Context, input GetAssessmentTyp
 type AssessmentQueryType string
 
 const (
+	QueryTypeTeacherID   AssessmentQueryType = "TeacherID"
 	QueryTypeTeacherName AssessmentQueryType = "TeacherName"
 )
 
