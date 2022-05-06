@@ -101,7 +101,7 @@ func (acs AmsAgeConnectionService) GetByOrganization(ctx context.Context, operat
 	condition := NewCondition(options...)
 
 	filter := AgeRangeFilter{
-		ProgramID: &UUIDFilter{
+		OrganizationID: &UUIDFilter{
 			Operator: UUIDOperator(OperatorTypeEq),
 			Value:    UUID(operator.OrgID),
 		},

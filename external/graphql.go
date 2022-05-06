@@ -22,6 +22,7 @@ type GraphQLError []struct {
 	Extensions struct {
 		Code      string `json:"code"`
 		Exception struct {
+			Code       string   `json:"code"`
 			Stacktrace []string `json:"stacktrace"`
 		} `json:"exception"`
 	}

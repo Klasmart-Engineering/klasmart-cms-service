@@ -117,7 +117,7 @@ func (accs AmsCategoryConnectionService) GetByOrganization(ctx context.Context, 
 func (accs AmsCategoryConnectionService) GetBySubjects(ctx context.Context, operator *entity.Operator, subjectIDs []string, options ...APOption) ([]*Category, error) {
 	result := make(map[string][]CategoriesConnectionResponse)
 	IDs := utils.SliceDeduplicationExcludeEmpty(subjectIDs)
-	err := subPageQuery(ctx, operator, "subcategoryNode", "categoriesConnection", IDs, result)
+	err := subPageQuery(ctx, operator, "subjectNode", "categoriesConnection", IDs, result)
 	if err != nil {
 		log.Error(ctx, "GetBySubjects: subPageQuery failed",
 			log.Err(err),
@@ -134,6 +134,7 @@ func (accs AmsCategoryConnectionService) GetBySubjects(ctx context.Context, oper
 					ID:     edge.Node.ID,
 					Name:   edge.Node.Name,
 					Status: APStatus(edge.Node.Status),
+					System: edge.Node.System,
 				}
 				if condition.System.Valid && category.System != condition.System.Bool {
 					continue

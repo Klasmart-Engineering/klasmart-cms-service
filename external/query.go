@@ -172,11 +172,19 @@ func subFetch(ctx context.Context, operator *entity.Operator, argument SubTempla
 			log.Any("operator", operator))
 		return err
 	}
+
+	for _, e := range res.Errors {
+		if e.Extensions.Exception.Code != "ERR_NON_EXISTENT_ENTITY" {
+			log.Error(ctx, "subFetch: data has error",
+				log.Err(res.Errors),
+				log.Any("operator", operator))
+			return res.Errors
+		}
+	}
 	if res.Errors != nil {
-		log.Error(ctx, "subFetch: data has error",
+		log.Warn(ctx, "subFetch: non exist",
 			log.Err(res.Errors),
 			log.Any("operator", operator))
-		return res.Errors
 	}
 	return nil
 }
