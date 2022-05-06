@@ -177,7 +177,7 @@ func (s *Server) getAssessmentsSummary(c *gin.Context) {
 // @ID getStudentAssessments
 // @Accept json
 // @Produce json
-// @Param type query string true "type search, the value of 'home_fun_study' will be deprecated in the future,please use 'OfflineStudy' instead" enums(OfflineClass,OnlineClass,OnlineStudy,OfflineStudy,home_fun_study,ReviewStudy)
+// @Param type query string true "type search, the value of 'home_fun_study' is deprecated,please use 'OfflineStudy' instead" enums(OfflineClass,OnlineClass,OnlineStudy,OfflineStudy,home_fun_study,ReviewStudy)
 // @Param status query string false "status search" enums(NotStarted,InProgress,Done,Resubmitted,Completed)
 // @Param teacher_id query string false "teacher id search"
 // @Param assessment_id query string false "assessment id search"
