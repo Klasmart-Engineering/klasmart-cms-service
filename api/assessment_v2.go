@@ -177,12 +177,12 @@ func (s *Server) getAssessmentsSummary(c *gin.Context) {
 // @ID getStudentAssessments
 // @Accept json
 // @Produce json
-// @Param type query string true "type search, OfflineStudy:home_fun_study" enums(OfflineClass,OnlineClass,OnlineStudy,OfflineStudy,home_fun_study,ReviewStudy)
+// @Param type query string true "type search, the value of 'home_fun_study' is deprecated,please use 'OfflineStudy' instead" enums(OfflineClass,OnlineClass,OnlineStudy,OfflineStudy,home_fun_study,ReviewStudy)
 // @Param status query string false "status search" enums(NotStarted,InProgress,Done,Resubmitted,Completed)
 // @Param teacher_id query string false "teacher id search"
 // @Param assessment_id query string false "assessment id search"
 // @Param schedule_ids query string false "schedule ids search"
-// @Param order_by query string false "order by" enums(create_at,-create_at,in_progress_at,-in_progress_at,done_at,-done_at,resubmitted_at,-resubmitted_at,complete_at,-complete_at) default(-create_at)
+// @Param order_by query string false "order by" enums(create_at,-create_at,in_progress_at,-in_progress_at,done_at,-done_at,resubmitted_at,-resubmitted_at,completed_at,-completed_at) default(-create_at)
 // @Param created_ge query string false "created_at greater search"
 // @Param created_le query string false "created_at less search"
 // @Param in_progress_ge query string false "in_progress_at greater search"

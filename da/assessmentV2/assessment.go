@@ -233,9 +233,9 @@ func (o StudentAssessmentOrderBy) ToSQL() string {
 		return "resubmitted_at"
 	case "-resubmitted_at":
 		return "resubmitted_at desc"
-	case "complete_at":
+	case "completed_at":
 		return "completed_at"
-	case "-complete_at":
+	case "-completed_at":
 		return "completed_at desc"
 	default:
 		return "create_at desc"
