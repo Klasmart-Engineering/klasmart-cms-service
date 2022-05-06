@@ -228,9 +228,9 @@ func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseSomeContent(ctx
 				continue
 			}
 
-			if scoreItem.Content.ParentID != "" {
-				continue
-			}
+			//if scoreItem.Content.ParentID != "" {
+			//	continue
+			//}
 
 			contentKey := aes.ParseTreeID(scoreItem.Content)
 			if _, ok := contentMap[contentKey]; !ok {
