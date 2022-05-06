@@ -95,7 +95,7 @@ func (s *Server) getAssessmentDetailV2(c *gin.Context) {
 
 // @Summary
 // @Description update assessment
-// @Tags Assessment
+// @Tags assessments
 // @ID updateAssessmentV2
 // @Accept json
 // @Produce json
