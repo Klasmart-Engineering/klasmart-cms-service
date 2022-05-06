@@ -715,7 +715,7 @@ func (l *learningSummaryReportModel) QueryAssignmentsSummaryV2(ctx context.Conte
 		Items: items,
 	}
 	for _, item := range items {
-		switch item.Type {
+		switch item.AssessmentType {
 		case entity.AssessmentTypeHomeFunStudy:
 			res.HomeFunStudyCount++
 		case entity.AssessmentTypeStudy:

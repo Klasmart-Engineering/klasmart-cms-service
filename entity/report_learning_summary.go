@@ -142,7 +142,7 @@ type QueryAssignmentsSummaryResultV2 struct {
 }
 
 type AssignmentsSummaryItemV2 struct {
-	Type            AssessmentType   `json:"assessment_type" gorm:"column:assessment_type" enums:"class,live,study,home_fun_study"`
+	AssessmentType  AssessmentType   `json:"assessment_type" gorm:"column:assessment_type" enums:"class,live,study,home_fun_study"`
 	Status          AssessmentStatus `json:"status" gorm:"column:status" enums:"in_progress,complete"`
 	AssessmentTitle string           `json:"assessment_title" gorm:"column:assessment_title" `
 	LessonPlanName  string           `json:"lesson_plan_name" gorm:"column:lesson_plan_name" `
