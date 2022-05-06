@@ -677,7 +677,6 @@ func (s *Server) querySharedContent(c *gin.Context) {
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
-// @Param dir_path query string false "dir_path"
 // @Param parent_id query string false "parent_id"
 // @Tags content
 // @Success 200 {object} entity.QuerySharedContentV2Response
