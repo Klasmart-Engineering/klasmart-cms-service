@@ -210,10 +210,9 @@ func (aes *AssessmentExternalService) deconstructUserRoomInfo(userRoomInfos []*R
 
 // TODO: refactor
 func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseSomeContent(ctx context.Context, userScores []*external.H5PUserScores, studentCount int) float64 {
-	attemptedCount := 0
 	contentCount := 0
 	contentMap := make(map[string]struct{})
-
+	attemptedMap := make(map[string]struct{})
 	for _, item := range userScores {
 		if item.User == nil {
 			continue
@@ -228,17 +227,15 @@ func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseSomeContent(ctx
 				continue
 			}
 
-			//if scoreItem.Content.ParentID != "" {
-			//	continue
-			//}
-
 			contentKey := aes.ParseTreeID(scoreItem.Content)
 			if _, ok := contentMap[contentKey]; !ok {
 				contentCount++
 				contentMap[contentKey] = struct{}{}
 			}
+
 			if scoreItem.Seen {
-				attemptedCount++
+				userContentKey := fmt.Sprintf("%s:%s", item.User.UserID, contentKey)
+				attemptedMap[userContentKey] = struct{}{}
 			}
 		}
 	}
@@ -246,6 +243,7 @@ func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseSomeContent(ctx
 	var result float64
 
 	total := float64(studentCount * contentCount)
+	attemptedCount := len(attemptedMap)
 	if total > 0 {
 		result = float64(attemptedCount) / total
 
@@ -265,7 +263,6 @@ func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseSomeContent(ctx
 		log.Int("contentCount", contentCount),
 		log.Int("attemptedCount", attemptedCount),
 		log.Any("contentMap", contentMap),
-		log.Any("userScores", userScores),
 	)
 	return result
 }
