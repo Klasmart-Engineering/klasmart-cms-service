@@ -258,7 +258,7 @@ func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseSomeContent(ctx
 		}
 	}
 
-	log.Debug(ctx, "calcRoomCompleteRate debug",
+	log.Debug(ctx, "calcRoomCompleteRate info debug",
 		log.Int("studentCount", studentCount),
 		log.Int("contentCount", contentCount),
 		log.Int("attemptedCount", attemptedCount),
