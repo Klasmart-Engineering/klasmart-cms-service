@@ -413,6 +413,7 @@ type ContentConditionRequest struct {
 	Program            []string `json:"program"`
 	SourceType         string   `json:"source_type"`
 	DirPath            string   `json:"dir_path"`
+	ParentID           string   `json:"parent_id"`
 	ContentName        string   `json:"content_name"`
 	DataSourceID       string   `json:"data_source_id"`
 
