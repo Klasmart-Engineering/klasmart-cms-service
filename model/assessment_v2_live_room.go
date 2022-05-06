@@ -260,6 +260,13 @@ func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseSomeContent(ctx
 		}
 	}
 
+	log.Debug(ctx, "calcRoomCompleteRate debug",
+		log.Int("studentCount", studentCount),
+		log.Int("contentCount", contentCount),
+		log.Int("attemptedCount", attemptedCount),
+		log.Any("contentMap", contentMap),
+		log.Any("userScores", userScores),
+	)
 	return result
 }
 
