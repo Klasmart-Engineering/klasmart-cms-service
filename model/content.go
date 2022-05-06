@@ -137,6 +137,7 @@ type IContentModel interface {
 
 	//For authed content
 	SearchSharedContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
+	SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (response entity.QuerySharedContentV2Response, err error)
 
 	CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (ContentData, error)
 	ConvertContentObj(ctx context.Context, tx *dbo.DBContext, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error)
@@ -747,7 +748,6 @@ func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, co
 
 	return count, contentWithDetails, nil
 }
-
 func (cm *ContentModel) searchContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	count, objs, err := da.GetContentDA().SearchContentUnSafe(ctx, tx, condition)
 	if err != nil {
@@ -1208,6 +1208,31 @@ func (cm *ContentModel) SearchSharedContent(ctx context.Context, tx *dbo.DBConte
 	}
 
 	return response.Total, response.Contents, nil
+}
+func (cm *ContentModel) SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, op *entity.Operator) (response entity.QuerySharedContentV2Response, err error) {
+	response, err = da.GetContentDA().SearchSharedContentV2(ctx, tx, condition, op)
+	if err != nil {
+		return
+	}
+
+	// fill author name
+	var userIDs []string
+	for _, item := range response.Items {
+		userIDs = append(userIDs, item.Author)
+	}
+	if len(userIDs) <= 0 {
+		return
+	}
+	users, err := external.GetUserServiceProvider().BatchGetNameMap(ctx, op, userIDs)
+	if err != nil {
+		return
+	}
+	for _, item := range response.Items {
+		if name, ok := users[item.Author]; ok {
+			item.AuthorName = name
+		}
+	}
+	return
 }
 
 func (cm *ContentModel) searchSharedContent(ctx context.Context, condition interface{}) (interface{}, error) {

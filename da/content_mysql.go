@@ -619,3 +619,117 @@ FROM
 WHERE ` + rawQuery1 + `
 )) AS records;`
 }
+
+func (cd *ContentMySQLDA) SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, op *entity.Operator) (response entity.QuerySharedContentV2Response, err error) {
+	response.Items = []*entity.QuerySharedContentV2Item{}
+	sbFolderID := NewSqlBuilder(ctx, `
+select id from cms_folder_items cfi 
+where cfi.id in (
+	SELECT
+		csf.folder_id
+	from
+		cms_shared_folders csf
+	where
+		csf.org_id in (?)
+		and csf.delete_at = 0
+		 
+	) 
+and cfi.parent_id = ?
+`,
+		[]interface{}{op.OrgID, constant.ShareToAll},
+		condition.ParentID,
+	)
+
+	sbFolderSelect := NewSqlBuilder(ctx, `
+id,
+? as content_type,
+name,
+thumbnail,
+cfi.creator as author,
+? as publish_status,
+cfi.items_count 
+`, entity.AliasContentTypeFolder, entity.ContentStatusPublished)
+	sbParentID := NewSqlBuilder(ctx, `
+and cfi.parent_id = ?
+`, condition.ParentID)
+	sbFolder := NewSqlBuilder(ctx, `
+select 
+	{{.sbFolderSelect}}
+from cms_folder_items cfi 
+where  cfi.id  in ({{.sbFolderID}})
+{{.sbParentID}}
+`).Replace(ctx, "sbFolderSelect", sbFolderSelect).
+		Replace(ctx, "sbFolderID", sbFolderID).
+		Replace(ctx, "sbParentID", sbParentID)
+	sb := NewSqlBuilder(ctx, `
+{{.sbFolder}}
+{{.sbContent}}
+`).Replace(ctx, "sbFolder", sbFolder)
+	sbContent := NewSqlBuilder(ctx, ``)
+	if condition.ParentID != "/" {
+		sqlWhere := strings.Builder{}
+		sqlWhere.WriteString(`
+where  cc.parent_folder = ?
+and cc.publish_status = ?
+`)
+		argsWhere := []interface{}{
+			condition.ParentID,
+			entity.ContentStatusPublished,
+		}
+		if utils.ContainsString(condition.GroupNames, entity.LessonPlanGroupNameMoreFeaturedContent.String()) {
+			sqlWhere.WriteString(`
+and EXISTS ( 
+	SELECT
+		1
+	FROM
+		cms_content_properties ccp
+	WHERE
+		ccp.property_type = ?
+		AND ccp.property_id not IN (select program_id from programs_groups  )
+`)
+			argsWhere = append(argsWhere, entity.ContentPropertyTypeProgram)
+
+		} else if len(condition.Program) > 0 {
+			sqlWhere.WriteString(`
+and EXISTS ( 
+	SELECT
+		1
+	FROM
+		cms_content_properties ccp
+	WHERE
+		ccp.property_type = ?
+		AND ccp.property_id  IN (?)
+`)
+			argsWhere = append(argsWhere, entity.ContentPropertyTypeProgram, condition.Program)
+		}
+		sbWhere := NewSqlBuilder(ctx, sqlWhere.String(), argsWhere...)
+
+		sqlContent := `
+union all
+select 
+	cc.id,
+	cc.	content_type,
+	cc.content_name as name,
+	cc.thumbnail ,
+	cc.author ,
+	cc.publish_status ,
+	0 as items_count
+from cms_contents cc 
+{{.sbWhere}}
+`
+		sbContent = NewSqlBuilder(ctx, sqlContent, argsWhere...).Replace(ctx, "sbWhere", sbWhere)
+	}
+	sb = sb.Replace(ctx, "sbContent", sbContent)
+	sql, args, err := sb.Build(ctx)
+	if err != nil {
+		return
+	}
+	response.Total, err = cd.PageRawSQL(ctx, &response.Items, condition.OrderBy, sql, dbo.Pager{
+		Page:     int(condition.Pager.PageIndex),
+		PageSize: int(condition.Pager.PageSize),
+	}, args...)
+	if err != nil {
+		return
+	}
+	return
+}

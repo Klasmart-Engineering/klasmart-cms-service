@@ -677,7 +677,7 @@ func (s *Server) querySharedContent(c *gin.Context) {
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
-// @Param dir_path query string false "dir_path"
+// @Param parent_id query string false "parent_id"
 // @Tags content
 // @Success 200 {object} entity.QuerySharedContentV2Response
 // @Failure 500 {object} InternalServerErrorResponse
@@ -687,13 +687,14 @@ func (s *Server) querySharedContentV2(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := s.queryContentCondition(c, op)
-	total, results, err := model.GetContentModel().SearchSharedContent(ctx, dbo.MustGetDB(ctx), &condition, op)
+	condition.ParentID = c.Query("parent_id")
+	if condition.ParentID == "" {
+		condition.ParentID = "/"
+	}
+	response, err := model.GetContentModel().SearchSharedContentV2(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, s.convertQueryContentResult(ctx, &entity.ContentInfoWithDetailsResponse{
-			Total:       total,
-			ContentList: results,
-		}))
+		c.JSON(http.StatusOK, response)
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoPermissionToQuery:

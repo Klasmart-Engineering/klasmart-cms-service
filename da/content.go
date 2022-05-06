@@ -36,6 +36,7 @@ type IContentDA interface {
 	GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error)
 
 	CleanCache(ctx context.Context)
+	SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, op *entity.Operator) (response entity.QuerySharedContentV2Response, err error)
 }
 
 var (
@@ -177,6 +178,9 @@ func (c ContentDA) CleanCache(ctx context.Context) {
 	if err != nil {
 		log.Warn(ctx, "clean content folder cache failed", log.Err(err))
 	}
+}
+func (c ContentDA) SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, op *entity.Operator) (response entity.QuerySharedContentV2Response, err error) {
+	return c.mysqlDA.SearchSharedContentV2(ctx, tx, condition, op)
 }
 
 type contentFolderRequest struct {
