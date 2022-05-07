@@ -7,19 +7,19 @@ import (
 )
 
 type ProgramFilter struct {
-	ID             *UUIDFilter         `gqls:"id,omitempty"`
-	Name           *StringFilter       `gqls:"name,omitempty"`
-	Status         *StringFilter       `gqls:"status,omitempty"`
-	System         *BooleanFilter      `gqls:"system,omitempty"`
-	OrganizationID *UUIDFilter         `gqls:"organizationId,omitempty"`
-	GradeID        *UUIDFilter         `gqls:"gradeId,omitempty"`
-	AgeRangeFrom   *AgeRangeTypeFilter `gqls:"ageRangeFrom,omitempty"`
-	AgeRangeTo     *AgeRangeTypeFilter `gqls:"ageRangeTo,omitempty"`
-	SubjectID      *UUIDFilter         `gqls:"subjectId,omitempty"`
-	SchoolID       *UUIDFilter         `gqls:"schoolId,omitempty"`
-	ClassID        *UUIDFilter         `gqls:"classId,omitempty"`
-	AND            []ProgramFilter     `gqls:"AND,omitempty"`
-	OR             []ProgramFilter     `gqls:"OR,omitempty"`
+	ID             *UUIDFilter         `json:"id,omitempty" gqls:"id,omitempty"`
+	Name           *StringFilter       `json:"name,omitempty" gqls:"name,omitempty"`
+	Status         *StringFilter       `json:"status,omitempty" gqls:"status,omitempty"`
+	System         *BooleanFilter      `json:"system,omitempty" gqls:"system,omitempty"`
+	OrganizationID *UUIDFilter         `json:"organizationId,omitempty" gqls:"organizationId,omitempty"`
+	GradeID        *UUIDFilter         `json:"gradeId,omitempty" gqls:"gradeId,omitempty"`
+	AgeRangeFrom   *AgeRangeTypeFilter `json:"ageRangeFrom,omitempty" gqls:"ageRangeFrom,omitempty"`
+	AgeRangeTo     *AgeRangeTypeFilter `json:"ageRangeTo,omitempty" gqls:"ageRangeTo,omitempty"`
+	SubjectID      *UUIDFilter         `json:"subjectId,omitempty" gqls:"subjectId,omitempty"`
+	SchoolID       *UUIDFilter         `json:"schoolId,omitempty" gqls:"schoolId,omitempty"`
+	ClassID        *UUIDFilter         `json:"classId,omitempty" gqls:"classId,omitempty"`
+	AND            []ProgramFilter     `json:"AND,omitempty" gqls:"AND,omitempty"`
+	OR             []ProgramFilter     `json:"OR,omitempty" gqls:"OR,omitempty"`
 }
 
 func (ProgramFilter) FilterName() FilterType {
@@ -59,13 +59,10 @@ func (pcs AmsProgramConnectionService) GetByOrganization(ctx context.Context, op
 	condition := NewCondition(options...)
 
 	filter := ProgramFilter{
-		OrganizationID: &UUIDFilter{
-			Operator: UUIDOperator(OperatorTypeEq),
-			Value:    UUID(operator.OrgID),
-		},
-		Status: &StringFilter{
-			Operator: StringOperator(OperatorTypeEq),
-			Value:    Active.String(),
+		Status: &StringFilter{Operator: StringOperator(OperatorTypeEq), Value: Active.String()},
+		OR: []ProgramFilter{
+			{OrganizationID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(operator.OrgID)}},
+			{System: &BooleanFilter{Operator: OperatorTypeEq, Value: true}},
 		},
 	}
 	if condition.Status.Valid {
@@ -78,7 +75,6 @@ func (pcs AmsProgramConnectionService) GetByOrganization(ctx context.Context, op
 		}
 	}
 
-	var programs []*Program
 	var pages []ProgramsConnectionResponse
 	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
@@ -88,8 +84,26 @@ func (pcs AmsProgramConnectionService) GetByOrganization(ctx context.Context, op
 			log.Any("filter", filter))
 		return nil, err
 	}
+
+	if len(pages) == 0 {
+		log.Warn(ctx, "program is empty",
+			log.Any("operator", operator),
+			log.Any("filter", filter))
+		return []*Program{}, nil
+	}
+
+	programs := make([]*Program, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
 	for _, p := range pages {
 		for _, v := range p.Edges {
+			if _, ok := exists[v.Node.ID]; ok {
+				log.Warn(ctx, "program exist",
+					log.Any("program", v),
+					log.Any("operator", operator),
+					log.Any("filter", filter))
+				continue
+			}
+			exists[v.Node.ID] = true
 			obj := &Program{
 				ID:   v.Node.ID,
 				Name: v.Node.Name,

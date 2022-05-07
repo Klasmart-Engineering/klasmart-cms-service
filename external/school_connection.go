@@ -156,8 +156,8 @@ func (ascs AmsSchoolConnectionService) GetByOperator(ctx context.Context, operat
 			sch := School{
 				ID:             v.Node.ID,
 				Name:           v.Node.Name,
-				Status:         APStatus(v.Node.Status),
 				OrganizationId: v.Node.OrganizationId,
+				Status:         APStatus(v.Node.Status),
 			}
 			schools = append(schools, &sch)
 		}
@@ -215,9 +215,10 @@ func (ascs AmsSchoolConnectionService) GetByUsers(ctx context.Context, operator 
 					continue
 				}
 				school := &School{
-					ID:     node.ID,
-					Name:   node.Name,
-					Status: APStatus(node.Status),
+					ID:             node.ID,
+					Name:           node.Name,
+					Status:         APStatus(node.Status),
+					OrganizationId: node.OrganizationId,
 				}
 				schoolsMap[k] = append(schoolsMap[k], school)
 			}
@@ -248,9 +249,10 @@ func (ascs AmsSchoolConnectionService) GetByClasses(ctx context.Context, operato
 					continue
 				}
 				school := &School{
-					ID:     edge.Node.ID,
-					Name:   edge.Node.Name,
-					Status: APStatus(edge.Node.Status),
+					ID:             edge.Node.ID,
+					Name:           edge.Node.Name,
+					Status:         APStatus(edge.Node.Status),
+					OrganizationId: edge.Node.OrganizationId,
 				}
 				schoolsMap[k] = append(schoolsMap[k], school)
 			}

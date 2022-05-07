@@ -72,6 +72,12 @@ func (pcs OrganizationsConnectionResponse) GetPageInfo() *ConnectionPageInfo {
 }
 
 func (aocs AmsOrganizationConnectionService) GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string, options ...APOption) (map[string]*Organization, error) {
+	if len(classIDs) == 0 {
+		log.Warn(ctx, "GetByClasses: class is empty",
+			log.Any("operator", operator),
+			log.Strings("class_ids", classIDs))
+		return map[string]*Organization{}, nil
+	}
 	schools, err := GetSchoolServiceProvider().GetByClasses(ctx, operator, classIDs)
 	if err != nil {
 		log.Error(ctx, "GetByClasses: get school failed",
@@ -81,7 +87,7 @@ func (aocs AmsOrganizationConnectionService) GetByClasses(ctx context.Context, o
 		return nil, err
 	}
 	if len(schools) == 0 {
-		log.Debug(ctx, "GetByClasses: school is empty",
+		log.Warn(ctx, "GetByClasses: school is empty",
 			log.Any("operator", operator),
 			log.Strings("class_ids", classIDs))
 		return map[string]*Organization{}, nil
@@ -127,6 +133,15 @@ func (aocs AmsOrganizationConnectionService) GetByClasses(ctx context.Context, o
 			log.Any("operator", operator),
 			log.Any("filter", filter))
 		return nil, err
+	}
+
+	if len(pages) == 0 {
+		log.Warn(ctx, "GetByClasses: organization is empty",
+			log.Any("school", schools),
+			log.Any("filter", filter),
+			log.Any("operator", operator),
+			log.Strings("class_ids", classIDs))
+		return map[string]*Organization{}, nil
 	}
 
 	orgMap := make(map[string]*Organization)
@@ -176,6 +191,7 @@ func (aocs AmsOrganizationConnectionService) GetNameMapByOrganizationOrSchool(ct
 	}
 
 	nameMap := make(map[string]string)
+	var mapLock sync.RWMutex
 	var orgErr, schErr error
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -188,14 +204,16 @@ func (aocs AmsOrganizationConnectionService) GetNameMapByOrganizationOrSchool(ct
 			})
 		}
 		var pages []OrganizationsConnectionResponse
-		err := pageQuery(ctx, operator, filter, &pages)
-		if err != nil {
-
-		}
 		orgErr = pageQuery(ctx, operator, filter, &pages)
-		if err != nil {
+		if orgErr != nil {
 			log.Error(ctx, "GetNameMapByOrganizationOrSchool: pageQuery organization failed",
-				log.Err(err),
+				log.Err(orgErr),
+				log.Any("operator", operator),
+				log.Any("filter", filter))
+			return
+		}
+		if len(pages) == 0 {
+			log.Warn(ctx, "organization is empty",
 				log.Any("operator", operator),
 				log.Any("filter", filter))
 			return
@@ -203,7 +221,9 @@ func (aocs AmsOrganizationConnectionService) GetNameMapByOrganizationOrSchool(ct
 		//var organizations []*Organization
 		for _, page := range pages {
 			for _, v := range page.Edges {
+				mapLock.RLock()
 				nameMap[v.Node.ID] = v.Node.Name
+				mapLock.RUnlock()
 			}
 		}
 	}()
@@ -216,22 +236,25 @@ func (aocs AmsOrganizationConnectionService) GetNameMapByOrganizationOrSchool(ct
 			})
 		}
 		var pages []SchoolsConnectionResponse
-		err := pageQuery(ctx, operator, filter, &pages)
-		if err != nil {
-
-		}
 		schErr = pageQuery(ctx, operator, filter, &pages)
-		if err != nil {
+		if schErr != nil {
 			log.Error(ctx, "GetNameMapByOrganizationOrSchool: pageQuery school failed",
-				log.Err(err),
+				log.Err(schErr),
 				log.Any("operator", operator),
 				log.Any("filter", filter))
 			return
 		}
-
+		if len(pages) == 0 {
+			log.Warn(ctx, "school is empty",
+				log.Any("operator", operator),
+				log.Any("filter", filter))
+			return
+		}
 		for _, page := range pages {
 			for _, v := range page.Edges {
+				mapLock.RLock()
 				nameMap[v.Node.ID] = v.Node.Name
+				mapLock.RUnlock()
 			}
 		}
 	}()
@@ -277,9 +300,24 @@ func (aocs AmsOrganizationConnectionService) GetByUserID(ctx context.Context, op
 			log.Any("filter", filter))
 		return nil, err
 	}
-	var organizations []*Organization
+	if len(pages) == 0 {
+		log.Warn(ctx, "org is empty",
+			log.Any("operator", operator),
+			log.Any("filter", filter))
+		return []*Organization{}, nil
+	}
+	organizations := make([]*Organization, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
 	for _, page := range pages {
 		for _, v := range page.Edges {
+			if _, ok := exists[v.Node.ID]; ok {
+				log.Warn(ctx, "organization exists",
+					log.Any("user", v.Node),
+					log.Any("operator", operator),
+					log.Any("filter", filter))
+				continue
+			}
+			exists[v.Node.ID] = true
 			org := Organization{
 				ID:     v.Node.ID,
 				Name:   v.Node.Name,

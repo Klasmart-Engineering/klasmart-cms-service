@@ -75,7 +75,6 @@ func (scs AmsSubjectConnectionService) GetByProgram(ctx context.Context, operato
 			Value:    condition.System.Valid,
 		}
 	}
-	var subjects []*Subject
 	var pages []SubjectsConnectionResponse
 	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
@@ -85,8 +84,25 @@ func (scs AmsSubjectConnectionService) GetByProgram(ctx context.Context, operato
 			log.Any("filter", filter))
 		return nil, err
 	}
+	if len(pages) == 0 {
+		log.Warn(ctx, "subject is empty",
+			log.Any("operator", operator),
+			log.Any("filter", filter))
+		return []*Subject{}, nil
+	}
+
+	subjects := make([]*Subject, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
 	for _, p := range pages {
 		for _, v := range p.Edges {
+			if _, ok := exists[v.Node.ID]; ok {
+				log.Warn(ctx, "subject exists",
+					log.Any("subject", v.Node),
+					log.Any("operator", operator),
+					log.Any("filter", filter))
+				continue
+			}
+			exists[v.Node.ID] = true
 			obj := &Subject{
 				ID:     v.Node.ID,
 				Name:   v.Node.Name,
@@ -102,25 +118,21 @@ func (scs AmsSubjectConnectionService) GetByOrganization(ctx context.Context, op
 	condition := NewCondition(options...)
 
 	filter := SubjectFilter{
-		OrganizationID: &UUIDFilter{
-			Operator: UUIDOperator(OperatorTypeEq),
-			Value:    UUID(operator.OrgID),
-		},
 		Status: &StringFilter{
 			Operator: StringOperator(OperatorTypeEq),
 			Value:    Active.String(),
+		},
+		OR: []SubjectFilter{
+			{OrganizationID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(operator.OrgID)}},
+			{System: &BooleanFilter{Operator: OperatorTypeEq, Value: true}},
 		},
 	}
 	if condition.Status.Valid {
 		filter.Status.Value = condition.Status.Status.String()
 	}
 	if condition.System.Valid {
-		filter.System = &BooleanFilter{
-			Operator: OperatorTypeEq,
-			Value:    condition.System.Valid,
-		}
+		filter.System = &BooleanFilter{Operator: OperatorTypeEq, Value: condition.System.Valid}
 	}
-	var subjects []*Subject
 	var pages []SubjectsConnectionResponse
 	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
@@ -130,8 +142,24 @@ func (scs AmsSubjectConnectionService) GetByOrganization(ctx context.Context, op
 			log.Any("filter", filter))
 		return nil, err
 	}
+	if len(pages) == 0 {
+		log.Warn(ctx, "subject is empty",
+			log.Any("operator", operator),
+			log.Any("filter", filter))
+		return []*Subject{}, nil
+	}
+	subjects := make([]*Subject, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
 	for _, p := range pages {
 		for _, v := range p.Edges {
+			if _, ok := exists[v.Node.ID]; ok {
+				log.Warn(ctx, "subject exists",
+					log.Any("subject", v.Node),
+					log.Any("operator", operator),
+					log.Any("filter", filter))
+				continue
+			}
+			exists[v.Node.ID] = true
 			obj := &Subject{
 				ID:     v.Node.ID,
 				Name:   v.Node.Name,

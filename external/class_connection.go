@@ -168,7 +168,7 @@ func (accs AmsClassConnectionService) GetByUserIDs(ctx context.Context, operator
 			log.Strings("user_ids", userIDs))
 		return nil, sErr
 	}
-	var classesMap map[string][]*Class
+	classesMap := make(map[string][]*Class)
 	for _, k := range IDs {
 		if teachClasses[k] == nil && studyClasses[k] != nil {
 			classesMap[k] = studyClasses[k]

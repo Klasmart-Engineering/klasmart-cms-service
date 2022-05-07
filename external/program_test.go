@@ -2,6 +2,7 @@ package external
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -28,22 +29,21 @@ func TestAmsProgramService_BatchGet(t *testing.T) {
 	time.Sleep(time.Second)
 }
 
+var prgToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MTg4OTg4OSwiaXNzIjoia2lkc2xvb3AifQ.RQMWjHbKtkv5LsD478cQt_BY7ZHTxRo1sUEJN1ymaZyXwIZXpVcjNHW8jURw4U9GYgg4pzfnCqmaD1X7XoYSL7cWgzS8_d6XrcWmn5kVuC4BBoEdg9JfPxoxfQCZsmDKM6kds-cJu7HH2RM_U8a55Az4tNhZ0ZQ8xZKe4pEJBeQJcUsCbdnH0LF-Lak2OWoP3vQ9bI_sA3ak0gvfRpBpm8_1B8ZDiR2VrkOr_h2sl-iIdQBW7LbPd2EI4nr6RkZyXytTfgiRpCAmbn3OYZOTWzf5OMsubE2NeCyZKEIJZc0rmMTGwVTe2tpXudiE21W-pFnPk97PFQFhPADFfgbN3A"
+
 func TestAmsProgramService_GetByOrganization(t *testing.T) {
-	programs, err := GetProgramServiceProvider().GetByOrganization(context.TODO(), testOperator, WithStatus(Inactive))
+	ctx := context.Background()
+	testOperator.Token = prgToken
+	provider := AmsProgramConnectionService{}
+	programs1, err := provider.AmsProgramService.GetByOrganization(ctx, testOperator)
 	if err != nil {
 		t.Errorf("GetProgramServiceProvider().GetByOrganization() error = %v", err)
 		return
 	}
-
-	if len(programs) == 0 {
-		t.Error("GetProgramServiceProvider().GetByOrganization() get empty slice")
+	programs2, err := provider.GetByOrganization(ctx, testOperator)
+	if err != nil {
+		t.Errorf("GetProgramServiceProvider().GetByOrganization() error = %v", err)
 		return
 	}
-
-	for _, program := range programs {
-		if program == nil {
-			t.Error("GetProgramServiceProvider().GetByOrganization() get null")
-			return
-		}
-	}
+	fmt.Println("lens:", len(programs1) == len(programs2))
 }

@@ -2,6 +2,7 @@ package external
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -38,21 +39,39 @@ func TestAmsUserService_GetUserCount(t *testing.T) {
 
 }
 
+var usrToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MTkwOTU1NiwiaXNzIjoia2lkc2xvb3AifQ.kE2Bp7yFXhFeFqKclBRNhupZimdXCJBol64lMqqR2y_CWnTwF0WaU_eqqkH5YXmHtPHSUpME6ZWoaHDQNcuvRQ2QXSTHAIWLeM9t6WyPVKAZYMsbURdlHSrvqqxW_RzZgsQlYl3-2ra6DGHGrFj2hb678J07wGixvwrz5xl9LoEVIb3IkZ3nFLRWy3FiJ31cbZxJX8WtkgjVRO-V9mcImbwcIJluh3JqkjGoApEacldnAvuxpebLAJkQdkBdezOJwx38RH97CP_8Q7YzoeNkgFp6bNPPC0hSxUzDjY86way0cry2l0NNgtS3zGkw7O4FpxzQZPO_dhGbDGJCOK7q1A"
+
 // userID: 000d653d-7961-447c-8d66-ad8c4a40eae6
 var orgID = "6300b3c5-8936-497e-ba1f-d67164b59c65"
 
 func TestGetByOrganization(t *testing.T) {
 	ctx := context.Background()
-	//uf := UserFilter{
-	//	UserID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: "000d653d-7961-447c-8d66-ad8c4a40eae6"},
-	//}
-	GetUserServiceProvider().GetByOrganization(ctx, testOperator, orgID)
+	testOperator.Token = usrToken
+	ID := "6300b3c5-8936-497e-ba1f-d67164b59c65"
+	provider := AmsUserConnectionService{}
+	users1, err := provider.AmsUserService.GetByOrganization(ctx, testOperator, ID)
+	if err != nil {
+		t.Errorf("GetUserServiceProvider().GetByProgram() error = %v", err)
+	}
+	users2, err := provider.GetByOrganization(ctx, testOperator, ID)
+	if err != nil {
+		t.Errorf("GetUserServiceProvider().GetByProgram() error = %v", err)
+	}
+	fmt.Println("len:", len(users1) == len(users2))
 }
 
-var utestToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MTA1ODE4NCwiaXNzIjoia2lkc2xvb3AifQ.Abs8v_zbaKfC7WQmS3-AXsddZruG8jq-AgyBrtaVyN3XGeSIFZvvSeJ8xiJug2QEWl8Afjfer5ndZph__qZ2rBCL-SMcF-rw-375cfvh6zOyZv1n7r8SereMnLugkY5nS2XCU-BPPgBVauf0ugONoLn_pKpN_nZ7jHr7U_OyKEuUeQ_CAmwRVGwpSFbiAtTdqvAYvrBr5-o52y0G_-LWiZ8GlM725NW87gUEHNb8Y7oSRN1xSz0mPObC1xjV_xlrT3g736mFmXBa0IbppDUFsqplEB-q_fHVBWyokF8G_qhESOeq167LGRyX0g_DPxk4HAGPBwkYe5qUOF-N5_yloQ"
-
-func TestGetBy(t *testing.T) {
+func TestGetOnlyUnderOrgUsers(t *testing.T) {
 	ctx := context.Background()
-	testOperator.Token = utestToken
-	GetUserServiceProvider().GetOnlyUnderOrgUsers(ctx, testOperator, orgID)
+	testOperator.Token = usrToken
+	provider := AmsUserConnectionService{}
+	ID := "6300b3c5-8936-497e-ba1f-d67164b59c65"
+	users1, err := provider.AmsUserService.GetOnlyUnderOrgUsers(ctx, testOperator, ID)
+	if err != nil {
+		t.Errorf("GetUserServiceProvider().GetByProgram() error = %v", err)
+	}
+	users2, err := provider.GetOnlyUnderOrgUsers(ctx, testOperator, ID)
+	if err != nil {
+		t.Errorf("GetUserServiceProvider().GetByProgram() error = %v", err)
+	}
+	fmt.Println("len:", len(users1) == len(users2))
 }

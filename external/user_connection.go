@@ -81,12 +81,27 @@ func (aucs AmsUserConnectionService) GetByOrganization(ctx context.Context, oper
 			log.Any("filter", filter))
 		return nil, err
 	}
-	var users []*User
+	if len(pages) == 0 {
+		log.Warn(ctx, "user is empty",
+			log.Any("operator", operator),
+			log.Any("filter", filter))
+		return []*User{}, nil
+	}
+	users := make([]*User, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
 	for _, page := range pages {
 		for _, v := range page.Edges {
+			if _, ok := exists[v.Node.ID]; ok {
+				log.Warn(ctx, "user exists",
+					log.Any("user", v.Node),
+					log.Any("operator", operator),
+					log.Any("filter", filter))
+				continue
+			}
+			exists[v.Node.ID] = true
 			user := User{
 				ID:         v.Node.ID,
-				Name:       v.Node.UserName,
+				Name:       v.Node.GivenName + " " + v.Node.FamilyName,
 				GivenName:  v.Node.GivenName,
 				FamilyName: v.Node.FamilyName,
 				Email:      v.Node.ContactInfo.Email,
@@ -119,7 +134,7 @@ func (aucs AmsUserConnectionService) GetOnlyUnderOrgUsers(ctx context.Context, o
 		for _, v := range page.Edges {
 			user := User{
 				ID:         v.Node.ID,
-				Name:       v.Node.UserName,
+				Name:       v.Node.GivenName + " " + v.Node.FamilyName,
 				GivenName:  v.Node.GivenName,
 				FamilyName: v.Node.FamilyName,
 				Email:      v.Node.ContactInfo.Email,

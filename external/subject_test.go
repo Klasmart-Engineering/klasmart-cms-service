@@ -2,6 +2,7 @@ package external
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -28,42 +29,43 @@ func TestAmsSubjectService_BatchGet(t *testing.T) {
 	time.Sleep(time.Second)
 }
 
+var sbjToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MTkwNDE0MywiaXNzIjoia2lkc2xvb3AifQ.DOPhGxQp4pCzONmp92GJWES5CJr-dz7gjGO_KyGDS6lLUqYtv-e74r3GC8s4OWFdPnYUJEp_zi5HIX-RAe-_w1Was1WSWJXjc2c9JM2CJ3OOKK-y8nTHFdFcoQc0UFwKJRfqNDc0hnU_mY1rtCUouAa7Ktpu6C8YExcNx191GFJcu4LRk-kz9GFyvdT8v5jTY1dO5RPLANdgaGVrVGnTur0ASJfh9whlMATbMlDThJXWbwA2NSIMhd8Y8ZkFDoI-3ZQoQyoVHgzscDaiK_UnfwBXRK4NPHONKcOIfXXtUvjrHYt5lfheOrx3FnkCi448dT3oCfl5V-9HSiXSKSHR6g"
+
 func TestAmsSubjectService_GetByProgram(t *testing.T) {
-	subjects, err := GetSubjectServiceProvider().GetByProgram(context.TODO(), testOperator, "04c630cc-fabe-4176-80f2-30a029907a33", WithStatus(Active))
+	ctx := context.Background()
+	testOperator.Token = sbjToken
+	ID := "04c630cc-fabe-4176-80f2-30a029907a33"
+	provider := AmsSubjectConnectionService{}
+	subjects1, err := provider.AmsSubjectService.GetByProgram(ctx, testOperator, ID, WithStatus(Active))
 	if err != nil {
 		t.Errorf("GetSubjectServiceProvider().GetByProgram() error = %v", err)
 		return
 	}
 
-	if len(subjects) == 0 {
-		t.Error("GetSubjectServiceProvider().GetByProgram() get empty slice")
+	subjects2, err := provider.GetByProgram(ctx, testOperator, ID, WithStatus(Active))
+	if err != nil {
+		t.Errorf("GetSubjectServiceProvider().GetByProgram() error = %v", err)
 		return
 	}
 
-	for _, subject := range subjects {
-		if subject == nil {
-			t.Error("GetSubjectServiceProvider().GetByProgram() get null")
-			return
-		}
-	}
+	fmt.Println("len:", len(subjects1) == len(subjects2))
 }
 
 func TestAmsSubjectService_GetByOrganization(t *testing.T) {
-	subjects, err := GetSubjectServiceProvider().GetByOrganization(context.TODO(), testOperator, WithStatus(Active))
+	ctx := context.Background()
+	testOperator.Token = sbjToken
+	provider := AmsSubjectConnectionService{}
+	subjects1, err := provider.AmsSubjectService.GetByOrganization(ctx, testOperator)
 	if err != nil {
-		t.Errorf("GetSubjectServiceProvider().GetByOrganization() error = %v", err)
+		t.Errorf("GetSubjectServiceProvider().GetByProgram() error = %v", err)
 		return
 	}
 
-	if len(subjects) == 0 {
-		t.Error("GetSubjectServiceProvider().GetByOrganization() get empty slice")
+	subjects2, err := provider.GetByOrganization(ctx, testOperator)
+	if err != nil {
+		t.Errorf("GetSubjectServiceProvider().GetByProgram() error = %v", err)
 		return
 	}
 
-	for _, subject := range subjects {
-		if subject == nil {
-			t.Error("GetSubjectServiceProvider().GetByOrganization() get null")
-			return
-		}
-	}
+	fmt.Println("len:", len(subjects1) == len(subjects2))
 }

@@ -11,18 +11,18 @@ type AmsGradeConnectionService struct {
 }
 
 type GradeFilter struct {
-	ID             *UUIDFilter    `gqls:"id,omitempty"`
-	Name           *StringFilter  `gqls:"name,omitempty"`
-	Status         *StringFilter  `gqls:"status,omitempty"`
-	System         *BooleanFilter `gqls:"system,omitempty"`
-	OrganizationID *UUIDFilter    `gqls:"organizationId,omitempty"`
-	CategoryID     *UUIDFilter    `gqls:"categoryId,omitempty"`
-	ClassID        *UUIDFilter    `gqls:"classId,omitempty"`
-	ProgramID      *UUIDFilter    `gqls:"programId,omitempty"`
-	FromGradeID    *UUIDFilter    `gqls:"fromGradeId,omitempty"`
-	ToGradeID      *UUIDFilter    `gqls:"toGradeId,omitempty"`
-	AND            []GradeFilter  `gqls:"AND,omitempty"`
-	OR             []GradeFilter  `gqls:"OR,omitempty"`
+	ID             *UUIDFilter    `json:"id,omitempty" gqls:"id,omitempty"`
+	Name           *StringFilter  `json:"name,omitempty" gqls:"name,omitempty"`
+	Status         *StringFilter  `json:"status,omitempty" gqls:"status,omitempty"`
+	System         *BooleanFilter `json:"system,omitempty" gqls:"system,omitempty"`
+	OrganizationID *UUIDFilter    `json:"organizationId,omitempty" gqls:"organizationId,omitempty"`
+	CategoryID     *UUIDFilter    `json:"categoryId,omitempty" gqls:"categoryId,omitempty"`
+	ClassID        *UUIDFilter    `json:"classId,omitempty" gqls:"classId,omitempty"`
+	ProgramID      *UUIDFilter    `json:"programId,omitempty" gqls:"programId,omitempty"`
+	FromGradeID    *UUIDFilter    `json:"fromGradeId,omitempty" gqls:"fromGradeId,omitempty"`
+	ToGradeID      *UUIDFilter    `json:"toGradeId,omitempty" gqls:"toGradeId,omitempty"`
+	AND            []GradeFilter  `json:"AND,omitempty" gqls:"AND,omitempty"`
+	OR             []GradeFilter  `json:"OR,omitempty" gqls:"OR,omitempty"`
 }
 
 func (GradeFilter) FilterName() FilterType {
@@ -41,7 +41,7 @@ type GradeSummaryNode struct {
 }
 type GradeConnectionNode struct {
 	ID        string           `json:"id" gqls:"id"`
-	Name      string           `json:"name" gqls:"id"`
+	Name      string           `json:"name" gqls:"name"`
 	Status    string           `json:"status" gqls:"status"`
 	System    bool             `json:"system" gqls:"system"`
 	FromGrade GradeSummaryNode `json:"fromGrade" gqls:"fromGrade"`
@@ -85,7 +85,6 @@ func (gcs AmsGradeConnectionService) GetByProgram(ctx context.Context, operator 
 		}
 	}
 
-	var grades []*Grade
 	var pages []GradesConnectionResponse
 	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
@@ -95,8 +94,25 @@ func (gcs AmsGradeConnectionService) GetByProgram(ctx context.Context, operator 
 			log.Any("filter", filter))
 		return nil, err
 	}
+	if len(pages) == 0 {
+		log.Warn(ctx, "grade is empty",
+			log.Any("operator", operator),
+			log.Any("filter", filter))
+		return []*Grade{}, nil
+	}
+
+	grades := make([]*Grade, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
 	for _, p := range pages {
 		for _, v := range p.Edges {
+			if _, ok := exists[v.Node.ID]; ok {
+				log.Warn(ctx, "grade exists",
+					log.Any("grade", v.Node),
+					log.Any("operator", operator),
+					log.Any("filter", filter))
+				continue
+			}
+			exists[v.Node.ID] = true
 			obj := &Grade{
 				ID:     v.Node.ID,
 				Name:   v.Node.Name,
@@ -111,26 +127,19 @@ func (gcs AmsGradeConnectionService) GetByProgram(ctx context.Context, operator 
 func (gcs AmsGradeConnectionService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Grade, error) {
 	condition := NewCondition(options...)
 	filter := GradeFilter{
-		OrganizationID: &UUIDFilter{
-			Operator: UUIDOperator(OperatorTypeEq),
-			Value:    UUID(operator.OrgID),
-		},
-		Status: &StringFilter{
-			Operator: StringOperator(OperatorTypeEq),
-			Value:    Active.String(),
+		Status: &StringFilter{Operator: StringOperator(OperatorTypeEq), Value: Active.String()},
+		OR: []GradeFilter{
+			{OrganizationID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(operator.OrgID)}},
+			{System: &BooleanFilter{Operator: OperatorTypeEq, Value: true}},
 		},
 	}
 	if condition.Status.Valid {
 		filter.Status.Value = condition.Status.Status.String()
 	}
 	if condition.System.Valid {
-		filter.System = &BooleanFilter{
-			Operator: OperatorTypeEq,
-			Value:    condition.System.Valid,
-		}
+		filter.System = &BooleanFilter{Operator: OperatorTypeEq, Value: condition.System.Valid}
 	}
 
-	var grades []*Grade
 	var pages []GradesConnectionResponse
 	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
@@ -140,8 +149,25 @@ func (gcs AmsGradeConnectionService) GetByOrganization(ctx context.Context, oper
 			log.Any("filter", filter))
 		return nil, err
 	}
+	if len(pages) == 0 {
+		log.Warn(ctx, "grade is empty",
+			log.Any("operator", operator),
+			log.Any("filter", filter))
+		return []*Grade{}, nil
+	}
+
+	grades := make([]*Grade, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
 	for _, p := range pages {
 		for _, v := range p.Edges {
+			if _, ok := exists[v.Node.ID]; ok {
+				log.Warn(ctx, "grade exists",
+					log.Any("grade", v.Node),
+					log.Any("operator", operator),
+					log.Any("filter", filter))
+				continue
+			}
+			exists[v.Node.ID] = true
 			obj := &Grade{
 				ID:     v.Node.ID,
 				Name:   v.Node.Name,
