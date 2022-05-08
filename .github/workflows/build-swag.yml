@@ -1,0 +1,35 @@
+name: Deploy to Swagger
+
+on:
+  push:
+    branches: [ cncd-01 ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.18
+  
+    - name: Cache Go Modules
+      uses: actions/cache@v3
+      env:
+        cache-name: cache-go-modules
+      with:
+        path: .go/pkg/mod/
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
+        
+    - name: Build SWAG
+      run: |
+        go env -w GOPROXY="https://goproxy.cn,direct"
+        go env -w GOPRIVATE="bitbucket.org"
+        go install github.com/swaggo/swag/cmd/swag@v1.8.1
+        ./.go/bin/swag init
+        cp docs/swagger.json api.swagger.json
