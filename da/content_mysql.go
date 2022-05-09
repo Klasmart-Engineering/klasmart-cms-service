@@ -641,26 +641,41 @@ and cfi.parent_id = ?
 	)
 
 	sbFolderSelect := NewSqlBuilder(ctx, `
-id,
+cfi.id,
 ? as content_type,
-name,
-thumbnail,
+cfi.name,
+cfi.thumbnail,
 cfi.creator as author,
 ? as publish_status,
-cfi.items_count 
+cfi.items_count,
+cfi.update_at,
+cfi.create_at,
+cfi.name as content_name
 `, entity.AliasContentTypeFolder, entity.ContentStatusPublished)
 	sbParentID := NewSqlBuilder(ctx, `
 and cfi.parent_id = ?
 `, condition.ParentID)
+	sbName := NewSqlBuilder(ctx, ``)
+	if condition.Name != "" {
+		sbName = NewSqlBuilder(ctx, `and match(cfi.name, cfi.description, cfi.keywords) against(? in boolean mode)`, condition.Name)
+	}
+	sbContentName := NewSqlBuilder(ctx, ``)
+	if condition.ContentName != "" {
+		sbContentName = NewSqlBuilder(ctx, `and cfi.name= ? `, condition.ContentName)
+	}
 	sbFolder := NewSqlBuilder(ctx, `
 select 
 	{{.sbFolderSelect}}
 from cms_folder_items cfi 
 where  cfi.id  in ({{.sbFolderID}})
 {{.sbParentID}}
+{{.sbName}}
+{{.sbContentName}}
 `).Replace(ctx, "sbFolderSelect", sbFolderSelect).
 		Replace(ctx, "sbFolderID", sbFolderID).
-		Replace(ctx, "sbParentID", sbParentID)
+		Replace(ctx, "sbParentID", sbParentID).
+		Replace(ctx, "sbName", sbName).
+		Replace(ctx, "sbContentName", sbContentName)
 	sb := NewSqlBuilder(ctx, `
 {{.sbFolder}}
 {{.sbContent}}
@@ -685,6 +700,7 @@ and EXISTS (
 		cms_content_properties ccp
 	WHERE
 		ccp.property_type = ?
+		and ccp.content_id = cc.id
 		AND ccp.property_id not IN (select program_id from programs_groups  )
 `)
 			argsWhere = append(argsWhere, entity.ContentPropertyTypeProgram)
@@ -698,9 +714,23 @@ and EXISTS (
 		cms_content_properties ccp
 	WHERE
 		ccp.property_type = ?
+		and ccp.content_id = cc.id
 		AND ccp.property_id  IN (?)
 `)
 			argsWhere = append(argsWhere, entity.ContentPropertyTypeProgram, condition.Program)
+		}
+
+		if condition.Name != "" {
+			sqlWhere.WriteString(`
+and match(cc.content_name, cc.description, cc.keywords) against(? in boolean mode)
+`)
+			argsWhere = append(argsWhere, condition.Name)
+		}
+		if condition.ContentName != "" {
+			sqlWhere.WriteString(`
+and cc.content_name = ?
+`)
+			argsWhere = append(argsWhere, condition.ContentName)
 		}
 		sbWhere := NewSqlBuilder(ctx, sqlWhere.String(), argsWhere...)
 
@@ -713,7 +743,10 @@ select
 	cc.thumbnail ,
 	cc.author ,
 	cc.publish_status ,
-	0 as items_count
+	0 as items_count,
+	cc.update_at,
+	cc.create_at,
+	cc.content_name
 from cms_contents cc 
 {{.sbWhere}}
 `
@@ -724,7 +757,8 @@ from cms_contents cc
 	if err != nil {
 		return
 	}
-	response.Total, err = cd.PageRawSQL(ctx, &response.Items, condition.OrderBy, sql, dbo.Pager{
+
+	response.Total, err = cd.PageRawSQL(ctx, &response.Items, NewContentOrderBy(condition.OrderBy).ToSQL(), sql, dbo.Pager{
 		Page:     int(condition.Pager.PageIndex),
 		PageSize: int(condition.Pager.PageSize),
 	}, args...)
