@@ -750,7 +750,7 @@ select
 from cms_contents cc 
 {{.sbWhere}}
 `
-		sbContent = NewSqlBuilder(ctx, sqlContent, argsWhere...).Replace(ctx, "sbWhere", sbWhere)
+		sbContent = NewSqlBuilder(ctx, sqlContent).Replace(ctx, "sbWhere", sbWhere)
 	}
 	sb = sb.Replace(ctx, "sbContent", sbContent)
 	sql, args, err := sb.Build(ctx)
