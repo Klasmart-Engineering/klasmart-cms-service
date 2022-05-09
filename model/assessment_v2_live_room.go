@@ -131,7 +131,7 @@ func (aes *AssessmentExternalService) StudentScores(ctx context.Context, userSco
 				userScoreResultItem := &RoomUserScore{
 					ContentUniqueID: contentUniqueID,
 				}
-				aes.setStudentScore(userContentScoreItem, scoreItem, contentMaxScoreMap)
+				aes.setStudentScore(userScoreResultItem, scoreItem, contentMaxScoreMap)
 
 				userScoreMap[userScoreItem.User.UserID] = append(userScoreMap[userScoreItem.User.UserID], userScoreResultItem)
 				userContentScoreMap[contentUniqueID] = userScoreResultItem
