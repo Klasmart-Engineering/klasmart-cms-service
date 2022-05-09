@@ -175,13 +175,11 @@ and (s.delete_at = 0)
 			argsSchedule = append(argsSchedule, filter.WeekEnd)
 		}
 	case entity.LearningSummaryTypeAssignment:
-		if filter.WeekStart > 0 {
-			sqlSchedule.WriteString(`and s.complete_time >= ? `)
-			argsSchedule = append(argsSchedule, filter.WeekStart)
-		}
-		if filter.WeekEnd > 0 {
-			sqlSchedule.WriteString(`and s.complete_time < ? `)
-			argsSchedule = append(argsSchedule, filter.WeekEnd)
+		if filter.WeekStart > 0 && filter.WeekEnd > 0 {
+			sqlSchedule.WriteString(`and exists (
+select 1 from assessments_v2 av where av.schedule_id =s.id and  av.complete_at BETWEEN ? and  ?
+)`)
+			argsSchedule = append(argsSchedule, filter.WeekStart, filter.WeekEnd)
 		}
 	}
 
