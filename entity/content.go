@@ -553,7 +553,6 @@ type QuerySharedContentV2Item struct {
 	AuthorName    string               `json:"author_name"`
 	Author        string               `json:"author"`
 	PublishStatus ContentPublishStatus `json:"publish_status"`
-	ItemsCount    int                  `json:"items_count"`
 }
 
 type FolderContentInfoWithDetailsResponse struct {

@@ -646,8 +646,7 @@ cfi.id,
 cfi.name,
 cfi.thumbnail,
 cfi.creator as author,
-? as publish_status,
-cfi.items_count,
+? as publish_status, 
 cfi.update_at,
 cfi.create_at,
 cfi.name as content_name
@@ -716,6 +715,7 @@ and EXISTS (
 		ccp.property_type = ?
 		and ccp.content_id = cc.id
 		AND ccp.property_id  IN (?)
+)
 `)
 			argsWhere = append(argsWhere, entity.ContentPropertyTypeProgram, condition.Program)
 		}
@@ -742,8 +742,7 @@ select
 	cc.content_name as name,
 	cc.thumbnail ,
 	cc.author ,
-	cc.publish_status ,
-	0 as items_count,
+	cc.publish_status , 
 	cc.update_at,
 	cc.create_at,
 	cc.content_name
