@@ -2,7 +2,12 @@ package external
 
 import (
 	"context"
+	"fmt"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
@@ -149,5 +154,68 @@ func (accs AmsCategoryConnectionService) GetBySubjects(ctx context.Context, oper
 			}
 		}
 	}
+	return categories, nil
+}
+
+func (accs AmsCategoryConnectionService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+
+	sb := new(strings.Builder)
+
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$category_id_", ": ID!", len(_ids)))
+	for index := range _ids {
+		fmt.Fprintf(sb, "q%d: categoryNode(id: $category_id_%d) {id name status system}\n", index, index)
+	}
+	sb.WriteString("}")
+
+	request := NewRequest(sb.String(), RequestToken(operator.Token))
+	for index, id := range _ids {
+		request.Var(fmt.Sprintf("category_id_%d", index), id)
+	}
+
+	data := map[string]*Category{}
+
+	response := &GraphQLSubResponse{
+		Data: &data,
+	}
+
+	_, err = GetAmsConnection().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get categories by ids failed",
+			log.Err(err),
+			log.Strings("ids", ids))
+		return nil, err
+	}
+
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "get categories by ids failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator),
+			log.Strings("ids", ids))
+		return nil, response.Errors
+	}
+
+	categories := make([]cache.Object, 0, len(data))
+	for index := range ids {
+		category := data[fmt.Sprintf("q%d", indexMapping[index])]
+		if category == nil {
+			log.Error(ctx, "category not found", log.String("id", ids[index]))
+			return nil, constant.ErrRecordNotFound
+		}
+		categories = append(categories, category)
+	}
+
+	log.Info(ctx, "get categories by ids success",
+		log.Strings("ids", ids),
+		log.Any("categories", categories))
+
 	return categories, nil
 }

@@ -113,34 +113,9 @@ func TestAmsOrganizationService_GetByPermission(t *testing.T) {
 	}
 }
 
-func TestAmsOrganizationService_GetByUserID(t *testing.T) {
-	ctx := context.Background()
-	testOperator.Token = orgToken
-	id := "000d653d-7961-447c-8d66-ad8c4a40eae6"
-	provider := AmsOrganizationConnectionService{}
-
-	organizations1, err := provider.AmsOrganizationService.GetByUserID(ctx, testOperator, id)
-	if err != nil {
-		t.Errorf("GetOrganizationServiceProvider().GetNameByOrganizationOrSchool() error = %v", err)
-		return
-	}
-
-	organizations2, err := provider.GetByUserID(ctx, testOperator, id)
-	if err != nil {
-		t.Errorf("GetOrganizationServiceProvider().GetNameByOrganizationOrSchool() error = %v", err)
-		return
-	}
-	fmt.Println("len:", len(organizations1) == len(organizations2))
-}
-
 func TestOrganizationService_QueryByIDs(t *testing.T) {
 	orgs, err := GetOrganizationServiceProvider().QueryByIDs(context.TODO(),
-		[]string{
-			"ad26d555-e9ad-4582-8fd6-c5e180847844",
-			"00a91b89-02f2-4c36-8afd-5e3cdcfd1c86",
-			"16ab82c3-355a-4002-883f-eb37b78b10a7",
-			"f27efd10-000e-4542-bef2-0ccda39b93d3",
-			"0ee01c37-c014-4c22-bb81-84d4f2a53b36"},
+		[]string{"6300b3c5-8936-497e-ba1f-d67164b59c65", "6300b3c5-8936-497e-ba1f-d67164b59c66"},
 		testOperator)
 	if err != nil {
 		t.Errorf("GetOrganizationServiceProvider().QueryByIDs() error = %v", err)

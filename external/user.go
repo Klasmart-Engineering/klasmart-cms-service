@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"strings"
 	"sync"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 
@@ -31,7 +32,6 @@ type UserServiceProvider interface {
 	Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*User, error)
 	GetByOrganization(ctx context.Context, operator *entity.Operator, organizationID string) ([]*User, error)
 	NewUser(ctx context.Context, operator *entity.Operator, email string) (string, error)
-	FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error)
 	GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Operator, orgID string) ([]*User, error)
 	GetUserCount(ctx context.Context, op *entity.Operator, cond *entity.GetUserCountCondition) (count int, err error)
 }

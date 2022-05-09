@@ -4,15 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"strings"
 	"text/template"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
-
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
-	cl "gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
@@ -26,7 +24,6 @@ type OrganizationServiceProvider interface {
 	GetNameByOrganizationOrSchool(ctx context.Context, operator *entity.Operator, id []string) ([]string, error)
 	GetNameMapByOrganizationOrSchool(ctx context.Context, operator *entity.Operator, id []string) (map[string]string, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName, options ...APOption) ([]*Organization, error)
-	GetByUserID(ctx context.Context, operator *entity.Operator, id string, options ...APOption) ([]*Organization, error)
 }
 
 type Organization struct {
@@ -90,7 +87,7 @@ func (s AmsOrganizationService) QueryByIDs(ctx context.Context, ids []string, op
 
 	_ids := utils.SliceDeduplication(ids)
 
-	req := cl.NewRequest(q, chlorine.ReqToken(operator.Token))
+	req := chlorine.NewRequest(q, chlorine.ReqToken(operator.Token))
 	req.Var("orgIDs", _ids)
 
 	data := struct {
@@ -404,70 +401,6 @@ func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *e
 	log.Info(ctx, "get orgs by permission success",
 		log.Any("operator", operator),
 		log.String("permissionName", permissionName.String()),
-		log.Any("orgs", orgs))
-
-	return orgs, nil
-}
-
-func (s AmsOrganizationService) GetByUserID(ctx context.Context, operator *entity.Operator, id string, options ...APOption) ([]*Organization, error) {
-	condition := NewCondition(options...)
-
-	request := chlorine.NewRequest(`
-	query($user_id: ID!) {
-		user(user_id: $user_id) {
-			memberships{
-				organization{
-					id:organization_id
-					name:organization_name
-					status
-				}
-			}
-		}
-	}`, chlorine.ReqToken(operator.Token))
-	request.Var("user_id", id)
-
-	data := &struct {
-		User struct {
-			Memberships []struct {
-				Organization Organization `json:"organization"`
-			} `json:"memberships"`
-		} `json:"user"`
-	}{}
-
-	response := &chlorine.Response{
-		Data: data,
-	}
-
-	_, err := GetAmsClient().Run(ctx, request, response)
-	if err != nil {
-		log.Error(ctx, "get orgs by user failed",
-			log.Err(err),
-			log.String("userID", id))
-		return nil, err
-	}
-
-	orgs := make([]*Organization, 0)
-	for _, membership := range data.User.Memberships {
-		if condition.Status.Valid {
-			if condition.Status.Status != membership.Organization.Status {
-				continue
-			}
-		} else {
-			// only status = "Active" data is returned by default
-			if membership.Organization.Status != Active {
-				continue
-			}
-		}
-
-		orgs = append(orgs, &Organization{
-			ID:     membership.Organization.ID,
-			Name:   membership.Organization.Name,
-			Status: membership.Organization.Status,
-		})
-	}
-
-	log.Info(ctx, "get orgs by user success",
-		log.String("userID", id),
 		log.Any("orgs", orgs))
 
 	return orgs, nil

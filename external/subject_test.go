@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 )
 
 func TestAmsSubjectService_BatchGet(t *testing.T) {
@@ -26,7 +25,6 @@ func TestAmsSubjectService_BatchGet(t *testing.T) {
 			return
 		}
 	}
-	time.Sleep(time.Second)
 }
 
 var sbjToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MTkwNDE0MywiaXNzIjoia2lkc2xvb3AifQ.DOPhGxQp4pCzONmp92GJWES5CJr-dz7gjGO_KyGDS6lLUqYtv-e74r3GC8s4OWFdPnYUJEp_zi5HIX-RAe-_w1Was1WSWJXjc2c9JM2CJ3OOKK-y8nTHFdFcoQc0UFwKJRfqNDc0hnU_mY1rtCUouAa7Ktpu6C8YExcNx191GFJcu4LRk-kz9GFyvdT8v5jTY1dO5RPLANdgaGVrVGnTur0ASJfh9whlMATbMlDThJXWbwA2NSIMhd8Y8ZkFDoI-3ZQoQyoVHgzscDaiK_UnfwBXRK4NPHONKcOIfXXtUvjrHYt5lfheOrx3FnkCi448dT3oCfl5V-9HSiXSKSHR6g"

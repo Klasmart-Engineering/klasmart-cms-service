@@ -2,11 +2,15 @@ package external
 
 import (
 	"context"
+	"fmt"
+	"strings"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
 )
 
 type OrganizationFilter struct {
@@ -327,4 +331,65 @@ func (aocs AmsOrganizationConnectionService) GetByUserID(ctx context.Context, op
 		}
 	}
 	return organizations, nil
+}
+
+func (aocs AmsOrganizationConnectionService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+	sb := new(strings.Builder)
+
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$org_id_", ": ID!", len(_ids)))
+	for index := range _ids {
+		fmt.Fprintf(sb, "q%d: organizationNode(id: $org_id_%d) {id name status}\n", index, index)
+	}
+	sb.WriteString("}")
+
+	request := NewRequest(sb.String(), RequestToken(operator.Token))
+	for index, id := range _ids {
+		request.Var(fmt.Sprintf("org_id_%d", index), id)
+	}
+
+	data := map[string]*Organization{}
+	response := &GraphQLSubResponse{
+		Data: &data,
+	}
+
+	_, err = GetAmsConnection().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get organizations by ids failed",
+			log.Err(err),
+			log.Strings("ids", ids))
+		return nil, err
+	}
+
+	nullableOrganizations := make([]cache.Object, len(ids))
+	for index := range ids {
+		organization := data[fmt.Sprintf("q%d", indexMapping[index])]
+		if organization == nil {
+			nullableOrganizations[index] = &NullableOrganization{
+				StrID: ids[index],
+				Valid: false,
+			}
+			continue
+		}
+
+		nullableOrganizations[index] = &NullableOrganization{
+			Organization: *organization,
+			StrID:        organization.ID,
+			Valid:        true,
+		}
+	}
+
+	log.Info(ctx, "get orgs by ids success",
+		log.Strings("ids", ids),
+		log.Any("orgs", nullableOrganizations))
+
+	return nullableOrganizations, nil
 }
