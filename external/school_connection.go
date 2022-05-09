@@ -79,9 +79,24 @@ func (ascs AmsSchoolConnectionService) GetByOrganizationID(ctx context.Context, 
 			log.Any("filter", filter))
 		return nil, err
 	}
-	var schools []*School
+	if len(pages) == 0 {
+		log.Warn(ctx, "organization is empty",
+			log.Any("operator", operator),
+			log.Any("filter", filter))
+		return []*School{}, nil
+	}
+	schools := make([]*School, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
 	for _, page := range pages {
 		for _, v := range page.Edges {
+			if _, ok := exists[v.Node.ID]; ok {
+				log.Warn(ctx, "organization exists",
+					log.Any("organization", v.Node),
+					log.Any("operator", operator),
+					log.Any("filter", filter))
+				continue
+			}
+			exists[v.Node.ID] = true
 			sch := School{
 				ID:             v.Node.ID,
 				Name:           v.Node.Name,
@@ -150,9 +165,24 @@ func (ascs AmsSchoolConnectionService) GetByOperator(ctx context.Context, operat
 			log.Any("filter", filter))
 		return nil, err
 	}
-	var schools []*School
+	if len(pages) == 0 {
+		log.Warn(ctx, "organization is empty",
+			log.Any("operator", operator),
+			log.Any("filter", filter))
+		return []*School{}, nil
+	}
+	schools := make([]*School, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
 	for _, page := range pages {
 		for _, v := range page.Edges {
+			if _, ok := exists[v.Node.ID]; ok {
+				log.Warn(ctx, "organization exists",
+					log.Any("organization", v.Node),
+					log.Any("operator", operator),
+					log.Any("filter", filter))
+				continue
+			}
+			exists[v.Node.ID] = true
 			sch := School{
 				ID:             v.Node.ID,
 				Name:           v.Node.Name,
@@ -202,6 +232,14 @@ func (ascs AmsSchoolConnectionService) GetByUsers(ctx context.Context, operator 
 	schoolsMap := make(map[string][]*School)
 	for k, pages := range result {
 		for _, page := range pages {
+			if len(page.Edges) == 0 {
+				log.Warn(ctx, "GetByUsers: school is empty",
+					log.String("user", k),
+					log.String("org_id", orgID),
+					log.Strings("user_ids", userIDs))
+				schoolsMap[k] = []*School{}
+				continue
+			}
 			for _, edge := range page.Edges {
 				node := edge.Node.School
 				if node.OrganizationId != orgID {
@@ -241,6 +279,10 @@ func (ascs AmsSchoolConnectionService) GetByClasses(ctx context.Context, operato
 	schoolsMap := make(map[string][]*School)
 	for k, pages := range result {
 		for _, page := range pages {
+			if len(page.Edges) == 0 {
+				schoolsMap[k] = []*School{}
+				continue
+			}
 			for _, edge := range page.Edges {
 				if condition.Status.Valid && condition.Status.Status != APStatus(edge.Node.Status) {
 					continue

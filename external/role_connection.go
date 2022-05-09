@@ -2,7 +2,9 @@ package external
 
 import (
 	"context"
+	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
@@ -68,9 +70,25 @@ func (arcs *AmsRoleConnectionService) GetRole(ctx context.Context, op *entity.Op
 			log.Any("filter", filter))
 		return nil, err
 	}
-	var roles []*entity.Role
+	if len(pages) == 0 {
+		err = &entity.ExternalError{
+			Err:  fmt.Errorf("role not found: %s", roleName),
+			Type: constant.InternalErrorTypeAms,
+		}
+		return nil, err
+	}
+	roles := make([]*entity.Role, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
 	for _, page := range pages {
 		for _, v := range page.Edges {
+			if _, ok := exists[v.Node.ID]; ok {
+				log.Warn(ctx, "role exists",
+					log.Any("role", v.Node),
+					log.Any("operator", op),
+					log.Any("filter", filter))
+				continue
+			}
+			exists[v.Node.ID] = true
 			role := entity.Role{
 				ID:     v.Node.ID,
 				Name:   v.Node.Name,

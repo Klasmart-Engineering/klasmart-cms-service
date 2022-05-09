@@ -5,6 +5,9 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -120,8 +123,8 @@ func TestMain(m *testing.M) {
 		Token:  token,
 	}
 	ro.SetConfig(config.Get().RedisConfig.Option)
-	initQuerier(context.Background())
-
+	initQuerier(ctx)
+	initCache(ctx)
 	os.Exit(m.Run())
 }
 
@@ -141,6 +144,18 @@ func initQuerier(ctx context.Context) {
 	engine.AddDataSource(ctx, GetAgeServiceProvider())
 }
 
+func initCache(ctx context.Context) {
+
+	conf := config.Get()
+	err := kl2cache.Init(ctx,
+		kl2cache.OptEnable(conf.RedisConfig.OpenCache),
+		kl2cache.OptRedis(conf.RedisConfig.Host, conf.RedisConfig.Port, conf.RedisConfig.Password),
+		kl2cache.OptStrategyFixed(constant.MaxCacheExpire),
+	)
+	if err != nil {
+		log.Panic(ctx, "kl2cache.Init failed", log.Err(err))
+	}
+}
 func TestRegexp(t *testing.T) {
 	r, _ := regexp.Compile("(\\S+=\\S+;)*access=\\S+(;\\S+=\\S+)*")
 	t.Log(r.MatchString("abc=;access=123"))

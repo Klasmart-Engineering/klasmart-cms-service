@@ -312,7 +312,7 @@ func (aocs AmsOrganizationConnectionService) GetByUserID(ctx context.Context, op
 		for _, v := range page.Edges {
 			if _, ok := exists[v.Node.ID]; ok {
 				log.Warn(ctx, "organization exists",
-					log.Any("user", v.Node),
+					log.Any("org", v.Node),
 					log.Any("operator", operator),
 					log.Any("filter", filter))
 				continue

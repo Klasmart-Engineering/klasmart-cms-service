@@ -126,7 +126,7 @@ func (accs AmsClassConnectionService) getByStudentIDs(ctx context.Context, opera
 					ID:       edge.Node.ID,
 					Name:     edge.Node.Name,
 					Status:   APStatus(edge.Node.Status),
-					JoinType: IsTeaching,
+					JoinType: IsStudy,
 				}
 				if condition.Status.Valid && condition.Status.Status != class.Status {
 					continue
@@ -180,6 +180,9 @@ func (accs AmsClassConnectionService) GetByUserIDs(ctx context.Context, operator
 			classesMap[k] = teachClasses[k]
 			classesMap[k] = append(classesMap[k], studyClasses[k]...)
 		}
+		if teachClasses[k] == nil && studyClasses[k] == nil {
+			classesMap[k] = []*Class{}
+		}
 	}
 	return classesMap, nil
 }
@@ -197,6 +200,7 @@ func (accs AmsClassConnectionService) GetByOrganizationIDs(ctx context.Context, 
 	condition := NewCondition(options...)
 	classesMap := make(map[string][]*Class)
 	for k, pages := range result {
+		classesMap[k] = []*Class{}
 		for _, page := range pages {
 			for _, edge := range page.Edges {
 				class := Class{
@@ -206,7 +210,7 @@ func (accs AmsClassConnectionService) GetByOrganizationIDs(ctx context.Context, 
 				}
 				if condition.Status.Valid && condition.Status.Status != class.Status {
 					continue
-				} else if condition.Status.Valid && class.Status != Active {
+				} else if !condition.Status.Valid && class.Status != Active {
 					// only status = "Active" data is returned by default
 					continue
 				}
@@ -240,7 +244,7 @@ func (accs AmsClassConnectionService) GetBySchoolIDs(ctx context.Context, operat
 				}
 				if condition.Status.Valid && condition.Status.Status != class.Status {
 					continue
-				} else if condition.Status.Valid && class.Status != Active {
+				} else if !condition.Status.Valid && class.Status != Active {
 					// only status = "Active" data is returned by default
 					continue
 				}
