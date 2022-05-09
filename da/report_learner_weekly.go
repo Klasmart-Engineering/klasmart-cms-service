@@ -88,7 +88,7 @@ left join learning_outcomes lo on lo.id =t.outcome_id
 }
 func (r *ReportDA) QueryAssignmentsSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (items []*entity.AssignmentsSummaryItemV2, err error) {
 	items = []*entity.AssignmentsSummaryItemV2{}
-	sbSchedule, err := r.getSqlBuilderOfSchedulesByLearningSummaryFilter(ctx, operator, filter, entity.LearningSummaryTypeLiveClass)
+	sbSchedule, err := r.getSqlBuilderOfSchedulesByLearningSummaryFilter(ctx, operator, filter, entity.LearningSummaryTypeAssignment)
 	if err != nil {
 		return
 	}
@@ -132,6 +132,13 @@ inner join cms_contents cc on cc.id = s.lesson_plan_id
 }
 
 func (r *ReportDA) getSqlBuilderOfSchedulesByLearningSummaryFilter(ctx context.Context, operator *entity.Operator, filter *entity.LearningSummaryFilter, typ entity.LearningSummaryType) (sb *sqlBuilder, err error) {
+	classType := entity.ScheduleClassTypeOnlineClass
+	switch typ {
+	case entity.LearningSummaryTypeAssignment:
+		classType = entity.ScheduleClassTypeHomework
+	case entity.LearningSummaryTypeLiveClass:
+		classType = entity.ScheduleClassTypeOnlineClass
+	}
 	sqlSchedule := strings.Builder{}
 	sqlSchedule.WriteString(`
 select 
@@ -148,19 +155,17 @@ and exists (
 		sr.relation_id in (?)
 		and sr.relation_type in (?,?)
 		and s.id = sr.schedule_id)
-and (s.delete_at = 0) 
+and (s.delete_at = 0)  
 `)
 	argsSchedule := []interface{}{
 		operator.OrgID,
-		entity.ScheduleClassTypeOnlineClass,
+		classType,
 		filter.StudentID,
 		entity.ScheduleRelationTypeClassRosterStudent,
 		entity.ScheduleRelationTypeParticipantStudent,
 	}
 	switch typ {
 	case entity.LearningSummaryTypeLiveClass:
-		sqlSchedule.WriteString(`and s.class_type = ? `)
-		argsSchedule = append(argsSchedule, entity.ScheduleClassTypeOnlineClass)
 		if filter.WeekStart > 0 {
 			sqlSchedule.WriteString(`and s.start_at >= ? `)
 			argsSchedule = append(argsSchedule, filter.WeekStart)
@@ -170,8 +175,6 @@ and (s.delete_at = 0)
 			argsSchedule = append(argsSchedule, filter.WeekEnd)
 		}
 	case entity.LearningSummaryTypeAssignment:
-		sqlSchedule.WriteString(`and s.class_type = ? `)
-		argsSchedule = append(argsSchedule, entity.ScheduleClassTypeHomework)
 		if filter.WeekStart > 0 {
 			sqlSchedule.WriteString(`and s.complete_time >= ? `)
 			argsSchedule = append(argsSchedule, filter.WeekStart)
