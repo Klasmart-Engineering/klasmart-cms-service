@@ -635,6 +635,7 @@ where cfi.id in (
 		 
 	) 
 and cfi.parent_id = ?
+and cfi.delete_at = 0
 `,
 		[]interface{}{op.OrgID, constant.ShareToAll},
 		condition.ParentID,
@@ -685,6 +686,7 @@ where  cfi.id  in ({{.sbFolderID}})
 		sqlWhere.WriteString(`
 where  cc.parent_folder = ?
 and cc.publish_status = ?
+and cc.delete_at = 0
 `)
 		argsWhere := []interface{}{
 			condition.ParentID,
