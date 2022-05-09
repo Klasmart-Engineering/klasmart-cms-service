@@ -701,6 +701,7 @@ and EXISTS (
 		ccp.property_type = ?
 		and ccp.content_id = cc.id
 		AND ccp.property_id not IN (select program_id from programs_groups  )
+)
 `)
 			argsWhere = append(argsWhere, entity.ContentPropertyTypeProgram)
 
