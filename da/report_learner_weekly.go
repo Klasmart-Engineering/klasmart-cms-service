@@ -105,14 +105,14 @@ select
 	{{.sbAssessmentType}}
 	{{.sbStatus}}
 	av.title  as assessment_title,
-	cc.content_name as lesson_plan_name,	 
+	if(cc.content_name is null,"",cc.content_name) as lesson_plan_name,	 
 	av.schedule_id,
 	av.id as assessment_id,
 	av.complete_at,
 	av.create_at
 from assessments_v2 av 
 inner join schedules s on s.id = av.schedule_id 
-inner join cms_contents cc on cc.id = s.lesson_plan_id 
+left join cms_contents cc on cc.id = s.lesson_plan_id 
 {{.sbWhere}}
 `
 	sb := NewSqlBuilder(ctx, sql).
