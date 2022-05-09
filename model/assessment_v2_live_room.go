@@ -88,6 +88,8 @@ func (aes *AssessmentExternalService) StudentScores(ctx context.Context, userSco
 			continue
 		}
 
+		// content id
+		userContentScoreMap := make(map[string]*RoomUserScore)
 		for _, scoreItem := range userScoreItem.Scores {
 			if scoreItem.Score == nil {
 				log.Warn(ctx, "user score item is nil", log.String("userID", userScoreItem.User.UserID), log.Any("scoreItem", scoreItem))
@@ -121,27 +123,19 @@ func (aes *AssessmentExternalService) StudentScores(ctx context.Context, userSco
 				contentMaxScoreMap[contentUniqueID] = 0
 			}
 
-			userScoreResultItem := &RoomUserScore{
-				ContentUniqueID: contentUniqueID,
-				Seen:            scoreItem.Seen,
-			}
-
-			if len(scoreItem.TeacherScores) > 0 {
-				userScoreResultItem.Score = scoreItem.TeacherScores[len(scoreItem.TeacherScores)-1].Score
-			} else if len(scoreItem.Score.Scores) > 0 {
-				userScoreResultItem.Score = scoreItem.Score.Scores[0]
-			} else {
-				userScoreResultItem.Score = 0
-			}
-
-			if len(scoreItem.Score.Answers) > 0 {
-				userScoreResultItem.Answer = scoreItem.Score.Answers[0].Answer
-				if contentMaxScoreMap[userScoreResultItem.ContentUniqueID] < scoreItem.Score.Answers[0].MaximumPossibleScore {
-					contentMaxScoreMap[userScoreResultItem.ContentUniqueID] = scoreItem.Score.Answers[0].MaximumPossibleScore
+			if userContentScoreItem, ok := userContentScoreMap[contentUniqueID]; ok {
+				if !userContentScoreItem.Seen {
+					aes.setStudentScore(userContentScoreItem, scoreItem, contentMaxScoreMap)
 				}
-			}
+			} else {
+				userScoreResultItem := &RoomUserScore{
+					ContentUniqueID: contentUniqueID,
+				}
+				aes.setStudentScore(userContentScoreItem, scoreItem, contentMaxScoreMap)
 
-			userScoreMap[userScoreItem.User.UserID] = append(userScoreMap[userScoreItem.User.UserID], userScoreResultItem)
+				userScoreMap[userScoreItem.User.UserID] = append(userScoreMap[userScoreItem.User.UserID], userScoreResultItem)
+				userContentScoreMap[contentUniqueID] = userScoreResultItem
+			}
 		}
 	}
 
@@ -153,6 +147,25 @@ func (aes *AssessmentExternalService) StudentScores(ctx context.Context, userSco
 	}
 
 	return userScoreMap, tree, nil
+}
+
+func (aes *AssessmentExternalService) setStudentScore(userScoreResultItem *RoomUserScore, scoreItem *external.H5PUserContentScore, contentMaxScoreMap map[string]float64) {
+	if scoreItem.Seen {
+		userScoreResultItem.Seen = true
+		if len(scoreItem.TeacherScores) > 0 {
+			userScoreResultItem.Score = scoreItem.TeacherScores[len(scoreItem.TeacherScores)-1].Score
+		} else if len(scoreItem.Score.Scores) > 0 {
+			userScoreResultItem.Score = scoreItem.Score.Scores[0]
+		} else {
+			userScoreResultItem.Score = 0
+		}
+		if len(scoreItem.Score.Answers) > 0 {
+			userScoreResultItem.Answer = scoreItem.Score.Answers[0].Answer
+			if contentMaxScoreMap[userScoreResultItem.ContentUniqueID] < scoreItem.Score.Answers[0].MaximumPossibleScore {
+				contentMaxScoreMap[userScoreResultItem.ContentUniqueID] = scoreItem.Score.Answers[0].MaximumPossibleScore
+			}
+		}
+	}
 }
 
 func (aes *AssessmentExternalService) StudentCommentMap(ctx context.Context, teacherComments []*external.H5PTeacherCommentsByStudent) (map[string]string, error) {
@@ -227,7 +240,7 @@ func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseSomeContent(ctx
 				continue
 			}
 
-			contentKey := aes.ParseTreeID(scoreItem.Content)
+			contentKey := aes.ParseContentUniqueID(scoreItem.Content)
 			if _, ok := contentMap[contentKey]; !ok {
 				contentCount++
 				contentMap[contentKey] = struct{}{}
