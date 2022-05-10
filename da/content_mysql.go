@@ -663,19 +663,26 @@ and cfi.parent_id = ?
 	if condition.ContentName != "" {
 		sbContentName = NewSqlBuilder(ctx, `and cfi.name= ? `, condition.ContentName)
 	}
-	sbFolder := NewSqlBuilder(ctx, `
+	sqlFolder := strings.Builder{}
+	sqlFolder.WriteString(`
 select 
 	{{.sbFolderSelect}}
 from cms_folder_items cfi 
-where  cfi.id  in ({{.sbFolderID}})
+where  
+cfi.delete_at = 0
 {{.sbParentID}}
 {{.sbName}}
 {{.sbContentName}}
-`).Replace(ctx, "sbFolderSelect", sbFolderSelect).
-		Replace(ctx, "sbFolderID", sbFolderID).
+`)
+	if condition.ParentID == "/" {
+		sqlFolder.WriteString("and cfi.id  in ({{.sbFolderID}})")
+	}
+	sbFolder := NewSqlBuilder(ctx, sqlFolder.String()).
+		Replace(ctx, "sbFolderSelect", sbFolderSelect).
 		Replace(ctx, "sbParentID", sbParentID).
 		Replace(ctx, "sbName", sbName).
-		Replace(ctx, "sbContentName", sbContentName)
+		Replace(ctx, "sbContentName", sbContentName).
+		Replace(ctx, "sbFolderID", sbFolderID)
 	sb := NewSqlBuilder(ctx, `
 {{.sbFolder}}
 {{.sbContent}}
