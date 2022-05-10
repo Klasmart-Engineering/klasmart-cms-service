@@ -176,8 +176,8 @@ func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiff
 			continue
 		}
 		replyItem := &v2.AssessmentDiffContentStudentsReply{
-			StudentID:       userItem.UserID,
-			StudentName:     "",
+			StudentID: userItem.UserID,
+			//StudentName:     "",
 			Status:          userItem.StatusByUser,
 			ReviewerComment: "",
 			Results:         make([]*v2.DiffContentStudentResultReply, 0),

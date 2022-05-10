@@ -370,7 +370,14 @@ func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, asse
 	}
 
 	result.Class = classMap[assessment.ID]
-	result.Teachers = teacherMap[assessment.ID]
+
+	if teachers, ok := teacherMap[assessment.ID]; ok {
+		result.TeacherIDs = make([]string, len(teachers))
+		for i, teacherItem := range teachers {
+			result.TeacherIDs[i] = teacherItem.ID
+		}
+	}
+
 	result.Program = programMap[assessment.ID]
 	result.Subjects = subjectMap[assessment.ID]
 	result.ScheduleTitle = schedule.Title

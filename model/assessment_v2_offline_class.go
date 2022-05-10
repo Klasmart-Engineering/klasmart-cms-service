@@ -150,8 +150,8 @@ func (o *OfflineClassAssessment) MatchStudents(contents []*v2.AssessmentContentR
 		}
 
 		studentReply := &v2.AssessmentStudentReply{
-			StudentID:     item.UserID,
-			StudentName:   "",
+			StudentID: item.UserID,
+			//StudentName:   "",
 			Status:        item.StatusByUser,
 			ProcessStatus: item.StatusBySystem,
 			Results:       nil,

@@ -115,6 +115,9 @@ type ScheduleEndClassCallBackResp struct {
 	ScheduleID string `json:"schedule_id"`
 }
 
+type AssessmentTeacher struct {
+	ID string `json:"id"`
+}
 type AssessmentDetailReply struct {
 	ID                string           `json:"id"`
 	Title             string           `json:"title"`
@@ -122,7 +125,7 @@ type AssessmentDetailReply struct {
 	Status            AssessmentStatus `json:"status"`
 	RoomID            string           `json:"room_id"`
 	Class             *entity.IDName   `json:"class"`
-	Teachers          []*entity.IDName `json:"teachers"`
+	TeacherIDs        []string         `json:"teacher_ids"`
 	Program           *entity.IDName   `json:"program"`
 	Subjects          []*entity.IDName `json:"subjects"`
 	ClassEndAt        int64            `json:"class_end_at"`
@@ -143,8 +146,8 @@ type AssessmentDetailReply struct {
 }
 
 type AssessmentDiffContentStudentsReply struct {
-	StudentID       string                           `json:"student_id"`
-	StudentName     string                           `json:"student_name"`
+	StudentID string `json:"student_id"`
+	//StudentName     string                           `json:"student_name"`
 	Status          AssessmentUserStatus             `json:"status" enums:"Participate,NotParticipate"`
 	ReviewerComment string                           `json:"reviewer_comment"`
 	Results         []*DiffContentStudentResultReply `json:"results,omitempty"`
@@ -172,8 +175,8 @@ type AssessmentDiffContentReply struct {
 }
 
 type AssessmentStudentReply struct {
-	StudentID       string                          `json:"student_id"`
-	StudentName     string                          `json:"student_name"`
+	StudentID string `json:"student_id"`
+	//StudentName     string                          `json:"student_name"`
 	Status          AssessmentUserStatus            `json:"status" enums:"Participate,NotParticipate"`
 	ProcessStatus   AssessmentUserSystemStatus      `json:"process_status"`
 	ReviewerComment string                          `json:"reviewer_comment"`
