@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 )
 
 func TestAmsAgeService_BatchGet(t *testing.T) {
@@ -26,8 +25,6 @@ func TestAmsAgeService_BatchGet(t *testing.T) {
 			return
 		}
 	}
-
-	time.Sleep(time.Second)
 }
 
 var ageToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MTgyNDE2OSwiaXNzIjoia2lkc2xvb3AifQ.dGK8xXolSSdx-cf7uarPqVJe2oOkrXHfP0-GuBA0XGzU5Yb4e2F2KkEsVQTAY78M7KemvhliFujntppg1JmOu3xNDNo6mNeqtBzcfI5HSnit8kHCmAX5MkFGSSzuK_mAHtvCwGvdEyqj6-8FhMWkompKtH78o3EMvItutOU2mhv-V24p5pdFbE1KK_7RI15Yxdej_Uu_UJCl57LpNog_vS0ANd_QyqF-QJEb0esffYr66s1X1_JFqekeZezckl27-0AwyOX3-Jg_SyOy7bn-Sk1WWys2-aSdZ4N3I41SUKRHCrdrEromsFmqT9DUvUl5gixL-sZKJq1zhecw8GEwWA"

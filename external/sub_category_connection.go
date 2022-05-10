@@ -2,8 +2,14 @@ package external
 
 import (
 	"context"
+	"fmt"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type SubcategoryFilter struct {
@@ -142,5 +148,67 @@ func (sccs AmsSubCategoryConnectionService) GetByOrganization(ctx context.Contex
 	}
 
 	subCategories := sccs.pageNodes(ctx, operator, pages)
+	return subCategories, nil
+}
+
+func (sccs AmsSubCategoryConnectionService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+
+	sb := new(strings.Builder)
+
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$subcategory_id_", ": ID!", len(_ids)))
+	for index := range _ids {
+		fmt.Fprintf(sb, "q%d: subcategoryNode(id: $subcategory_id_%d) {id name status system}\n", index, index)
+	}
+	sb.WriteString("}")
+
+	request := NewRequest(sb.String(), RequestToken(operator.Token))
+	for index, id := range _ids {
+		request.Var(fmt.Sprintf("subcategory_id_%d", index), id)
+	}
+
+	data := map[string]*SubCategory{}
+	response := &GraphQLSubResponse{
+		Data: &data,
+	}
+
+	_, err = GetAmsConnection().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get subCategories by ids failed",
+			log.Err(err),
+			log.Strings("ids", ids))
+		return nil, err
+	}
+
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "get subCategories by ids failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator),
+			log.Strings("ids", ids))
+		return nil, response.Errors
+	}
+
+	subCategories := make([]cache.Object, 0, len(data))
+	for index := range ids {
+		subCategory := data[fmt.Sprintf("q%d", indexMapping[index])]
+		if subCategory == nil {
+			log.Error(ctx, "subCategory not found", log.String("id", ids[index]))
+			return nil, constant.ErrRecordNotFound
+		}
+		subCategories = append(subCategories, subCategory)
+	}
+
+	log.Info(ctx, "get subCategories by ids success",
+		log.Strings("ids", ids),
+		log.Any("subCategories", subCategories))
+
 	return subCategories, nil
 }

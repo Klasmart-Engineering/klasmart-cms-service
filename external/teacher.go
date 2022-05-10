@@ -3,32 +3,29 @@ package external
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"strings"
 	"sync"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type TeacherServiceProvider interface {
 	cache.IDataSource
-	Get(ctx context.Context, operator *entity.Operator, id string) (*Teacher, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableTeacher, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableTeacher, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
 	GetByOrganization(ctx context.Context, operator *entity.Operator, organizationID string) ([]*Teacher, error)
 	GetByOrganizations(ctx context.Context, operator *entity.Operator, organizationIDs []string) (map[string][]*Teacher, error)
-	GetBySchool(ctx context.Context, operator *entity.Operator, schoolID string) ([]*Teacher, error)
 	GetBySchools(ctx context.Context, operator *entity.Operator, schoolIDs []string) (map[string][]*Teacher, error)
 	GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*Teacher, error)
 	Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*Teacher, error)
-	FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error)
 }
 
 type Teacher struct {
@@ -67,19 +64,6 @@ func GetTeacherServiceProvider() TeacherServiceProvider {
 }
 
 type AmsTeacherService struct{}
-
-func (s AmsTeacherService) Get(ctx context.Context, operator *entity.Operator, id string) (*Teacher, error) {
-	teachers, err := s.BatchGet(ctx, operator, []string{id})
-	if err != nil {
-		return nil, err
-	}
-
-	if teachers[0].Teacher == nil || !teachers[0].Valid {
-		return nil, constant.ErrRecordNotFound
-	}
-
-	return teachers[0].Teacher, nil
-}
 
 func (s AmsTeacherService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableTeacher, error) {
 	if len(ids) == 0 {
@@ -247,52 +231,6 @@ func (s AmsTeacherService) GetByOrganizations(ctx context.Context, operator *ent
 	return teachers, nil
 }
 
-func (s AmsTeacherService) GetBySchool(ctx context.Context, operator *entity.Operator, schoolID string) ([]*Teacher, error) {
-	request := chlorine.NewRequest(`
-	query ($school_id: ID!) {
-		school(school_id: $school_id) {
-			classes{
-				teachers{
-					id: user_id
-					name: user_name
-				}
-			}    
-		}
-	}`, chlorine.ReqToken(operator.Token))
-	request.Var("school_id", schoolID)
-
-	data := &struct {
-		School struct {
-			Classes []struct {
-				Teachers []*Teacher `json:"teachers"`
-			} `json:"classes"`
-		} `json:"school"`
-	}{}
-
-	response := &chlorine.Response{
-		Data: data,
-	}
-
-	_, err := GetAmsClient().Run(ctx, request, response)
-	if err != nil {
-		log.Error(ctx, "get teachers by school failed",
-			log.Err(err),
-			log.String("schoolID", schoolID))
-		return nil, err
-	}
-
-	teachers := make([]*Teacher, 0, len(data.School.Classes))
-	for _, class := range data.School.Classes {
-		teachers = append(teachers, class.Teachers...)
-	}
-
-	log.Info(ctx, "get teachers by school success",
-		log.String("schoolID", schoolID),
-		log.Any("teachers", teachers))
-
-	return teachers, nil
-}
-
 //TODO:No Test Program
 func (s AmsTeacherService) GetBySchools(ctx context.Context, operator *entity.Operator, schoolIDs []string) (map[string][]*Teacher, error) {
 	if len(schoolIDs) == 0 {
@@ -409,10 +347,6 @@ func (s AmsTeacherService) Query(ctx context.Context, operator *entity.Operator,
 	}
 
 	return teachers, nil
-}
-
-func (s AmsTeacherService) FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error) {
-	return GetUserServiceProvider().FilterByPermission(ctx, operator, userIDs, permissionName)
 }
 
 func (s AmsTeacherService) Name() string {

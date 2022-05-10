@@ -3,26 +3,21 @@ package external
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"strings"
 	"sync"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
-
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
-
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
 )
 
 type SchoolServiceProvider interface {
 	cache.IDataSource
-	Get(ctx context.Context, operator *entity.Operator, id string) (*School, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableSchool, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableSchool, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -77,19 +72,6 @@ func GetSchoolServiceProvider() SchoolServiceProvider {
 
 type AmsSchoolService struct {
 	BaseCacheKey kl2cache.KeyByStrings
-}
-
-func (s AmsSchoolService) Get(ctx context.Context, operator *entity.Operator, id string) (*School, error) {
-	schools, err := s.BatchGet(ctx, operator, []string{id})
-	if err != nil {
-		return nil, err
-	}
-
-	if schools[0].School == nil || !schools[0].Valid {
-		return nil, constant.ErrRecordNotFound
-	}
-
-	return schools[0].School, nil
 }
 
 func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableSchool, error) {

@@ -7,7 +7,7 @@ import (
 )
 
 func TestAmsGradeService_BatchGet(t *testing.T) {
-	ids := []string{"98461ca1-06a1-432a-97d0-4e1dff33e1a5", "a9f0217d-f7ec-4add-950d-4e8986ab2c82"}
+	ids := []string{"9d3e591d-06a6-4fc4-9714-cf155a15b415", "98461ca1-06a1-432a-97d0-4e1dff33e1a5"}
 	grades, err := GetGradeServiceProvider().BatchGet(context.TODO(), testOperator, ids)
 	if err != nil {
 		t.Errorf("GetGradeServiceProvider().BatchGet() error = %v", err)

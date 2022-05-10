@@ -1,11 +1,16 @@
 package external
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"sync"
+	"text/template"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
 )
 
 type ClassFilter struct {
@@ -367,6 +372,78 @@ func (accs AmsClassConnectionService) GetOnlyUnderOrgClasses(ctx context.Context
 			classes = append(classes, &nullableClass)
 		}
 	}
+
+	return classes, nil
+}
+
+func (accs AmsClassConnectionService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	raw := `query{
+		{{range $i, $e := .}}
+		index_{{$i}}: classNode(id: "{{$e}}"){
+			id
+			name
+			status
+		  }
+		{{end}}
+	}`
+
+	temp, err := template.New("Classes").Parse(raw)
+	if err != nil {
+		log.Error(ctx, "temp error", log.String("raw", raw), log.Err(err))
+		return nil, err
+	}
+
+	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+
+	buf := bytes.Buffer{}
+	err = temp.Execute(&buf, _ids)
+	if err != nil {
+		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
+		return nil, err
+	}
+	req := NewRequest(buf.String(), RequestToken(operator.Token))
+	payload := make(map[string]*Class, len(ids))
+	res := GraphQLSubResponse{
+		Data: &payload,
+	}
+
+	_, err = GetAmsConnection().Run(ctx, req, &res)
+	if err != nil {
+		log.Error(ctx, "Run error", log.String("q", buf.String()), log.Any("res", res), log.Err(err))
+		return nil, err
+	}
+	if len(res.Errors) > 0 {
+		log.Error(ctx, "Res error", log.String("q", buf.String()), log.Any("res", res), log.Err(res.Errors))
+		return nil, res.Errors
+	}
+	var classes []cache.Object
+	for index := range ids {
+		class := payload[fmt.Sprintf("index_%d", indexMapping[index])]
+		if class == nil {
+			classes = append(classes, &NullableClass{
+				Valid: false,
+				StrID: ids[index],
+			})
+		} else {
+			classes = append(classes, &NullableClass{
+				Class: *class,
+				Valid: true,
+				StrID: ids[index],
+			})
+		}
+	}
+
+	log.Info(ctx, "get classes by ids success",
+		log.Strings("ids", ids),
+		log.Any("classes", classes))
 
 	return classes, nil
 }

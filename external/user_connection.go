@@ -2,8 +2,13 @@ package external
 
 import (
 	"context"
+	"fmt"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type UserFilter struct {
@@ -134,5 +139,85 @@ func (aucs AmsUserConnectionService) GetOnlyUnderOrgUsers(ctx context.Context, o
 		return nil, err
 	}
 	users := aucs.pageNodes(ctx, op, pages)
+	return users, nil
+}
+
+type UserNode struct {
+	ID         string `json:"id"`
+	Name       string `json:"username"`
+	GivenName  string `json:"givenName"`
+	FamilyName string `json:"familyName"`
+	Avatar     string `json:"avatar"`
+}
+
+func (u UserNode) ToUser() *User {
+	return &User{
+		ID:         u.ID,
+		Name:       u.Name,
+		GivenName:  u.GivenName,
+		FamilyName: u.FamilyName,
+		Avatar:     u.Avatar,
+	}
+}
+
+func (aucs AmsUserConnectionService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+
+	sb := new(strings.Builder)
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$user_id_", ": ID!", len(_ids)))
+	for index := range _ids {
+		fmt.Fprintf(sb, "q%d: userNode(id: $user_id_%d) {id username givenName familyName avatar}\n", index, index)
+	}
+	sb.WriteString("}")
+
+	request := NewRequest(sb.String(), RequestToken(operator.Token))
+	for index, id := range _ids {
+		request.Var(fmt.Sprintf("user_id_%d", index), id)
+	}
+
+	data := map[string]*UserNode{}
+	response := &GraphQLSubResponse{
+		Data: &data,
+	}
+
+	_, err = GetAmsConnection().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get users by ids failed", log.Err(err), log.Strings("ids", ids))
+		return nil, err
+	}
+
+	users := make([]cache.Object, 0, len(data))
+	for index := range ids {
+		user := data[fmt.Sprintf("q%d", indexMapping[index])]
+		if user == nil {
+			continue
+		}
+		// user service no longer provides username. So we need to construct
+		// the username based on the given name and family name, so that no other
+		// places need to be modified
+		if user != nil && user.Name == "" && user.FamilyName != "" && user.GivenName != "" {
+			user.Name = user.GivenName + " " + user.FamilyName
+		}
+
+		users = append(users, &NullableUser{
+			Valid: user != nil,
+			User:  user.ToUser(),
+			StrID: _ids[indexMapping[index]],
+		})
+	}
+
+	log.Info(ctx, "get users by ids success",
+		log.Strings("ids", ids),
+		log.Any("users", users))
+
 	return users, nil
 }

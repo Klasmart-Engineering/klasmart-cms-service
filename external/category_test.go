@@ -4,11 +4,10 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 )
 
 func TestAmsCategoryService_BatchGet(t *testing.T) {
-	ids := []string{"84b8f87a-7b61-4580-a190-a9ce3fe90dd3", "2d5ea951-836c-471e-996e-76823a992689"}
+	ids := []string{"64e000aa-4a2c-4e2e-9d8d-f779e97bdd73", "64e000aa-4a2c-4e2e-9d8d-f779e97bdd73"}
 	categories, err := GetCategoryServiceProvider().BatchGet(context.TODO(), testOperator, ids)
 	if err != nil {
 		t.Errorf("GetCategoryServiceProvider.BatchGet() error = %v", err)
@@ -26,7 +25,6 @@ func TestAmsCategoryService_BatchGet(t *testing.T) {
 			return
 		}
 	}
-	time.Sleep(time.Second)
 }
 
 var catToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MjE0Njg3NCwiaXNzIjoia2lkc2xvb3AifQ.W5y6k4AnXeVSUnd12rRUSRYpKhigVY3h46lj8qoJXZtqLk6tRpCmg57E3_TI27rs1tsEqgR0dEXUl5dqJD3FHP7UjS9t-SWpY9aqvK3yYUoPd3YCbOyvsW3PkSd7UkrbSOVADsInDPT9H3DMjimPMrz_aTPyofpRCeOxYSiFOPW4iNc51qJ3Kb7RTfW-ljyVd2XLIB7gHXwimG4hppFxjOtlDmW3EoNVFnAUbhYghz1NJhpc5kiOLuz9VBDaEjv2gNC7sAsys8sqmmHZHDuEW-lYsyty_q1uInxbUFSBQonHtfjAuAFfXZFQS1hpQHIcxyqlvrc7IOFmWeOdFZMxNA"

@@ -2,7 +2,11 @@ package external
 
 import (
 	"context"
+	"fmt"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
@@ -355,4 +359,59 @@ func (ascs AmsSchoolConnectionService) GetByClasses(ctx context.Context, operato
 		schoolsMap[k] = ascs.pageNodes(ctx, operator, pages)
 	}
 	return schoolsMap, nil
+}
+
+func (ascs AmsSchoolConnectionService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+
+	sb := new(strings.Builder)
+
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$school_id_", ": ID!", len(_ids)))
+	for index := range _ids {
+		fmt.Fprintf(sb, "q%d: schoolNode(id: $school_id_%d) {id name status}\n", index, index)
+	}
+	sb.WriteString("}")
+
+	request := NewRequest(sb.String(), RequestToken(operator.Token))
+	for index, id := range _ids {
+		request.Var(fmt.Sprintf("school_id_%d", index), id)
+	}
+
+	data := map[string]*School{}
+
+	response := &GraphQLSubResponse{
+		Data: &data,
+	}
+
+	_, err = GetAmsConnection().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get schools by ids failed",
+			log.Err(err),
+			log.Strings("ids", ids))
+		return nil, err
+	}
+
+	schools := make([]cache.Object, 0, len(data))
+	for index := range ids {
+		school := data[fmt.Sprintf("q%d", indexMapping[index])]
+		schools = append(schools, &NullableSchool{
+			Valid:  school != nil,
+			School: school,
+			StrID:  ids[index],
+		})
+	}
+
+	log.Info(ctx, "get schools by ids success",
+		log.Strings("ids", ids),
+		log.Any("schools", schools))
+
+	return schools, nil
 }

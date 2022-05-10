@@ -2,8 +2,14 @@ package external
 
 import (
 	"context"
+	"fmt"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type ProgramFilter struct {
@@ -127,5 +133,68 @@ func (pcs AmsProgramConnectionService) GetByOrganization(ctx context.Context, op
 	}
 
 	programs := pcs.pageNodes(ctx, operator, pages)
+	return programs, nil
+}
+
+func (pcs AmsProgramConnectionService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		fmt.Println("options:", options)
+		return nil, err
+	}
+
+	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+
+	sb := new(strings.Builder)
+
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$program_id_", ": ID!", len(_ids)))
+	for index := range _ids {
+		fmt.Fprintf(sb, "q%d: programNode(id: $program_id_%d) {id name status system}\n", index, index)
+	}
+	sb.WriteString("}")
+
+	request := NewRequest(sb.String(), RequestToken(operator.Token))
+	for index, id := range _ids {
+		request.Var(fmt.Sprintf("program_id_%d", index), id)
+	}
+
+	data := map[string]*Program{}
+	response := &GraphQLSubResponse{
+		Data: &data,
+	}
+
+	_, err = GetAmsConnection().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get programs by ids failed",
+			log.Err(err),
+			log.Strings("ids", ids))
+		return nil, err
+	}
+
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "get programs by ids failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator),
+			log.Strings("ids", ids))
+		return nil, response.Errors
+	}
+
+	programs := make([]cache.Object, 0, len(data))
+	for index := range ids {
+		program := data[fmt.Sprintf("q%d", indexMapping[index])]
+		if program == nil {
+			log.Error(ctx, "program not found", log.String("id", ids[index]))
+			return nil, constant.ErrRecordNotFound
+		}
+		programs = append(programs, program)
+	}
+
+	log.Info(ctx, "get programs by ids success",
+		log.Strings("ids", ids),
+		log.Any("programs", programs))
+
 	return programs, nil
 }
