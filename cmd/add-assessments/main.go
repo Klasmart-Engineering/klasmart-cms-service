@@ -7,15 +7,16 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/chlorine"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/KL-Engineering/chlorine"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
 )
 
 func main() {

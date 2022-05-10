@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"testing"
 
-	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"github.com/KL-Engineering/dbo"
 )
 
 func TestOutcomeRedis_GetOutcomeCacheBySearchCondition(t *testing.T) {

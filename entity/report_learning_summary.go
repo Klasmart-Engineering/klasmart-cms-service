@@ -1,6 +1,6 @@
 package entity
 
-import "gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+import "github.com/KL-Engineering/kidsloop-cms-service/utils"
 
 type QueryLearningSummaryTimeFilterArgs struct {
 	TimeOffset  int                 `json:"time_offset"`
@@ -85,6 +85,24 @@ type QueryLiveClassesSummaryResult struct {
 	Items  []*LiveClassSummaryItem `json:"items"`
 }
 
+type QueryLiveClassesSummaryResultV2 struct {
+	Attend float64                   `json:"attend"`
+	Items  []*LiveClassSummaryItemV2 `json:"items"`
+}
+
+type LiveClassSummaryItemV2 struct {
+	Absent          bool   `json:"absent"`
+	ClassStartTime  int64  `json:"class_start_time"`
+	ScheduleTitle   string `json:"schedule_title"`
+	LessonPlanName  string `json:"lesson_plan_name"`
+	TeacherFeedback string `json:"teacher_feedback"`
+	// for debug
+	ScheduleID   string `json:"schedule_id"`
+	AssessmentID string `json:"assessment_id"`
+	// for sorting
+	CompleteAt int64 `json:"complete_at"`
+	CreateAt   int64 `json:"create_at"`
+}
 type LiveClassSummaryItem struct {
 	Status          AssessmentStatus          `json:"status" enums:"in_progress,complete"`
 	Absent          bool                      `json:"absent"`
@@ -105,6 +123,37 @@ type LearningSummaryOutcome struct {
 	ID     string                  `json:"id"`
 	Name   string                  `json:"name"`
 	Status AssessmentOutcomeStatus `json:"status" enums:"achieved,not_achieved,partially"`
+}
+
+type LearningSummaryOutcomeItem struct {
+	OutcomeID          string `json:"outcome_id" gorm:"column:outcome_id" `
+	OutcomeName        string `json:"outcome_name" gorm:"column:outcome_name" `
+	CountOfUnknown     int    `json:"count_of_unknown" gorm:"column:count_of_unknown" `
+	CountOfAchieved    int    `json:"count_of_achieved" gorm:"column:count_of_achieved" `
+	CountOfNotAchieved int    `json:"count_of_not_achieved" gorm:"column:count_of_not_achieved" `
+	CountOfNotCovered  int    `json:"count_of_not_covered" gorm:"column:count_of_not_covered" `
+	CountOfAll         int    `json:"count_of_all" gorm:"column:count_of_all" `
+}
+
+type QueryAssignmentsSummaryResultV2 struct {
+	StudyCount        int                         `json:"study_count"`
+	HomeFunStudyCount int                         `json:"home_fun_study_count"`
+	Items             []*AssignmentsSummaryItemV2 `json:"items"`
+}
+
+type AssignmentsSummaryItemV2 struct {
+	AssessmentType  AssessmentType   `json:"assessment_type" gorm:"column:assessment_type" enums:"class,live,study,home_fun_study"`
+	Status          AssessmentStatus `json:"status" gorm:"column:status" enums:"in_progress,complete"`
+	AssessmentTitle string           `json:"assessment_title" gorm:"column:assessment_title" `
+	LessonPlanName  string           `json:"lesson_plan_name" gorm:"column:lesson_plan_name" `
+	TeacherFeedback string           `json:"teacher_feedback" gorm:"column:teacher_feedback" `
+
+	// for debug
+	ScheduleID   string `json:"schedule_id" gorm:"column:schedule_id" `
+	AssessmentID string `json:"assessment_id" gorm:"column:assessment_id" `
+	// for sorting
+	CompleteAt int64 `json:"complete_at" gorm:"column:complete_at" `
+	CreateAt   int64 `json:"create_at" gorm:"column:create_at" `
 }
 
 type QueryAssignmentsSummaryResult struct {

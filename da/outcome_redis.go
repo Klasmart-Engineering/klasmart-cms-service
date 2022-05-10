@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/ro"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/ro"
 )
 
 type IOutcomeRedis interface {

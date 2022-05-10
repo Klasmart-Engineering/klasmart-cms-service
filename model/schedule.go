@@ -10,18 +10,19 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/dbo"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da/assessmentV2"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mq"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/errgroup"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/da"
+	"github.com/KL-Engineering/kidsloop-cms-service/da/assessmentV2"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
+	"github.com/KL-Engineering/kidsloop-cms-service/mq"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils/errgroup"
 )
 
 var (
@@ -87,7 +88,8 @@ type IScheduleModel interface {
 	GetScheduleRelationIDs(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleRelationIDs, error)
 	CheckScheduleReviewData(ctx context.Context, op *entity.Operator, request *entity.CheckScheduleReviewDataRequest) (*entity.CheckScheduleReviewDataResponse, error)
 	UpdateScheduleReviewStatus(ctx context.Context, request *entity.UpdateScheduleReviewStatusRequest) error
-	GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleReview, error)
+	GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]*entity.ScheduleReview, error)
+	GetScheduleAttendance(ctx context.Context, timeframeFrom, timeframeTo int, scheduleTypes []string) ([]*entity.ScheduleAttendance, error)
 }
 
 type scheduleModel struct {
@@ -128,7 +130,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 		viewData.SubjectIDs = nil
 	}
 
-	schedule, err := viewData.ToSchedule(ctx)
+	schedule, err := viewData.ToSchedule(ctx, op)
 
 	relationInput := &entity.ScheduleRelationInput{
 		ClassRosterClassID:     viewData.ClassID,
@@ -831,8 +833,6 @@ func (s *scheduleModel) prepareScheduleUpdateData(ctx context.Context, op *entit
 	newSchedule.Description = viewData.Description
 	newSchedule.DueAt = viewData.DueAt
 	newSchedule.ClassType = viewData.ClassType
-	newSchedule.CreatedID = op.UserID
-	newSchedule.CreatedAt = time.Now().Unix()
 	newSchedule.UpdatedID = op.UserID
 	newSchedule.UpdatedAt = time.Now().Unix()
 	newSchedule.DeletedID = ""
@@ -954,43 +954,44 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 		)
 		return nil, constant.ErrOperateNotAllowed
 	}
+
 	if schedule.ClassType == entity.ScheduleClassTypeHomework &&
 		schedule.IsHomeFun &&
 		schedule.IsHidden {
 		log.Info(ctx, "schedule already hidden", log.Any("schedule", schedule))
 		return nil, ErrScheduleAlreadyHidden
 	}
-	if schedule.ClassType == entity.ScheduleClassTypeHomework {
-		if schedule.IsHomeFun {
-			exist, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, op, schedule.ID)
-			if err != nil {
-				log.Error(ctx, "update schedule: get schedule feedback error",
-					log.Any("schedule", schedule),
-					log.Err(err),
-				)
-				return nil, err
-			}
-			if exist {
-				log.Info(ctx, "ErrScheduleAlreadyAssignments", log.Any("schedule", schedule))
-				return nil, ErrScheduleAlreadyFeedback
-			}
-		} else {
-			if schedule.IsLockedLessonPlan() {
-				log.Info(ctx, "The schedule has already been attended", log.Any("scheduleID", schedule.ID))
-				return nil, ErrScheduleStudyAlreadyProgress
-			}
+
+	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
+		exist, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, op, schedule.ID)
+		if err != nil {
+			log.Error(ctx, "update schedule: get schedule feedback error",
+				log.Any("schedule", schedule),
+				log.Err(err),
+			)
+			return nil, err
+		}
+		if exist {
+			log.Info(ctx, "ErrScheduleAlreadyAssignments", log.Any("schedule", schedule))
+			return nil, ErrScheduleAlreadyFeedback
 		}
 	}
+
+	// check schedule is locked lesson plan version
+	if schedule.IsLockedLessonPlan() {
+		log.Info(ctx, "The schedule has already been attended", log.Any("scheduleID", schedule.ID))
+		return nil, ErrScheduleStudyAlreadyProgress
+	}
+
 	switch schedule.ClassType {
 	case entity.ScheduleClassTypeHomework, entity.ScheduleClassTypeTask:
 		if schedule.DueAt > 0 {
 			now := time.Now().Unix()
-			dueAtEnd := utils.TodayEndByTimeStamp(schedule.DueAt, time.Local).Unix()
-			if dueAtEnd < now {
+			if schedule.DueAt < now {
 				log.Warn(ctx, "checkScheduleStatus: the due_at time has expired",
 					log.Any("schedule", schedule),
 					log.Any("now", now),
-					log.Any("dueAtEnd", dueAtEnd),
+					log.Any("schedule.DueAt", schedule.DueAt),
 				)
 				return nil, ErrScheduleEditMissTimeForDueAt
 			}
@@ -1194,7 +1195,8 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 		return err
 	}
 
-	if schedule.IsReview {
+	// if review schedule is pending
+	if schedule.IsReview && schedule.ReviewStatus == entity.ScheduleReviewStatusPending {
 		deleteScheduleReviewRequest := external.DeleteScheduleReviewRequest{
 			ScheduleIDs: []string{schedule.ID},
 		}
@@ -1204,15 +1206,11 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 				log.Err(err),
 				log.Any("deleteScheduleReviewRequest", deleteScheduleReviewRequest),
 			)
-			return err
-		}
-
-		if len(resp.Succeeded) != 1 && resp.Succeeded[0] != schedule.ID {
+		} else if len(resp.Succeeded) != 1 || resp.Succeeded[0] != schedule.ID {
 			log.Error(ctx, "delete schedule review failed",
 				log.Any("resp", resp),
 				log.Any("deleteScheduleReviewRequest", deleteScheduleReviewRequest),
 			)
-			return errors.New("delete schedule review failed")
 		}
 	}
 
@@ -1595,7 +1593,7 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 		return nil, err
 	}
 
-	completeHomefunStudyAssessmentMap, err := GetAssessmentOfflineStudyModel().IsAnyOneCompleteByScheduleIDs(ctx, op, homeFunScheduleIDs)
+	completeHomefunStudyAssessmentMap, err := GetAssessmentFeedbackModel().IsCompleteByScheduleIDs(ctx, op, homeFunScheduleIDs)
 	if err != nil {
 		log.Error(ctx, "judgment home fun anyone attempt error", log.Err(err), log.Any("scheduleIDs", homeFunScheduleIDs))
 		return nil, err
@@ -3195,12 +3193,17 @@ func (s *scheduleModel) UpdateScheduleReviewStatus(ctx context.Context, request 
 	return nil
 }
 
-func (s *scheduleModel) GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleReview, error) {
+func (s *scheduleModel) GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]*entity.ScheduleReview, error) {
+	if len(scheduleIDs) == 0 {
+		return map[string][]*entity.ScheduleReview{}, nil
+	}
+
 	var scheduleReviews []*entity.ScheduleReview
+	scheduleReviewsMap := make(map[string][]*entity.ScheduleReview, len(scheduleIDs))
 	daCondition := da.ScheduleReviewCondition{
 		ScheduleIDs: entity.NullStrings{
 			Valid:   true,
-			Strings: []string{scheduleID},
+			Strings: scheduleIDs,
 		},
 		ReviewStatuses: entity.NullStrings{
 			Valid:   true,
@@ -3215,7 +3218,128 @@ func (s *scheduleModel) GetSuccessScheduleReview(ctx context.Context, op *entity
 		return nil, err
 	}
 
-	return scheduleReviews, nil
+	for _, v := range scheduleReviews {
+		if _, ok := scheduleReviewsMap[v.ScheduleID]; ok {
+			scheduleReviewsMap[v.ScheduleID] = append(scheduleReviewsMap[v.ScheduleID], v)
+		} else {
+			scheduleReviewsMap[v.ScheduleID] = []*entity.ScheduleReview{v}
+		}
+	}
+
+	return scheduleReviewsMap, nil
+}
+
+func (s *scheduleModel) GetScheduleAttendance(ctx context.Context, timeframeFrom, timeframeTo int, scheduleTypes []string) ([]*entity.ScheduleAttendance, error) {
+	daCondition := da.ScheduleCondition{
+		StartAtOrEndAtOrDueAtGe: sql.NullInt64{
+			Int64: int64(timeframeFrom),
+			Valid: true,
+		},
+		StartAtOrEndAtOrDueAtLe: sql.NullInt64{
+			Int64: int64(timeframeTo),
+			Valid: true,
+		},
+		ClassTypes: entity.NullStrings{
+			Strings: []string{},
+			Valid:   true,
+		},
+	}
+
+	if utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeClass)) {
+		daCondition.ClassTypes.Strings = append(daCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeOfflineClass))
+	}
+	if utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeLive)) {
+		daCondition.ClassTypes.Strings = append(daCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeOnlineClass))
+	}
+	if utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeTask)) {
+		daCondition.ClassTypes.Strings = append(daCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeTask))
+	}
+	if utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeHomefunStudy)) &&
+		!utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeStudy)) {
+		daCondition.ClassTypes.Strings = append(daCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeHomework))
+		daCondition.IsHomefun = sql.NullBool{
+			Bool:  true,
+			Valid: true,
+		}
+	}
+	if utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeStudy)) &&
+		!utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeHomefunStudy)) {
+		daCondition.ClassTypes.Strings = append(daCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeHomework))
+		daCondition.IsHomefun = sql.NullBool{
+			Bool:  false,
+			Valid: true,
+		}
+	}
+	if utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeStudy)) &&
+		utils.ContainsString(scheduleTypes, string(entity.ScheduleTypeHomefunStudy)) {
+		daCondition.ClassTypes.Strings = append(daCondition.ClassTypes.Strings, string(entity.ScheduleClassTypeHomework))
+	}
+
+	var schedules []*entity.Schedule
+	err := s.scheduleDA.Query(ctx, daCondition, &schedules)
+	if err != nil {
+		log.Error(ctx, "s.scheduleDA.Query error",
+			log.Err(err),
+			log.Any("daCondition", daCondition))
+		return nil, err
+	}
+	if len(schedules) == 0 {
+		return []*entity.ScheduleAttendance{}, nil
+	}
+
+	scheduleIDs := make([]string, 0, len(schedules))
+	for _, v := range schedules {
+		scheduleIDs = append(scheduleIDs, v.ID)
+	}
+
+	scheduleRelationCondition := da.ScheduleRelationCondition{
+		ScheduleIDs: entity.NullStrings{
+			Strings: scheduleIDs,
+			Valid:   true,
+		},
+		RelationTypes: entity.NullStrings{
+			Strings: []string{string(entity.ScheduleRelationTypeClassRosterStudent), string(entity.ScheduleRelationTypeClassRosterTeacher)},
+			Valid:   true,
+		},
+	}
+	var scheduleRelations []*entity.ScheduleRelation
+	err = s.scheduleRelationDA.Query(ctx, scheduleRelationCondition, &scheduleRelations)
+	if err != nil {
+		log.Error(ctx, "s.scheduleRelationDA.Query error",
+			log.Err(err),
+			log.Any("scheduleRelationCondition", scheduleRelationCondition))
+		return nil, err
+	}
+
+	scheduleAttendances := make(map[string]*entity.ScheduleAttendance)
+	for _, v := range scheduleRelations {
+		if val, ok := scheduleAttendances[v.ScheduleID]; ok {
+			switch v.RelationType {
+			case entity.ScheduleRelationTypeClassRosterStudent:
+				val.NumberOfStudents++
+			case entity.ScheduleRelationTypeClassRosterTeacher:
+				val.NumberOfTeachers++
+			}
+		} else {
+			switch v.RelationType {
+			case entity.ScheduleRelationTypeClassRosterStudent:
+				scheduleAttendances[v.ScheduleID] = &entity.ScheduleAttendance{
+					NumberOfStudents: 1,
+				}
+			case entity.ScheduleRelationTypeClassRosterTeacher:
+				scheduleAttendances[v.ScheduleID] = &entity.ScheduleAttendance{
+					NumberOfTeachers: 1,
+				}
+			}
+		}
+	}
+
+	result := make([]*entity.ScheduleAttendance, 0, len(scheduleAttendances))
+	for _, v := range scheduleAttendances {
+		result = append(result, v)
+	}
+
+	return result, nil
 }
 
 // Schedule model interval function
@@ -3556,7 +3680,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 	// check if the assessment completed, homefun homework
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun && !schedule.IsReview {
 		g.Go(func() error {
-			scheduleAssessmentMap, err := GetAssessmentOfflineStudyModel().IsAnyOneCompleteByScheduleIDs(ctx, operator, []string{schedule.ID})
+			scheduleAssessmentMap, err := GetAssessmentFeedbackModel().IsCompleteByScheduleIDs(ctx, operator, []string{schedule.ID})
 			if err != nil {
 				log.Error(ctx, "s.homefunStudyModel.Query error",
 					log.Err(err),
@@ -4121,7 +4245,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 	// check if the assessment completed, homefun homework
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun && !schedule.IsReview {
 		g.Go(func() error {
-			scheduleAssessmentMap, err := GetAssessmentOfflineStudyModel().IsAnyOneCompleteByScheduleIDs(ctx, operator, []string{schedule.ID})
+			scheduleAssessmentMap, err := GetAssessmentFeedbackModel().IsCompleteByScheduleIDs(ctx, operator, []string{schedule.ID})
 			if err != nil {
 				log.Error(ctx, "s.homefunStudyModel.Query error",
 					log.Err(err),
@@ -4277,7 +4401,7 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 	g.Go(func() error {
 		if len(homefunHomeworkIDs) > 0 {
 			var err error
-			scheduleCompleteAssessmentMap, err = GetAssessmentOfflineStudyModel().IsAnyOneCompleteByScheduleIDs(ctx, operator, homefunHomeworkIDs)
+			scheduleCompleteAssessmentMap, err = GetAssessmentFeedbackModel().IsCompleteByScheduleIDs(ctx, operator, homefunHomeworkIDs)
 			if err != nil {
 				log.Error(ctx, "s.homefunStudyModel.Query error",
 					log.Err(err),
@@ -4534,9 +4658,9 @@ func (s *scheduleModel) transformToScheduleTimeView(ctx context.Context, operato
 		}
 
 		if len(homefunHomeworkIDs) > 0 {
-			offlineStudyResult, err := GetAssessmentOfflineStudyModel().GetUserResult(ctx, operator, homefunHomeworkIDs, []string{operator.UserID})
+			offlineStudyResult, err := GetAssessmentFeedbackModel().GetUserResult(ctx, operator, homefunHomeworkIDs, []string{operator.UserID})
 			if err != nil {
-				log.Error(ctx, "GetAssessmentOfflineStudyModel().GetUserResult error",
+				log.Error(ctx, "GetAssessmentFeedbackModel().GetUserResult error",
 					log.Err(err),
 					log.Strings("homefunHomeworkIDs", homefunHomeworkIDs),
 					log.String("studentID", operator.UserID))
@@ -4545,10 +4669,10 @@ func (s *scheduleModel) transformToScheduleTimeView(ctx context.Context, operato
 
 			for scheduleID, homefunStudyAssessment := range offlineStudyResult {
 				if len(homefunStudyAssessment) > 0 {
-					switch homefunStudyAssessment[0].Status {
-					case v2.UserResultProcessStatusComplete:
+					switch homefunStudyAssessment[0].StatusBySystem {
+					case v2.AssessmentUserSystemStatusCompleted:
 						assessmentStatusMap[scheduleID] = entity.AssessmentStatusComplete
-					case v2.UserResultProcessStatusStarted, v2.UserResultProcessStatusDraft:
+					case v2.AssessmentUserSystemStatusDone, v2.AssessmentUserSystemStatusResubmitted, v2.AssessmentUserSystemStatusInProgress:
 						assessmentStatusMap[scheduleID] = entity.AssessmentStatusInProgress
 					}
 				}
@@ -4674,6 +4798,13 @@ func (s *scheduleModel) getAssessmentAddWhenCreateSchedulesReq(ctx context.Conte
 
 // model package interval function
 func removeResourceMetadata(ctx context.Context, resourceID string) error {
+	bucket := config.Get().StorageConfig.StorageBucket
+	inboundBucket := config.Get().StorageConfig.StorageBucketInbound
+	if inboundBucket != "" && inboundBucket != bucket {
+		log.Debug(ctx, "use inbound bucket", log.String("inboundBucket", inboundBucket))
+		return nil
+	}
+
 	if resourceID == "" {
 		return nil
 	}

@@ -3,15 +3,15 @@ package model
 import (
 	"context"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"github.com/KL-Engineering/common-log/log"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/da"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 func (cm *ContentModel) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest) (response *entity.GetLessonPlansCanScheduleResponse, err error) {

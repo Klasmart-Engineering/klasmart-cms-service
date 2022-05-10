@@ -30,6 +30,15 @@ type StudentAchievementReportItem struct {
 	NotAchievedCount  int    `json:"not_achieved_count"`
 	NotAttemptedCount int    `json:"not_attempted_count"`
 }
+type StudentOutcomeCountItem struct {
+	StudentID          string `json:"student_id" gorm:"column:student_id" `
+	OutcomeID          string `json:"outcome_id" gorm:"column:outcome_id" `
+	CountOfUnknown     int    `json:"count_of_unknown" gorm:"column:count_of_unknown" `
+	CountOfAchieved    int    `json:"count_of_achieved" gorm:"column:count_of_achieved" `
+	CountOfNotAchieved int    `json:"count_of_not_achieved" gorm:"column:count_of_not_achieved" `
+	CountOfNotCovered  int    `json:"count_of_not_covered" gorm:"column:count_of_not_covered" `
+	CountOfAll         int    `json:"count_of_all" gorm:"column:count_of_all" `
+}
 
 type StudentAchievementReportResponse struct {
 	StudentName   string                                  `json:"student_name"`
@@ -204,6 +213,12 @@ type TeacherReport struct {
 type TeacherReportCategory struct {
 	Name  string   `json:"name"`
 	Items []string `json:"items"`
+}
+
+type TeacherReportItem struct {
+	CategoryID  string `json:"category_id" gorm:"column:category_id" `
+	OutcomeID   string `json:"outcome_id" gorm:"column:outcome_id" `
+	OutcomeName string `json:"outcome_name" gorm:"column:outcome_name" `
 }
 
 type TeacherReportSortByCount TeacherReport

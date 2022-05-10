@@ -2,8 +2,9 @@ package model
 
 import (
 	"encoding/json"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"testing"
+
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 func Test_GetUserSettingJson(t *testing.T) {

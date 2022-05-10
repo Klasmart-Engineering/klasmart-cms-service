@@ -2,9 +2,10 @@ package model
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"testing"
+
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 func TestShortcodeValidate(t *testing.T) {

@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"github.com/KL-Engineering/common-log/log"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 type RepeatType string
@@ -203,6 +203,32 @@ type RepeatEnd struct {
 	AfterTime  int64         `json:"after_time,omitempty"`
 }
 
+// TODO needs to be integrated with ScheduleClassType
+type ScheduleType string
+
+const (
+	ScheduleTypeLive         ScheduleType = "live"
+	ScheduleTypeClass        ScheduleType = "class"
+	ScheduleTypeStudy        ScheduleType = "study"
+	ScheduleTypeHomefunStudy ScheduleType = "home_fun_study"
+	ScheduleTypeReview       ScheduleType = "review"
+	ScheduleTypeTask         ScheduleType = "task"
+)
+
+func (s ScheduleType) Valid() bool {
+	switch s {
+	case ScheduleTypeLive,
+		ScheduleTypeClass,
+		ScheduleTypeStudy,
+		ScheduleTypeHomefunStudy,
+		ScheduleTypeReview,
+		ScheduleTypeTask:
+		return true
+	default:
+		return false
+	}
+}
+
 type ScheduleClassType string
 
 const (
@@ -388,8 +414,7 @@ func (s ScheduleStatus) GetScheduleStatus(input ScheduleStatusInput) ScheduleSta
 	switch input.ClassType {
 	case ScheduleClassTypeHomework, ScheduleClassTypeTask:
 		if input.DueAt > 0 {
-			endAt := utils.TodayEndByTimeStamp(input.DueAt, time.Local).Unix()
-			if endAt < time.Now().Unix() {
+			if input.DueAt < time.Now().Unix() {
 				status = ScheduleStatusClosed
 			}
 		}
@@ -481,7 +506,7 @@ type ScheduleEditValidation struct {
 	IsReview               bool
 }
 
-func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
+func (s *ScheduleAddView) ToSchedule(ctx context.Context, op *Operator) (*Schedule, error) {
 	schedule := &Schedule{
 		ID:              utils.NewID(),
 		Title:           s.Title,
@@ -504,6 +529,8 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 		ReviewStatus:    "",
 		ContentStartAt:  s.ContentStartAt,
 		ContentEndAt:    s.ContentEndAt,
+		CreatedID:       op.UserID,
+		UpdatedID:       op.UserID,
 	}
 
 	if s.IsReview {
@@ -661,8 +688,8 @@ type ScheduleSimplified struct {
 }
 
 type ScheduleShortInfo struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID   string `json:"id" gorm:"column:id" `
+	Name string `json:"name" gorm:"column:name" `
 }
 
 type SchedulePlain struct {
@@ -673,7 +700,7 @@ type ScheduleVariable struct {
 	*Schedule
 	RoomID           string               `json:"room_id"`
 	Subjects         []*ScheduleShortInfo `json:"subjects"`
-	ClassRosterClass *ScheduleShortInfo   `json:"subjects"`
+	ClassRosterClass *ScheduleShortInfo   `json:"class_roster_class"`
 }
 
 type ScheduleInclude struct {
@@ -1057,4 +1084,9 @@ type ScheduleReviewSucceededResult struct {
 type ScheduleReviewFailedResult struct {
 	StudentID string `json:"student_id"`
 	Reason    string `json:"reason"`
+}
+
+type ScheduleAttendance struct {
+	NumberOfTeachers int `json:"number_of_teachers"`
+	NumberOfStudents int `json:"number_of_students"`
 }

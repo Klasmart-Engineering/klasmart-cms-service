@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/test/utils"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/test/utils"
 )
 
 func TestCreateScheduleReview(t *testing.T) {
@@ -37,7 +37,6 @@ func TestCheckScheduleReview(t *testing.T) {
 		TimeZoneOffset: 0,
 		ProgramID:      "class_id_1",
 		SubjectIDs:     []string{"subject1"},
-		ClassID:        "class_id_1",
 		StudentIDs:     []string{"79d78876-79bb-4b79-9868-4a99e03ca757"},
 		ContentStartAt: 0,
 		ContentEndAt:   0,

@@ -1,10 +1,11 @@
 package da
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
+
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 type IHomeFunStudyDA interface {

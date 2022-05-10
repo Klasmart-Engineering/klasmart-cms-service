@@ -3,11 +3,11 @@ package model
 import (
 	"context"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"github.com/KL-Engineering/kidsloop-cms-service/da"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 func (m *reportModel) GetLearnerReportOverview(ctx context.Context, op *entity.Operator, cond *entity.LearnerReportOverviewCondition) (res entity.LearnerReportOverview, err error) {
@@ -26,7 +26,7 @@ func (m *reportModel) GetLearnerReportOverview(ctx context.Context, op *entity.O
 	if err != nil {
 		return
 	}
-	ucCond := entity.GetUserCountCondition{
+	ucCond := &entity.GetUserCountCondition{
 		OrgID: entity.NullString{
 			String: op.OrgID,
 			Valid:  true,

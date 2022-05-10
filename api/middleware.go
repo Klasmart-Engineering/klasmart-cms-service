@@ -9,15 +9,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	newrelic "github.com/newrelic/go-agent"
 	"github.com/newrelic/go-agent/_integrations/nrgin/v1"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 func ExtractSession(c *gin.Context) (string, error) {
@@ -47,6 +47,26 @@ func (Server) mustAms(c *gin.Context) {
 	})
 	if err != nil {
 		log.Info(c.Request.Context(), "mustAms", log.String("token", token), log.Err(err))
+		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
+		return
+	}
+}
+
+func (Server) mustDataService(c *gin.Context) {
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		log.Info(c.Request.Context(), "mustDataService", log.String("session", "no authorization"))
+		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
+		return
+	}
+
+	prefix := "Bearer "
+	if strings.HasPrefix(token, prefix) {
+		token = token[len(prefix):]
+	}
+
+	if token != config.Get().DataService.PublicAuthorizedKey {
+		log.Info(c.Request.Context(), "mustDataService", log.String("token", token))
 		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
 		return
 	}

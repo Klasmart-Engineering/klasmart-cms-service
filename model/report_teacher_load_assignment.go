@@ -3,14 +3,14 @@ package model
 import (
 	"context"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"github.com/KL-Engineering/common-log/log"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/da"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 func (m *reportModel) GetTeacherLoadReportOfAssignment(ctx context.Context, op *entity.Operator, req *entity.TeacherLoadAssignmentRequest) (items []*entity.TeacherLoadAssignmentResponseItem, err error) {

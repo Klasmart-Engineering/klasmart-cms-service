@@ -7,12 +7,12 @@ import (
 	"sort"
 	"strings"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/da"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 type assessmentH5P struct {
@@ -941,8 +941,8 @@ func (m *assessmentH5P) calcRoomCompleteRate(ctx context.Context, room *entity.A
 }
 
 func (m *assessmentH5P) canScoring(contentType string) bool {
-	if v, ok := canScoringMap[contentType]; ok {
-		return v
-	}
+	//if v, ok := canScoringMap[contentType]; ok {
+	//	return v
+	//}
 	return true
 }

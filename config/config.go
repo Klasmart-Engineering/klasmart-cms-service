@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-redis/redis/v8"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
 var (
@@ -102,8 +102,9 @@ type StorageConfig struct {
 	StorageBucket   string `yaml:"storage_bucket"`
 	StorageRegion   string `yaml:"storage_region"`
 
-	StorageDownloadMode StorageDownloadMode `yaml:"storage_download_mode"`
-	StorageSigMode      bool                `yaml:"storage_sig_mode"`
+	StorageDownloadMode  StorageDownloadMode `yaml:"storage_download_mode"`
+	StorageSigMode       bool                `yaml:"storage_sig_mode"`
+	StorageBucketInbound string              `yaml:"storage_bucket_inbound"`
 }
 
 type CDNConfig struct {
@@ -123,7 +124,8 @@ type ScheduleConfig struct {
 type LiveTokenConfig struct {
 	PrivateKey interface{} `yaml:"private_key" json:"-"`
 	//PublicKey  string      `yaml:"public_key"`
-	AssetsUrlPrefix string `yaml:"assets_url_prefix"`
+	AssetsUrlPrefix        string `yaml:"assets_url_prefix"`
+	ScheduleQueryPublicKey string `yaml:"schedule_query_public_key"`
 }
 
 type AssessmentConfig struct {
@@ -133,9 +135,10 @@ type AssessmentConfig struct {
 }
 
 type AMSConfig struct {
-	EndPoint       string      `json:"endpoint" yaml:"endpoint"`
-	TokenVerifyKey interface{} `json:"-" yaml:"token_verify_key"`
-	AuthorizedKey  string      `json:"authorized_key"`
+	EndPoint           string      `json:"endpoint" yaml:"endpoint"`
+	TokenVerifyKey     interface{} `json:"-" yaml:"token_verify_key"`
+	AuthorizedKey      string      `json:"authorized_key"`
+	UseDeprecatedQuery bool        `json:"use_deprecated_query"`
 }
 
 type DataServiceConfig struct {
@@ -211,7 +214,7 @@ func LoadEnvConfig() {
 	loadCryptoEnvConfig(ctx)
 	loadLiveTokenEnvConfig(ctx)
 	LoadAMSConfig(ctx)
-	loadH5PServiceConfig(ctx)
+	LoadH5PServiceConfig(ctx)
 	loadDataServiceConfig(ctx)
 	loadTencentConfig(ctx)
 	loadKidsloopCNLoginConfig(ctx)
@@ -316,6 +319,8 @@ func loadStorageEnvConfig(ctx context.Context) {
 			config.CDNConfig.CDNPrivateKeyPath = assertGetEnv("cdn_private_key_path")
 		}
 	}
+
+	config.StorageConfig.StorageBucketInbound = os.Getenv("storage_bucket_inbound")
 }
 
 func LoadRedisEnvConfig(ctx context.Context) {
@@ -478,6 +483,7 @@ func loadLiveTokenEnvConfig(ctx context.Context) {
 		)
 	}
 	config.LiveTokenConfig.AssetsUrlPrefix = assetsUrlPrefix
+	config.LiveTokenConfig.ScheduleQueryPublicKey = os.Getenv("schedule_query_key")
 }
 
 func loadAssessmentConfig(ctx context.Context) {
@@ -512,21 +518,29 @@ func loadAssessmentConfig(ctx context.Context) {
 
 func LoadAMSConfig(ctx context.Context) {
 	config.AMS.EndPoint = assertGetEnv("ams_endpoint")
-	publicKeyPath := os.Getenv("jwt_public_key_path") //"./jwt_public_key.pem"
-	content, err := ioutil.ReadFile(publicKeyPath)
-	if err != nil {
-		log.Panic(ctx, "loadAMSConfig:load public key failed", log.Err(err), log.String("publicKeyPath", publicKeyPath))
-	}
+	publicKey := os.Getenv("jwt_public_key_string")
+	if publicKey != "" {
+		// debug mode: HS256/HS512
+		config.AMS.TokenVerifyKey = []byte(publicKey)
+	} else {
+		publicKeyPath := os.Getenv("jwt_public_key_path") //"./jwt_public_key.pem"
+		content, err := ioutil.ReadFile(publicKeyPath)
+		if err != nil {
+			log.Panic(ctx, "loadAMSConfig:load public key failed", log.Err(err), log.String("publicKeyPath", publicKeyPath))
+		}
 
-	key, err := jwt.ParseRSAPublicKeyFromPEM(content)
-	if err != nil {
-		log.Panic(ctx, "loadAMSConfig:ParseRSAPublicKeyFromPEM failed", log.Err(err))
+		key, err := jwt.ParseRSAPublicKeyFromPEM(content)
+		if err != nil {
+			log.Panic(ctx, "loadAMSConfig:ParseRSAPublicKeyFromPEM failed", log.Err(err))
+		}
+		config.AMS.TokenVerifyKey = key
 	}
-	config.AMS.TokenVerifyKey = key
 	config.AMS.AuthorizedKey = os.Getenv("user_service_api_key")
+	useDeprecatedQuery, err := strconv.ParseBool(os.Getenv("use_deprecated_query"))
+	config.AMS.UseDeprecatedQuery = err != nil || useDeprecatedQuery
 }
 
-func loadH5PServiceConfig(ctx context.Context) {
+func LoadH5PServiceConfig(ctx context.Context) {
 	config.H5P.EndPoint = constant.H5PServiceDefaultEndpoint
 	h5pEndpoint := os.Getenv("h5p_endpoint")
 	if h5pEndpoint != "" {
@@ -536,11 +550,9 @@ func loadH5PServiceConfig(ctx context.Context) {
 
 func loadDataServiceConfig(ctx context.Context) {
 	// TODO assertGetEnv
-	// config.DataService.EndPoint = os.Getenv("data_service_endpoint")
-	// config.DataService.AuthorizedKey = os.Getenv("data_service_api_key")
-	// config.DataService.PublicAuthorizedKey = os.Getenv("data_service_public_key")
-	config.DataService.EndPoint = "https://dev-global-adaptive-review-api.data.kidsloop.net"
-	config.DataService.AuthorizedKey = "uM72VB8WJl85tw66Ps4ri5uZJaBvxzsmF5sa0yg5"
+	config.DataService.EndPoint = os.Getenv("data_service_endpoint")
+	config.DataService.AuthorizedKey = os.Getenv("data_service_api_key")
+	config.DataService.PublicAuthorizedKey = os.Getenv("data_service_public_key")
 }
 
 func loadCORSConfig(ctx context.Context) {

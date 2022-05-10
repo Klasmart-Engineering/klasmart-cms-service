@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"github.com/KL-Engineering/common-log/log"
 
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 

@@ -2,23 +2,22 @@ package model
 
 import (
 	"context"
-	"sort"
 	"sync"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/da"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 type IReportModel interface {
 	ListStudentsReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsAchievementReportRequest) (*entity.StudentsAchievementReportResponse, error)
 	GetStudentReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.GetStudentAchievementReportRequest) (*entity.StudentAchievementReportResponse, error)
-	GetTeacherReportOverView(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, from, to int64, teacherIDs []string) (res *entity.StudentsAchievementOverviewReportResponse, err error)
+	GetLearningOutcomeOverView(ctx context.Context, condition *da.LearningOutcomeOverviewQueryCondition) (res *entity.StudentsAchievementOverviewReportResponse, err error)
 	GetTeacherReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, teacherIDs ...string) (*entity.TeacherReport, error)
 	GetLessonPlanFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string) ([]*entity.ScheduleShortInfo, error)
 	// DEPRECATED
@@ -42,6 +41,7 @@ type IReportModel interface {
 	GetClassIDsCanViewReports(ctx context.Context, operator *entity.Operator, params external.TeacherViewPermissionParams) (classIDs []string, err error)
 	GetLearnerUsageOverview(ctx context.Context, op *entity.Operator, permissions map[external.PermissionName]bool, request *entity.LearnerUsageRequest) (response *entity.LearnerUsageResponse, err error)
 	GetLearnerReportOverview(ctx context.Context, op *entity.Operator, cond *entity.LearnerReportOverviewCondition) (res entity.LearnerReportOverview, err error)
+	GetAppInsightMessage(ctx context.Context, op *entity.Operator, req *entity.AppInsightMessageRequest) (res *entity.AppInsightMessageResponse, err error)
 }
 
 var (
@@ -110,8 +110,12 @@ func (m *reportModel) GetLearnerUsageOverview(ctx context.Context, op *entity.Op
 
 // region assessment
 
-func (m *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsAchievementReportRequest) (*entity.StudentsAchievementReportResponse, error) {
+func (m *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsAchievementReportRequest) (res *entity.StudentsAchievementReportResponse, err error) {
 	{
+		res = &entity.StudentsAchievementReportResponse{
+			Items:         []*entity.StudentAchievementReportItem{},
+			AssessmentIDs: []string{},
+		}
 		if !req.Status.Valid() {
 			log.Error(ctx, "list students report: invalid status", log.Any("req", req))
 			return nil, constant.ErrInvalidArgs
@@ -159,108 +163,47 @@ func (m *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 		return nil, err
 	}
 
-	assessmentIDs, err := m.getCompletedAssessmentIDs(ctx, tx, operator, req.ClassID, req.LessonPlanID)
+	items, err := da.GetReportDA().GetStudentOutcomeCount(ctx, operator, req)
 	if err != nil {
-		log.Error(ctx, "list student report: get assessment ids failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("req", req),
-		)
-		return nil, err
+		return
 	}
-
-	assessmentAttendances, err := m.getAssessmentCheckedStudents(ctx, tx, assessmentIDs)
-	if err != nil {
-		log.Error(ctx, "list student report: get checked assessment attendance failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("req", req),
-			log.Strings("assessment_ids", assessmentIDs),
-		)
-		return nil, err
-	}
-
-	var assessmentOutcomes []*entity.AssessmentOutcome
-	if err := da.GetAssessmentOutcomeDA().QueryTx(ctx, tx, &da.QueryAssessmentOutcomeConditions{
-		AssessmentIDs: entity.NullStrings{
-			Strings: assessmentIDs,
-			Valid:   true,
-		},
-		Checked: entity.NullBool{
-			Bool:  true,
-			Valid: true,
-		},
-	}, &assessmentOutcomes); err != nil {
-		log.Error(ctx, "ListStudentsReport: da.GetAssessmentOutcomeDA().QueryTx: get assessment outcomes failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("req", req),
-			log.Strings("assessment_ids", assessmentIDs),
-		)
-		return nil, err
-	}
-
-	outcomeAttendances, err := m.getOutcomeAttendancesIncludePartially(ctx, tx, assessmentIDs)
-	if err != nil {
-		log.Error(ctx, "list student report: call getOutcomeAttendances failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("req", req),
-			log.Strings("assessment_ids", assessmentIDs),
-		)
-		return nil, err
-	}
-
-	tr, err := m.makeLatestOutcomeIDsTranslator(ctx, tx, operator, m.getOutcomeIDs(assessmentOutcomes))
-	if err != nil {
-		log.Error(ctx, "list student report: make latest outcome ids translator failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("req", req),
-			log.Any("assessment_outcomes", assessmentOutcomes),
-		)
-		return nil, err
-	}
-
-	attendanceIDExistsMap := m.getAttendanceIDsExistMap(assessmentAttendances)
-	attendanceID2OutcomeIDsMap := m.getAttendanceID2OutcomeIDsMap(assessmentAttendances, assessmentOutcomes)
-	achievedAttendanceID2OutcomeIDsMap := m.getAchievedAttendanceID2OutcomeIDsMap(outcomeAttendances)
-	skipAttendanceID2OutcomeIDsMap := m.getSkipAttendanceID2OutcomeIDsMap(assessmentAttendances, assessmentOutcomes)
-	notAchievedAttendanceID2OutcomeIDsMap := m.getNotAchievedAttendanceID2OutcomeIDsMap(attendanceID2OutcomeIDsMap, achievedAttendanceID2OutcomeIDsMap, skipAttendanceID2OutcomeIDsMap)
-	log.Debug(ctx, "ListStudentsReport: print all map",
-		log.Any("attendance_id_exists_map", attendanceIDExistsMap),
-		log.Any("attendance_id_2_outcome_ids_map", attendanceID2OutcomeIDsMap),
-		log.Any("achieved_attendance_id_2_outcome_ids_map", achievedAttendanceID2OutcomeIDsMap),
-		log.Any("skip_attendance_id_2_outcome_ids_map", skipAttendanceID2OutcomeIDsMap),
-		log.Any("not_achieved_attendance_id_2_outcome_ids_map", notAchievedAttendanceID2OutcomeIDsMap),
-	)
-
-	var result = entity.StudentsAchievementReportResponse{AssessmentIDs: assessmentIDs}
-	for _, student := range students {
-		newItem := entity.StudentAchievementReportItem{StudentID: student.ID, StudentName: student.Name}
-		if !attendanceIDExistsMap[student.ID] {
-			newItem.Attend = false
-			result.Items = append(result.Items, &newItem)
-			continue
+	mRes := map[string]*entity.StudentAchievementReportItem{}
+	for _, item := range items {
+		if _, ok := mRes[item.StudentID]; !ok {
+			mRes[item.StudentID] = &entity.StudentAchievementReportItem{}
 		}
-		newItem.Attend = true
-		newItem.AchievedCount = len(tr(achievedAttendanceID2OutcomeIDsMap[student.ID]))
-		newItem.NotAttemptedCount = len(tr(skipAttendanceID2OutcomeIDsMap[student.ID]))
-		newItem.NotAchievedCount = len(tr(notAchievedAttendanceID2OutcomeIDsMap[student.ID]))
-		result.Items = append(result.Items, &newItem)
+
+		switch {
+		case item.CountOfNotAchieved == item.CountOfAll:
+			mRes[item.StudentID].NotAchievedCount++
+		case item.CountOfNotCovered == item.CountOfAll:
+			mRes[item.StudentID].NotAttemptedCount++
+		default:
+			mRes[item.StudentID].AchievedCount++
+		}
+	}
+	for _, student := range students {
+		item := &entity.StudentAchievementReportItem{
+			StudentID:         student.ID,
+			StudentName:       student.Name,
+			Attend:            false,
+			AchievedCount:     0,
+			NotAchievedCount:  0,
+			NotAttemptedCount: 0,
+		}
+		if _, ok := mRes[student.ID]; ok {
+			item.NotAchievedCount = mRes[student.ID].NotAchievedCount
+			item.AchievedCount = mRes[student.ID].AchievedCount
+			item.NotAttemptedCount = mRes[student.ID].NotAttemptedCount
+			if item.AchievedCount+item.NotAchievedCount > 0 {
+				item.Attend = true
+			}
+		}
+
+		res.Items = append(res.Items, item)
 	}
 
-	sortInterface := entity.NewSortingStudentReportItems(result.Items, req.Status)
-	switch req.SortBy {
-	case entity.ReportSortByDesc:
-		sort.Sort(sort.Reverse(sortInterface))
-	case entity.ReportSortByAsc:
-		fallthrough
-	default:
-		sort.Sort(sortInterface)
-	}
-
-	return &result, nil
+	return
 }
 
 func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.GetStudentAchievementReportRequest) (*entity.StudentAchievementReportResponse, error) {
@@ -568,20 +511,19 @@ func (rm *reportModel) GetClassIDsCanViewReports(ctx context.Context, operator *
 	return
 }
 
-func (m *reportModel) GetTeacherReportOverView(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, from, to int64, teacherIDs []string) (res *entity.StudentsAchievementOverviewReportResponse, err error) {
+func (m *reportModel) GetLearningOutcomeOverView(ctx context.Context, condition *da.LearningOutcomeOverviewQueryCondition) (res *entity.StudentsAchievementOverviewReportResponse, err error) {
 	res = &entity.StudentsAchievementOverviewReportResponse{}
-	if len(teacherIDs) == 0 {
+	if len(condition.TeacherIDs) == 0 {
 		return
 	}
-	res.CoveredLearnOutComeCount, err = da.GetReportDA().GetCompleteLearnOutcomeCount(ctx, tx, from, to, teacherIDs)
+
+	covered, achieved, err := da.GetReportDA().GetLearnerOutcomeOverview(ctx, condition)
 	if err != nil {
 		return
 	}
-	studentOutcomeAchievedCounts, err := da.GetReportDA().GetStudentAchievedOutcome(ctx, tx, from, to, teacherIDs)
-	if err != nil {
-		return
-	}
-	for _, s := range studentOutcomeAchievedCounts {
+
+	res.CoveredLearnOutComeCount = covered
+	for _, s := range achieved {
 		percent := float64(s.AchievedOutcomeCount) / float64(s.TotalAchievedOutcomeCount)
 		switch {
 		case percent >= 0.8:
@@ -594,109 +536,53 @@ func (m *reportModel) GetTeacherReportOverView(ctx context.Context, tx *dbo.DBCo
 	}
 	return
 }
-func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, teacherIDs ...string) (*entity.TeacherReport, error) {
+
+func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, teacherIDs ...string) (res *entity.TeacherReport, err error) {
+	res = &entity.TeacherReport{
+		Categories: []*entity.TeacherReportCategory{},
+	}
 	if len(teacherIDs) < 1 {
-		return &entity.TeacherReport{
-			Categories: []*entity.TeacherReportCategory{},
-		}, nil
+		return
 	}
-	var assessmentIDs []string
-	{
-
-		assessments, err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
-			OrgID: entity.NullString{
-				String: operator.OrgID,
-				Valid:  true,
-			},
-			TeacherIDs: entity.NullStrings{
-				Strings: teacherIDs,
-				Valid:   true,
-			},
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		for _, item := range assessments {
-			assessmentIDs = append(assessmentIDs, item.ID)
-		}
+	items, err := da.GetReportDA().GetTeacherReportItems(ctx, tx, operator, teacherIDs...)
+	if err != nil {
+		return
 	}
-	var outcomes []*entity.Outcome
-	{
-		var assessmentOutcomes []*entity.AssessmentOutcome
-		if err := da.GetAssessmentOutcomeDA().QueryTx(ctx, tx, &da.QueryAssessmentOutcomeConditions{
-			AssessmentIDs: entity.NullStrings{
-				Strings: assessmentIDs,
-				Valid:   true,
-			},
-			Checked: entity.NullBool{
-				Bool:  true,
-				Valid: true,
-			},
-		}, &assessmentOutcomes); err != nil {
-			log.Error(ctx, "GetTeacherReport: da.GetAssessmentOutcomeDA().QueryTx: get assessment outcomes failed",
-				log.Err(err),
-				log.Any("operator", operator),
-				log.Strings("assessment_ids", assessmentIDs),
-			)
-			return nil, err
-		}
 
-		outcomeIDs := m.getOutcomeIDs(assessmentOutcomes)
-		oidTr, err := m.makeLatestOutcomeIDsTranslator(ctx, tx, operator, outcomeIDs)
-		if err != nil {
-			log.Error(ctx, "GetTeacherReport: make latest outcome ids translator failed",
-				log.Err(err),
-				log.Any("outcome_ids", outcomeIDs),
-				log.Any("operator", operator),
-			)
-		}
-		outcomeIDs = oidTr(outcomeIDs)
-		outcomes, err = GetOutcomeModel().GetByIDs(ctx, operator, tx, outcomeIDs)
-		if err != nil {
-			log.Error(ctx, "get teacher report: get learning outcome failed by ids",
-				log.Err(err),
-				log.Any("operator", operator),
-				log.Any("teacher_ids", teacherIDs),
-			)
-			return nil, err
-		}
-	}
 	categoryIDToNameMap := map[string]string{}
-	{
-		developmentalList, err := external.GetCategoryServiceProvider().GetByOrganization(ctx, operator)
-		if err != nil {
-			log.Error(ctx, "get teacher report: query all developmental failed",
-				log.Err(err),
-				log.Any("teacher_ids", teacherIDs),
-				log.Any("operator", operator),
-			)
-			return nil, err
+	categories, err := external.GetCategoryServiceProvider().GetByOrganization(ctx, operator)
+	if err != nil {
+		return
+	}
+	for _, category := range categories {
+		categoryIDToNameMap[category.ID] = category.Name
+	}
+
+	mCategory := map[string]map[string]bool{}
+	for _, item := range items {
+		name, ok := categoryIDToNameMap[item.CategoryID]
+		if !ok {
+			continue
 		}
-		for _, item := range developmentalList {
-			categoryIDToNameMap[item.ID] = item.Name
+
+		mOutcome, ok := mCategory[name]
+		if !ok {
+			mOutcome = map[string]bool{}
+			mCategory[name] = mOutcome
+		}
+		mOutcome[item.OutcomeName] = true
+	}
+
+	for name, mOutcome := range mCategory {
+		category := &entity.TeacherReportCategory{
+			Name: name,
+		}
+		res.Categories = append(res.Categories, category)
+		for outcomeName := range mOutcome {
+			category.Items = append(category.Items, outcomeName)
 		}
 	}
-	result := &entity.TeacherReport{}
-	{
-		developmentalID2OutcomeCountMap := map[string][]*entity.Outcome{}
-		for _, outcome := range outcomes {
-			for _, category := range outcome.Categories {
-				developmentalID2OutcomeCountMap[category] = append(developmentalID2OutcomeCountMap[category], outcome)
-			}
-		}
-		for developmentalID, outcomes := range developmentalID2OutcomeCountMap {
-			newItem := &entity.TeacherReportCategory{
-				Name: categoryIDToNameMap[developmentalID],
-			}
-			for _, outcome := range outcomes {
-				newItem.Items = append(newItem.Items, outcome.Name)
-			}
-			result.Categories = append(result.Categories, newItem)
-		}
-		sort.Sort((*entity.TeacherReportSortByCount)(result))
-	}
-	return result, nil
+	return
 }
 
 func (m *reportModel) ListStudentsPerformanceReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsPerformanceReportRequest) (*entity.ListStudentsPerformanceReportResponse, error) {
@@ -1694,75 +1580,5 @@ func (m *reportModel) getStudentInClass(ctx context.Context, operator *entity.Op
 // endregion
 
 func (m *reportModel) GetLessonPlanFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string) ([]*entity.ScheduleShortInfo, error) {
-	// query assessments
-	cond := da.QueryAssessmentConditions{
-		OrgID: entity.NullString{
-			String: operator.OrgID,
-			Valid:  true,
-		},
-		Status: entity.NullAssessmentStatus{
-			Value: entity.AssessmentStatusComplete,
-			Valid: true,
-		},
-		ClassIDs: entity.NullStrings{
-			Strings: []string{classID},
-			Valid:   true,
-		},
-	}
-	assessments, err := GetAssessmentModel().Query(ctx, operator, &cond)
-	if err != nil {
-		log.Error(ctx, "get lesson plan filter: query assessments failed",
-			log.Err(err),
-			log.Any("cond", cond),
-			log.String("class_id", classID),
-		)
-		return nil, err
-	}
-
-	// batch get schedules
-	scheduleIDs := make([]string, 0, len(assessments))
-	for _, a := range assessments {
-		scheduleIDs = append(scheduleIDs, a.ScheduleID)
-	}
-	scheduleIDs = utils.SliceDeduplicationExcludeEmpty(scheduleIDs)
-	if len(scheduleIDs) == 0 {
-		log.Debug(ctx, "get lesson plan filter: empty schedule ids",
-			log.Any("cond", cond),
-			log.String("class_id", classID),
-		)
-		return nil, nil
-	}
-	schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, operator, scheduleIDs, nil)
-	if err != nil {
-		log.Error(ctx, "get lesson plan filter: get schedules failed",
-			log.Err(err),
-			log.Strings("schedule_ids", scheduleIDs),
-			log.String("class_id", classID),
-		)
-		return nil, err
-	}
-
-	// batch get lesson plans
-	lessonPlanIDs := make([]string, 0, len(schedules))
-	for _, s := range schedules {
-		lessonPlanIDs = append(lessonPlanIDs, s.LessonPlanID)
-	}
-	lessonPlanIDs = utils.SliceDeduplicationExcludeEmpty(lessonPlanIDs)
-	contents, err := GetContentModel().GetContentNameByIDList(ctx, tx, lessonPlanIDs)
-	if err != nil {
-		log.Error(ctx, "get lesson plan filter: get content names failed",
-			log.Err(err),
-			log.Strings("lesson_plan_ids", lessonPlanIDs),
-			log.String("class_id", classID),
-		)
-		return nil, err
-	}
-	result := make([]*entity.ScheduleShortInfo, 0, len(contents))
-	for _, c := range contents {
-		result = append(result, &entity.ScheduleShortInfo{
-			ID:   c.ID,
-			Name: c.Name,
-		})
-	}
-	return result, nil
+	return da.GetReportDA().GetLessonPlanFilter(ctx, operator, classID)
 }

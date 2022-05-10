@@ -7,16 +7,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/da"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
 	"github.com/dgrijalva/jwt-go"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 var (
@@ -112,6 +112,16 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 	if schedule.ClassType == entity.ScheduleClassTypeTask || (schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun) {
 		liveTokenInfo.Materials = make([]*entity.LiveMaterial, 0)
 	} else if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsReview {
+		now := time.Now().Unix()
+		if now > schedule.DueAt {
+			log.Warn(ctx, "Due date has expired",
+				log.Any("op", op),
+				log.Any("schedule", schedule),
+				log.Int64("time.Now", now),
+			)
+			return "", ErrGoLiveNotAllow
+		}
+
 		// review schedule live token
 		scheduleReview, err := da.GetScheduleReviewDA().GetScheduleReviewByScheduleIDAndStudentID(ctx, dbo.MustGetDB(ctx), scheduleID, op.UserID)
 		if err != nil {
@@ -215,33 +225,35 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 				return "", err
 			}
 
-			scheduleLiveLessonMaterials := make([]*entity.ScheduleLiveLessonMaterial, 0, len(liveTokenInfo.Materials))
-			for _, v := range liveTokenInfo.Materials {
-				scheduleLiveLessonMaterials = append(scheduleLiveLessonMaterials, &entity.ScheduleLiveLessonMaterial{
-					LessonMaterialID:   v.ID,
-					LessonMaterialName: v.Name,
-				})
-			}
-			scheduleLiveLessonPlan := &entity.ScheduleLiveLessonPlan{
-				LessonPlanID:    latestLessonPlanID[0],
-				LessonPlanName:  lessonPlanName.Name,
-				LessonMaterials: scheduleLiveLessonMaterials,
-			}
-			schedule.LiveLessonPlan = scheduleLiveLessonPlan
+			if tokenType == entity.LiveTokenTypeLive {
+				scheduleLiveLessonMaterials := make([]*entity.ScheduleLiveLessonMaterial, 0, len(liveTokenInfo.Materials))
+				for _, v := range liveTokenInfo.Materials {
+					scheduleLiveLessonMaterials = append(scheduleLiveLessonMaterials, &entity.ScheduleLiveLessonMaterial{
+						LessonMaterialID:   v.ID,
+						LessonMaterialName: v.Name,
+					})
+				}
+				scheduleLiveLessonPlan := &entity.ScheduleLiveLessonPlan{
+					LessonPlanID:    latestLessonPlanID[0],
+					LessonPlanName:  lessonPlanName.Name,
+					LessonMaterials: scheduleLiveLessonMaterials,
+				}
+				schedule.LiveLessonPlan = scheduleLiveLessonPlan
 
-			if err := GetAssessmentInternalModel().LockAssessmentContentAndOutcome(ctx, op, schedule.Schedule); err != nil {
-				log.Error(ctx, "assessment lock content version error", log.Any("schedule", schedule), log.Err(err))
-				return "", err
-			}
+				if err := GetAssessmentInternalModel().LockAssessmentContentAndOutcome(ctx, op, schedule.Schedule); err != nil {
+					log.Error(ctx, "assessment lock content version error", log.Any("schedule", schedule), log.Err(err))
+					return "", err
+				}
 
-			err = GetScheduleModel().UpdateLiveLessonPlan(ctx, op, scheduleID, scheduleLiveLessonPlan)
-			if err != nil {
-				log.Error(ctx, "GetScheduleModel().UpdateLiveMaterials error",
-					log.Err(err),
-					log.Any("op", op),
-					log.String("scheduleID", scheduleID),
-					log.Any("scheduleLiveLessonPlan", scheduleLiveLessonPlan))
-				return "", err
+				err = GetScheduleModel().UpdateLiveLessonPlan(ctx, op, scheduleID, scheduleLiveLessonPlan)
+				if err != nil {
+					log.Error(ctx, "GetScheduleModel().UpdateLiveMaterials error",
+						log.Err(err),
+						log.Any("op", op),
+						log.String("scheduleID", scheduleID),
+						log.Any("scheduleLiveLessonPlan", scheduleLiveLessonPlan))
+					return "", err
+				}
 			}
 		}
 	}

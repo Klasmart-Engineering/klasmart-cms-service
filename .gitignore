@@ -21,3 +21,4 @@ cmd/assessment_migrate/assessment_migrate
 cmd/academic_profile/academic_profile
 cmd/academic_profile/ap
 *.exe
+kidsloop-cms-service

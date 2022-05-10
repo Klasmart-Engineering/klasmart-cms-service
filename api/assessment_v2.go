@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/KL-Engineering/common-log/log"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
+	"github.com/KL-Engineering/kidsloop-cms-service/model"
 )
 
 // @Summary assessments query
@@ -23,9 +23,9 @@ import (
 // @Accept json
 // @Produce json
 // @Param status query string false "status search,multiple states are separated by commas,optional value is NotStarted,Started,Draft,Complete"
-// @Param query_key query string false "query key fuzzy search"
-// @Param query_type query string false "query type" enums(TeacherName)
-// @Param assessment_type query string true "assessment type, value:OnlineClass,OfflineClass,OnlineStudy,ReviewStudy"
+// @Param query_key query string false "query key search"
+// @Param query_type query string false "query type" enums(TeacherID)
+// @Param assessment_type query string true "assessment type, value:OnlineClass,OfflineClass,OnlineStudy,ReviewStudy,OfflineStudy"
 // @Param page query int false "page number" default(1)
 // @Param page_size query integer false "page size" format(int) default(10)
 // @Param order_by query string false "query order by" enums(class_end_at,-class_end_at,complete_at,-complete_at,create_at,-create_at) default(-create_at)
@@ -95,7 +95,7 @@ func (s *Server) getAssessmentDetailV2(c *gin.Context) {
 
 // @Summary
 // @Description update assessment
-// @Tags Assessment
+// @Tags assessments
 // @ID updateAssessmentV2
 // @Accept json
 // @Produce json
@@ -177,18 +177,24 @@ func (s *Server) getAssessmentsSummary(c *gin.Context) {
 // @ID getStudentAssessments
 // @Accept json
 // @Produce json
-// @Param type query string true "type search"
-// @Param status query string false "status search"
-// @Param order_by query string false "order by"
+// @Param type query string true "type search, the value of 'home_fun_study' is deprecated,please use 'OfflineStudy' instead" enums(OfflineClass,OnlineClass,OnlineStudy,OfflineStudy,home_fun_study,ReviewStudy)
+// @Param status query string false "status search" enums(NotStarted,InProgress,Done,Resubmitted,Completed)
 // @Param teacher_id query string false "teacher id search"
 // @Param assessment_id query string false "assessment id search"
 // @Param schedule_ids query string false "schedule ids search"
-// @Param create_at_ge query string false "create_at greater search"
-// @Param create_at_le query string false "create_at less search"
-// @Param update_at_le query string false "update_at greater search"
-// @Param update_at_le query string false "update_at less search"
-// @Param complete_at_ge query string false "complete_at greater search"
-// @Param complete_at_le query string false "complete_at less search"
+// @Param order_by query string false "order by" enums(create_at,-create_at,in_progress_at,-in_progress_at,done_at,-done_at,resubmitted_at,-resubmitted_at,completed_at,-completed_at) default(-create_at)
+// @Param created_ge query string false "created_at greater search"
+// @Param created_le query string false "created_at less search"
+// @Param in_progress_ge query string false "in_progress_at greater search"
+// @Param in_progress_le query string false "in_progress_at less search"
+// @Param done_ge query string false "done_at greater search"
+// @Param done_le query string false "done_at less search"
+// @Param resubmitted_ge query string false "resubmitted_at greater search"
+// @Param resubmitted_le query string false "resubmitted_at less search"
+// @Param completed_ge query string false "complete_at greater search"
+// @Param completed_le query string false "complete_at less search"
+// @Param complete_at_ge query string false "complete_at greater search (deprecated)"
+// @Param complete_at_le query string false "complete_at less search (deprecated)"
 // @Param page query string false "page search"
 // @Param page_size query string false "page size search"
 // @Success 200 {object} v2.SearchStudentAssessmentsResponse
@@ -222,7 +228,7 @@ func (s *Server) getStudentAssessments(c *gin.Context) {
 
 	log.Debug(ctx, "request params", log.Any("conditions", conditions))
 
-	total, result, err := model.GetAssessmentModelV2().QueryTeacherFeedback(ctx, op, conditions)
+	total, result, err := model.GetAssessmentModelV2().QueryStudentAssessment(ctx, op, conditions)
 
 	switch err {
 	case nil:

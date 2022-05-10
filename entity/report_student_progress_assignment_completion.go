@@ -18,7 +18,21 @@ type AssignmentCompletionRate struct {
 	Duration                    TimeRange `json:"duration"`
 }
 
-type AssignmentResponse []*AssignmentCompletionRate
+type AssignmentResponse struct {
+	Assignments []*AssignmentCompletionRate `json:"assignments"`
+	LabelID     string                      `json:"label_id"`
+	LabelParams AssignmentLabelParams       `json:"label_params"`
+}
+
+type AssignmentLabelParams struct {
+	AssignmentCompleteCount int64   `json:"assignment_complete_count"`
+	AssignmentCount         int64   `json:"assignment_count"`
+	AssignCompareClass3week float64 `json:"assign_compare_class_3_week"`
+	AssignCompareLastWeek   float64 `json:"assign_compare_last_week"`
+	AssignCompare3Week      float64 `json:"assign_compare_3_week"`
+	AssignCompareClass      float64 `json:"assign_compare_class"`
+	AssignCompleteCount     int64   `json:"assign_complete_count"`
+}
 
 type StudentAssignmentStatus struct {
 	ClassID   string `json:"class_id" gorm:"column:class_id"`

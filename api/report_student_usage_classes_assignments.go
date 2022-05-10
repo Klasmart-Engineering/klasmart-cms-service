@@ -1,13 +1,14 @@
 package api
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"net/http"
 
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
+
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/model"
 	"github.com/gin-gonic/gin"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
 // @Summary get Classes&Assignments Report

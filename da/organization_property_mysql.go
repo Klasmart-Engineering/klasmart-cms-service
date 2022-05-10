@@ -1,6 +1,6 @@
 package da
 
-import "gitlab.badanamu.com.cn/calmisland/dbo"
+import "github.com/KL-Engineering/dbo"
 
 type OrganizationPropertyMySQLDA struct {
 	dbo.BaseDA

@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"strings"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 )
 
 const (
@@ -19,10 +19,6 @@ const (
 	ContentStatusAttachment = "attachment"
 	ContentStatusHidden     = "hidden"
 	ContentStatusArchive    = "archive"
-
-	ContentTypeMaterial = 1
-	ContentTypePlan     = 2
-	ContentTypeAssets   = 3
 
 	AliasContentTypeFolder = 10
 
@@ -74,6 +70,12 @@ var (
 
 type ContentPublishStatus string
 type ContentType int
+
+const (
+	ContentTypeMaterial = 1
+	ContentTypePlan     = 2
+	ContentTypeAssets   = 3
+)
 
 type ContentPropertyType int
 
@@ -411,6 +413,7 @@ type ContentConditionRequest struct {
 	Program            []string `json:"program"`
 	SourceType         string   `json:"source_type"`
 	DirPath            string   `json:"dir_path"`
+	ParentID           string   `json:"parent_id"`
 	ContentName        string   `json:"content_name"`
 	DataSourceID       string   `json:"data_source_id"`
 
@@ -535,6 +538,21 @@ type QueryContentItem struct {
 	ContentTypeName string               `json:"content_type_name"`
 	Permission      ContentPermission    `json:"permission"`
 	SuggestTime     int                  `json:"suggest_time"`
+}
+
+type QuerySharedContentV2Response struct {
+	Total int                         `json:"total"`
+	Items []*QuerySharedContentV2Item `json:"items"`
+}
+type QuerySharedContentV2Item struct {
+	ID            string               `json:"id"`
+	DirPath       string               `json:"dir_path"`
+	ContentType   ContentType          `json:"content_type"`
+	Name          string               `json:"name"`
+	Thumbnail     string               `json:"thumbnail"`
+	AuthorName    string               `json:"author_name"`
+	Author        string               `json:"author"`
+	PublishStatus ContentPublishStatus `json:"publish_status"`
 }
 
 type FolderContentInfoWithDetailsResponse struct {

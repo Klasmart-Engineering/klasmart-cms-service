@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"github.com/KL-Engineering/common-log/log"
 	"gopkg.in/gomail.v2"
 )
 

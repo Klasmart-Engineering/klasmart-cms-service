@@ -6,17 +6,17 @@ import (
 	"strings"
 	"sync"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils/kl2cache"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+	"github.com/KL-Engineering/kidsloop-cache/cache"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 
-	"gitlab.badanamu.com.cn/calmisland/chlorine"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"github.com/KL-Engineering/chlorine"
+	"github.com/KL-Engineering/common-log/log"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 type SchoolServiceProvider interface {

@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	"github.com/stretchr/testify/assert"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 func createFolders(t *testing.T) ([]string, error) {
@@ -263,7 +263,7 @@ func TestMoveSubFolderToAllProcess(t *testing.T) {
 func TestQuerySharedContents(t *testing.T) {
 	operator := fakeOperator()
 	operator.OrgID = "100"
-	total, data, err := GetContentModel().SearchAuthedContent(context.Background(), dbo.MustGetDB(context.Background()),
+	total, data, err := GetContentModel().SearchSharedContent(context.Background(), dbo.MustGetDB(context.Background()),
 		&entity.ContentConditionRequest{}, operator)
 
 	assert.NoError(t, err)

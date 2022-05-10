@@ -8,7 +8,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 func TestStudentUsageRecordInJwt(t *testing.T) {

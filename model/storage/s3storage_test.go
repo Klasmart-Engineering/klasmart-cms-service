@@ -5,16 +5,17 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/aws/aws-sdk-go/service/cloudfront/sign"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"io/ioutil"
 	"net/url"
 	"os"
 	"testing"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/aws/aws-sdk-go/service/cloudfront/sign"
+
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 )
 
 func InitEnv() {

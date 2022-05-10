@@ -3,8 +3,8 @@ package api
 import (
 	"net/http"
 
+	"github.com/KL-Engineering/kidsloop-cms-service/model"
 	"github.com/gin-gonic/gin"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
 // @Summary getProgramGroup

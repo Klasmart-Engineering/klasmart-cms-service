@@ -7,18 +7,18 @@ import (
 	"net/http"
 	"testing"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 
 	"github.com/dgrijalva/jwt-go"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"gitlab.badanamu.com.cn/calmisland/ro"
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/da"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/model"
+	"github.com/KL-Engineering/ro"
 )
 
 func TestCreateOutcome(t *testing.T) {

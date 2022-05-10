@@ -2,25 +2,25 @@ package model
 
 import (
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
+
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 )
 
-func NewOfflineClassAssessmentPage(ags *AssessmentGrain) IAssessmentMatch {
+func NewOfflineClassAssessmentPage(at *AssessmentTool) IAssessmentMatch {
 	return &OfflineClassAssessment{
-		ags:    ags,
+		at:     at,
 		action: AssessmentMatchActionPage,
-		base:   NewBaseAssessment(ags),
+		base:   NewBaseAssessment(at, AssessmentMatchActionPage),
 	}
 }
 
-func NewOfflineClassAssessmentDetail(ags *AssessmentGrain) IAssessmentMatch {
+func NewOfflineClassAssessmentDetail(at *AssessmentTool) IAssessmentMatch {
 	return &OfflineClassAssessment{
-		ags:    ags,
+		at:     at,
 		action: AssessmentMatchActionDetail,
-		base:   NewBaseAssessment(ags),
+		base:   NewBaseAssessment(at, AssessmentMatchActionDetail),
 	}
 }
 
@@ -28,7 +28,7 @@ type OfflineClassAssessment struct {
 	EmptyAssessment
 
 	base   BaseAssessment
-	ags    *AssessmentGrain
+	at     *AssessmentTool
 	action AssessmentMatchAction
 }
 
@@ -41,73 +41,40 @@ func (o *OfflineClassAssessment) MatchLessPlan() (map[string]*v2.AssessmentConte
 }
 
 func (o *OfflineClassAssessment) MatchProgram() (map[string]*entity.IDName, error) {
-	onlineClass := NewOnlineClassAssessmentPage(o.ags)
+	onlineClass := NewOnlineClassAssessmentPage(o.at)
 
 	return onlineClass.MatchProgram()
 }
 
 func (o *OfflineClassAssessment) MatchSubject() (map[string][]*entity.IDName, error) {
-	onlineClass := NewOnlineClassAssessmentPage(o.ags)
+	onlineClass := NewOnlineClassAssessmentPage(o.at)
 
 	return onlineClass.MatchSubject()
 }
 
 func (o *OfflineClassAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
-	assessmentUserMap, err := o.ags.GetAssessmentUserMap()
-	if err != nil {
-		return nil, err
-	}
-
-	userMap, err := o.ags.GetUserMap()
-	if err != nil {
-		return nil, err
-	}
-
-	result := make(map[string][]*entity.IDName, len(o.ags.assessments))
-	for _, item := range o.ags.assessments {
-		if assUserItems, ok := assessmentUserMap[item.ID]; ok {
-			for _, assUserItem := range assUserItems {
-				if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
-					continue
-				}
-				//if assUserItem.StatusBySystem == v2.AssessmentUserStatusNotParticipate {
-				//	continue
-				//}
-				resultItem := &entity.IDName{
-					ID:   assUserItem.UserID,
-					Name: "",
-				}
-
-				if userItem, ok := userMap[assUserItem.UserID]; ok && userItem != nil {
-					resultItem.Name = userItem.Name
-				}
-				result[item.ID] = append(result[item.ID], resultItem)
-			}
-		}
-	}
-
-	return result, nil
+	return o.base.MatchTeacher()
 }
 
 func (o *OfflineClassAssessment) MatchClass() (map[string]*entity.IDName, error) {
-	onlineClass := NewOnlineClassAssessmentDetail(o.ags)
+	onlineClass := NewOnlineClassAssessmentDetail(o.at)
 
 	return onlineClass.MatchClass()
 }
 
 func (o *OfflineClassAssessment) MatchOutcomes() (map[string]*v2.AssessmentOutcomeReply, error) {
-	onlineClass := NewOnlineClassAssessmentDetail(o.ags)
+	onlineClass := NewOnlineClassAssessmentDetail(o.at)
 
 	return onlineClass.MatchOutcomes()
 }
 
 func (o *OfflineClassAssessment) MatchContents() ([]*v2.AssessmentContentReply, error) {
-	libraryContents, err := o.ags.SingleGetContentsFromSchedule()
+	libraryContents, err := o.at.FirstGetContentsFromSchedule()
 	if err != nil {
 		return nil, err
 	}
 
-	assessmentContentMap, err := o.ags.SingleGetAssessmentContentMap()
+	assessmentContentMap, err := o.at.FirstGetAssessmentContentMap()
 	if err != nil {
 		return nil, err
 	}
@@ -149,34 +116,29 @@ func (o *OfflineClassAssessment) MatchContents() ([]*v2.AssessmentContentReply, 
 }
 
 func (o *OfflineClassAssessment) MatchStudents(contents []*v2.AssessmentContentReply) ([]*v2.AssessmentStudentReply, error) {
-	ctx := o.ags.ctx
+	//ctx := o.at.ctx
 
-	userMap, err := o.ags.GetUserMap()
+	assessmentUserMap, err := o.at.GetAssessmentUserMap()
 	if err != nil {
 		return nil, err
 	}
 
-	assessmentUserMap, err := o.ags.GetAssessmentUserMap()
-	if err != nil {
-		return nil, err
-	}
-
-	assessmentUsers, ok := assessmentUserMap[o.ags.assessment.ID]
+	assessmentUsers, ok := assessmentUserMap[o.at.first.ID]
 	if !ok {
 		return nil, constant.ErrRecordNotFound
 	}
 
-	contentMapFromAssessment, err := o.ags.SingleGetAssessmentContentMap()
+	contentMapFromAssessment, err := o.at.FirstGetAssessmentContentMap()
 	if err != nil {
 		return nil, err
 	}
 
-	outcomeMapFromAssessment, err := o.ags.SingleGetOutcomeFromAssessment()
+	outcomeMapFromAssessment, err := o.at.FirstGetOutcomeFromAssessment()
 	if err != nil {
 		return nil, err
 	}
 
-	outcomeMapFromContent, err := o.ags.SingleGetOutcomeMapFromContent()
+	outcomeMapFromContent, err := o.at.FirstGetOutcomeMapFromContent()
 	if err != nil {
 		return nil, err
 	}
@@ -188,20 +150,12 @@ func (o *OfflineClassAssessment) MatchStudents(contents []*v2.AssessmentContentR
 			continue
 		}
 
-		studentInfo, ok := userMap[item.UserID]
-		if !ok {
-			log.Warn(ctx, "not found user info from user service", log.Any("item", item), log.Any("userMap", userMap))
-			studentInfo = &entity.IDName{
-				ID:   item.UserID,
-				Name: "",
-			}
-		}
-
 		studentReply := &v2.AssessmentStudentReply{
-			StudentID:   item.UserID,
-			StudentName: studentInfo.Name,
-			Status:      item.StatusByUser,
-			Results:     nil,
+			StudentID: item.UserID,
+			//StudentName:   "",
+			Status:        item.StatusByUser,
+			ProcessStatus: item.StatusBySystem,
+			Results:       nil,
 		}
 
 		for _, content := range contents {
@@ -213,7 +167,7 @@ func (o *OfflineClassAssessment) MatchStudents(contents []*v2.AssessmentContentR
 			for _, outcomeID := range content.OutcomeIDs {
 				var userOutcome *v2.AssessmentUserOutcome
 				if assessmentContent, ok := contentMapFromAssessment[content.ContentID]; ok {
-					key := o.ags.GetKey([]string{
+					key := o.at.GetKey([]string{
 						item.ID,
 						assessmentContent.ID,
 						outcomeID,

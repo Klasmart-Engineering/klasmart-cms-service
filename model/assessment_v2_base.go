@@ -2,10 +2,10 @@ package model
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
+
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 )
 
 type IAssessmentMatch interface {
@@ -23,6 +23,8 @@ type IAssessmentMatch interface {
 	MatchContents() ([]*v2.AssessmentContentReply, error)
 	MatchStudents(contentsReply []*v2.AssessmentContentReply) ([]*v2.AssessmentStudentReply, error)
 	MatchDiffContentStudents() ([]*v2.AssessmentDiffContentStudentsReply, error)
+
+	Update(req *v2.AssessmentUpdateReq) error
 }
 
 type AssessmentMatchAction int
@@ -33,9 +35,10 @@ const (
 	AssessmentMatchActionDetail
 )
 
-func NewBaseAssessment(ag *AssessmentGrain) BaseAssessment {
+func NewBaseAssessment(at *AssessmentTool, action AssessmentMatchAction) BaseAssessment {
 	return BaseAssessment{
-		ag: ag,
+		at:     at,
+		action: action,
 	}
 }
 
@@ -43,36 +46,37 @@ func NewBaseAssessment(ag *AssessmentGrain) BaseAssessment {
 //	return &BaseAssessment{
 //		ctx: ctx,
 //		op:  op,
-//		ag: NewAssessmentsGrain(ctx, op, []*v2.Assessment{assessment}),
+//		at: NewAssessmentsGrain(ctx, op, []*v2.Assessment{assessment}),
 //	}
 //}
 
 type BaseAssessment struct {
-	ag *AssessmentGrain
+	at     *AssessmentTool
+	action AssessmentMatchAction
 }
 
 func (o *BaseAssessment) MatchAnyOneAttempted() (bool, error) {
-	roomDataMap, err := o.ag.GetRoomData()
+	roomDataMap, err := o.at.GetRoomStudentScoresAndComments()
 	if err != nil {
 		return false, err
 	}
-	roomData, ok := roomDataMap[o.ag.assessment.ScheduleID]
-	return ok && len(roomData) > 0, nil
+	roomData, ok := roomDataMap[o.at.first.ScheduleID]
+	return ok && roomData != nil && len(roomData.ScoresByUser) > 0, nil
 }
 
 func (o *BaseAssessment) MatchClass() (map[string]*entity.IDName, error) {
-	relationMap, err := o.ag.GetScheduleRelationMap()
+	relationMap, err := o.at.GetScheduleRelationMap()
 	if err != nil {
 		return nil, err
 	}
 
-	classMap, err := o.ag.GetClassMap()
+	classMap, err := o.at.GetClassMap()
 	if err != nil {
 		return nil, err
 	}
 
-	result := make(map[string]*entity.IDName, len(o.ag.assessments))
-	for _, item := range o.ag.assessments {
+	result := make(map[string]*entity.IDName, len(o.at.assessments))
+	for _, item := range o.at.assessments {
 		if srItems, ok := relationMap[item.ScheduleID]; ok {
 			for _, srItem := range srItems {
 				if srItem.RelationType == entity.ScheduleRelationTypeClassRosterClass {
@@ -87,7 +91,7 @@ func (o *BaseAssessment) MatchClass() (map[string]*entity.IDName, error) {
 }
 
 func (o *BaseAssessment) MatchSchedule() (map[string]*entity.Schedule, error) {
-	scheduleMap, err := o.ag.GetScheduleMap()
+	scheduleMap, err := o.at.GetScheduleMap()
 	if err != nil {
 		return nil, err
 	}
@@ -96,19 +100,19 @@ func (o *BaseAssessment) MatchSchedule() (map[string]*entity.Schedule, error) {
 }
 
 func (o *BaseAssessment) MatchLessPlan() (map[string]*v2.AssessmentContentView, error) {
-	scheduleMap, err := o.ag.GetScheduleMap()
+	scheduleMap, err := o.at.GetScheduleMap()
 	if err != nil {
 		return nil, err
 	}
 
-	lessPlanMap, err := o.ag.GetLessPlanMap()
+	lessPlanMap, err := o.at.GetLessPlanMap()
 	if err != nil {
 		return nil, err
 	}
 
 	// key:assessmentID
-	result := make(map[string]*v2.AssessmentContentView, len(o.ag.assessments))
-	for _, item := range o.ag.assessments {
+	result := make(map[string]*v2.AssessmentContentView, len(o.at.assessments))
+	for _, item := range o.at.assessments {
 		if schedule, ok := scheduleMap[item.ScheduleID]; ok {
 			if lessPlanItem, ok := lessPlanMap[schedule.LessonPlanID]; ok && lessPlanItem != nil {
 				result[item.ID] = lessPlanItem
@@ -119,65 +123,59 @@ func (o *BaseAssessment) MatchLessPlan() (map[string]*v2.AssessmentContentView, 
 	return result, nil
 }
 
-func (o *BaseAssessment) summaryRoomScores(userMapFromRoomMap map[string]*RoomUserInfo, contentsReply []*v2.AssessmentContentReply) (map[string]float64, map[string]float64) {
-	contentSummaryTotalScoreMap := make(map[string]float64)
-	contentMap := make(map[string]*v2.AssessmentContentReply)
-	for _, content := range contentsReply {
-		if content.IgnoreCalculateScore {
-			continue
-		}
-		contentID := content.ContentID
-		if content.ContentType == v2.AssessmentContentTypeUnknown {
-			contentID = content.ParentID
-		}
-		contentSummaryTotalScoreMap[contentID] = contentSummaryTotalScoreMap[contentID] + content.MaxScore
-
-		contentMap[content.RoomProvideContentID] = content
+func (o *BaseAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
+	assessmentUserMap, err := o.at.GetAssessmentUserMap()
+	if err != nil {
+		return nil, err
 	}
 
-	roomUserResultMap := make(map[string]*RoomUserResults)
-	roomUserSummaryScoreMap := make(map[string]float64)
-	for _, item := range userMapFromRoomMap {
-		for _, resultItem := range item.Results {
-			key := o.ag.GetKey([]string{
-				item.UserID,
-				resultItem.RoomContentID,
-			})
-			roomUserResultMap[key] = resultItem
+	userMap := make(map[string]*entity.IDName)
+	if o.action == AssessmentMatchActionPage {
+		userMap, err = o.at.GetTeacherMap()
+		if err != nil {
+			return nil, err
+		}
+	}
 
-			if contentItem, ok := contentMap[resultItem.RoomContentID]; ok {
-				if contentItem.IgnoreCalculateScore {
+	result := make(map[string][]*entity.IDName, len(o.at.assessments))
+	for _, item := range o.at.assessments {
+		if assUserItems, ok := assessmentUserMap[item.ID]; ok {
+			for _, assUserItem := range assUserItems {
+				if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
 					continue
 				}
-				contentID := contentItem.ContentID
-				if contentItem.ContentType == v2.AssessmentContentTypeUnknown {
-					contentID = contentItem.ParentID
+				//if assUserItem.StatusBySystem == v2.AssessmentUserStatusNotParticipate {
+				//	continue
+				//}
+				resultItem := &entity.IDName{
+					ID:   assUserItem.UserID,
+					Name: "",
 				}
 
-				key2 := o.ag.GetKey([]string{
-					item.UserID,
-					contentID,
-				})
-				roomUserSummaryScoreMap[key2] = roomUserSummaryScoreMap[key2] + resultItem.Score
+				if userItem, ok := userMap[assUserItem.UserID]; ok && userItem != nil {
+					resultItem.Name = userItem.Name
+				}
+				result[item.ID] = append(result[item.ID], resultItem)
 			}
 		}
 	}
 
-	log.Debug(o.ag.ctx, "summary score info", log.Any("contentSummaryTotalScoreMap", contentSummaryTotalScoreMap), log.Any("roomUserSummaryScoreMap", roomUserSummaryScoreMap))
-	return contentSummaryTotalScoreMap, roomUserSummaryScoreMap
+	return result, nil
 }
 
-func GetAssessmentPageMatch(assessmentType v2.AssessmentType, ags *AssessmentGrain) IAssessmentMatch {
+func GetAssessmentPageMatch(assessmentType v2.AssessmentType, at *AssessmentTool) IAssessmentMatch {
 	var match IAssessmentMatch
 	switch assessmentType {
 	case v2.AssessmentTypeOnlineClass:
-		match = NewOnlineClassAssessmentPage(ags)
+		match = NewOnlineClassAssessmentPage(at)
 	case v2.AssessmentTypeOfflineClass:
-		match = NewOfflineClassAssessmentPage(ags)
+		match = NewOfflineClassAssessmentPage(at)
 	case v2.AssessmentTypeOnlineStudy:
-		match = NewOnlineStudyAssessmentPage(ags)
+		match = NewOnlineStudyAssessmentPage(at)
 	case v2.AssessmentTypeReviewStudy:
-		match = NewReviewStudyAssessmentPage(ags)
+		match = NewReviewStudyAssessmentPage(at)
+	case v2.AssessmentTypeOfflineStudy:
+		match = NewOfflineStudyAssessmentPage(at)
 	default:
 		match = NewEmptyAssessment()
 	}
@@ -185,17 +183,19 @@ func GetAssessmentPageMatch(assessmentType v2.AssessmentType, ags *AssessmentGra
 	return match
 }
 
-func GetAssessmentDetailMatch(assessmentType v2.AssessmentType, ags *AssessmentGrain) IAssessmentMatch {
+func GetAssessmentDetailMatch(assessmentType v2.AssessmentType, at *AssessmentTool) IAssessmentMatch {
 	var match IAssessmentMatch
 	switch assessmentType {
 	case v2.AssessmentTypeOnlineClass:
-		match = NewOnlineClassAssessmentDetail(ags)
+		match = NewOnlineClassAssessmentDetail(at)
 	case v2.AssessmentTypeOfflineClass:
-		match = NewOfflineClassAssessmentDetail(ags)
+		match = NewOfflineClassAssessmentDetail(at)
 	case v2.AssessmentTypeOnlineStudy:
-		match = NewOnlineStudyAssessmentDetail(ags)
+		match = NewOnlineStudyAssessmentDetail(at)
 	case v2.AssessmentTypeReviewStudy:
-		match = NewReviewStudyAssessmentDetail(ags)
+		match = NewReviewStudyAssessmentDetail(at)
+	case v2.AssessmentTypeOfflineStudy:
+		match = NewOfflineStudyAssessmentDetail(at)
 	default:
 		match = NewEmptyAssessment()
 	}
@@ -204,8 +204,11 @@ func GetAssessmentDetailMatch(assessmentType v2.AssessmentType, ags *AssessmentG
 }
 
 func ConvertAssessmentPageReply(ctx context.Context, op *entity.Operator, assessmentType v2.AssessmentType, assessments []*v2.Assessment) ([]*v2.AssessmentQueryReply, error) {
-	ags := NewAssessmentGrainMul(ctx, op, assessments)
-	match := GetAssessmentPageMatch(assessmentType, ags)
+	at, err := NewAssessmentTool(ctx, op, assessments)
+	if err != nil {
+		return nil, err
+	}
+	match := GetAssessmentPageMatch(assessmentType, at)
 
 	scheduleMap, err := match.MatchSchedule()
 	if err != nil {
@@ -250,11 +253,12 @@ func ConvertAssessmentPageReply(ctx context.Context, op *entity.Operator, assess
 
 	for i, item := range assessments {
 		replyItem := &v2.AssessmentQueryReply{
-			ID:         item.ID,
-			Title:      item.Title,
-			ClassEndAt: item.ClassEndAt,
-			CompleteAt: item.CompleteAt,
-			Status:     item.Status,
+			ID:             item.ID,
+			AssessmentType: item.AssessmentType,
+			Title:          item.Title,
+			ClassEndAt:     item.ClassEndAt,
+			CompleteAt:     item.CompleteAt,
+			Status:         item.Status,
 		}
 		result[i] = replyItem
 
@@ -283,8 +287,11 @@ func ConvertAssessmentPageReply(ctx context.Context, op *entity.Operator, assess
 }
 
 func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, assessment *v2.Assessment) (*v2.AssessmentDetailReply, error) {
-	ags := NewAssessmentGrainSingle(ctx, op, assessment)
-	match := GetAssessmentDetailMatch(assessment.AssessmentType, ags)
+	at, err := NewAssessmentTool(ctx, op, []*v2.Assessment{assessment})
+	if err != nil {
+		return nil, err
+	}
+	match := GetAssessmentDetailMatch(assessment.AssessmentType, at)
 
 	scheduleMap, err := match.MatchSchedule()
 	if err != nil {
@@ -347,14 +354,15 @@ func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, asse
 	}
 
 	result := &v2.AssessmentDetailReply{
-		ID:           assessment.ID,
-		Title:        assessment.Title,
-		Status:       assessment.Status,
-		RoomID:       assessment.ScheduleID,
-		ClassEndAt:   assessment.ClassEndAt,
-		ClassLength:  assessment.ClassLength,
-		CompleteAt:   assessment.CompleteAt,
-		CompleteRate: 0,
+		ID:             assessment.ID,
+		AssessmentType: assessment.AssessmentType,
+		Title:          assessment.Title,
+		Status:         assessment.Status,
+		RoomID:         assessment.ScheduleID,
+		ClassEndAt:     assessment.ClassEndAt,
+		ClassLength:    assessment.ClassLength,
+		CompleteAt:     assessment.CompleteAt,
+		CompleteRate:   0,
 	}
 
 	schedule, ok := scheduleMap[assessment.ScheduleID]
@@ -363,7 +371,14 @@ func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, asse
 	}
 
 	result.Class = classMap[assessment.ID]
-	result.Teachers = teacherMap[assessment.ID]
+
+	if teachers, ok := teacherMap[assessment.ID]; ok {
+		result.TeacherIDs = make([]string, len(teachers))
+		for i, teacherItem := range teachers {
+			result.TeacherIDs[i] = teacherItem.ID
+		}
+	}
+
 	result.Program = programMap[assessment.ID]
 	result.Subjects = subjectMap[assessment.ID]
 	result.ScheduleTitle = schedule.Title
@@ -373,6 +388,7 @@ func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, asse
 	result.Students = students
 	result.CompleteRate = completeRateMap[assessment.ID]
 	result.IsAnyOneAttempted = isAnyOneAttempted
+	result.Description = schedule.Description
 
 	for _, item := range outcomeMap {
 		result.Outcomes = append(result.Outcomes, item)
@@ -383,92 +399,15 @@ func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, asse
 	return result, nil
 }
 
-func ConvertAssessmentHomePageReply(ctx context.Context, op *entity.Operator, assessmentType v2.AssessmentType, assessments []*v2.Assessment) ([]*v2.AssessmentQueryReply, error) {
-	ags := NewAssessmentGrainMul(ctx, op, assessments)
-	match := GetAssessmentPageMatch(assessmentType, ags)
-
-	scheduleMap, err := match.MatchSchedule()
-	if err != nil {
-		return nil, err
-	}
-	lessPlanMap, err := match.MatchLessPlan()
-	if err != nil {
-		return nil, err
-	}
-	teacherMap, err := match.MatchTeacher()
-	if err != nil {
-		return nil, err
-	}
-	programMap, err := match.MatchProgram()
-	if err != nil {
-		return nil, err
-	}
-	subjectMap, err := match.MatchSubject()
-	if err != nil {
-		return nil, err
-	}
-
-	var (
-		classMap        map[string]*entity.IDName
-		completeRateMap map[string]float64
-		remainingMap    map[string]int64
-	)
-	if assessmentType == v2.AssessmentTypeOnlineStudy {
-		classMap, err = match.MatchClass()
-		if err != nil {
-			return nil, err
-		}
-		completeRateMap, err = match.MatchCompleteRate()
-		if err != nil {
-			return nil, err
-		}
-		remainingMap, err = match.MatchRemainingTime()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	result := make([]*v2.AssessmentQueryReply, len(assessments))
-
-	for i, item := range assessments {
-		replyItem := &v2.AssessmentQueryReply{
-			ID:         item.ID,
-			Title:      item.Title,
-			ClassEndAt: item.ClassEndAt,
-			CompleteAt: item.CompleteAt,
-			Status:     item.Status,
-		}
-		result[i] = replyItem
-
-		replyItem.Teachers = teacherMap[item.ID]
-
-		schedule, ok := scheduleMap[item.ScheduleID]
-		if !ok {
-			continue
-		}
-		if lessPlanItem, ok := lessPlanMap[item.ID]; ok {
-			replyItem.LessonPlan = &entity.IDName{
-				ID:   lessPlanItem.ID,
-				Name: lessPlanItem.Name,
-			}
-		}
-
-		replyItem.Program = programMap[item.ID]
-		replyItem.Subjects = subjectMap[item.ID]
-		replyItem.DueAt = schedule.DueAt
-		replyItem.ClassInfo = classMap[item.ID]
-		replyItem.RemainingTime = remainingMap[item.ID]
-		replyItem.CompleteRate = completeRateMap[item.ID]
-	}
-
-	return result, nil
-}
-
 func NewEmptyAssessment() IAssessmentMatch {
 	return EmptyAssessment{}
 }
 
 type EmptyAssessment struct{}
+
+func (o EmptyAssessment) Update(req *v2.AssessmentUpdateReq) error {
+	return nil
+}
 
 func (o EmptyAssessment) MatchAnyOneAttempted() (bool, error) {
 	return false, nil

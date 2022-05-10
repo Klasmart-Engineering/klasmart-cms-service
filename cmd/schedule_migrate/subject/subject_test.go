@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"testing"
+
+	"github.com/KL-Engineering/dbo"
 )
 
 func Test_GetScheduleAboutOrgIDs(t *testing.T) {

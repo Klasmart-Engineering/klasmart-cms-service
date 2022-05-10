@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils/kl2cache"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 
 	"github.com/google/uuid"
 )

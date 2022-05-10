@@ -2,10 +2,11 @@ package model
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"sync"
+
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/da"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 type IFeedbackAssignmentModel interface {
@@ -25,9 +26,11 @@ func (f *feedbackAssignmentModel) QueryMap(ctx context.Context, op *entity.Opera
 	result := make(map[string][]*entity.FeedbackAssignmentView)
 	for _, assignmentItem := range assignments {
 		item := &entity.FeedbackAssignmentView{
-			AttachmentID:   assignmentItem.AttachmentID,
-			AttachmentName: assignmentItem.AttachmentName,
-			Number:         assignmentItem.Number,
+			ID:                 assignmentItem.ID,
+			AttachmentID:       assignmentItem.AttachmentID,
+			AttachmentName:     assignmentItem.AttachmentName,
+			Number:             assignmentItem.Number,
+			ReviewAttachmentID: assignmentItem.ReviewAttachmentID,
 		}
 		if _, ok := result[assignmentItem.FeedbackID]; ok {
 			result[assignmentItem.FeedbackID] = append(result[assignmentItem.FeedbackID], item)

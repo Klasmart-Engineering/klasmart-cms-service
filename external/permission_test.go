@@ -3,12 +3,11 @@ package external
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"testing"
-)
 
-var token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0MTk5OTE2MywiaXNzIjoia2lkc2xvb3AifQ.SAoVGuuqP84Y4fr0WNlgED3JEKElmGwrZJDHhtIVPdTtD7lMWV02612k1hfP6Tvl1GcMl_pCMrcy60KiHpCxmp10cVrbf9oOFiezdfFql49gQm15Skng5S4vaWMhZeKaV5lfDfwIIp8dx4kugHrHTL2o5zolFeJFlSJLjV2BnyHM7h_Y5oZdLAyuMaG1c4hv6FsZDGvLenLlbf0M-B8CkGVIuYmfyJ82V_GDCRCGgniP8Nog1XIy4vGYRoiMWzN4eSURePGU9utoXBeBr63Ty397su7HNzgw8_OLU-5_YFOTinifnL9djvlIyfBedxSq97f1NQLvVg7te2ro4vpmAw"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+)
 
 func TestHasAnyOrganizationPermission(t *testing.T) {
 	config.LoadEnvConfig()

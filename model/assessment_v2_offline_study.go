@@ -3,680 +3,598 @@ package model
 import (
 	"context"
 	"database/sql"
-	"errors"
-	"strings"
-	"sync"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da/assessmentV2"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/da"
+	"github.com/KL-Engineering/kidsloop-cms-service/da/assessmentV2"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 )
 
-var (
-	assessmentOfflineStudy     IAssessmentOfflineStudyModel
-	assessmentOfflineStudyOnce = sync.Once{}
-
-	ErrOfflineStudyHasCompleted   = errors.New("home fun study has completed")
-	ErrOfflineStudyHasNewFeedback = errors.New("home fun study has new feedback")
-)
-
-type assessmentOfflineStudyModel struct {
-	AmsServices external.AmsServices
+func NewOfflineStudyAssessmentPage(at *AssessmentTool) IAssessmentMatch {
+	return &OfflineStudyAssessment{
+		at:     at,
+		action: AssessmentMatchActionPage,
+		base:   NewBaseAssessment(at, AssessmentMatchActionPage),
+	}
 }
 
-type IAssessmentOfflineStudyModel interface {
-	UserSubmitOfflineStudy(ctx context.Context, op *entity.Operator, req *v2.OfflineStudyUserResultAddReq) error
-	Draft(ctx context.Context, op *entity.Operator, req *v2.OfflineStudyUserResultUpdateReq) error
-	Complete(ctx context.Context, op *entity.Operator, req *v2.OfflineStudyUserResultUpdateReq) error
-
-	GetByID(ctx context.Context, op *entity.Operator, id string) (*v2.GetOfflineStudyUserResultDetailReply, error)
-	Page(ctx context.Context, op *entity.Operator, req *v2.AssessmentQueryReq) (*v2.OfflineStudyUserPageReply, error)
-
-	IsAnyOneCompleteByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]bool, error)
-	GetUserResult(ctx context.Context, op *entity.Operator, scheduleIDs []string, userIDs []string) (map[string][]*v2.AssessmentUserResultDBView, error)
+func NewOfflineStudyAssessmentDetail(at *AssessmentTool) IAssessmentMatch {
+	return &OfflineStudyAssessment{
+		at:     at,
+		action: AssessmentMatchActionDetail,
+		base:   NewBaseAssessment(at, AssessmentMatchActionDetail),
+	}
 }
 
-func (a *assessmentOfflineStudyModel) GetUserResult(ctx context.Context, op *entity.Operator, scheduleIDs []string, userIDs []string) (map[string][]*v2.AssessmentUserResultDBView, error) {
-	_, userResults, err := assessmentV2.GetAssessmentUserResultDA().GetAssessmentUserResultDBView(ctx, &assessmentV2.AssessmentUserResultDBViewCondition{
-		OrgID: sql.NullString{
-			String: op.OrgID,
-			Valid:  true,
-		},
-		ScheduleIDs: entity.NullStrings{
-			Strings: scheduleIDs,
-			Valid:   true,
-		},
-		UserIDs: entity.NullStrings{
-			Strings: userIDs,
-			Valid:   true,
-		},
-	})
+type OfflineStudyAssessment struct {
+	EmptyAssessment
+
+	base   BaseAssessment
+	at     *AssessmentTool
+	action AssessmentMatchAction
+}
+
+func (o *OfflineStudyAssessment) MatchSchedule() (map[string]*entity.Schedule, error) {
+	return o.base.MatchSchedule()
+}
+
+func (o *OfflineStudyAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
+	return o.base.MatchTeacher()
+}
+
+func (o *OfflineStudyAssessment) MatchClass() (map[string]*entity.IDName, error) {
+	return o.base.MatchClass()
+}
+
+func (o *OfflineStudyAssessment) MatchCompleteRate() (map[string]float64, error) {
+	ctx := o.at.ctx
+
+	assessmentUserMap, err := o.at.GetAssessmentUserMap()
 	if err != nil {
 		return nil, err
 	}
 
-	result := make(map[string][]*v2.AssessmentUserResultDBView)
-	for _, item := range userResults {
-		result[item.ScheduleID] = append(result[item.ScheduleID], item)
-	}
-
-	return result, nil
-}
-
-func (a *assessmentOfflineStudyModel) IsAnyOneCompleteByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]bool, error) {
-	_, userResults, err := assessmentV2.GetAssessmentUserResultDA().GetAssessmentUserResultDBView(ctx, &assessmentV2.AssessmentUserResultDBViewCondition{
-		OrgID: sql.NullString{
-			String: op.OrgID,
-			Valid:  true,
-		},
-		ScheduleIDs: entity.NullStrings{
-			Strings: scheduleIDs,
-			Valid:   true,
-		}})
+	reviewerFeedbackMap, err := o.at.GetReviewerFeedbackMap()
 	if err != nil {
 		return nil, err
 	}
 
-	result := make(map[string]bool)
-	for _, item := range userResults {
-		if item.Status == v2.UserResultProcessStatusComplete {
-			result[item.ScheduleID] = true
+	studentCount := make(map[string]int)
+	studentCompleteCount := make(map[string]int)
+	for key, users := range assessmentUserMap {
+		for _, userItem := range users {
+			if userItem.UserType == v2.AssessmentUserTypeStudent {
+				studentCount[key]++
+
+				if _, ok := reviewerFeedbackMap[userItem.ID]; ok {
+					studentCompleteCount[key]++
+				}
+			}
+		}
+	}
+
+	result := make(map[string]float64)
+	for _, item := range o.at.assessments {
+		stuTotal := studentCount[item.ID]
+		stuComplete := studentCompleteCount[item.ID]
+		if stuTotal == 0 || stuComplete == 0 {
+			result[item.ID] = 0
+		} else if stuComplete > stuTotal {
+			log.Warn(ctx, "Completion rate result greater than 1",
+				log.Any("assessment", item),
+				log.Any("assessmentUserMap", assessmentUserMap),
+				log.Any("reviewerFeedbackMap", reviewerFeedbackMap))
+			result[item.ID] = 1
+		} else {
+			result[item.ID] = float64(stuComplete) / float64(stuTotal)
 		}
 	}
 
 	return result, nil
 }
 
-func (a *assessmentOfflineStudyModel) Draft(ctx context.Context, op *entity.Operator, req *v2.OfflineStudyUserResultUpdateReq) error {
-	return a.update(ctx, op, v2.UserResultProcessStatusDraft, req)
+func (o *OfflineStudyAssessment) MatchRemainingTime() (map[string]int64, error) {
+	onlineStudy := NewOnlineStudyAssessmentPage(o.at)
+
+	return onlineStudy.MatchRemainingTime()
 }
 
-func (a *assessmentOfflineStudyModel) Complete(ctx context.Context, op *entity.Operator, req *v2.OfflineStudyUserResultUpdateReq) error {
-	return a.update(ctx, op, v2.UserResultProcessStatusComplete, req)
+func (o *OfflineStudyAssessment) MatchOutcomes() (map[string]*v2.AssessmentOutcomeReply, error) {
+	outcomes, err := o.at.FirstGetOutcomesFromSchedule()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]*v2.AssessmentOutcomeReply, len(outcomes))
+	if len(outcomes) <= 0 {
+		return result, nil
+	}
+
+	for _, item := range outcomes {
+		resultItem := &v2.AssessmentOutcomeReply{
+			OutcomeID:          item.ID,
+			OutcomeName:        item.Name,
+			AssignedTo:         nil,
+			Assumed:            item.Assumed,
+			AssignedToLessPlan: false,
+			AssignedToMaterial: false,
+			ScoreThreshold:     item.ScoreThreshold,
+		}
+		result[item.ID] = resultItem
+	}
+
+	return result, nil
 }
 
-func (a *assessmentOfflineStudyModel) update(ctx context.Context, op *entity.Operator, status v2.UserResultProcessStatus, req *v2.OfflineStudyUserResultUpdateReq) error {
-	permission := new(AssessmentPermission)
+func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentContentReply) ([]*v2.AssessmentStudentReply, error) {
+	ctx := o.at.ctx
+	op := o.at.op
 
-	err := permission.IsAllowEdit(ctx, op)
+	assessmentUsers, err := o.at.GetAssessmentUsers()
+	if err != nil {
+		return nil, err
+	}
+
+	feedbackCond := &da.ScheduleFeedbackCondition{
+		ScheduleID: sql.NullString{
+			String: o.at.first.ScheduleID,
+			Valid:  true,
+		},
+	}
+	scheduleFeedbacks, err := GetScheduleFeedbackModel().Query(ctx, op, feedbackCond)
+	if err != nil {
+		return nil, err
+	}
+	scheduleFeedbackMap := make(map[string][]*entity.ScheduleFeedbackView, len(scheduleFeedbacks))
+	for _, item := range scheduleFeedbacks {
+		scheduleFeedbackMap[item.UserID] = append(scheduleFeedbackMap[item.UserID], item)
+	}
+
+	reviewerFeedbackMap, err := o.at.GetReviewerFeedbackMap()
+	if err != nil {
+		return nil, err
+	}
+
+	assessmentOutcomeMap, err := o.at.FirstGetOutcomeFromAssessment()
+	if err != nil {
+		return nil, err
+	}
+
+	outcomesFromSchedule, err := o.at.FirstGetOutcomesFromSchedule()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*v2.AssessmentStudentReply, 0, len(assessmentUsers))
+	for _, item := range assessmentUsers {
+		if item.UserType != v2.AssessmentUserTypeStudent {
+			continue
+		}
+
+		resultItem := &v2.AssessmentStudentReply{
+			StudentID:     item.UserID,
+			Status:        item.StatusByUser,
+			ProcessStatus: item.StatusBySystem,
+			Results:       make([]*v2.AssessmentStudentResultReply, 0),
+		}
+
+		studentResultItem := new(v2.AssessmentStudentResultReply)
+		studentResultItem.Outcomes = make([]*v2.AssessmentStudentResultOutcomeReply, 0, len(outcomesFromSchedule))
+		for _, outcomeItem := range outcomesFromSchedule {
+			aoKey := o.at.GetKey([]string{
+				item.ID,
+				"",
+				outcomeItem.ID,
+			})
+
+			stuOutcomeReplyItem := &v2.AssessmentStudentResultOutcomeReply{
+				OutcomeID: outcomeItem.ID,
+				Status:    v2.AssessmentUserOutcomeStatusUnknown,
+			}
+			if outcomeItem.Assumed {
+				stuOutcomeReplyItem.Status = v2.AssessmentUserOutcomeStatusAchieved
+			}
+			if assOutcomeItem, ok := assessmentOutcomeMap[aoKey]; ok && assOutcomeItem.Status != "" {
+				stuOutcomeReplyItem.Status = assOutcomeItem.Status
+			}
+
+			studentResultItem.Outcomes = append(studentResultItem.Outcomes, stuOutcomeReplyItem)
+		}
+
+		reviewerFeedback, ok := reviewerFeedbackMap[item.ID]
+		if !ok {
+			if len(studentResultItem.Outcomes) > 0 {
+				resultItem.Results = append(resultItem.Results, studentResultItem)
+			}
+
+			result = append(result, resultItem)
+			continue
+		}
+
+		resultItem.ReviewerComment = reviewerFeedback.ReviewerComment
+		studentResultItem.AssessScore = v2.AssessmentUserAssessAverage
+		if reviewerFeedback.AssessScore > 0 {
+			studentResultItem.AssessScore = reviewerFeedback.AssessScore
+		}
+		studentResultItem.Attempted = true
+
+		if studentFeedbackItems, ok := scheduleFeedbackMap[item.UserID]; ok {
+			studentResultItem.StudentFeedbacks = make([]*v2.StudentResultFeedBacksReply, 0, len(studentFeedbackItems))
+			for _, feedbackItem := range studentFeedbackItems {
+				feedbackReply := &v2.StudentResultFeedBacksReply{
+					ID:          feedbackItem.ID,
+					ScheduleID:  feedbackItem.ScheduleID,
+					UserID:      feedbackItem.UserID,
+					Comment:     feedbackItem.Comment,
+					CreateAt:    feedbackItem.CreateAt,
+					Assignments: feedbackItem.Assignments,
+				}
+				studentResultItem.StudentFeedbacks = append(studentResultItem.StudentFeedbacks, feedbackReply)
+			}
+		}
+
+		resultItem.Results = append(resultItem.Results, studentResultItem)
+
+		result = append(result, resultItem)
+	}
+
+	return result, nil
+}
+
+func (o *OfflineStudyAssessment) verifyUpdateRequest(req *v2.AssessmentUpdateReq) error {
+	ctx := o.at.ctx
+
+	// verify assessment status
+	if !req.Action.Valid() {
+		log.Warn(ctx, "req action invalid", log.Any("req", req))
+		return constant.ErrInvalidArgs
+	}
+	if o.at.first.Status == v2.AssessmentStatusComplete {
+		log.Warn(ctx, "assessment is completed", log.Any("assessment", o.at.first))
+		return ErrAssessmentHasCompleted
+	}
+
+	// verify assessment remaining time
+	remainingTimeMap, err := o.MatchRemainingTime()
 	if err != nil {
 		return err
 	}
-
-	userResult := new(v2.AssessmentReviewerFeedback)
-	err = assessmentV2.GetAssessmentUserResultDA().Get(ctx, req.ID, userResult)
-	if err == dbo.ErrRecordNotFound {
-		log.Error(ctx, "get assessment user result by id not found", log.Err(err), log.Any("req", req), log.Any("op", op))
-		return constant.ErrRecordNotFound
+	remainingTime, ok := remainingTimeMap[o.at.first.ID]
+	if !ok {
+		log.Warn(ctx, "not found assessment remaining time", log.Any("assessment", o.at.first))
+		return constant.ErrInvalidArgs
 	}
-	if err != nil {
-		log.Error(ctx, "get assessment user result by id not found", log.Err(err), log.Any("req", req), log.Any("op", op))
-		return err
+	if remainingTime > 0 {
+		log.Warn(ctx, "assessment remaining time is greater than 0", log.Int64("remainingTime", remainingTime), log.Any("assessment", o.at.first))
+		return constant.ErrInvalidArgs
 	}
 
-	if userResult.Status == v2.UserResultProcessStatusComplete {
-		log.Warn(ctx, "user result is complete", log.Any("userResult", userResult), log.Any("op", op))
-		return ErrOfflineStudyHasCompleted
+	if len(req.Students) <= 0 {
+		log.Warn(ctx, "request students list is empty", log.Any("request", req))
+		return constant.ErrInvalidArgs
 	}
 
+	return nil
+}
+func (o *OfflineStudyAssessment) prepareAssessmentUpdateData(req *v2.AssessmentUpdateReq) (*v2.Assessment, error) {
+	ctx := o.at.ctx
+	//op := o.at.op
 	now := time.Now().Unix()
 
-	userResult.Status = status
-	userResult.AssessScore = req.AssessScore
-	userResult.UpdateAt = now
-	if status == v2.UserResultProcessStatusComplete {
-		userResult.CompleteAt = now
-	}
-	userResult.StudentFeedbackID = req.AssessFeedbackID
-	userResult.ReviewerID = op.UserID
-	userResult.ReviewerComment = req.AssessComment
+	result := o.at.first
 
-	// assessment user
-	assessmentUser := new(v2.AssessmentUser)
-	err = assessmentV2.GetAssessmentUserDA().Get(ctx, userResult.AssessmentUserID, assessmentUser)
-	if err == dbo.ErrRecordNotFound {
-		log.Error(ctx, "get assessment user by id not found", log.Err(err), log.Any("userResult", userResult), log.Any("op", op))
-		return constant.ErrRecordNotFound
-	}
-	if err != nil {
-		log.Error(ctx, "get assessment user by id not found", log.Err(err), log.Any("userResult", userResult), log.Any("op", op))
-		return err
+	if req.Action == v2.AssessmentActionDraft {
+		result.Status = v2.AssessmentStatusInDraft
+	} else if req.Action == v2.AssessmentActionComplete {
+		result.Status = v2.AssessmentStatusComplete
+		result.CompleteAt = now
+	} else {
+		log.Warn(ctx, "req action is invalid", log.Any("req", req))
+		return nil, constant.ErrInvalidArgs
 	}
 
-	// assessment
-	assessment := new(v2.Assessment)
-	err = assessmentV2.GetAssessmentDA().Get(ctx, assessmentUser.AssessmentID, assessment)
-	if err == dbo.ErrRecordNotFound {
-		log.Error(ctx, "get assessment by id not found", log.Err(err), log.Any("assessmentUser", assessmentUser), log.Any("op", op))
-		return constant.ErrRecordNotFound
-	}
-	if err != nil {
-		log.Error(ctx, "get assessment by id not found", log.Err(err), log.Any("assessmentUser", assessmentUser), log.Any("op", op))
-		return err
-	}
-	newest, err := GetScheduleFeedbackModel().GetNewest(ctx, op, assessmentUser.UserID, assessment.ScheduleID)
-	if err != nil {
-		return err
-	}
-	if req.AssessFeedbackID != newest.ScheduleFeedback.ID {
-		log.Warn(ctx, "user have new submit", log.Any("newest", newest), log.Any("req", req), log.Any("op", op))
-		return ErrOfflineStudyHasNewFeedback
-	}
+	result.UpdateAt = now
 
-	// outcomes
-	userOutcomeIDs := make([]string, len(req.Outcomes))
-	userOutcomeReqMap := make(map[string]*v2.OfflineStudyUserOutcomeUpdateReq)
-	for i, item := range req.Outcomes {
-		userOutcomeIDs[i] = item.OutcomeID
-		userOutcomeReqMap[item.OutcomeID] = item
-	}
-	userOutcomeCond := &assessmentV2.AssessmentUserOutcomeCondition{
-		AssessmentUserIDs: entity.NullStrings{
-			Strings: []string{userResult.AssessmentUserID},
-			Valid:   true,
-		},
-	}
-	var waitUpdateUserOutcomes []*v2.AssessmentUserOutcome
-	err = assessmentV2.GetAssessmentUserOutcomeDA().Query(ctx, userOutcomeCond, &waitUpdateUserOutcomes)
-	if err != nil {
-		log.Warn(ctx, "get assessment user outcomes error", log.Any("userOutcomeCond", userOutcomeCond), log.Any("req", req), log.Any("op", op))
-		return err
-	}
-	for _, item := range waitUpdateUserOutcomes {
-		if reqItem, ok := userOutcomeReqMap[item.OutcomeID]; ok {
-			if !reqItem.Status.Valid() {
-				log.Warn(ctx, "request user outcome status invalid", log.Any("reqItem", reqItem), log.Any("req", req), log.Any("op", op))
-				return constant.ErrInvalidArgs
-			}
-			item.Status = reqItem.Status
-			item.UpdateAt = now
-		}
-	}
-
-	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		_, err = assessmentV2.GetAssessmentUserResultDA().UpdateTx(ctx, tx, userResult)
-		if err != nil {
-			log.Error(ctx, "update assessment user result error", log.Err(err), log.Any("userResult", userResult))
-			return err
-		}
-
-		if len(waitUpdateUserOutcomes) > 0 {
-			_, err = assessmentV2.GetAssessmentUserOutcomeDA().UpdateTx(ctx, tx, waitUpdateUserOutcomes)
-			if err != nil {
-				log.Error(ctx, "update assessment user outcomes error", log.Err(err), log.Any("waitUpdateUserOutcomes", waitUpdateUserOutcomes))
-				return err
-			}
-		}
-
-		return nil
-	})
+	return result, nil
 }
 
-func (a *assessmentOfflineStudyModel) GetByID(ctx context.Context, op *entity.Operator, id string) (*v2.GetOfflineStudyUserResultDetailReply, error) {
-	userResult := new(v2.AssessmentReviewerFeedback)
-	err := assessmentV2.GetAssessmentUserResultDA().Get(ctx, id, userResult)
-	if err == dbo.ErrRecordNotFound {
-		log.Error(ctx, "get user result not found", log.Err(err), log.String("id", id))
-		return nil, constant.ErrRecordNotFound
-	}
-	if err != nil {
-		log.Error(ctx, "get user result error", log.Err(err), log.String("id", id))
-		return nil, err
-	}
+func (o *OfflineStudyAssessment) prepareAssessmentUsersUpdateData(req *v2.AssessmentUpdateReq) ([]*v2.AssessmentUser, error) {
+	ctx := o.at.ctx
+	now := time.Now().Unix()
 
-	assessmentUser := new(v2.AssessmentUser)
-	err = assessmentV2.GetAssessmentUserDA().Get(ctx, userResult.AssessmentUserID, assessmentUser)
-	if err != nil {
-		log.Error(ctx, "get assessment user error", log.Err(err), log.Any("userResult", userResult))
-		return nil, err
-	}
-
-	assessment := new(v2.Assessment)
-	err = assessmentV2.GetAssessmentDA().Get(ctx, assessmentUser.AssessmentID, assessment)
-	if err != nil {
-		log.Error(ctx, "get assessment error", log.Err(err), log.Any("assessmentUser", assessmentUser))
-		return nil, err
-	}
-
-	schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, op, []string{assessment.ScheduleID}, &entity.ScheduleInclude{
-		ClassRosterClass: true,
-	})
+	assessmentUserMap, err := o.at.FirstGetAssessmentUserWithUserIDAndUserTypeMap()
 	if err != nil {
 		return nil, err
 	}
+	result := make([]*v2.AssessmentUser, 0, len(req.Students))
 
-	scheduleMap := make(map[string]*entity.ScheduleVariable, len(schedules))
-	for _, item := range schedules {
-		scheduleMap[item.ID] = item
-	}
+	for _, item := range req.Students {
+		if !item.Status.Valid() {
+			log.Warn(ctx, "req student status is invalid", log.Any("studentItem", item))
+			return nil, constant.ErrInvalidArgs
+		}
 
-	schedule, ok := scheduleMap[assessment.ScheduleID]
-	if !ok {
-		log.Error(ctx, "schedule not found", log.Any("assessment", assessment))
-		return nil, constant.ErrRecordNotFound
-	}
-
-	score := v2.AssessmentUserAssessAverage
-	if userResult.AssessScore > 0 {
-		score = userResult.AssessScore
-	}
-
-	result := &v2.GetOfflineStudyUserResultDetailReply{
-		ID:            userResult.ID,
-		ScheduleID:    schedule.ID,
-		Status:        userResult.Status,
-		DueAt:         schedule.DueAt,
-		CompleteAt:    userResult.CompleteAt,
-		FeedbackID:    userResult.StudentFeedbackID,
-		AssessScore:   score,
-		AssessComment: userResult.ReviewerComment,
-		Title:         assessment.Title,
-		Teachers:      nil,
-		Student:       nil,
-		Outcomes:      nil,
-	}
-
-	// teachers
-	teacherCondition := &assessmentV2.AssessmentUserCondition{
-		AssessmentID: sql.NullString{
-			String: assessment.ID,
-			Valid:  true,
-		},
-		UserType: sql.NullString{
-			String: v2.AssessmentUserTypeTeacher.String(),
-			Valid:  true,
-		},
-	}
-	var assessmentTeacher []*v2.AssessmentUser
-	err = assessmentV2.GetAssessmentUserDA().Query(ctx, teacherCondition, &assessmentTeacher)
-	if err != nil {
-		log.Error(ctx, "get assessment user by condition error", log.Any("teacherCondition", teacherCondition))
-		return nil, err
-	}
-
-	userIDs := make([]string, 0, len(assessmentTeacher))
-	for _, item := range assessmentTeacher {
-		userIDs = append(userIDs, item.UserID)
-	}
-	userIDs = append(userIDs, assessmentUser.UserID)
-	userMap, err := external.GetUserServiceProvider().BatchGetNameMap(ctx, op, userIDs)
-	if err != nil {
-		log.Error(ctx, "get user info from external error", log.Any("userIDs", userIDs))
-		return nil, err
-	}
-
-	for _, item := range assessmentTeacher {
-		result.Teachers = append(result.Teachers, &entity.IDName{
-			ID:   item.UserID,
-			Name: userMap[item.UserID],
+		stuKey := o.at.GetKey([]string{
+			item.StudentID,
+			v2.AssessmentUserTypeStudent.String(),
 		})
+
+		assessmentUserItem, ok := assessmentUserMap[stuKey]
+		if !ok {
+			log.Warn(ctx, "not found student in assessment", log.Any("studentItem", item), log.Any("assessmentUserMap", assessmentUserMap))
+			return nil, constant.ErrInvalidArgs
+		}
+		assessmentUserItem.StatusByUser = item.Status
+
+		if req.Action == v2.AssessmentActionComplete {
+			if assessmentUserItem.StatusBySystem == v2.AssessmentUserSystemStatusDone ||
+				assessmentUserItem.StatusBySystem == v2.AssessmentUserSystemStatusResubmitted {
+				assessmentUserItem.StatusBySystem = v2.AssessmentUserSystemStatusCompleted
+				assessmentUserItem.CompletedAt = now
+			}
+		}
+
+		assessmentUserItem.UpdateAt = now
+		result = append(result, assessmentUserItem)
 	}
 
-	// student
-	result.Student = &entity.IDName{
-		ID:   assessmentUser.UserID,
-		Name: userMap[assessmentUser.UserID],
+	return result, nil
+}
+
+func (o *OfflineStudyAssessment) prepareUserOutcomesUpdateData(req *v2.AssessmentUpdateReq) ([]*v2.AssessmentUserOutcome, error) {
+	ctx := o.at.ctx
+	now := time.Now().Unix()
+
+	// prepare assessment user data
+	assessmentUserMap, err := o.at.FirstGetAssessmentUserWithUserIDAndUserTypeMap()
+	if err != nil {
+		return nil, err
 	}
 
-	// user outcome
-	userOutcomeCond := assessmentV2.AssessmentUserOutcomeCondition{
+	assessmentUserIDs := make([]string, 0)
+	reqStuOutcomeMap := make(map[string]*v2.AssessmentStudentResultOutcomeReq)
+
+	for _, item := range req.Students {
+		if !item.Status.Valid() {
+			log.Warn(ctx, "req student status is invalid", log.Any("studentItem", item))
+			return nil, constant.ErrInvalidArgs
+		}
+
+		stuKey := o.at.GetKey([]string{
+			item.StudentID,
+			v2.AssessmentUserTypeStudent.String(),
+		})
+
+		assessmentUserItem, ok := assessmentUserMap[stuKey]
+		if !ok {
+			log.Warn(ctx, "not found student in assessment", log.Any("studentItem", item), log.Any("assessmentUserMap", assessmentUserMap))
+			return nil, constant.ErrInvalidArgs
+		}
+
+		if len(item.Results) <= 0 {
+			continue
+		}
+
+		assessmentUserIDs = append(assessmentUserIDs, assessmentUserItem.ID)
+		stuResult := item.Results[0]
+		for _, outcomeReq := range stuResult.Outcomes {
+			reqStuOutcomeMap[o.at.GetKey([]string{assessmentUserItem.ID, outcomeReq.OutcomeID})] = outcomeReq
+		}
+	}
+
+	userOutcomeCond := &assessmentV2.AssessmentUserOutcomeCondition{
 		AssessmentUserIDs: entity.NullStrings{
-			Strings: []string{userResult.AssessmentUserID},
+			Strings: assessmentUserIDs,
 			Valid:   true,
 		},
 	}
 	var userOutcomes []*v2.AssessmentUserOutcome
 	err = assessmentV2.GetAssessmentUserOutcomeDA().Query(ctx, userOutcomeCond, &userOutcomes)
 	if err != nil {
-		log.Error(ctx, "get user outcomes error", log.Any("userOutcomeCond", userOutcomeCond))
+		log.Warn(ctx, "get assessment user outcomes error", log.Any("userOutcomeCond", userOutcomeCond), log.Any("req", req))
 		return nil, err
 	}
-	outcomeIDs := make([]string, len(userOutcomes))
-	userOutcomeMap := make(map[string]*v2.AssessmentUserOutcome)
-	for i, item := range userOutcomes {
-		outcomeIDs[i] = item.OutcomeID
-		userOutcomeMap[item.OutcomeID] = item
-	}
-	outcomes, err := GetOutcomeModel().GetByIDs(ctx, op, dbo.MustGetDB(ctx), outcomeIDs)
-	if err != nil {
-		log.Error(ctx, "get outcomes info by ids error", log.Strings("outcomeIDs", outcomeIDs))
-		return nil, err
-	}
-	result.Outcomes = make([]*v2.OfflineStudyUserOutcomeReply, len(outcomes))
-	for i, item := range outcomes {
-		userOutcomeReplyItem := &v2.OfflineStudyUserOutcomeReply{
-			OutcomeID:   item.ID,
-			OutcomeName: item.Name,
-			Assumed:     item.Assumed,
-			Status:      v2.AssessmentUserOutcomeStatusUnknown,
-		}
 
-		if userOutcomeItem, ok := userOutcomeMap[item.ID]; ok && userOutcomeItem.Status != "" {
-			userOutcomeReplyItem.Status = userOutcomeItem.Status
-		} else if item.Assumed {
-			userOutcomeReplyItem.Status = v2.AssessmentUserOutcomeStatusAchieved
+	result := make([]*v2.AssessmentUserOutcome, 0, len(userOutcomes))
+	for _, item := range userOutcomes {
+		if reqStuOutcome, ok := reqStuOutcomeMap[o.at.GetKey([]string{item.AssessmentUserID, item.OutcomeID})]; ok {
+			if !reqStuOutcome.Status.Valid() {
+				log.Warn(ctx, "student outcome status invalid", log.Any("reqStuOutcome", reqStuOutcome), log.Any("req", req))
+				return nil, constant.ErrInvalidArgs
+			}
+			item.Status = reqStuOutcome.Status
+			item.UpdateAt = now
+			result = append(result, item)
 		}
-
-		result.Outcomes[i] = userOutcomeReplyItem
 	}
 
 	return result, nil
 }
 
-func (a *assessmentOfflineStudyModel) UserSubmitOfflineStudy(ctx context.Context, op *entity.Operator, req *v2.OfflineStudyUserResultAddReq) error {
-	var assessments []*v2.Assessment
-	err := assessmentV2.GetAssessmentDA().Query(ctx, &assessmentV2.AssessmentCondition{
-		ScheduleID: sql.NullString{
-			String: req.ScheduleID,
-			Valid:  true,
-		},
-	}, &assessments)
+func (o *OfflineStudyAssessment) prepareReviewerFeedbacksUpdateData(req *v2.AssessmentUpdateReq) ([]*v2.AssessmentReviewerFeedback, []*entity.FeedbackAssignment, error) {
+	ctx := o.at.ctx
+	op := o.at.op
+	now := time.Now().Unix()
+
+	// prepare assessment user data
+	assessmentUserMap, err := o.at.FirstGetAssessmentUserWithUserIDAndUserTypeMap()
 	if err != nil {
-		return err
-	}
-	if len(assessments) <= 0 {
-		return constant.ErrRecordNotFound
+		return nil, nil, err
 	}
 
-	assessment := assessments[0]
+	assessmentUserIDs := make([]string, 0)
+	reqReviewerCommentMap := make(map[string]string)
+	reqStuResultMap := make(map[string]*v2.AssessmentStudentResultReq)
+	assignmentMap := make(map[string]*v2.FeedbackAssignmentsReq)
 
-	var assessmentUsers []*v2.AssessmentUser
-	assessmentUserCond := &assessmentV2.AssessmentUserCondition{
-		AssessmentID: sql.NullString{
-			String: assessment.ID,
-			Valid:  true,
-		},
-		UserIDs: entity.NullStrings{
-			Strings: []string{req.UserID},
+	for _, item := range req.Students {
+		if !item.Status.Valid() {
+			log.Warn(ctx, "req student status is invalid", log.Any("studentItem", item))
+			return nil, nil, constant.ErrInvalidArgs
+		}
+
+		stuKey := o.at.GetKey([]string{
+			item.StudentID,
+			v2.AssessmentUserTypeStudent.String(),
+		})
+
+		assessmentUserItem, ok := assessmentUserMap[stuKey]
+		if !ok {
+			log.Warn(ctx, "not found student in assessment", log.Any("studentItem", item), log.Any("assessmentUserMap", assessmentUserMap))
+			return nil, nil, constant.ErrInvalidArgs
+		}
+		assessmentUserIDs = append(assessmentUserIDs, assessmentUserItem.ID)
+
+		if len(item.Results) <= 0 {
+			continue
+		}
+		stuResult := item.Results[0]
+		reqReviewerCommentMap[assessmentUserItem.ID] = item.ReviewerComment
+		reqStuResultMap[assessmentUserItem.ID] = stuResult
+
+		for _, assignItem := range stuResult.Assignments {
+			assignmentMap[assignItem.ID] = assignItem
+		}
+	}
+
+	reviewerFeedbackCond := &assessmentV2.AssessmentUserResultCondition{
+		AssessmentUserIDs: entity.NullStrings{
+			Strings: assessmentUserIDs,
 			Valid:   true,
 		},
-		UserType: sql.NullString{
-			String: v2.AssessmentUserTypeStudent.String(),
-			Valid:  true,
-		},
 	}
-	err = assessmentV2.GetAssessmentUserDA().Query(ctx, assessmentUserCond, &assessmentUsers)
+	var reviewerFeedbacks []*v2.AssessmentReviewerFeedback
+	err = assessmentV2.GetAssessmentUserResultDA().Query(ctx, reviewerFeedbackCond, &reviewerFeedbacks)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	waitUpdateReviewerFeedbacks := make([]*v2.AssessmentReviewerFeedback, 0, len(assessmentUserIDs))
+	waitUpdateFeedbackAssignments := make([]*entity.FeedbackAssignment, 0)
+
+	if len(reviewerFeedbacks) > 0 {
+		feedbackIDs := make([]string, 0)
+		for _, item := range reviewerFeedbacks {
+			if reqStuResult, ok := reqStuResultMap[item.AssessmentUserID]; ok {
+				if reqStuResult.AssessScore <= 0 {
+					log.Warn(ctx, "student assessScore invalid in request", log.Any("req", req))
+					return nil, nil, constant.ErrInvalidArgs
+				}
+				item.AssessScore = reqStuResult.AssessScore
+				item.ReviewerID = op.UserID
+			}
+			if comment, ok := reqReviewerCommentMap[item.AssessmentUserID]; ok {
+				item.ReviewerComment = comment
+			}
+			item.UpdateAt = now
+
+			waitUpdateReviewerFeedbacks = append(waitUpdateReviewerFeedbacks, item)
+			feedbackIDs = append(feedbackIDs, item.StudentFeedbackID)
+		}
+
+		// assignment
+		feedbackAssignCond := &da.FeedbackAssignmentCondition{
+			FeedBackIDs: entity.NullStrings{
+				Strings: feedbackIDs,
+				Valid:   true,
+			},
+		}
+
+		var feedbackAssigns []*entity.FeedbackAssignment
+		err = da.GetFeedbackAssignmentDA().Query(ctx, feedbackAssignCond, &feedbackAssigns)
+		if err != nil {
+			log.Error(ctx, "get feedback assignment error", log.Any("feedbackAssignCond", feedbackAssignCond))
+			return nil, nil, err
+		}
+		for _, item := range feedbackAssigns {
+			if assignmentReq, ok := assignmentMap[item.ID]; ok && assignmentReq.ReviewAttachmentID != "" {
+				item.ReviewAttachmentID = assignmentReq.ReviewAttachmentID
+				item.UpdateAt = now
+				waitUpdateFeedbackAssignments = append(waitUpdateFeedbackAssignments, item)
+			}
+		}
+	}
+
+	return waitUpdateReviewerFeedbacks, waitUpdateFeedbackAssignments, nil
+}
+
+func (o *OfflineStudyAssessment) Update(req *v2.AssessmentUpdateReq) error {
+	ctx := o.at.ctx
+
+	err := o.verifyUpdateRequest(req)
 	if err != nil {
 		return err
 	}
-	if len(assessmentUsers) <= 0 {
-		return constant.ErrRecordNotFound
-	}
 
-	assessmentUser := assessmentUsers[0]
-
-	userResultCond := &assessmentV2.AssessmentUserResultCondition{
-		AssessmentUserID: sql.NullString{
-			String: assessmentUser.ID,
-			Valid:  true,
-		},
-	}
-	var userResults []*v2.AssessmentReviewerFeedback
-	err = assessmentV2.GetAssessmentUserResultDA().Query(ctx, userResultCond, &userResults)
+	waitUpdateAssessment, err := o.prepareAssessmentUpdateData(req)
 	if err != nil {
 		return err
 	}
 
-	now := time.Now().Unix()
-	if len(userResults) <= 0 {
-		userResult := &v2.AssessmentReviewerFeedback{
-			ID:                utils.NewID(),
-			AssessmentUserID:  assessmentUser.ID,
-			Status:            v2.UserResultProcessStatusStarted,
-			StudentFeedbackID: req.FeedbackID,
-			CreateAt:          now,
-		}
+	waitUpdateAssessmentUsers, err := o.prepareAssessmentUsersUpdateData(req)
+	if err != nil {
+		return err
+	}
 
-		outcomeIDsMap, err := GetScheduleModel().GetLearningOutcomeIDs(ctx, op, []string{req.ScheduleID})
+	waitUpdateUserOutcomes, err := o.prepareUserOutcomesUpdateData(req)
+	if err != nil {
+		return err
+	}
+
+	waitUpdateReviewerFeedbacks, waitUpdateFeedbackAssignments, err := o.prepareReviewerFeedbacksUpdateData(req)
+	if err != nil {
+		return err
+	}
+
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		_, err := assessmentV2.GetAssessmentDA().UpdateTx(ctx, tx, waitUpdateAssessment)
 		if err != nil {
+			log.Error(ctx, "update assessment data error", log.Err(err), log.Any("waitUpdateAssessment", waitUpdateAssessment))
 			return err
 		}
-		outcomeIDs := outcomeIDsMap[req.ScheduleID]
-		outcomes, err := GetOutcomeModel().GetByIDs(ctx, op, dbo.MustGetDB(ctx), outcomeIDs)
 
-		waitAddUserOutcomes := make([]*v2.AssessmentUserOutcome, len(outcomeIDs))
-		for i, item := range outcomes {
-			waitAddUserOutcomeItem := &v2.AssessmentUserOutcome{
-				ID:                  utils.NewID(),
-				AssessmentUserID:    assessmentUser.ID,
-				AssessmentContentID: "",
-				OutcomeID:           item.ID,
-				CreateAt:            now,
-				Status:              v2.AssessmentUserOutcomeStatusUnknown,
-			}
-			if item.Assumed {
-				waitAddUserOutcomeItem.Status = v2.AssessmentUserOutcomeStatusAchieved
-			}
-
-			waitAddUserOutcomes[i] = waitAddUserOutcomeItem
-		}
-
-		assessmentUser.StatusBySystem = v2.AssessmentUserStatusParticipate
-		return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-			if assessment.Status == v2.AssessmentStatusNotStarted {
-				assessment.Status = v2.AssessmentStatusStarted
-				_, err := assessmentV2.GetAssessmentDA().UpdateTx(ctx, tx, assessment)
-				if err != nil {
-					return err
-				}
-			}
-
-			_, err := assessmentV2.GetAssessmentUserDA().UpdateTx(ctx, tx, assessmentUser)
+		if len(waitUpdateAssessmentUsers) > 0 {
+			_, err := assessmentV2.GetAssessmentUserDA().UpdateTx(ctx, tx, waitUpdateAssessmentUsers)
 			if err != nil {
+				log.Error(ctx, "update assessment user data error", log.Err(err), log.Any("waitUpdateAssessmentUsers", waitUpdateAssessmentUsers))
 				return err
 			}
-
-			_, err = assessmentV2.GetAssessmentUserResultDA().InsertTx(ctx, tx, userResult)
+		}
+		if len(waitUpdateUserOutcomes) > 0 {
+			_, err := assessmentV2.GetAssessmentUserOutcomeDA().UpdateTx(ctx, tx, waitUpdateUserOutcomes)
 			if err != nil {
+				log.Error(ctx, "update assessment user outcome data error", log.Err(err), log.Any("waitUpdateUserOutcomes", waitUpdateUserOutcomes))
 				return err
 			}
-
-			if len(waitAddUserOutcomes) > 0 {
-				_, err = assessmentV2.GetAssessmentUserOutcomeDA().InsertTx(ctx, tx, waitAddUserOutcomes)
-				if err != nil {
-					return err
-				}
-			}
-
-			return nil
-		})
-	} else {
-		userResult := userResults[0]
-		if userResult.Status == v2.UserResultProcessStatusComplete {
-			log.Warn(ctx, "user offline assessment is complete", log.Any("req", req))
-			return ErrOfflineStudyHasCompleted
 		}
-		userResult.StudentFeedbackID = req.FeedbackID
-		userResult.UpdateAt = time.Now().Unix()
-		_, err = assessmentV2.GetAssessmentUserResultDA().Update(ctx, userResult)
-		if err != nil {
-			return err
+
+		if len(waitUpdateReviewerFeedbacks) > 0 {
+			_, err := assessmentV2.GetAssessmentUserResultDA().UpdateTx(ctx, tx, waitUpdateReviewerFeedbacks)
+			if err != nil {
+				log.Error(ctx, "update assessment reviewer feedback data error", log.Err(err), log.Any("waitUpdateReviewerFeedbacks", waitUpdateReviewerFeedbacks))
+				return err
+			}
+		}
+
+		if len(waitUpdateFeedbackAssignments) > 0 {
+			_, err := da.GetFeedbackAssignmentDA().UpdateTx(ctx, tx, waitUpdateFeedbackAssignments)
+			if err != nil {
+				log.Error(ctx, "update feedback assignment data error", log.Err(err), log.Any("waitUpdateFeedbackAssignments", waitUpdateFeedbackAssignments))
+				return err
+			}
 		}
 
 		return nil
-	}
-}
-
-func (a *assessmentOfflineStudyModel) Page(ctx context.Context, op *entity.Operator, req *v2.AssessmentQueryReq) (*v2.OfflineStudyUserPageReply, error) {
-	result := &v2.OfflineStudyUserPageReply{}
-
-	permission := new(AssessmentPermission)
-	err := permission.SearchAllPermissions(ctx, op)
-	if err != nil {
-		return nil, err
-	}
-	queryCondition := &assessmentV2.UserResultPageCondition{
-		OrgID:   op.OrgID,
-		OrderBy: assessmentV2.NewAssessmentUserResultOrderBy(req.OrderBy),
-		Pager: dbo.Pager{
-			Page:     req.PageIndex,
-			PageSize: req.PageSize,
-		},
-		TeacherIDs: entity.NullStrings{},
-	}
-
-	if permission.OrgPermission.Status.Valid {
-		queryCondition.Status = permission.OrgPermission.Status
-	} else {
-		if permission.SchoolPermission.Status.Valid {
-			queryCondition.Status = permission.SchoolPermission.Status
-			queryCondition.TeacherIDs.Strings = permission.SchoolPermission.UserIDs
-		}
-		if permission.MyPermission.Status.Valid {
-			queryCondition.TeacherIDs.Strings = append(queryCondition.TeacherIDs.Strings, permission.MyPermission.UserID)
-		}
-
-		queryCondition.TeacherIDs.Valid = true
-	}
-
-	queryCondition.Status.Strings = strings.Split(req.Status, ",")
-	queryCondition.Status.Valid = len(queryCondition.Status.Strings) > 0
-
-	if req.QueryType == v2.QueryTypeTeacherName {
-		teachers, err := external.GetTeacherServiceProvider().Query(ctx, op, op.OrgID, req.QueryKey)
-		if err != nil {
-			return nil, err
-		}
-		queryCondition.TeacherIDs.Strings = make([]string, len(teachers))
-		for i, item := range teachers {
-			queryCondition.TeacherIDs.Strings[i] = item.ID
-		}
-
-		queryCondition.TeacherIDs.Valid = true
-	}
-
-	log.Debug(ctx, "query condition", log.Any("queryCondition", queryCondition), log.Any("permission", permission))
-
-	total, userResults, err := assessmentV2.GetAssessmentUserResultDA().PageByCondition(ctx, queryCondition)
-	if err != nil {
-		return nil, err
-	}
-
-	if total <= 0 {
-		return result, nil
-	}
-
-	scheduleIDs := make([]string, 0, len(userResults))
-	userIDs := make([]string, 0, len(userResults))
-	assessmentIDs := make([]string, 0, len(userResults))
-	dedupMap := make(map[string]struct{})
-	for _, item := range userResults {
-		if _, ok := dedupMap[item.UserID]; !ok {
-			userIDs = append(userIDs, item.UserID)
-		}
-
-		if _, ok := dedupMap[item.ScheduleID]; !ok {
-			scheduleIDs = append(scheduleIDs, item.ScheduleID)
-		}
-
-		if _, ok := dedupMap[item.AssessmentID]; !ok {
-			assessmentIDs = append(assessmentIDs, item.AssessmentID)
-		}
-	}
-
-	schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, op, scheduleIDs, &entity.ScheduleInclude{
-		ClassRosterClass: true,
 	})
+
 	if err != nil {
-		return nil, err
+		log.Error(ctx, "update data error", log.Err(err))
+		return err
 	}
 
-	scheduleMap := make(map[string]*entity.ScheduleVariable, len(schedules))
-	for _, item := range schedules {
-		scheduleMap[item.ID] = item
-	}
-
-	teacherCondition := &assessmentV2.AssessmentUserCondition{
-		AssessmentIDs: entity.NullStrings{
-			Strings: assessmentIDs,
-			Valid:   true,
-		},
-		UserType: sql.NullString{
-			String: v2.AssessmentUserTypeTeacher.String(),
-			Valid:  true,
-		},
-	}
-	var assessmentTeacher []*v2.AssessmentUser
-	err = assessmentV2.GetAssessmentUserDA().Query(ctx, teacherCondition, &assessmentTeacher)
-	if err != nil {
-		log.Error(ctx, "query assessment user error", log.Any("teacherCondition", teacherCondition))
-		return nil, err
-	}
-
-	assessmentTeacherMap := make(map[string][]string)
-	for _, item := range assessmentTeacher {
-		if _, ok := dedupMap[item.UserID]; !ok {
-			userIDs = append(userIDs, item.UserID)
-		}
-		assessmentTeacherMap[item.AssessmentID] = append(assessmentTeacherMap[item.AssessmentID], item.UserID)
-	}
-
-	userMap, err := external.GetUserServiceProvider().BatchGetNameMap(ctx, op, userIDs)
-	if err != nil {
-		return nil, err
-	}
-
-	resultItems := make([]*v2.OfflineStudyUserPageItem, len(userResults))
-	for i, item := range userResults {
-		replyItem := &v2.OfflineStudyUserPageItem{
-			ID:          item.ID,
-			CompleteAt:  item.CompleteAt,
-			Status:      item.Status,
-			SubmitAt:    item.CreateAt,
-			AssessScore: item.AssessScore,
-		}
-		if scheduleItem, ok := scheduleMap[item.ScheduleID]; ok {
-			var className string
-			if scheduleItem.ClassRosterClass != nil {
-				className = scheduleItem.ClassRosterClass.Name
-			}
-			titleInput := v2.GenerateAssessmentTitleInput{
-				ClassName:    className,
-				ScheduleName: scheduleItem.Title,
-			}
-			title, err := v2.AssessmentTypeOfflineStudy.Title(ctx, titleInput)
-			if err != nil {
-				return nil, err
-			}
-			replyItem.Title = title
-			replyItem.DueAt = scheduleItem.DueAt
-		}
-
-		replyItem.Student = &entity.IDName{
-			ID:   item.UserID,
-			Name: userMap[item.UserID],
-		}
-
-		if teachers, ok := assessmentTeacherMap[item.AssessmentID]; ok {
-			for _, teacherID := range teachers {
-				replyItem.Teachers = append(replyItem.Teachers, &entity.IDName{
-					ID:   teacherID,
-					Name: userMap[teacherID],
-				})
-			}
-		}
-
-		resultItems[i] = replyItem
-	}
-	result.Total = total
-	result.Item = resultItems
-
-	return result, nil
-}
-
-func GetAssessmentOfflineStudyModel() IAssessmentOfflineStudyModel {
-	assessmentOfflineStudyOnce.Do(func() {
-		assessmentOfflineStudy = &assessmentOfflineStudyModel{
-			AmsServices: external.GetAmsServices(),
-		}
-	})
-	return assessmentOfflineStudy
+	return nil
 }

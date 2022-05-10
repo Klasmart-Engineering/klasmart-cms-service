@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"github.com/KL-Engineering/dbo"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 func Test_GetLessonPlanIDsByCondition_Sql(t *testing.T) {

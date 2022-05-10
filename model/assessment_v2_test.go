@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"github.com/KL-Engineering/dbo"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 )
 
-const assessmentOpToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0ODAwNzc1MCwiaXNzIjoia2lkc2xvb3AifQ.OgduSwTLXyLGubPRpo0wQeKddQ41S60R3AnE4jtWwI1pPsisuKyNDWY8H81Q9v2MauEaqvTODgzGV5YvZsMHhuwVhoWZY-mceSRSV75M2gEw5LThzGrOc68NtXLA_D4_pbeWMGJd4MKEDSpAHHqslu1vSkW4g0MZzNqjYOTktvUbFQYwVf9VLQvraAV_GrmQibOWgR9D11j4OkDcp_2xIBlTjWHg74jhLkprCzLR3wSDlBkyQC37zsWums-8Ryc2C0UGuIxuvSq1qaQPl-hprUGpxo7SWWagJhQ-zAxgO5nmD5Modn908pkQ2mdy825crByWjlre8NtKINsX3KfDtw"
+const assessmentOpToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MDI2MTk2OCwiaXNzIjoia2lkc2xvb3AifQ.Tn_XvqnMiZX7NuCXOweR0Gz_6Ts-Z7qbOu_FXLNGU4IbPhjWlOS6A5nVZTKfMy2c_DuHODNEpMAImRufjxT6Psu9Pl4gSbNd6L76ZN_3LSg-fJnKnSu9RoGue36Y3wgpNGnOJbH_qxUciV6pBYzcXoemTjlVTJPbB8Ig90s-tkl1xPy7hI1Mmj49fMbsfXDqxB1XYonzhj0blYSCn_-aeIjGFAayZUda93VRZGmHx81Ny1zKO5hiecQXBRA0y78jYyONWRZ8LZFCmfgeeyzSvXbP-WZat5ZHYNG7UBUgTGN83Nu0IKzdztZB18t6EIUWPDsQGcMIc0FVQX68ybsXuw"
 
 func TestAssessmentModel_GetByID(t *testing.T) {
 	ctx := context.Background()
@@ -21,7 +21,7 @@ func TestAssessmentModel_GetByID(t *testing.T) {
 		Token:  "",
 	}
 	op.Token = assessmentOpToken
-	result, err := GetAssessmentModelV2().GetByID(ctx, op, "62344ae15db29d3f2d1a4321")
+	result, err := GetAssessmentModelV2().GetByID(ctx, op, "6201e1c2da9f846f258df80a")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestAssessmentModel_Query(t *testing.T) {
 	result, err := GetAssessmentModelV2().Page(ctx, op, &v2.AssessmentQueryReq{
 		//QueryKey:       "org mi",
 		//QueryType:      v2.QueryTypeTeacherName,
-		AssessmentType: v2.AssessmentTypeReviewStudy,
+		AssessmentType: v2.AssessmentTypeOnlineStudy,
 		OrderBy:        "-create_at",
 		Status:         "Started,Draft,Complete",
 		PageIndex:      1,
@@ -207,16 +207,17 @@ func TestPageForHomePage(t *testing.T) {
 func TestQueryTeacherFeedback(t *testing.T) {
 	ctx := context.Background()
 	op := &entity.Operator{
-		UserID: "afdfc0d9-ada9-4e66-b225-20f956d1a399",
-		OrgID:  "60c064cc-bbd8-4724-b3f6-b886dce4774f",
+		UserID: "aea0e494-e56f-417e-99a7-81774c879bf8",
+		OrgID:  "f27efd10-000e-4542-bef2-0ccda39b93d3",
 		Token:  "",
 	}
-	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFlYTBlNDk0LWU1NmYtNDE3ZS05OWE3LTgxNzc0Yzg3OWJmOCIsImVtYWlsIjoic3R1MDJfMDAxQHlvcG1haWwuY29tIiwiZXhwIjoxNjQ2MTIxNDQ2LCJpc3MiOiJraWRzbG9vcCJ9.IMXxYAIB-eH1es1dS4xD5WOTLG6lkhcJGo6Kp3qEYaeO6ivcHOjNiq7bZwnK-QuU-kv2qeWUwZ0uQHFTnJ7CupL8KGB-fye2nn1I1sPZ4VL_eSWiyYG8rV4zXEukTEm3EmIGMN_TvCIkloRYFqq9_PWfYxc1pu8wBRPHbzU0hZwtDcUweuLLvkCev4LAJoaHI0DlvfrJ6NK0GVGI-p2ROf2219kPuHwd-1RVR91jHNwzRejFi1Y3eft-olU04aPg5mwEvGk3E-2SC8zzuXi9EE_FrcAzPpU5kuhTXMZh1LHdFGlI2Ws9slX-LOKga-rt5-Qsk-xUaE9vj2eQBTWtqA"
+	op.Token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFlYTBlNDk0LWU1NmYtNDE3ZS05OWE3LTgxNzc0Yzg3OWJmOCIsImVtYWlsIjoic3R1MDJfMDAxQHlvcG1haWwuY29tIiwiZXhwIjoxNjUwOTYyNzA4LCJpc3MiOiJraWRzbG9vcCJ9.ZXwqpJV_0wDk_AmSOsQnwSTfP8V7X9lT1EXbNYf8JBBPKwgTQ412LNwtrBmDpNNL5hUq6YOt4iW1zA5IB3vVCX90x0AYzknU39Q2HPuONzaIxkHPVZI3tYLn00-rYdncDYK1XiJbv_APp4D0qC9JuSEn7aGF6OzvU31uCkSk9ab_ZE2tsJogA7ueqhNzlzWCOZ_vsx5ggZULT2_YBL2JHojYHfsPoCDrphkJm3gT3b6w7FIQozgL89fOLmTMPWabQ5zaJo95VZRj3GFESiFTr6Ld6SFfuMlSfxRvkkrCAHuSCDjoNVYBwR4iweCvs31i9ul3bAm02hC5OYQN5SGrWg"
 
-	total, result, err := GetAssessmentModelV2().QueryTeacherFeedback(ctx, op, &v2.StudentQueryAssessmentConditions{
+	total, result, err := GetAssessmentModelV2().QueryStudentAssessment(ctx, op, &v2.StudentQueryAssessmentConditions{
 		OrgID:     "f27efd10-000e-4542-bef2-0ccda39b93d3",
 		StudentID: "aea0e494-e56f-417e-99a7-81774c879bf8",
-		ClassType: "home_fun_study",
+		//ScheduleIDs: []string{"61249b0b8217ac62053ede9a", "61249d928217ac62053edfc2", "6125b30c4196280adf6424a4"},
+		ClassType: "OfflineStudy",
 		OrderBy:   "-complete_at",
 		Page:      1,
 		PageSize:  5,

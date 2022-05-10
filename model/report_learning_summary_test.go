@@ -1,10 +1,11 @@
 package model
 
 import (
-	"github.com/stretchr/testify/assert"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"testing"
 	"time"
+
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLearningSummaryReportModel_QueryTimeFilter(t *testing.T) {

@@ -7,13 +7,13 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/da"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 var (
@@ -81,18 +81,11 @@ func (s *scheduleFeedbackModel) GetNewest(ctx context.Context, op *entity.Operat
 	}
 	result.Assignments = assignments
 
-	offlineStudyResultMap, err := GetAssessmentOfflineStudyModel().GetUserResult(ctx, op, []string{scheduleID}, []string{userID})
-	if err == constant.ErrRecordNotFound {
-		log.Error(ctx, "not found home fun", log.Err(err), log.Any("op", op), log.Any("feedback", feedback))
-		return nil, ErrFeedbackNotGenerateAssessment
-	}
+	isCompletedScheduleMap, err := GetAssessmentFeedbackModel().IsCompleteByScheduleIDs(ctx, op, []string{scheduleID})
 	if err != nil {
-		log.Error(ctx, "get home fun study  error", log.Err(err), log.Any("op", op), log.Any("feedback", feedback))
 		return nil, err
 	}
-	if offlineStudyResultItem, ok := offlineStudyResultMap[scheduleID]; ok && len(offlineStudyResultItem) > 0 {
-		result.IsAllowSubmit = offlineStudyResultItem[0].Status != v2.UserResultProcessStatusComplete
-	}
+	result.IsAllowSubmit = !isCompletedScheduleMap[scheduleID]
 
 	return result, nil
 }
@@ -243,7 +236,7 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 			UserID:     op.UserID,
 			FeedbackID: feedback.ID,
 		}
-		err = GetAssessmentOfflineStudyModel().UserSubmitOfflineStudy(ctx, op, offlineStudyAddReq)
+		err = GetAssessmentFeedbackModel().UserSubmitOfflineStudy(ctx, op, offlineStudyAddReq)
 		if err != nil {
 			return "", err
 		}

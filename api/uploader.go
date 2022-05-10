@@ -3,9 +3,11 @@ package api
 import (
 	"net/http"
 
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/model"
+	"github.com/KL-Engineering/kidsloop-cms-service/model/storage"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 	"github.com/gin-gonic/gin"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 )
 
 type UploadPathResponse struct {
@@ -80,6 +82,11 @@ func (s *Server) getContentResourcePath(c *gin.Context) {
 		return
 	}
 	path, err := model.GetResourceUploaderModel().GetResourcePath(ctx, resourceId)
+	if err == nil {
+		path = path + utils.GetUrlParamStr(c.Request.URL.String())
+		log.Debug(ctx, "getContentResourcePath: request url", log.String("request url", c.Request.URL.Path), log.String("path", path))
+	}
+
 	switch err {
 	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -128,6 +135,43 @@ func (s *Server) getDownloadPath(c *gin.Context) {
 		c.JSON(http.StatusOK, DownloadPathResource{
 			Path: path,
 		})
+	default:
+		s.defaultErrorHandler(c, err)
+	}
+}
+
+// @Summary checkResourceExist
+// @ID checkResourceExist
+// @Description check resource exist
+// @Accept json
+// @Produce json
+// @Param resource_id path string true "Resource id"
+// @Tags content
+// @Success 200 {boolean} string "true/false"
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Router /contents_resources/{resource_id}/check [get]
+func (s *Server) checkExist(c *gin.Context) {
+	ctx := c.Request.Context()
+	resourceId := c.Param("resource_id")
+
+	if resourceId == "" {
+		c.JSON(http.StatusBadRequest,
+			gin.H{
+				"msg": "resourceId is required",
+			})
+		return
+	}
+	exist, err := model.GetResourceUploaderModel().CheckResourceExist(ctx, resourceId)
+	switch err {
+	case model.ErrInvalidResourceID:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case storage.ErrInvalidUploadPartition:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case storage.ErrInvalidExtensionInPartitionFile:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorUnsupported))
+	case nil:
+		c.JSON(http.StatusOK, exist)
 	default:
 		s.defaultErrorHandler(c, err)
 	}

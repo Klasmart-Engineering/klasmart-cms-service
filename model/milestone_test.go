@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/test/utils"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
+	"github.com/KL-Engineering/kidsloop-cms-service/test/utils"
 )
 
 func TestDelete(t *testing.T) {

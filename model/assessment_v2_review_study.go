@@ -2,26 +2,27 @@ package model
 
 import (
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
 )
 
-func NewReviewStudyAssessmentPage(ags *AssessmentGrain) IAssessmentMatch {
+func NewReviewStudyAssessmentPage(at *AssessmentTool) IAssessmentMatch {
 	return &ReviewStudyAssessment{
-		ags:    ags,
+		at:     at,
 		action: AssessmentMatchActionPage,
-		base:   NewBaseAssessment(ags),
+		base:   NewBaseAssessment(at, AssessmentMatchActionPage),
 	}
 }
 
-func NewReviewStudyAssessmentDetail(ags *AssessmentGrain) IAssessmentMatch {
+func NewReviewStudyAssessmentDetail(at *AssessmentTool) IAssessmentMatch {
 	return &ReviewStudyAssessment{
-		ags:    ags,
+		at:     at,
 		action: AssessmentMatchActionDetail,
-		base:   NewBaseAssessment(ags),
+		base:   NewBaseAssessment(at, AssessmentMatchActionDetail),
 	}
 }
 
@@ -29,7 +30,7 @@ type ReviewStudyAssessment struct {
 	EmptyAssessment
 
 	base   BaseAssessment
-	ags    *AssessmentGrain
+	at     *AssessmentTool
 	action AssessmentMatchAction
 }
 
@@ -42,7 +43,7 @@ func (o *ReviewStudyAssessment) MatchSchedule() (map[string]*entity.Schedule, er
 }
 
 func (o *ReviewStudyAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
-	return NewOnlineStudyAssessmentPage(o.ags).MatchTeacher()
+	return o.base.MatchTeacher()
 }
 
 func (o *ReviewStudyAssessment) MatchClass() (map[string]*entity.IDName, error) {
@@ -50,55 +51,125 @@ func (o *ReviewStudyAssessment) MatchClass() (map[string]*entity.IDName, error) 
 }
 
 func (o *ReviewStudyAssessment) MatchCompleteRate() (map[string]float64, error) {
-	return NewOnlineStudyAssessmentPage(o.ags).MatchCompleteRate()
+	ctx := o.at.ctx
+
+	assessmentUserMap, err := o.at.GetAssessmentUserMap()
+	if err != nil {
+		return nil, err
+	}
+
+	studentCount := make(map[string]int)
+	for key, users := range assessmentUserMap {
+		for _, userItem := range users {
+			if userItem.UserType == v2.AssessmentUserTypeStudent {
+				studentCount[key]++
+			}
+		}
+	}
+
+	roomDataMap, err := o.at.GetRoomStudentScoresAndComments()
+	if err != nil {
+		return nil, err
+	}
+
+	// scheduleID,studentID
+	scheduleReviewMap, err := o.at.BatchGetScheduleReviewMap()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]float64)
+	for _, item := range o.at.assessments {
+		studentReviewContentMap, ok := scheduleReviewMap[item.ScheduleID]
+		if !ok {
+			log.Warn(ctx, "not found student content in schedule", log.Any("schedule", item))
+			continue
+		}
+
+		roomData, ok := roomDataMap[item.ScheduleID]
+		if !ok {
+			continue
+		}
+
+		var contentTotalCount int
+		for _, stuContentItem := range studentReviewContentMap {
+			if stuContentItem.LiveLessonPlan == nil {
+				log.Warn(ctx, "student content is empty", log.Any("stuContentItem", stuContentItem))
+				continue
+			}
+			contentTotalCount += len(stuContentItem.LiveLessonPlan.LessonMaterials)
+		}
+
+		result[item.ID] = GetAssessmentExternalService().calcRoomCompleteRateWhenUseDiffContent(ctx, roomData.ScoresByUser, contentTotalCount)
+	}
+
+	return result, nil
+}
+
+func (o *ReviewStudyAssessment) MatchRemainingTime() (map[string]int64, error) {
+	onlineStudy := NewOnlineStudyAssessmentPage(o.at)
+
+	return onlineStudy.MatchRemainingTime()
 }
 
 func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiffContentStudentsReply, error) {
-	ctx := o.ags.ctx
+	ctx := o.at.ctx
 	//op := adc.op
 
-	assessmentUserMap, err := o.ags.GetAssessmentUserMap()
+	assessmentUserMap, err := o.at.GetAssessmentUserMap()
 	if err != nil {
 		return nil, err
 	}
 
-	assessmentUsers, ok := assessmentUserMap[o.ags.assessment.ID]
+	assessmentUsers, ok := assessmentUserMap[o.at.first.ID]
 	if !ok {
-		log.Warn(ctx, "assessment users is empty", log.Any("assessment", o.ags.assessment))
+		log.Warn(ctx, "assessment users is empty", log.Any("assessment", o.at.first))
 		return nil, constant.ErrRecordNotFound
 	}
 
-	userInfoMap, err := o.ags.GetUserMap()
+	studentReviewMap, err := o.at.FirstGetScheduleReviewMap()
 	if err != nil {
 		return nil, err
 	}
 
-	studentReviewMap, contentMap, err := o.ags.SingleGetContentsFromScheduleReview()
+	contentMap, err := o.at.FirstGetContentsFromScheduleReview()
 	if err != nil {
 		return nil, err
 	}
 
-	roomDataMap, _ := o.ags.GetRoomData()
-	roomData, ok := roomDataMap[o.ags.assessment.ScheduleID]
-	if !ok {
-		log.Warn(ctx, "not found room data", log.Any("roomDataMap", roomDataMap), log.Any("assessment", o.ags.assessment))
+	roomDataMap, err := o.at.GetRoomStudentScoresAndComments()
+	if err != nil {
+		return nil, err
 	}
-	studentRoomDataMap := make(map[string]map[string]*UserRoomInfo)
-	for _, item := range roomData {
-		if item.User == nil {
-			log.Warn(ctx, "room user data is empty")
-			continue
-		}
-		userScoresTree, err := getAssessmentLiveRoom().getUserResultInfo(ctx, item)
+
+	commentResultMap, err := o.at.FirstGetCommentResultMap()
+	if err != nil {
+		return nil, err
+	}
+
+	roomData, ok := roomDataMap[o.at.first.ScheduleID]
+	studentRoomDataMap := make(map[string]map[string]*RoomUserScore)
+	roomContentMap := make(map[string]*RoomContentTree)
+	if ok {
+		userScores, roomContentTree, err := GetAssessmentExternalService().StudentScores(ctx, roomData.ScoresByUser)
 		if err != nil {
-			continue
+			return nil, err
 		}
 
-		studentRoomDataMap[item.User.UserID] = make(map[string]*UserRoomInfo)
-		for _, userScoreItem := range userScoresTree {
-			studentRoomDataMap[item.User.UserID][userScoreItem.MaterialID] = userScoreItem
+		for _, contentItem := range roomContentTree {
+			roomContentMap[contentItem.ContentUniqueID] = contentItem
 		}
+		for userID, scores := range userScores {
+			studentRoomDataMap[userID] = make(map[string]*RoomUserScore)
+			for _, scoreItem := range scores {
+				studentRoomDataMap[userID][scoreItem.ContentUniqueID] = scoreItem
+			}
+		}
+	} else {
+		log.Warn(ctx, "not found room data", log.Any("roomDataMap", roomDataMap), log.Any("assessment", o.at.first))
 	}
+
+	log.Debug(ctx, "student room data", log.Any("studentRoomDataMap", studentRoomDataMap))
 
 	result := make([]*v2.AssessmentDiffContentStudentsReply, 0, len(studentReviewMap))
 	for _, userItem := range assessmentUsers {
@@ -106,15 +177,15 @@ func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiff
 			continue
 		}
 		replyItem := &v2.AssessmentDiffContentStudentsReply{
-			StudentID:       userItem.UserID,
-			StudentName:     "",
+			StudentID: userItem.UserID,
+			//StudentName:     "",
 			Status:          userItem.StatusByUser,
 			ReviewerComment: "",
 			Results:         make([]*v2.DiffContentStudentResultReply, 0),
 		}
 
-		if userInfo, ok := userInfoMap[userItem.UserID]; ok {
-			replyItem.StudentName = userInfo.Name
+		if comment, ok := commentResultMap[userItem.UserID]; ok {
+			replyItem.ReviewerComment = comment
 		}
 
 		if studentReviewItem, ok := studentReviewMap[userItem.UserID]; ok {
@@ -123,7 +194,10 @@ func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiff
 				continue
 			}
 
-			studentRoomDataItem, _ := studentRoomDataMap[userItem.UserID]
+			studentContentScoreMap, ok := studentRoomDataMap[userItem.UserID]
+			if !ok {
+				log.Warn(ctx, "not found user room data", log.String("userID", userItem.UserID), log.Any("studentRoomDataMap", studentRoomDataMap))
+			}
 
 			index := 0
 			for _, contentItem := range studentReviewItem.LiveLessonPlan.LessonMaterials {
@@ -149,35 +223,36 @@ func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiff
 				if contentInfo, ok := contentMap[contentItem.LessonMaterialID]; ok {
 					reviewContentReplyItem.Content.ContentSubtype = contentInfo.FileType.String()
 				}
-				if studentRoomDataItem != nil {
-					if userContentRoomData, ok := studentRoomDataItem[contentItem.LessonMaterialID]; ok {
-						reviewContentReplyItem.Score = userContentRoomData.Score
-						reviewContentReplyItem.Answer = userContentRoomData.Answer
-						reviewContentReplyItem.Attempted = userContentRoomData.Seen
-						reviewContentReplyItem.Content.H5PID = userContentRoomData.H5PID
-						reviewContentReplyItem.Content.ContentSubtype = userContentRoomData.SubContentType
-						reviewContentReplyItem.Content.MaxScore = userContentRoomData.MaxScore
-						reviewContentReplyItem.Content.H5PSubID = userContentRoomData.SubContentID
+				if userContentRoomData, ok := studentContentScoreMap[contentItem.LessonMaterialID]; ok {
+					roomContentItem, ok := roomContentMap[userContentRoomData.ContentUniqueID]
+					if !ok {
+						log.Warn(ctx, "user content Data not found", log.Any("roomContentMap", roomContentMap), log.Any("userContentRoomData", userContentRoomData))
+						continue
+					}
+					reviewContentReplyItem.Score = userContentRoomData.Score
+					reviewContentReplyItem.Answer = userContentRoomData.Answer
+					reviewContentReplyItem.Attempted = userContentRoomData.Seen
+					reviewContentReplyItem.Content.H5PID = roomContentItem.H5PID
+					reviewContentReplyItem.Content.ContentSubtype = roomContentItem.Type
+					reviewContentReplyItem.Content.MaxScore = roomContentItem.MaxScore
+					reviewContentReplyItem.Content.H5PSubID = roomContentItem.SubContentID
 
-						if userContentRoomData.FileType == external.FileTypeH5P {
-							if userContentRoomData.MaxScore > 0 {
-								reviewContentReplyItem.Content.FileType = v2.AssessmentFileTypeSupportScoreStandAlone
-							} else {
-								reviewContentReplyItem.Content.FileType = v2.AssessmentFileTypeNotSupportScoreStandAlone
-							}
+					if roomContentItem.FileType == external.FileTypeH5P {
+						if roomContentItem.MaxScore > 0 {
+							reviewContentReplyItem.Content.FileType = v2.AssessmentFileTypeSupportScoreStandAlone
 						} else {
-							reviewContentReplyItem.Content.FileType = v2.AssessmentFileTypeNotChildSubContainer
-						}
-						replyItem.Results = append(replyItem.Results, reviewContentReplyItem)
-						if len(userContentRoomData.Children) > 0 {
-							reviewContentReplyItem.Content.FileType = v2.AssessmentFileTypeHasChildContainer
-
-							for i, child := range userContentRoomData.Children {
-								o.appendStudentScore(child, contentItem, &replyItem.Results, reviewContentReplyItem.Content.Number, i+1)
-							}
+							reviewContentReplyItem.Content.FileType = v2.AssessmentFileTypeNotSupportScoreStandAlone
 						}
 					} else {
-						replyItem.Results = append(replyItem.Results, reviewContentReplyItem)
+						reviewContentReplyItem.Content.FileType = v2.AssessmentFileTypeNotChildSubContainer
+					}
+					replyItem.Results = append(replyItem.Results, reviewContentReplyItem)
+					if len(roomContentItem.Children) > 0 {
+						reviewContentReplyItem.Content.FileType = v2.AssessmentFileTypeHasChildContainer
+
+						for i, child := range roomContentItem.Children {
+							o.appendStudentScore(child, studentContentScoreMap, contentItem, &replyItem.Results, reviewContentReplyItem.Content.Number, i+1)
+						}
 					}
 				} else {
 					replyItem.Results = append(replyItem.Results, reviewContentReplyItem)
@@ -192,11 +267,8 @@ func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiff
 	return result, nil
 }
 
-func (o *ReviewStudyAssessment) appendStudentScore(roomContent *UserRoomInfo, materialItem *entity.ScheduleLiveLessonMaterial, result *[]*v2.DiffContentStudentResultReply, prefix string, index int) {
+func (o *ReviewStudyAssessment) appendStudentScore(roomContent *RoomContentTree, userContentScoreMap map[string]*RoomUserScore, materialItem *entity.ScheduleLiveLessonMaterial, result *[]*v2.DiffContentStudentResultReply, prefix string, index int) {
 	replyItem := &v2.DiffContentStudentResultReply{
-		Answer:    roomContent.Answer,
-		Score:     roomContent.Score,
-		Attempted: roomContent.Seen,
 		Content: v2.AssessmentDiffContentReply{
 			Number:      fmt.Sprintf("%s-%d", prefix, index),
 			ContentID:   materialItem.LessonMaterialID,
@@ -206,11 +278,16 @@ func (o *ReviewStudyAssessment) appendStudentScore(roomContent *UserRoomInfo, ma
 			ParentID:    materialItem.LessonMaterialID,
 			H5PID:       roomContent.H5PID,
 			//ReviewerComment:      "",
-			ContentSubtype:       roomContent.SubContentType,
+			ContentSubtype:       roomContent.Type,
 			MaxScore:             roomContent.MaxScore,
 			H5PSubID:             roomContent.SubContentID,
 			RoomProvideContentID: "",
 		},
+	}
+	if userScore, ok := userContentScoreMap[roomContent.ContentUniqueID]; ok {
+		replyItem.Attempted = userScore.Seen
+		replyItem.Score = userScore.Score
+		replyItem.Answer = userScore.Answer
 	}
 
 	if roomContent.FileType == external.FileTypeH5P {
@@ -221,8 +298,12 @@ func (o *ReviewStudyAssessment) appendStudentScore(roomContent *UserRoomInfo, ma
 		}
 	}
 
+	if len(roomContent.Children) > 0 {
+		replyItem.Content.FileType = v2.AssessmentFileTypeHasChildContainer
+	}
+
 	*result = append(*result, replyItem)
 	for i, item := range roomContent.Children {
-		o.appendStudentScore(item, materialItem, result, replyItem.Content.Number, i+1)
+		o.appendStudentScore(item, userContentScoreMap, materialItem, result, replyItem.Content.Number, i+1)
 	}
 }

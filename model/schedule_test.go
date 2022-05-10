@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/test/utils"
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/test/utils"
 )
 
 func TestAdd(t *testing.T) {
@@ -224,11 +224,24 @@ func TestUpdateScheduleReviewStatus(t *testing.T) {
 func TestGetSuccessScheduleReview(t *testing.T) {
 	ctx := context.TODO()
 
-	scheduleReviews, err := GetScheduleModel().GetSuccessScheduleReview(ctx, &entity.Operator{}, "614091d5e8155193e489a9ba")
+	scheduleReviews, err := GetScheduleModel().GetSuccessScheduleReview(ctx, &entity.Operator{}, []string{"614091d5e8155193e489a9ba"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, v := range scheduleReviews {
+		t.Log(v)
+	}
+}
+
+func TestGetScheduleAttendance(t *testing.T) {
+	ctx := context.TODO()
+
+	scheduleTypes := []string{"live", "study", "home_fun_study"}
+	result, err := GetScheduleModel().GetScheduleAttendance(ctx, 1649174400, 1650470399, scheduleTypes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range result {
 		t.Log(v)
 	}
 }

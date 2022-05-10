@@ -2,10 +2,11 @@ package mq
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/imq"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"sync"
+
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/imq"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 )
 
 var (

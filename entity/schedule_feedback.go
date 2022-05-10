@@ -1,6 +1,6 @@
 package entity
 
-import "gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+import "github.com/KL-Engineering/kidsloop-cms-service/constant"
 
 type ScheduleFeedback struct {
 	ID         string `json:"id" gorm:"column:id;PRIMARY_KEY"`
@@ -28,9 +28,11 @@ type ScheduleFeedbackAddInput struct {
 }
 
 type FeedbackAssignmentView struct {
-	AttachmentID   string `json:"attachment_id"`
-	AttachmentName string `json:"attachment_name"`
-	Number         int    `json:"number"`
+	ID                 string `json:"id"`
+	AttachmentID       string `json:"attachment_id"`
+	AttachmentName     string `json:"attachment_name"`
+	Number             int    `json:"number"`
+	ReviewAttachmentID string `json:"review_attachment_id"`
 }
 type ScheduleFeedbackView struct {
 	ScheduleFeedback

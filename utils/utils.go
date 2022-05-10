@@ -5,13 +5,14 @@ import (
 	"crypto/hmac"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"strings"
 	"unsafe"
 
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -155,4 +156,12 @@ func PaddingString(s string, l int) string {
 		return s
 	}
 	return strings.Repeat("0", l-len(s)) + s
+}
+
+func GetUrlParamStr(url string) string {
+	urls := strings.Split(url, "?")
+	if len(urls) >= 2 {
+		return fmt.Sprintf("?%s", urls[1])
+	}
+	return ""
 }

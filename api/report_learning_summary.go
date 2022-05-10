@@ -5,14 +5,14 @@ import (
 	"strconv"
 	"strings"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/model"
 	"github.com/gin-gonic/gin"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
 // @Summary query learning summary time filter
@@ -113,6 +113,141 @@ func (s *Server) queryLiveClassesSummary(c *gin.Context) {
 	result, err := model.GetLearningSummaryReportModel().QueryLiveClassesSummary(ctx, dbo.MustGetDB(ctx), operator, filter)
 	if err != nil {
 		log.Error(ctx, "query live classes summary failed",
+			log.Err(err),
+			log.Any("filter", filter),
+		)
+	}
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
+	default:
+		s.defaultErrorHandler(c, err)
+	}
+}
+
+// @Summary query live classes summary
+// @Description query live classes summary
+// @Tags reports/learningSummary
+// @ID queryLiveClassesSummaryV2
+// @Accept json
+// @Produce json
+// @Param year query integer false "year"
+// @Param week_start query integer false "week start timestamp(unit: second)"
+// @Param week_end query integer false "week end timestamp(unit: second)"
+// @Param school_id query string false "school id"
+// @Param class_id query string false "class id"
+// @Param teacher_id query string false "teacher_id"
+// @Param student_id query string false "student_id"
+// @Param subject_id query string false "subject_id"
+// @Success 200 {object} entity.QueryLiveClassesSummaryResultV2
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /reports/learning_summary/live_classes_v2 [get]
+func (s *Server) queryLiveClassesSummaryV2(c *gin.Context) {
+	ctx := c.Request.Context()
+	operator := s.getOperator(c)
+
+	filter, err := s.parseLearningSummaryFilter(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	if filter.StudentID == "" {
+		log.Error(ctx, "query live classes summary: require student id")
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	result, err := model.GetLearningSummaryReportModel().QueryLiveClassesSummaryV2(ctx, dbo.MustGetDB(ctx), operator, filter)
+	if err != nil {
+		log.Error(ctx, "query live classes summary failed",
+			log.Err(err),
+			log.Any("filter", filter),
+		)
+	}
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
+	default:
+		s.defaultErrorHandler(c, err)
+	}
+}
+
+// @Summary query outcomes for  live classes summary
+// @Description query outcomes for  live classes summary
+// @Tags reports/learningSummary
+// @ID queryOutcomesByAssessmentID
+// @Accept json
+// @Produce json
+// @Param assessment_id query string false "assessment_id"
+// @Param student_id query string false "student_id"
+// @Success 200 {object} []entity.LearningSummaryOutcome
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /reports/learning_summary/outcomes [get]
+func (s *Server) queryOutcomesByAssessmentID(c *gin.Context) {
+	ctx := c.Request.Context()
+	operator := s.getOperator(c)
+	assessmentID := c.Query("assessment_id")
+	studentID := c.Query("student_id")
+	result, err := model.GetLearningSummaryReportModel().QueryOutcomesByAssessmentID(ctx, operator, assessmentID, studentID)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
+	default:
+		s.defaultErrorHandler(c, err)
+	}
+}
+
+// @Summary query live classes summary
+// @Description query live classes summary
+// @Tags reports/learningSummary
+// @ID queryAssignmentsSummaryV2
+// @Accept json
+// @Produce json
+// @Param year query integer false "year"
+// @Param week_start query integer false "week start timestamp(unit: second)"
+// @Param week_end query integer false "week end timestamp(unit: second)"
+// @Param school_id query string false "school id"
+// @Param class_id query string false "class id"
+// @Param teacher_id query string false "teacher_id"
+// @Param student_id query string false "student_id"
+// @Param subject_id query string false "subject_id"
+// @Success 200 {object} entity.QueryAssignmentsSummaryResultV2
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /reports/learning_summary/assignments_v2 [get]
+func (s *Server) queryAssignmentsSummaryV2(c *gin.Context) {
+	ctx := c.Request.Context()
+	operator := s.getOperator(c)
+
+	filter, err := s.parseLearningSummaryFilter(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	if filter.StudentID == "" {
+		log.Error(ctx, "query assignments summary: require student id")
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	result, err := model.GetLearningSummaryReportModel().QueryAssignmentsSummaryV2(ctx, dbo.MustGetDB(ctx), operator, filter)
+	if err != nil {
+		log.Error(ctx, "query assignments summary failed",
 			log.Err(err),
 			log.Any("filter", filter),
 		)

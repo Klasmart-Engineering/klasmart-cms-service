@@ -29,7 +29,7 @@ stages:
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
 
 DEPLOY_SWAGGER_Global_JOB:
-  <<: *BASE_IMAGE
+  image: golang:latest
   stage: deploy_swagger_global
   tags:
     - web-runner-aws

@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/KL-Engineering/dbo"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 	"github.com/stretchr/testify/assert"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 func TestCreateTable(t *testing.T) {

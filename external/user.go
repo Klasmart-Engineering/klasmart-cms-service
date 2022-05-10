@@ -7,13 +7,13 @@ import (
 	"strings"
 	"sync"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+	"github.com/KL-Engineering/kidsloop-cache/cache"
 
-	"gitlab.badanamu.com.cn/calmisland/chlorine"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/chlorine"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 var (
@@ -32,7 +32,7 @@ type UserServiceProvider interface {
 	NewUser(ctx context.Context, operator *entity.Operator, email string) (string, error)
 	FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error)
 	GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Operator, orgID string) ([]*User, error)
-	GetUserCount(ctx context.Context, op *entity.Operator, cond entity.GetUserCountCondition) (count int, err error)
+	GetUserCount(ctx context.Context, op *entity.Operator, cond *entity.GetUserCountCondition) (count int, err error)
 }
 
 type User struct {
@@ -72,7 +72,7 @@ func GetUserServiceProvider() UserServiceProvider {
 
 type AmsUserService struct{}
 
-func (s AmsUserService) GetUserCount(ctx context.Context, op *entity.Operator, cond entity.GetUserCountCondition) (count int, err error) {
+func (s AmsUserService) GetUserCount(ctx context.Context, op *entity.Operator, cond *entity.GetUserCountCondition) (count int, err error) {
 	mFilter := map[string]interface{}{}
 	var condFilters []interface{}
 	if cond.OrgID.Valid {

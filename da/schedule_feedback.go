@@ -2,9 +2,10 @@ package da
 
 import (
 	"database/sql"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"sync"
+
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 type IScheduleFeedbackDA interface {

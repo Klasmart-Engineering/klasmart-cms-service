@@ -48,6 +48,9 @@ var (
 	ErrBadUsageOfKl2Cache = errors.New("bad usage of kl2cache see log for detail")
 	ErrAssertFailed       = errors.New("assert failed")
 	ErrAmsDataFailed      = errors.New("ams data failed")
+	ErrGraphQLUnsupported = errors.New("unsupported graphql marshal type")
+	ErrGraphQLUnMatch     = errors.New("graphql marshal match failed")
+	ErrGraphQLHttpNotOK   = errors.New("graphql status code is not ok")
 )
 
 const (
@@ -160,9 +163,4 @@ const (
 const (
 	DBDefaultConnMaxLifetime = 4 * time.Hour
 	DBDefaultSlowThreshold   = 200 * time.Millisecond
-)
-
-const (
-	ContentFolderQueryCacheRefreshDuration = time.Minute
-	ContentFolderQueryCacheExpiration      = 0 // never expire
 )

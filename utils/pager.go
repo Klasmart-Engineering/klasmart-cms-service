@@ -3,8 +3,8 @@ package utils
 import (
 	"strconv"
 
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 )
 
 // recommended that GET request use

@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	locker "gitlab.badanamu.com.cn/calmisland/distributed_lock"
-	"gitlab.badanamu.com.cn/calmisland/distributed_lock/drivers"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	locker "github.com/KL-Engineering/distributed_lock"
+	"github.com/KL-Engineering/distributed_lock/drivers"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 )
 
 const (

@@ -4,11 +4,12 @@ import (
 	"context"
 	"sync"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 type IContentDA interface {
@@ -35,6 +36,7 @@ type IContentDA interface {
 	GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error)
 
 	CleanCache(ctx context.Context)
+	SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, op *entity.Operator) (response entity.QuerySharedContentV2Response, err error)
 }
 
 var (
@@ -49,7 +51,7 @@ func GetContentDA() IContentDA {
 			mysqlDA: new(ContentMySQLDA),
 		}
 
-		cache, err := NewLazyRefreshCache(&LazyRefreshCacheOption{
+		cache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
 			RedisKeyPrefix:  RedisKeyPrefixContentFolderQuery,
 			Expiration:      constant.ContentFolderQueryCacheExpiration,
 			RefreshDuration: constant.ContentFolderQueryCacheRefreshDuration,
@@ -69,7 +71,7 @@ func GetContentDA() IContentDA {
 type ContentDA struct {
 	redisDA            IContentRedis
 	mysqlDA            *ContentMySQLDA
-	contentFolderCache *LazyRefreshCache
+	contentFolderCache *utils.LazyRefreshCache
 }
 
 func (c ContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co entity.Content) (string, error) {
@@ -176,6 +178,9 @@ func (c ContentDA) CleanCache(ctx context.Context) {
 	if err != nil {
 		log.Warn(ctx, "clean content folder cache failed", log.Err(err))
 	}
+}
+func (c ContentDA) SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, op *entity.Operator) (response entity.QuerySharedContentV2Response, err error) {
+	return c.mysqlDA.SearchSharedContentV2(ctx, tx, condition, op)
 }
 
 type contentFolderRequest struct {

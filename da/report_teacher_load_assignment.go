@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"github.com/KL-Engineering/common-log/log"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 type ITeacherLoadAssessment interface {

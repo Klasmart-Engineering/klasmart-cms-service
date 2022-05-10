@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 	"github.com/gin-gonic/gin"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type TokenResponse struct {

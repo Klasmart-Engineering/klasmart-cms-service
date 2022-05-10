@@ -4,17 +4,17 @@ import (
 	"net/http"
 	"strings"
 
-	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"github.com/KL-Engineering/dbo"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	"github.com/KL-Engineering/kidsloop-cms-service/model"
 
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 	"github.com/dgrijalva/jwt-go"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	"github.com/gin-gonic/gin"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 // @Summary student usage record
@@ -83,6 +83,7 @@ func (s *Server) addStudentUsageRecordEvent(c *gin.Context) {
 	if len(req.Students) <= 0 {
 		log.Warn(ctx, "students is required", log.Any("req", req))
 		err = constant.ErrInvalidArgs
+		return
 	}
 
 	err = model.GetReportModel().AddStudentUsageRecordTx(ctx, dbo.MustGetDB(ctx), op, &req.StudentUsageRecord)

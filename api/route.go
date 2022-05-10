@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 
 	"github.com/gin-gonic/gin"
 )
@@ -58,7 +58,8 @@ func (s Server) registeRoute() {
 		content.GET("/contents_private", s.mustLogin, s.queryPrivateContent)
 		content.GET("/contents_pending", s.mustLogin, s.queryPendingContent)
 		content.GET("/contents_folders", s.mustLogin, s.queryFolderContent)
-		content.GET("/contents_authed", s.mustLogin, s.queryAuthContent)
+		content.GET("/contents_authed", s.mustLogin, s.querySharedContent)
+		content.GET("/contents_shared", s.mustLogin, s.querySharedContentV2)
 
 		content.PUT("/contents_bulk/publish", s.mustLogin, s.publishContentBulk)
 		content.DELETE("/contents_bulk", s.mustLogin, s.deleteContentBulk)
@@ -66,6 +67,7 @@ func (s Server) registeRoute() {
 		content.GET("/contents_resources", s.mustLogin, s.getUploadPath)
 		content.GET("/contents_resources/:resource_id", s.mustLoginWithoutOrgID, s.getContentResourcePath)
 		content.GET("/contents_resources/:resource_id/download", s.mustLoginWithoutOrgID, s.getDownloadPath)
+		content.GET("/contents_resources/:resource_id/check", s.mustLoginWithoutOrgID, s.checkExist)
 		content.GET("/contents/:content_id/live/token", s.mustLogin, s.getContentLiveToken)
 		content.POST("/contents_lesson_plans", s.mustLogin, s.getLessonPlansCanSchedule)
 	}
@@ -111,9 +113,9 @@ func (s Server) registeRoute() {
 		assessments.POST("/assessments", s.addAssessment)
 
 		// offlineStudy
-		assessments.GET("/user_offline_study", s.mustLogin, s.queryUserOfflineStudy)
-		assessments.GET("/user_offline_study/:id", s.mustLogin, s.getUserOfflineStudyByID)
-		assessments.PUT("/user_offline_study/:id", s.mustLogin, s.updateUserOfflineStudy)
+		//assessments.GET("/user_offline_study", s.mustLogin, s.queryUserOfflineStudy)
+		//assessments.GET("/user_offline_study/:id", s.mustLogin, s.getUserOfflineStudyByID)
+		//assessments.PUT("/user_offline_study/:id", s.mustLogin, s.updateUserOfflineStudy)
 
 		// home page
 		assessments.GET("/assessments_summary", s.mustLogin, s.getAssessmentsSummary)
@@ -123,7 +125,7 @@ func (s Server) registeRoute() {
 
 	reports := s.engine.Group("/v1")
 	{
-		reports.GET("/reports/students_achievement_overview", s.mustLogin, s.listStudentsAchievementOverviewReport)
+		reports.GET("/reports/students_achievement_overview", s.mustLogin, s.getLearningOutcomeOverView)
 		reports.GET("/reports/students", s.mustLogin, s.listStudentsAchievementReport)
 		reports.GET("/reports/students/:id", s.mustLogin, s.getStudentAchievementReport)
 		reports.GET("/reports/teachers/:id", s.mustLogin, s.getTeacherReport)
@@ -141,7 +143,10 @@ func (s Server) registeRoute() {
 
 		reports.GET("/reports/learning_summary/time_filter", s.mustLogin, s.queryLearningSummaryTimeFilter)
 		reports.GET("/reports/learning_summary/live_classes", s.mustLogin, s.queryLiveClassesSummary)
+		reports.GET("/reports/learning_summary/live_classes_v2", s.mustLogin, s.queryLiveClassesSummaryV2)
+		reports.GET("/reports/learning_summary/outcomes", s.mustLogin, s.queryOutcomesByAssessmentID)
 		reports.GET("/reports/learning_summary/assignments", s.mustLogin, s.queryAssignmentsSummary)
+		reports.GET("/reports/learning_summary/assignments_v2", s.mustLogin, s.queryAssignmentsSummaryV2)
 		reports.GET("/reports/learner_weekly_overview", s.mustLogin, s.getLearnerWeeklyReportOverview)
 		reports.GET("/reports/learner_monthly_overview", s.mustLogin, s.getLearnerMonthlyReportOverview)
 
@@ -156,7 +161,7 @@ func (s Server) registeRoute() {
 		reports.POST("/reports/student_progress/learn_outcome_achievement", s.mustLogin, s.getLearnOutcomeAchievement)
 		reports.POST("/reports/student_progress/class_attendance", s.mustLogin, s.getClassAttendance)
 		reports.POST("/reports/student_progress/assignment_completion", s.mustLogin, s.getAssignmentsCompletion)
-
+		reports.GET("/reports/student_progress/app/insight_message", s.mustLogin, s.getAppInsightMessage)
 		reports.POST("/reports/learner_usage/overview", s.mustLogin, s.getLearnerUsageOverview)
 	}
 
@@ -322,8 +327,8 @@ func (s Server) registeRoute() {
 		internal.GET("/contents", s.mustLoginWithoutOrgID, s.queryContentInternal)
 		internal.GET("/schedules", s.mustLoginWithoutOrgID, s.queryScheduleInternal)
 		internal.GET("/schedules/:id/relation_ids", s.mustLoginWithoutOrgID, s.queryScheduleRelationIDsInternal)
-		// TODO no authorization
-		internal.POST("/schedules/update_review_status", s.updateScheduleReviewStatus)
+		internal.POST("/schedules/update_review_status", s.mustDataService, s.updateScheduleReviewStatus)
+		internal.GET("/schedule_counts", s.getScheduleAttendance)
 	}
 }
 

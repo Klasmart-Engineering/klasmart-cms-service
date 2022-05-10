@@ -15,8 +15,8 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 	"github.com/dgrijalva/jwt-go"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 )
 
 var (

@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"gitlab.badanamu.com.cn/calmisland/chlorine"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
+
+	"github.com/KL-Engineering/chlorine"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cache/cache"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 type SubjectServiceProvider interface {
@@ -36,7 +38,10 @@ func (n *Subject) RelatedIDs() []*cache.RelatedEntity {
 }
 
 func GetSubjectServiceProvider() SubjectServiceProvider {
-	return &AmsSubjectService{}
+	if config.Get().AMS.UseDeprecatedQuery {
+		return &AmsSubjectService{}
+	}
+	return AmsSubjectConnectionService{}
 }
 
 type AmsSubjectService struct{}

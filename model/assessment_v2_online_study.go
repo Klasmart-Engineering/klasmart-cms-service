@@ -1,27 +1,28 @@
 package model
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 	"time"
+
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 )
 
-func NewOnlineStudyAssessmentPage(ag *AssessmentGrain) IAssessmentMatch {
+func NewOnlineStudyAssessmentPage(at *AssessmentTool) IAssessmentMatch {
 	return &OnlineStudyAssessment{
-		ag:     ag,
+		at:     at,
 		action: AssessmentMatchActionPage,
-		base:   NewBaseAssessment(ag),
+		base:   NewBaseAssessment(at, AssessmentMatchActionPage),
 	}
 }
 
-func NewOnlineStudyAssessmentDetail(ag *AssessmentGrain) IAssessmentMatch {
+func NewOnlineStudyAssessmentDetail(at *AssessmentTool) IAssessmentMatch {
 	return &OnlineStudyAssessment{
-		ag:     ag,
+		at:     at,
 		action: AssessmentMatchActionDetail,
-		base:   NewBaseAssessment(ag),
+		base:   NewBaseAssessment(at, AssessmentMatchActionDetail),
 	}
 }
 
@@ -29,7 +30,7 @@ type OnlineStudyAssessment struct {
 	EmptyAssessment
 
 	base   BaseAssessment
-	ag     *AssessmentGrain
+	at     *AssessmentTool
 	action AssessmentMatchAction
 }
 
@@ -42,32 +43,7 @@ func (o *OnlineStudyAssessment) MatchLessPlan() (map[string]*v2.AssessmentConten
 }
 
 func (o *OnlineStudyAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
-	assessmentUserMap, err := o.ag.GetAssessmentUserMap()
-	if err != nil {
-		return nil, err
-	}
-
-	userMap, err := o.ag.GetUserMap()
-	if err != nil {
-		return nil, err
-	}
-
-	result := make(map[string][]*entity.IDName, len(o.ag.assessments))
-	for _, item := range o.ag.assessments {
-		if assUserItems, ok := assessmentUserMap[item.ID]; ok {
-			for _, assUserItem := range assUserItems {
-				if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
-					continue
-				}
-
-				if userItem, ok := userMap[assUserItem.UserID]; ok && userItem != nil {
-					result[item.ID] = append(result[item.ID], userItem)
-				}
-			}
-		}
-	}
-
-	return result, nil
+	return o.base.MatchTeacher()
 }
 
 func (o *OnlineStudyAssessment) MatchClass() (map[string]*entity.IDName, error) {
@@ -75,7 +51,9 @@ func (o *OnlineStudyAssessment) MatchClass() (map[string]*entity.IDName, error) 
 }
 
 func (o *OnlineStudyAssessment) MatchCompleteRate() (map[string]float64, error) {
-	assessmentUserMap, err := o.ag.GetAssessmentUserMap()
+	ctx := o.at.ctx
+
+	assessmentUserMap, err := o.at.GetAssessmentUserMap()
 	if err != nil {
 		return nil, err
 	}
@@ -89,16 +67,15 @@ func (o *OnlineStudyAssessment) MatchCompleteRate() (map[string]float64, error) 
 		}
 	}
 
-	roomDataMap, err := o.ag.GetRoomData()
+	roomDataMap, err := o.at.GetRoomStudentScoresAndComments()
 	if err != nil {
 		return nil, err
 	}
 
 	result := make(map[string]float64)
-	for _, item := range o.ag.assessments {
+	for _, item := range o.at.assessments {
 		if roomData, ok := roomDataMap[item.ScheduleID]; ok {
-			result[item.ID] = getAssessmentLiveRoom().
-				calcRoomCompleteRate(roomData, studentCount[item.ID])
+			result[item.ID] = GetAssessmentExternalService().calcRoomCompleteRateWhenUseSomeContent(ctx, roomData.ScoresByUser, studentCount[item.ID])
 		}
 	}
 
@@ -106,13 +83,13 @@ func (o *OnlineStudyAssessment) MatchCompleteRate() (map[string]float64, error) 
 }
 
 func (o *OnlineStudyAssessment) MatchRemainingTime() (map[string]int64, error) {
-	scheduleMap, err := o.ag.GetScheduleMap()
+	scheduleMap, err := o.at.GetScheduleMap()
 	if err != nil {
 		return nil, err
 	}
 
 	result := make(map[string]int64)
-	for _, item := range o.ag.assessments {
+	for _, item := range o.at.assessments {
 		if schedule, ok := scheduleMap[item.ScheduleID]; ok {
 			var remainingTime int64
 			if schedule.DueAt != 0 {
@@ -131,74 +108,64 @@ func (o *OnlineStudyAssessment) MatchRemainingTime() (map[string]int64, error) {
 }
 
 func (o *OnlineStudyAssessment) MatchOutcomes() (map[string]*v2.AssessmentOutcomeReply, error) {
-	onlineClass := NewOnlineClassAssessmentPage(o.ag)
+	onlineClass := NewOnlineClassAssessmentPage(o.at)
 
 	return onlineClass.MatchOutcomes()
 }
 
 func (o *OnlineStudyAssessment) MatchContents() ([]*v2.AssessmentContentReply, error) {
-	onlineClass := NewOnlineClassAssessmentPage(o.ag)
+	onlineClass := NewOnlineClassAssessmentPage(o.at)
 
 	return onlineClass.MatchContents()
 }
 
 func (o *OnlineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentContentReply) ([]*v2.AssessmentStudentReply, error) {
-	ctx := o.ag.ctx
+	ctx := o.at.ctx
 
-	assessmentUserMap, err := o.ag.GetAssessmentUserMap()
+	assessmentUserMap, err := o.at.GetAssessmentUserMap()
 	if err != nil {
 		return nil, err
 	}
 
-	assessmentUsers, ok := assessmentUserMap[o.ag.assessment.ID]
+	assessmentUsers, ok := assessmentUserMap[o.at.first.ID]
 	if !ok {
 		return nil, constant.ErrRecordNotFound
 	}
 
-	commentResultMap, err := o.ag.SingleGetCommentResultMap()
+	commentResultMap, err := o.at.FirstGetCommentResultMap()
 	if err != nil {
 		return nil, err
 	}
 
-	assessmentOutcomeMap, err := o.ag.SingleGetOutcomeFromAssessment()
+	assessmentOutcomeMap, err := o.at.FirstGetOutcomeFromAssessment()
 	if err != nil {
 		return nil, err
 	}
 
-	roomInfo, err := o.ag.SingleGetRoomData()
+	userScoreMap, _, err := o.at.FirstGetRoomData()
 	if err != nil {
 		return nil, err
 	}
 
-	userMapFromRoomMap := make(map[string]*RoomUserInfo, len(roomInfo.UserRoomInfo))
-	for _, item := range roomInfo.UserRoomInfo {
-		userMapFromRoomMap[item.UserID] = item
-	}
-
-	userMap, err := o.ag.GetUserMap()
-	if err != nil {
-		return nil, err
-	}
-
-	roomUserResultMap := make(map[string]*RoomUserResults)
-	for _, item := range userMapFromRoomMap {
-		for _, resultItem := range item.Results {
-			key := o.ag.GetKey([]string{
-				item.UserID,
-				resultItem.RoomContentID,
+	roomUserResultMap := make(map[string]*RoomUserScore)
+	for userID, scores := range userScoreMap {
+		for _, resultItem := range scores {
+			key := o.at.GetKey([]string{
+				userID,
+				resultItem.ContentUniqueID,
 			})
 			roomUserResultMap[key] = resultItem
 		}
 	}
 
-	contentScoreMap, studentScoreMap := o.base.summaryRoomScores(userMapFromRoomMap, contentsReply)
+	contentScoreMap, studentScoreMap := o.at.summaryRoomScores(userScoreMap, contentsReply)
 
-	contentMapFromAssessment, err := o.ag.SingleGetAssessmentContentMap()
+	contentMapFromAssessment, err := o.at.FirstGetAssessmentContentMap()
 	if err != nil {
 		return nil, err
 	}
 
-	outcomeMapFromContent, err := o.ag.SingleGetOutcomeMapFromContent()
+	outcomeMapFromContent, err := o.at.FirstGetOutcomeMapFromContent()
 	if err != nil {
 		return nil, err
 	}
@@ -210,20 +177,12 @@ func (o *OnlineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 			continue
 		}
 
-		studentInfo, ok := userMap[item.UserID]
-		if !ok {
-			log.Warn(ctx, "not found user info from user service", log.Any("item", item), log.Any("userMap", userMap))
-			studentInfo = &entity.IDName{
-				ID:   item.UserID,
-				Name: "",
-			}
-		}
-
 		studentReply := &v2.AssessmentStudentReply{
-			StudentID:   item.UserID,
-			StudentName: studentInfo.Name,
-			Status:      item.StatusByUser,
-			Results:     nil,
+			StudentID: item.UserID,
+			//StudentName:   "",
+			Status:        item.StatusByUser,
+			ProcessStatus: item.StatusBySystem,
+			Results:       nil,
 		}
 		studentReply.ReviewerComment = commentResultMap[item.UserID]
 
@@ -239,7 +198,7 @@ func (o *OnlineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 
 			var studentContentScore float32
 			if contentScoreItem, ok := contentScoreMap[contentID]; ok && contentScoreItem != 0 {
-				studentScoreKey := o.ag.GetKey([]string{
+				studentScoreKey := o.at.GetKey([]string{
 					item.UserID,
 					contentID,
 				})
@@ -252,7 +211,7 @@ func (o *OnlineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 			for _, outcomeID := range content.OutcomeIDs {
 				var userOutcome *v2.AssessmentUserOutcome
 				if assessmentContent, ok := contentMapFromAssessment[contentID]; ok {
-					key := o.ag.GetKey([]string{
+					key := o.at.GetKey([]string{
 						item.ID,
 						assessmentContent.ID,
 						outcomeID,
@@ -262,8 +221,8 @@ func (o *OnlineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 				userOutcomeReplyItem := &v2.AssessmentStudentResultOutcomeReply{
 					OutcomeID: outcomeID,
 				}
-				if o.ag.assessment.Status == v2.AssessmentStatusInDraft ||
-					o.ag.assessment.Status == v2.AssessmentStatusComplete {
+				if o.at.first.Status == v2.AssessmentStatusInDraft ||
+					o.at.first.Status == v2.AssessmentStatusComplete {
 					if userOutcome != nil && userOutcome.Status != "" {
 						userOutcomeReplyItem.Status = userOutcome.Status
 					} else {
@@ -286,7 +245,7 @@ func (o *OnlineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 			}
 			resultReply.Outcomes = userOutcomeReply
 
-			roomKey := o.ag.GetKey([]string{
+			roomKey := o.at.GetKey([]string{
 				item.UserID,
 				content.RoomProvideContentID,
 			})

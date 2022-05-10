@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	"github.com/jinzhu/gorm"
 	"github.com/stretchr/testify/assert"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 func TestCreateSharedFolderRecordTable(t *testing.T) {

@@ -3,13 +3,13 @@ package api
 import (
 	"net/http"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	"github.com/KL-Engineering/kidsloop-cms-service/model"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"github.com/KL-Engineering/common-log/log"
 
 	"github.com/gin-gonic/gin"
 )

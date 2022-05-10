@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"github.com/KL-Engineering/common-log/log"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 type AssessmentType string
@@ -171,6 +171,7 @@ func GetAssessmentTypeByScheduleType(ctx context.Context, input GetAssessmentTyp
 type AssessmentQueryType string
 
 const (
+	QueryTypeTeacherID   AssessmentQueryType = "TeacherID"
 	QueryTypeTeacherName AssessmentQueryType = "TeacherName"
 )
 
@@ -312,6 +313,25 @@ func (a AssessmentUserStatus) Valid() bool {
 	}
 }
 
+type AssessmentUserSystemStatus string
+
+const (
+	// AssessmentUserSystemStatusNotStarted when create schedule
+	AssessmentUserSystemStatusNotStarted AssessmentUserSystemStatus = "NotStarted"
+	// AssessmentUserSystemStatusInProgress when student enter the live room
+	AssessmentUserSystemStatusInProgress AssessmentUserSystemStatus = "InProgress"
+	// AssessmentUserSystemStatusDone when student leave the live room  or submit homework
+	AssessmentUserSystemStatusDone AssessmentUserSystemStatus = "Done"
+	// AssessmentUserSystemStatusResubmitted when student leave the live room or submit homework again
+	AssessmentUserSystemStatusResubmitted AssessmentUserSystemStatus = "Resubmitted"
+	// AssessmentUserSystemStatusCompleted when teacher completed assessment
+	AssessmentUserSystemStatusCompleted AssessmentUserSystemStatus = "Completed"
+)
+
+func (a AssessmentUserSystemStatus) String() string {
+	return string(a)
+}
+
 type AssessmentContentStatus string
 
 const (
@@ -386,3 +406,28 @@ const (
 	AssessmentActionDraft    AssessmentAction = "Draft"
 	AssessmentActionComplete AssessmentAction = "Complete"
 )
+
+func (s AssessmentAction) Valid() bool {
+	switch s {
+	case AssessmentActionDraft,
+		AssessmentActionComplete:
+		return true
+	}
+	return false
+}
+
+type AssessmentUserLiveAction string
+
+const (
+	AssessmentUserLiveActionEnterLiveRoom AssessmentUserLiveAction = "EnterLiveRoom"
+	AssessmentUserLiveActionLeaveLiveRoom AssessmentUserLiveAction = "LeaveLiveRoom"
+)
+
+func (a AssessmentUserLiveAction) Valid() bool {
+	switch a {
+	case AssessmentUserLiveActionEnterLiveRoom,
+		AssessmentUserLiveActionLeaveLiveRoom:
+		return true
+	}
+	return false
+}

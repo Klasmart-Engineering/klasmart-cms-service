@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 )
 
 func TestClassesAssignmentsModel_CreateRecord(t *testing.T) {

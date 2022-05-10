@@ -3,9 +3,10 @@ package da
 import (
 	"bytes"
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"text/template"
+
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 type IClassAttendance interface {

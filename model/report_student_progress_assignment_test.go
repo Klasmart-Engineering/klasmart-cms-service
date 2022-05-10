@@ -3,8 +3,9 @@ package model
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"testing"
+
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 func TestGetAssignmentCompletion(t *testing.T) {
@@ -20,7 +21,7 @@ func TestGetAssignmentCompletion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i := range res {
-		fmt.Printf("%#v\n", res[i])
+	for i := range res.Assignments {
+		fmt.Printf("%#v\n", res.Assignments[i])
 	}
 }

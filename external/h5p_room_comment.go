@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"text/template"
 
-	"gitlab.badanamu.com.cn/calmisland/chlorine"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/chlorine"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 // type TeacherComment {
@@ -32,7 +32,7 @@ type H5PTeacherComment struct {
 // 	teacherComments: [TeacherComment!]!
 // }
 type H5PTeacherCommentsByStudent struct {
-	User            *H5PUser             `json:"user"`
+	User            *H5PUser             `json:"student"`
 	TeacherComments []*H5PTeacherComment `json:"teacherComments"`
 }
 
@@ -144,6 +144,10 @@ query {
 	}
 
 	for _, studentComments := range data {
+		if studentComments == nil {
+			continue
+		}
+
 		for _, teacherComments := range studentComments.TeacherCommentsByStudent {
 			for _, comment := range teacherComments.TeacherComments {
 				// date is saved in milliseconds, we are more used to processing by seconds

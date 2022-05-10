@@ -4,12 +4,12 @@ import (
 	"context"
 	"sync"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	mutex "gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/da"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	mutex "github.com/KL-Engineering/kidsloop-cms-service/mutex"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 type IReviewerModel interface {
