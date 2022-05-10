@@ -143,8 +143,8 @@ type AssessmentDetailReply struct {
 }
 
 type AssessmentDiffContentStudentsReply struct {
-	StudentID       string                           `json:"student_id"`
-	StudentName     string                           `json:"student_name"`
+	StudentID string `json:"student_id"`
+	//StudentName     string                           `json:"student_name"`
 	Status          AssessmentUserStatus             `json:"status" enums:"Participate,NotParticipate"`
 	ReviewerComment string                           `json:"reviewer_comment"`
 	Results         []*DiffContentStudentResultReply `json:"results,omitempty"`
@@ -172,8 +172,8 @@ type AssessmentDiffContentReply struct {
 }
 
 type AssessmentStudentReply struct {
-	StudentID       string                          `json:"student_id"`
-	StudentName     string                          `json:"student_name"`
+	StudentID string `json:"student_id"`
+	//StudentName     string                          `json:"student_name"`
 	Status          AssessmentUserStatus            `json:"status" enums:"Participate,NotParticipate"`
 	ProcessStatus   AssessmentUserSystemStatus      `json:"process_status"`
 	ReviewerComment string                          `json:"reviewer_comment"`
