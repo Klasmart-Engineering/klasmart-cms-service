@@ -372,9 +372,9 @@ func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, asse
 	result.Class = classMap[assessment.ID]
 
 	if teachers, ok := teacherMap[assessment.ID]; ok {
-		result.Teachers = make([]*v2.AssessmentTeacher, 0, len(teachers))
-		for _, teacherItem := range teachers {
-			result.Teachers = append(result.Teachers, &v2.AssessmentTeacher{ID: teacherItem.ID})
+		result.TeacherIDs = make([]string, len(teachers))
+		for i, teacherItem := range teachers {
+			result.TeacherIDs[i] = teacherItem.ID
 		}
 	}
 
