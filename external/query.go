@@ -95,10 +95,11 @@ query(
 	${{$k}}:ID!
 	${{$v}}:String
 {{end}}
+	$filter: {{.FilterName}}
 ){
 {{range $k, $v := .VariableName}}
   {{$k}}: {{$.NodeName}}(id:${{$k}}){
-    {{$.ConnectionName}}(count:50, cursor: ${{$v}})
+    {{$.ConnectionName}}(count:50, cursor: ${{$v}}, filter:$filter)
 	{{$.FieldStructString}}
   }
 {{end}}
@@ -111,6 +112,7 @@ type SubTemplateArgument struct {
 	VariableName      map[string]string
 	NodeName          string
 	ConnectionName    string
+	FilterName        string
 	FieldStructString string
 }
 
@@ -139,7 +141,7 @@ func querySubString(ctx context.Context, templateArgument SubTemplateArgument) (
 	return buf.String(), nil
 }
 
-func subFetch(ctx context.Context, operator *entity.Operator, argument SubTemplateArgument, IDVariable, CursorVariable map[string]string, res *GraphQLSubResponse) error {
+func subFetch(ctx context.Context, operator *entity.Operator, argument SubTemplateArgument, IDVariable, CursorVariable map[string]string, filter interface{}, res *GraphQLSubResponse) error {
 	qString, err := querySubString(ctx, argument)
 	if err != nil {
 		log.Error(ctx, "subFetch: querySubString failed",
@@ -154,6 +156,9 @@ func subFetch(ctx context.Context, operator *entity.Operator, argument SubTempla
 	}
 	for k, v := range CursorVariable {
 		req.Var(k, v)
+	}
+	if filter != nil {
+		req.Var("filter", filter)
 	}
 
 	statusCode, err := GetAmsConnection().Run(ctx, req, &res)
@@ -189,20 +194,22 @@ func subFetch(ctx context.Context, operator *entity.Operator, argument SubTempla
 	return nil
 }
 
-func subPageQuery[ResType ConnectionResponse](ctx context.Context, operator *entity.Operator, nodeName, connectionName string, IDs []string, result map[string][]ResType) error {
+func subPageQuery[ResType ConnectionResponse](ctx context.Context, operator *entity.Operator, nodeName string, filter ConnectionFilter, IDs []string, result map[string][]ResType) error {
 	nodeFields, err := marshalFiled(ctx, result)
 	if err != nil {
 		log.Error(ctx, "subPageQuery: marshalFiled failed",
 			log.Err(err),
 			log.Strings("ids", IDs),
-			log.String("connection_name", connectionName),
+			log.Any("filter", filter),
 			log.String("nodeName", nodeName))
 		return err
 	}
+	connectionName := string(filter.ConnectionName())
 	templateArgument := SubTemplateArgument{
-		VariableName:      make(map[string]string),
+		VariableName:      map[string]string{},
 		NodeName:          nodeName,
 		ConnectionName:    connectionName,
+		FilterName:        string(filter.FilterName()),
 		FieldStructString: nodeFields,
 	}
 
@@ -223,7 +230,7 @@ func subPageQuery[ResType ConnectionResponse](ctx context.Context, operator *ent
 		res := GraphQLSubResponse{
 			Data: &data,
 		}
-		err = subFetch(ctx, operator, templateArgument, IDVariable, CursorVariable, &res)
+		err = subFetch(ctx, operator, templateArgument, IDVariable, CursorVariable, filter, &res)
 		if err != nil {
 			log.Error(ctx, "subPageQuery: subFetch failed",
 				log.Err(err),
@@ -239,16 +246,17 @@ func subPageQuery[ResType ConnectionResponse](ctx context.Context, operator *ent
 			log.Any("cursor_variable", CursorVariable),
 			log.Any("response", res))
 
-		variableName := make(map[string]string)
+		variableName := map[string]string{}
 		IDsMap := make(map[string]string)
 		CursorsMap := make(map[string]string)
 		for k, v := range data {
 			if page, ok := v[connectionName]; ok {
 				if page.GetPageInfo().HasNext(Forward) {
 					cursor := page.GetPageInfo().EndCursor
-					variableName[k] = templateArgument.VariableName[k]
+					cursorKey := templateArgument.VariableName[k]
+					variableName[k] = cursorKey
 					IDsMap[k] = IDVariable[k]
-					CursorsMap[templateArgument.VariableName[k]] = cursor
+					CursorsMap[cursorKey] = cursor
 				}
 				keyID := IDVariable[k]
 				result[keyID] = append(result[keyID], page)

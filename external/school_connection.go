@@ -27,6 +27,23 @@ func (SchoolFilter) ConnectionName() ConnectionType {
 	return SchoolsConnectionType
 }
 
+type SchoolMembershipFilter struct {
+	UserID   *UUIDFilter    `json:"userId,omitempty" gqls:"userId,omitempty"`
+	SchoolID *UUIDFilter    `json:"schoolId,omitempty" gqls:"schoolId,omitempty"`
+	Status   *StringFilter  `json:"status,omitempty" gqls:"status,omitempty"`
+	RoleID   *UUIDFilter    `json:"roleId,omitempty" gqls:"roleId,omitempty"`
+	AND      []SchoolFilter `json:"AND,omitempty" gqls:"AND,omitempty"`
+	OR       []SchoolFilter `json:"OR,omitempty" gqls:"OR,omitempty"`
+}
+
+func (SchoolMembershipFilter) FilterName() FilterType {
+	return SchoolMembershipFilterType
+}
+
+func (SchoolMembershipFilter) ConnectionName() ConnectionType {
+	return SchoolMembershipsConnectionType
+}
+
 type AmsSchoolConnectionService struct {
 	AmsSchoolService
 }
@@ -218,9 +235,20 @@ func (pcs SchoolMembershipsConnectionResponse) GetPageInfo() *ConnectionPageInfo
 }
 
 func (ascs AmsSchoolConnectionService) GetByUsers(ctx context.Context, operator *entity.Operator, orgID string, userIDs []string, options ...APOption) (map[string][]*School, error) {
+	condition := NewCondition(options...)
+	var filter SchoolMembershipFilter
+
+	//if condition.Status.Valid && condition.Status.Status != Ignore {
+	//	filter.Status.Operator = StringOperator(OperatorTypeEq)
+	//	filter.Status.Value = condition.Status.Status.String()
+	//} else if !condition.Status.Valid {
+	//	filter.Status.Operator = StringOperator(OperatorTypeEq)
+	//	filter.Status.Value = Active.String()
+	//}
+
 	result := make(map[string][]SchoolMembershipsConnectionResponse)
 	IDs := utils.SliceDeduplicationExcludeEmpty(userIDs)
-	err := subPageQuery(ctx, operator, "userNode", "schoolMembershipsConnection", IDs, result)
+	err := subPageQuery(ctx, operator, "userNode", filter, IDs, result)
 	if err != nil {
 		log.Error(ctx, "GetByUsers: subPageQuery failed",
 			log.Err(err),
@@ -228,7 +256,6 @@ func (ascs AmsSchoolConnectionService) GetByUsers(ctx context.Context, operator 
 			log.Strings("user_ids", userIDs))
 		return nil, err
 	}
-	condition := NewCondition(options...)
 	schoolsMap := make(map[string][]*School)
 	for k, pages := range result {
 		for _, page := range pages {
@@ -265,40 +292,67 @@ func (ascs AmsSchoolConnectionService) GetByUsers(ctx context.Context, operator 
 	return schoolsMap, nil
 }
 
+func (ascs AmsSchoolConnectionService) pageNodes(ctx context.Context, operator *entity.Operator, pages []SchoolsConnectionResponse) []*School {
+	if len(pages) == 0 {
+		log.Warn(ctx, "pageNodes is empty",
+			log.Any("operator", operator))
+		return []*School{}
+	}
+	schools := make([]*School, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
+	for _, page := range pages {
+		for _, edge := range page.Edges {
+			if _, ok := exists[edge.Node.ID]; ok {
+				log.Warn(ctx, "pageNodes: school exist",
+					log.Any("school", edge.Node),
+					log.Any("operator", operator))
+				continue
+			}
+			exists[edge.Node.ID] = true
+			school := &School{
+				ID:             edge.Node.ID,
+				Name:           edge.Node.Name,
+				Status:         APStatus(edge.Node.Status),
+				OrganizationId: edge.Node.OrganizationId,
+			}
+			schools = append(schools, school)
+		}
+	}
+	return schools
+}
+
+func (ascs AmsSchoolConnectionService) NewSchoolFilter(ctx context.Context, operator *entity.Operator, options ...APOption) *SchoolFilter {
+	condition := NewCondition(options...)
+	var filter SchoolFilter
+	if condition.Status.Valid && condition.Status.Status != Ignore {
+		filter.Status = &StringFilter{
+			Operator: StringOperator(OperatorTypeEq),
+			Value:    condition.Status.Status.String(),
+		}
+	} else if !condition.Status.Valid {
+		filter.Status = &StringFilter{
+			Operator: StringOperator(OperatorTypeEq),
+			Value:    Active.String(),
+		}
+	}
+	return &filter
+}
+
 func (ascs AmsSchoolConnectionService) GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string, options ...APOption) (map[string][]*School, error) {
+	filter := ascs.NewSchoolFilter(ctx, operator, options...)
 	result := make(map[string][]SchoolsConnectionResponse)
 	IDs := utils.SliceDeduplicationExcludeEmpty(classIDs)
-	err := subPageQuery(ctx, operator, "classNode", "schoolsConnection", IDs, result)
+	err := subPageQuery(ctx, operator, "classNode", filter, IDs, result)
 	if err != nil {
 		log.Error(ctx, "GetByClasses: subPageQuery failed",
 			log.Err(err),
 			log.Strings("class_ids", classIDs))
 		return nil, err
 	}
-	condition := NewCondition(options...)
 	schoolsMap := make(map[string][]*School)
 	for k, pages := range result {
-		for _, page := range pages {
-			if len(page.Edges) == 0 {
-				schoolsMap[k] = []*School{}
-				continue
-			}
-			for _, edge := range page.Edges {
-				if condition.Status.Valid && condition.Status.Status != APStatus(edge.Node.Status) {
-					continue
-				} else if !condition.Status.Valid && APStatus(edge.Node.Status) != Active {
-					// only status = "Active" data is returned by default
-					continue
-				}
-				school := &School{
-					ID:             edge.Node.ID,
-					Name:           edge.Node.Name,
-					Status:         APStatus(edge.Node.Status),
-					OrganizationId: edge.Node.OrganizationId,
-				}
-				schoolsMap[k] = append(schoolsMap[k], school)
-			}
-		}
+		log.Warn(ctx, "GetByClasses: school is empty", log.String("class", k))
+		schoolsMap[k] = ascs.pageNodes(ctx, operator, pages)
 	}
 	return schoolsMap, nil
 }

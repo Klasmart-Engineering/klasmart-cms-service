@@ -52,27 +52,63 @@ type AgesConnectionResponse struct {
 func (acs AgesConnectionResponse) GetPageInfo() *ConnectionPageInfo {
 	return &acs.PageInfo
 }
-func (acs AmsAgeConnectionService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Age, error) {
+func (acs AmsAgeConnectionService) NewAgeRangFilter(ctx context.Context, operator *entity.Operator, options ...APOption) *AgeRangeFilter {
 	condition := NewCondition(options...)
-	filter := AgeRangeFilter{
-		ProgramID: &UUIDFilter{
-			Operator: UUIDOperator(OperatorTypeEq),
-			Value:    UUID(programID),
-		},
-		Status: &StringFilter{
+	var filter AgeRangeFilter
+	if condition.Status.Valid && condition.Status.Status != Ignore {
+		filter.Status = &StringFilter{
+			Operator: StringOperator(OperatorTypeEq),
+			Value:    condition.Status.Status.String(),
+		}
+	} else if !condition.Status.Valid {
+		filter.Status = &StringFilter{
 			Operator: StringOperator(OperatorTypeEq),
 			Value:    Active.String(),
-		},
-	}
-
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
+		}
 	}
 	if condition.System.Valid {
 		filter.System = &BooleanFilter{
 			Operator: OperatorTypeEq,
-			Value:    condition.System.Valid,
+			Value:    condition.System.Bool,
 		}
+	}
+	return &filter
+}
+
+func (acs AmsAgeConnectionService) pageNodes(ctx context.Context, operator *entity.Operator, pages []AgesConnectionResponse) []*Age {
+	if len(pages) == 0 {
+		log.Warn(ctx, "pageNodes is empty",
+			log.Any("operator", operator))
+		return []*Age{}
+	}
+	ages := make([]*Age, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
+	for _, page := range pages {
+		for _, edge := range page.Edges {
+			if _, ok := exists[edge.Node.ID]; ok {
+				log.Warn(ctx, "pageNodes: age exist",
+					log.Any("age", edge.Node),
+					log.Any("operator", operator))
+				continue
+			}
+			exists[edge.Node.ID] = true
+			age := Age{
+				ID:     edge.Node.ID,
+				Name:   edge.Node.Name,
+				Status: APStatus(edge.Node.Status),
+				System: edge.Node.System,
+			}
+			ages = append(ages, &age)
+		}
+	}
+	return ages
+}
+
+func (acs AmsAgeConnectionService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Age, error) {
+	filter := acs.NewAgeRangFilter(ctx, operator, options...)
+	filter.ProgramID = &UUIDFilter{
+		Operator: UUIDOperator(OperatorTypeEq),
+		Value:    UUID(programID),
 	}
 	var pages []AgesConnectionResponse
 	err := pageQuery(ctx, operator, filter, &pages)
@@ -83,42 +119,14 @@ func (acs AmsAgeConnectionService) GetByProgram(ctx context.Context, operator *e
 			log.Any("filter", filter))
 		return nil, err
 	}
-	var ages []*Age
-	for _, page := range pages {
-		for _, v := range page.Edges {
-			age := Age{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			ages = append(ages, &age)
-		}
-	}
+	ages := acs.pageNodes(ctx, operator, pages)
 	return ages, nil
 }
 func (acs AmsAgeConnectionService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Age, error) {
-	condition := NewCondition(options...)
-
-	filter := AgeRangeFilter{
-		OrganizationID: &UUIDFilter{
-			Operator: UUIDOperator(OperatorTypeEq),
-			Value:    UUID(operator.OrgID),
-		},
-		Status: &StringFilter{
-			Operator: StringOperator(OperatorTypeEq),
-			Value:    Active.String(),
-		},
-	}
-
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
-	}
-	if condition.System.Valid {
-		filter.System = &BooleanFilter{
-			Operator: OperatorTypeEq,
-			Value:    condition.System.Valid,
-		}
+	filter := acs.NewAgeRangFilter(ctx, operator, options...)
+	filter.OrganizationID = &UUIDFilter{
+		Operator: UUIDOperator(OperatorTypeEq),
+		Value:    UUID(operator.OrgID),
 	}
 
 	var pages []AgesConnectionResponse
@@ -130,17 +138,6 @@ func (acs AmsAgeConnectionService) GetByOrganization(ctx context.Context, operat
 			log.Any("filter", filter))
 		return nil, err
 	}
-	var ages []*Age
-	for _, page := range pages {
-		for _, v := range page.Edges {
-			age := Age{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			ages = append(ages, &age)
-		}
-	}
+	ages := acs.pageNodes(ctx, operator, pages)
 	return ages, nil
 }

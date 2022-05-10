@@ -67,6 +67,37 @@ type UsersConnectionResponse struct {
 func (ucs UsersConnectionResponse) GetPageInfo() *ConnectionPageInfo {
 	return &ucs.PageInfo
 }
+func (aucs AmsUserConnectionService) pageNodes(ctx context.Context, operator *entity.Operator, pages []UsersConnectionResponse) []*User {
+	if len(pages) == 0 {
+		log.Warn(ctx, "pageNodes is empty",
+			log.Any("operator", operator))
+		return []*User{}
+	}
+	users := make([]*User, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
+	for _, page := range pages {
+		for _, edge := range page.Edges {
+			if _, ok := exists[edge.Node.ID]; ok {
+				log.Warn(ctx, "pageNodes: user exist",
+					log.Any("users", edge.Node),
+					log.Any("operator", operator))
+				continue
+			}
+			exists[edge.Node.ID] = true
+			user := User{
+				ID:         edge.Node.ID,
+				Name:       edge.Node.GivenName + " " + edge.Node.FamilyName,
+				GivenName:  edge.Node.GivenName,
+				FamilyName: edge.Node.FamilyName,
+				Email:      edge.Node.ContactInfo.Email,
+				Avatar:     edge.Node.Avatar,
+			}
+			users = append(users, &user)
+		}
+	}
+	return users
+}
+
 func (aucs AmsUserConnectionService) GetByOrganization(ctx context.Context, operator *entity.Operator, organizationID string) ([]*User, error) {
 	filter := UserFilter{
 		OrganizationID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(organizationID)},
@@ -81,35 +112,8 @@ func (aucs AmsUserConnectionService) GetByOrganization(ctx context.Context, oper
 			log.Any("filter", filter))
 		return nil, err
 	}
-	if len(pages) == 0 {
-		log.Warn(ctx, "user is empty",
-			log.Any("operator", operator),
-			log.Any("filter", filter))
-		return []*User{}, nil
-	}
-	users := make([]*User, 0, pages[0].TotalCount)
-	exists := make(map[string]bool)
-	for _, page := range pages {
-		for _, v := range page.Edges {
-			if _, ok := exists[v.Node.ID]; ok {
-				log.Warn(ctx, "user exists",
-					log.Any("user", v.Node),
-					log.Any("operator", operator),
-					log.Any("filter", filter))
-				continue
-			}
-			exists[v.Node.ID] = true
-			user := User{
-				ID:         v.Node.ID,
-				Name:       v.Node.GivenName + " " + v.Node.FamilyName,
-				GivenName:  v.Node.GivenName,
-				FamilyName: v.Node.FamilyName,
-				Email:      v.Node.ContactInfo.Email,
-				Avatar:     v.Node.Avatar,
-			}
-			users = append(users, &user)
-		}
-	}
+
+	users := aucs.pageNodes(ctx, operator, pages)
 	return users, nil
 }
 
@@ -129,19 +133,6 @@ func (aucs AmsUserConnectionService) GetOnlyUnderOrgUsers(ctx context.Context, o
 			log.Any("filter", filter))
 		return nil, err
 	}
-	var users []*User
-	for _, page := range pages {
-		for _, v := range page.Edges {
-			user := User{
-				ID:         v.Node.ID,
-				Name:       v.Node.GivenName + " " + v.Node.FamilyName,
-				GivenName:  v.Node.GivenName,
-				FamilyName: v.Node.FamilyName,
-				Email:      v.Node.ContactInfo.Email,
-				Avatar:     v.Node.Avatar,
-			}
-			users = append(users, &user)
-		}
-	}
+	users := aucs.pageNodes(ctx, op, pages)
 	return users, nil
 }

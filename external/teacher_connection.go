@@ -7,6 +7,16 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
+type TeacherFilter UserFilter
+
+func (TeacherFilter) FilterName() FilterType {
+	return UserFilterType
+}
+
+func (TeacherFilter) ConnectionName() ConnectionType {
+	return TeachersConnectionType
+}
+
 type AmsTeacherConnectionService struct {
 	AmsTeacherService
 }
@@ -22,7 +32,12 @@ func (ascs AmsTeacherConnectionService) GetByOrganization(ctx context.Context, o
 	return teacherMap[organizationID], nil
 }
 func (ascs AmsTeacherConnectionService) GetByOrganizations(ctx context.Context, operator *entity.Operator, organizationIDs []string) (map[string][]*Teacher, error) {
-	classes, err := GetClassServiceProvider().GetByOrganizationIDs(ctx, operator, organizationIDs)
+	IDs := utils.SliceDeduplicationExcludeEmpty(organizationIDs)
+	organizationTeachers := make(map[string][]*Teacher)
+	for _, id := range IDs {
+		organizationTeachers[id] = []*Teacher{}
+	}
+	classes, err := GetClassServiceProvider().GetByOrganizationIDs(ctx, operator, IDs, WithStatus(Ignore))
 	if err != nil {
 		log.Error(ctx, "GetByOrganizations: get classes failed",
 			log.Err(err),
@@ -40,7 +55,7 @@ func (ascs AmsTeacherConnectionService) GetByOrganizations(ctx context.Context, 
 	if len(clsIDs) == 0 {
 		log.Debug(ctx, "GetByOrganizations: class is empty",
 			log.Strings("organization_ids", organizationIDs))
-		return map[string][]*Teacher{}, nil
+		return organizationTeachers, nil
 	}
 	classTeachers, err := ascs.GetByClasses(ctx, operator, clsIDs)
 	if err != nil {
@@ -49,7 +64,6 @@ func (ascs AmsTeacherConnectionService) GetByOrganizations(ctx context.Context, 
 			log.Strings("organization_ids", organizationIDs))
 		return nil, err
 	}
-	organizationTeachers := make(map[string][]*Teacher)
 	for k, v := range classTeachers {
 		if org, ok := clsOrgMap[k]; ok {
 			organizationTeachers[org] = append(organizationTeachers[org], v...)
@@ -57,10 +71,37 @@ func (ascs AmsTeacherConnectionService) GetByOrganizations(ctx context.Context, 
 	}
 	return organizationTeachers, nil
 }
+
+func (ascs AmsTeacherConnectionService) pageNodes(ctx context.Context, operator *entity.Operator, pages []UsersConnectionResponse) []*Teacher {
+	if len(pages) == 0 {
+		log.Warn(ctx, "pageNodes is empty",
+			log.Any("operator", operator))
+		return []*Teacher{}
+	}
+	teachers := make([]*Teacher, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
+	for _, page := range pages {
+		for _, edge := range page.Edges {
+			if _, ok := exists[edge.Node.ID]; ok {
+				log.Warn(ctx, "pageNodes: teacher exist",
+					log.Any("teacher", edge.Node),
+					log.Any("operator", operator))
+				continue
+			}
+			exists[edge.Node.ID] = true
+			teacher := Teacher{
+				ID:   edge.Node.ID,
+				Name: edge.Node.GivenName,
+			}
+			teachers = append(teachers, &teacher)
+		}
+	}
+	return teachers
+}
 func (ascs AmsTeacherConnectionService) GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*Teacher, error) {
 	result := make(map[string][]UsersConnectionResponse)
 	IDs := utils.SliceDeduplicationExcludeEmpty(classIDs)
-	err := subPageQuery(ctx, operator, "classNode", "teachersConnection", IDs, result)
+	err := subPageQuery(ctx, operator, "classNode", TeacherFilter{}, IDs, result)
 	if err != nil {
 		log.Error(ctx, "GetByClassIDs: subPageQuery failed",
 			log.Err(err),
@@ -70,15 +111,12 @@ func (ascs AmsTeacherConnectionService) GetByClasses(ctx context.Context, operat
 
 	teachersMap := make(map[string][]*Teacher)
 	for k, pages := range result {
-		for _, page := range pages {
-			for _, edge := range page.Edges {
-				teacher := &Teacher{
-					ID:   edge.Node.ID,
-					Name: edge.Node.GivenName,
-				}
-				teachersMap[k] = append(teachersMap[k], teacher)
-			}
+		if len(pages) == 0 {
+			log.Warn(ctx, "GetyClassIDs: empty",
+				log.String("class", k),
+				log.Any("operator", operator))
 		}
+		teachersMap[k] = ascs.pageNodes(ctx, operator, pages)
 	}
 	return teachersMap, nil
 }
@@ -93,9 +131,7 @@ func (ascs AmsTeacherConnectionService) GetBySchool(ctx context.Context, operato
 	return result[schoolID], nil
 }
 func (ascs AmsTeacherConnectionService) GetBySchools(ctx context.Context, operator *entity.Operator, schoolIDs []string) (map[string][]*Teacher, error) {
-	result := make(map[string][]ClassesConnectionResponse)
-	IDs := utils.SliceDeduplicationExcludeEmpty(schoolIDs)
-	err := subPageQuery(ctx, operator, "schoolNode", "classesConnection", IDs, result)
+	classMap, err := GetClassServiceProvider().GetBySchoolIDs(ctx, operator, schoolIDs)
 	if err != nil {
 		log.Error(ctx, "GetBySchools: subPageQuery failed",
 			log.Err(err),
@@ -104,12 +140,10 @@ func (ascs AmsTeacherConnectionService) GetBySchools(ctx context.Context, operat
 	}
 	classSchoolMap := make(map[string]string)
 	var classIDs []string
-	for k, pages := range result {
-		for _, page := range pages {
-			for _, edge := range page.Edges {
-				classSchoolMap[edge.Node.ID] = k
-				classIDs = append(classIDs, edge.Node.ID)
-			}
+	for k, classes := range classMap {
+		for _, cls := range classes {
+			classSchoolMap[cls.ID] = k
+			classIDs = append(classIDs, cls.ID)
 		}
 	}
 

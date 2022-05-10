@@ -2,12 +2,11 @@ package external
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"testing"
 )
 
-var clsToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MjA2ODgzOCwiaXNzIjoia2lkc2xvb3AifQ.uZaNkzIbtPBvg0QgYyQZgfA1rTkWFZ0RmgAPNgofKCaGYxJH1EifzMDdTIa7wIArzXfM_InOOwkYmuwqdvfO43AOlnl5YjZwCxSO0TEtu2pZuRooSF_Wgx95fx-GA8ygTBdNOuMs6kRzN2GZhxOS7w1U1-FR_fHo_NOxewgI4TiVlpLyM_DSGUa7ytdaGYUD3xJrtv4-jUlJ5yNXp6DYVM9GiCE8oBMA0oOGqFNYgkJdGR3BF6iyD6nuS-k8S9Kqdzxf8_TcBHEND7Ax1lP-Uisar-B7EmL7SZX126I-KdxLC-3pqy7eob4ruSkfalWsWAe3k47ntE1dtC1hE0_8bA"
+var clsToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MjEwNTEzNiwiaXNzIjoia2lkc2xvb3AifQ.OlhWfjZUMkId4qNSg6bIpxouJ1oqct3EHrqFWgynixZezYbsH3zVcQL8mr1Bn6tQZ9XQUNpU0DRI398bezZKnkYf5_z4MSi8FKANeHlCCnABgDB1PZbmgTZ-8iodIA5hq0ZA0sWmOndOBCvvKMvxtEAmocr8nP2BxwZKIl-TxZLZQvVfBjOKEEDciTu7GGGKUBJZtxZxtSqZ4f6Q2QN9BA-dcMWlC6ZadVCwaMxLRrQ7YPrK2OkKTthUsqt_9eASnZem5CEzrdyeMjeBVo3nLPZP1Pww4G9eQbk-As0emr-GWf_ZtSlErjP-xQ--rFzwsBySygUneIoeLoI6RkTFdQ"
 var usrIDs = []string{
 	"000d653d-7961-447c-8d66-ad8c4a40eae6",
 }
@@ -34,13 +33,13 @@ func TestAmsClassService_GetByOrganizationIDs(t *testing.T) {
 	ctx := context.Background()
 	testOperator.Token = clsToken
 	provider := AmsClassConnectionService{}
-	classes1, err := provider.AmsClassService.GetByOrganizationIDs(ctx, testOperator, orgIDs, WithStatus(Inactive))
+	classes1, err := provider.AmsClassService.GetByOrganizationIDs(ctx, testOperator, orgIDs)
 	if err != nil {
 		t.Errorf("GetClassServiceProvider().GetByOrganizationIDs() error = %v", err)
 		return
 	}
 
-	classes2, err := provider.GetByOrganizationIDs(ctx, testOperator, orgIDs, WithStatus(Inactive))
+	classes2, err := provider.GetByOrganizationIDs(ctx, testOperator, orgIDs)
 	if err != nil {
 		t.Errorf("GetClassServiceProvider().GetByOrganizationIDs() error = %v", err)
 		return
@@ -58,7 +57,7 @@ func TestAmsClassService_GetBySchoolIDs(t *testing.T) {
 		return
 	}
 
-	classes2, err := provider.GetBySchoolIDs(ctx, testOperator, orgIDs, WithStatus(Inactive))
+	classes2, err := provider.GetBySchoolIDs(ctx, testOperator, schIDs, WithStatus(Inactive))
 	if err != nil {
 		t.Errorf("GetClassServiceProvider().GetByOrganizationIDs() error = %v", err)
 		return
@@ -69,13 +68,15 @@ func TestAmsClassService_GetBySchoolIDs(t *testing.T) {
 func TestAmsClassService_GetOnlyUnderOrgClasses(t *testing.T) {
 	ctx := context.Background()
 	testOperator.Token = clsToken
-	result, err := GetClassServiceProvider().GetOnlyUnderOrgClasses(ctx, testOperator, orgID)
+	provider := AmsClassConnectionService{}
+	result1, err := provider.AmsClassService.GetOnlyUnderOrgClasses(ctx, testOperator, orgID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	bs, err := json.Marshal(result)
+	result2, err := provider.GetOnlyUnderOrgClasses(ctx, testOperator, orgID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(bs)
+
+	fmt.Println("len:", len(result1) == len(result2))
 }

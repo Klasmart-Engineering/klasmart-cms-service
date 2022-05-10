@@ -53,28 +53,65 @@ type AmsSubjectConnectionService struct {
 	AmsSubjectService
 }
 
-func (scs AmsSubjectConnectionService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Subject, error) {
-	condition := NewCondition(options...)
+func (scs AmsSubjectConnectionService) pageNodes(ctx context.Context, operator *entity.Operator, pages []SubjectsConnectionResponse) []*Subject {
+	if len(pages) == 0 {
+		log.Warn(ctx, "pageNodes is empty",
+			log.Any("operator", operator))
+		return []*Subject{}
+	}
+	subjects := make([]*Subject, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
+	for _, page := range pages {
+		for _, edge := range page.Edges {
+			if _, ok := exists[edge.Node.ID]; ok {
+				log.Warn(ctx, "pageNodes: subcategory exist",
+					log.Any("subcategory", edge.Node),
+					log.Any("operator", operator))
+				continue
+			}
+			exists[edge.Node.ID] = true
+			obj := &Subject{
+				ID:     edge.Node.ID,
+				Name:   edge.Node.Name,
+				Status: APStatus(edge.Node.Status),
+				System: edge.Node.System,
+			}
+			subjects = append(subjects, obj)
+		}
+	}
+	return subjects
+}
 
-	filter := SubjectFilter{
-		ProgramID: &UUIDFilter{
-			Operator: UUIDOperator(OperatorTypeEq),
-			Value:    UUID(programID),
-		},
-		Status: &StringFilter{
+func (scs AmsSubjectConnectionService) NewSubjectFilter(ctx context.Context, operator *entity.Operator, options ...APOption) *SubjectFilter {
+	condition := NewCondition(options...)
+	var filter SubjectFilter
+	if condition.Status.Valid && condition.Status.Status != Ignore {
+		filter.Status = &StringFilter{
+			Operator: StringOperator(OperatorTypeEq),
+			Value:    condition.Status.Status.String(),
+		}
+	} else if !condition.Status.Valid {
+		filter.Status = &StringFilter{
 			Operator: StringOperator(OperatorTypeEq),
 			Value:    Active.String(),
-		},
-	}
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
+		}
 	}
 	if condition.System.Valid {
 		filter.System = &BooleanFilter{
 			Operator: OperatorTypeEq,
-			Value:    condition.System.Valid,
+			Value:    condition.System.Bool,
 		}
 	}
+	return &filter
+}
+
+func (scs AmsSubjectConnectionService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Subject, error) {
+	filter := scs.NewSubjectFilter(ctx, operator, options...)
+	filter.ProgramID = &UUIDFilter{
+		Operator: UUIDOperator(OperatorTypeEq),
+		Value:    UUID(programID),
+	}
+
 	var pages []SubjectsConnectionResponse
 	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
@@ -84,54 +121,15 @@ func (scs AmsSubjectConnectionService) GetByProgram(ctx context.Context, operato
 			log.Any("filter", filter))
 		return nil, err
 	}
-	if len(pages) == 0 {
-		log.Warn(ctx, "subject is empty",
-			log.Any("operator", operator),
-			log.Any("filter", filter))
-		return []*Subject{}, nil
-	}
 
-	subjects := make([]*Subject, 0, pages[0].TotalCount)
-	exists := make(map[string]bool)
-	for _, p := range pages {
-		for _, v := range p.Edges {
-			if _, ok := exists[v.Node.ID]; ok {
-				log.Warn(ctx, "subject exists",
-					log.Any("subject", v.Node),
-					log.Any("operator", operator),
-					log.Any("filter", filter))
-				continue
-			}
-			exists[v.Node.ID] = true
-			obj := &Subject{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			subjects = append(subjects, obj)
-		}
-	}
+	subjects := scs.pageNodes(ctx, operator, pages)
 	return subjects, nil
 }
 func (scs AmsSubjectConnectionService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Subject, error) {
-	condition := NewCondition(options...)
-
-	filter := SubjectFilter{
-		Status: &StringFilter{
-			Operator: StringOperator(OperatorTypeEq),
-			Value:    Active.String(),
-		},
-		OR: []SubjectFilter{
-			{OrganizationID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(operator.OrgID)}},
-			{System: &BooleanFilter{Operator: OperatorTypeEq, Value: true}},
-		},
-	}
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
-	}
-	if condition.System.Valid {
-		filter.System = &BooleanFilter{Operator: OperatorTypeEq, Value: condition.System.Valid}
+	filter := scs.NewSubjectFilter(ctx, operator, options...)
+	filter.OR = []SubjectFilter{
+		{OrganizationID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(operator.OrgID)}},
+		{System: &BooleanFilter{Operator: OperatorTypeEq, Value: true}},
 	}
 	var pages []SubjectsConnectionResponse
 	err := pageQuery(ctx, operator, filter, &pages)
@@ -142,32 +140,7 @@ func (scs AmsSubjectConnectionService) GetByOrganization(ctx context.Context, op
 			log.Any("filter", filter))
 		return nil, err
 	}
-	if len(pages) == 0 {
-		log.Warn(ctx, "subject is empty",
-			log.Any("operator", operator),
-			log.Any("filter", filter))
-		return []*Subject{}, nil
-	}
-	subjects := make([]*Subject, 0, pages[0].TotalCount)
-	exists := make(map[string]bool)
-	for _, p := range pages {
-		for _, v := range p.Edges {
-			if _, ok := exists[v.Node.ID]; ok {
-				log.Warn(ctx, "subject exists",
-					log.Any("subject", v.Node),
-					log.Any("operator", operator),
-					log.Any("filter", filter))
-				continue
-			}
-			exists[v.Node.ID] = true
-			obj := &Subject{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			subjects = append(subjects, obj)
-		}
-	}
+
+	subjects := scs.pageNodes(ctx, operator, pages)
 	return subjects, nil
 }

@@ -55,24 +55,65 @@ type AmsProgramConnectionService struct {
 	AmsProgramService
 }
 
-func (pcs AmsProgramConnectionService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Program, error) {
-	condition := NewCondition(options...)
-
-	filter := ProgramFilter{
-		Status: &StringFilter{Operator: StringOperator(OperatorTypeEq), Value: Active.String()},
-		OR: []ProgramFilter{
-			{OrganizationID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(operator.OrgID)}},
-			{System: &BooleanFilter{Operator: OperatorTypeEq, Value: true}},
-		},
+func (pcs AmsProgramConnectionService) pageNodes(ctx context.Context, operator *entity.Operator, pages []ProgramsConnectionResponse) []*Program {
+	if len(pages) == 0 {
+		log.Warn(ctx, "pageNodes is empty",
+			log.Any("operator", operator))
+		return []*Program{}
 	}
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
+	programs := make([]*Program, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
+	for _, page := range pages {
+		for _, edge := range page.Edges {
+			if _, ok := exists[edge.Node.ID]; ok {
+				log.Warn(ctx, "pageNodes: category exist",
+					log.Any("category", edge.Node),
+					log.Any("operator", operator))
+				continue
+			}
+			exists[edge.Node.ID] = true
+			obj := &Program{
+				ID:   edge.Node.ID,
+				Name: edge.Node.Name,
+				//GroupName:
+				Status: APStatus(edge.Node.Status),
+				System: edge.Node.System,
+			}
+			programs = append(programs, obj)
+		}
+	}
+	return programs
+}
+
+func (pcs AmsProgramConnectionService) NewProgramFilter(ctx context.Context, operator *entity.Operator, options ...APOption) *ProgramFilter {
+	condition := NewCondition(options...)
+	var filter ProgramFilter
+	if condition.Status.Valid && condition.Status.Status != Ignore {
+		filter.Status = &StringFilter{
+			Operator: StringOperator(OperatorTypeEq),
+			Value:    condition.Status.Status.String(),
+		}
+	} else if !condition.Status.Valid {
+		filter.Status = &StringFilter{
+			Operator: StringOperator(OperatorTypeEq),
+			Value:    Active.String(),
+		}
 	}
 	if condition.System.Valid {
 		filter.System = &BooleanFilter{
 			Operator: OperatorTypeEq,
-			Value:    condition.System.Valid,
+			Value:    condition.System.Bool,
 		}
+	}
+	return &filter
+}
+
+func (pcs AmsProgramConnectionService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Program, error) {
+	filter := pcs.NewProgramFilter(ctx, operator, options...)
+
+	filter.OR = []ProgramFilter{
+		{OrganizationID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(operator.OrgID)}},
+		{System: &BooleanFilter{Operator: OperatorTypeEq, Value: true}},
 	}
 
 	var pages []ProgramsConnectionResponse
@@ -85,34 +126,6 @@ func (pcs AmsProgramConnectionService) GetByOrganization(ctx context.Context, op
 		return nil, err
 	}
 
-	if len(pages) == 0 {
-		log.Warn(ctx, "program is empty",
-			log.Any("operator", operator),
-			log.Any("filter", filter))
-		return []*Program{}, nil
-	}
-
-	programs := make([]*Program, 0, pages[0].TotalCount)
-	exists := make(map[string]bool)
-	for _, p := range pages {
-		for _, v := range p.Edges {
-			if _, ok := exists[v.Node.ID]; ok {
-				log.Warn(ctx, "program exist",
-					log.Any("program", v),
-					log.Any("operator", operator),
-					log.Any("filter", filter))
-				continue
-			}
-			exists[v.Node.ID] = true
-			obj := &Program{
-				ID:   v.Node.ID,
-				Name: v.Node.Name,
-				//GroupName:
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			programs = append(programs, obj)
-		}
-	}
+	programs := pcs.pageNodes(ctx, operator, pages)
 	return programs, nil
 }

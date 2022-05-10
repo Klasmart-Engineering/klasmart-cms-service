@@ -62,29 +62,65 @@ type GradesConnectionResponse struct {
 func (scs GradesConnectionResponse) GetPageInfo() *ConnectionPageInfo {
 	return &scs.PageInfo
 }
-func (gcs AmsGradeConnectionService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Grade, error) {
-	condition := NewCondition(options...)
 
-	filter := GradeFilter{
-		ProgramID: &UUIDFilter{
-			Operator: UUIDOperator(OperatorTypeEq),
-			Value:    UUID(programID),
-		},
-		Status: &StringFilter{
+func (gcs AmsGradeConnectionService) pageNodes(ctx context.Context, operator *entity.Operator, pages []GradesConnectionResponse) []*Grade {
+	if len(pages) == 0 {
+		log.Warn(ctx, "pageNodes is empty",
+			log.Any("operator", operator))
+		return []*Grade{}
+	}
+	grades := make([]*Grade, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
+	for _, page := range pages {
+		for _, edge := range page.Edges {
+			if _, ok := exists[edge.Node.ID]; ok {
+				log.Warn(ctx, "pageNodes: grade exist",
+					log.Any("grade", edge.Node),
+					log.Any("operator", operator))
+				continue
+			}
+			exists[edge.Node.ID] = true
+			obj := &Grade{
+				ID:     edge.Node.ID,
+				Name:   edge.Node.Name,
+				Status: APStatus(edge.Node.Status),
+				System: edge.Node.System,
+			}
+			grades = append(grades, obj)
+		}
+	}
+	return grades
+}
+
+func (gcs AmsGradeConnectionService) NewGradeFilter(ctx context.Context, operator *entity.Operator, options ...APOption) *GradeFilter {
+	condition := NewCondition(options...)
+	var filter GradeFilter
+	if condition.Status.Valid && condition.Status.Status != Ignore {
+		filter.Status = &StringFilter{
+			Operator: StringOperator(OperatorTypeEq),
+			Value:    condition.Status.Status.String(),
+		}
+	} else if !condition.Status.Valid {
+		filter.Status = &StringFilter{
 			Operator: StringOperator(OperatorTypeEq),
 			Value:    Active.String(),
-		},
-	}
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
+		}
 	}
 	if condition.System.Valid {
 		filter.System = &BooleanFilter{
 			Operator: OperatorTypeEq,
-			Value:    condition.System.Valid,
+			Value:    condition.System.Bool,
 		}
 	}
+	return &filter
+}
 
+func (gcs AmsGradeConnectionService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Grade, error) {
+	filter := gcs.NewGradeFilter(ctx, operator, options...)
+	filter.ProgramID = &UUIDFilter{
+		Operator: UUIDOperator(OperatorTypeEq),
+		Value:    UUID(programID),
+	}
 	var pages []GradesConnectionResponse
 	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
@@ -94,50 +130,15 @@ func (gcs AmsGradeConnectionService) GetByProgram(ctx context.Context, operator 
 			log.Any("filter", filter))
 		return nil, err
 	}
-	if len(pages) == 0 {
-		log.Warn(ctx, "grade is empty",
-			log.Any("operator", operator),
-			log.Any("filter", filter))
-		return []*Grade{}, nil
-	}
 
-	grades := make([]*Grade, 0, pages[0].TotalCount)
-	exists := make(map[string]bool)
-	for _, p := range pages {
-		for _, v := range p.Edges {
-			if _, ok := exists[v.Node.ID]; ok {
-				log.Warn(ctx, "grade exists",
-					log.Any("grade", v.Node),
-					log.Any("operator", operator),
-					log.Any("filter", filter))
-				continue
-			}
-			exists[v.Node.ID] = true
-			obj := &Grade{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			grades = append(grades, obj)
-		}
-	}
+	grades := gcs.pageNodes(ctx, operator, pages)
 	return grades, nil
 }
 func (gcs AmsGradeConnectionService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Grade, error) {
-	condition := NewCondition(options...)
-	filter := GradeFilter{
-		Status: &StringFilter{Operator: StringOperator(OperatorTypeEq), Value: Active.String()},
-		OR: []GradeFilter{
-			{OrganizationID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(operator.OrgID)}},
-			{System: &BooleanFilter{Operator: OperatorTypeEq, Value: true}},
-		},
-	}
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
-	}
-	if condition.System.Valid {
-		filter.System = &BooleanFilter{Operator: OperatorTypeEq, Value: condition.System.Valid}
+	filter := gcs.NewGradeFilter(ctx, operator, options...)
+	filter.OR = []GradeFilter{
+		{OrganizationID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(operator.OrgID)}},
+		{System: &BooleanFilter{Operator: OperatorTypeEq, Value: true}},
 	}
 
 	var pages []GradesConnectionResponse
@@ -149,33 +150,7 @@ func (gcs AmsGradeConnectionService) GetByOrganization(ctx context.Context, oper
 			log.Any("filter", filter))
 		return nil, err
 	}
-	if len(pages) == 0 {
-		log.Warn(ctx, "grade is empty",
-			log.Any("operator", operator),
-			log.Any("filter", filter))
-		return []*Grade{}, nil
-	}
 
-	grades := make([]*Grade, 0, pages[0].TotalCount)
-	exists := make(map[string]bool)
-	for _, p := range pages {
-		for _, v := range p.Edges {
-			if _, ok := exists[v.Node.ID]; ok {
-				log.Warn(ctx, "grade exists",
-					log.Any("grade", v.Node),
-					log.Any("operator", operator),
-					log.Any("filter", filter))
-				continue
-			}
-			exists[v.Node.ID] = true
-			obj := &Grade{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			grades = append(grades, obj)
-		}
-	}
+	grades := gcs.pageNodes(ctx, operator, pages)
 	return grades, nil
 }

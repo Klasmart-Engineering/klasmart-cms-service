@@ -49,28 +49,61 @@ type AmsSubCategoryConnectionService struct {
 	AmsSubCategoryService
 }
 
-func (sccs AmsSubCategoryConnectionService) GetByCategory(ctx context.Context, operator *entity.Operator, categoryID string, options ...APOption) ([]*SubCategory, error) {
-	condition := NewCondition(options...)
+func (sccs AmsSubCategoryConnectionService) pageNodes(ctx context.Context, operator *entity.Operator, pages []SubcategoriesConnectionResponse) []*SubCategory {
+	if len(pages) == 0 {
+		log.Warn(ctx, "pageNodes is empty",
+			log.Any("operator", operator))
+		return []*SubCategory{}
+	}
+	subcategories := make([]*SubCategory, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
+	for _, page := range pages {
+		for _, edge := range page.Edges {
+			if _, ok := exists[edge.Node.ID]; ok {
+				log.Warn(ctx, "pageNodes: subcategory exist",
+					log.Any("subcategory", edge.Node),
+					log.Any("operator", operator))
+				continue
+			}
+			exists[edge.Node.ID] = true
+			obj := &SubCategory{
+				ID:     edge.Node.ID,
+				Name:   edge.Node.Name,
+				Status: APStatus(edge.Node.Status),
+				System: edge.Node.System,
+			}
+			subcategories = append(subcategories, obj)
+		}
+	}
+	return subcategories
+}
 
-	filter := SubcategoryFilter{
-		CategoryID: &UUIDFilter{
-			Operator: UUIDOperator(OperatorTypeEq),
-			Value:    UUID(categoryID),
-		},
-		Status: &StringFilter{
+func (sccs AmsSubCategoryConnectionService) NewSubcategoryFilter(ctx context.Context, operator *entity.Operator, options ...APOption) *SubcategoryFilter {
+	condition := NewCondition(options...)
+	var filter SubcategoryFilter
+	if condition.Status.Valid && condition.Status.Status != Ignore {
+		filter.Status = &StringFilter{
+			Operator: StringOperator(OperatorTypeEq),
+			Value:    condition.Status.Status.String(),
+		}
+	} else if !condition.Status.Valid {
+		filter.Status = &StringFilter{
 			Operator: StringOperator(OperatorTypeEq),
 			Value:    Active.String(),
-		},
-	}
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
+		}
 	}
 	if condition.System.Valid {
 		filter.System = &BooleanFilter{
 			Operator: OperatorTypeEq,
-			Value:    condition.System.Valid,
+			Value:    condition.System.Bool,
 		}
 	}
+	return &filter
+}
+
+func (sccs AmsSubCategoryConnectionService) GetByCategory(ctx context.Context, operator *entity.Operator, categoryID string, options ...APOption) ([]*SubCategory, error) {
+	filter := sccs.NewSubcategoryFilter(ctx, operator, options...)
+	filter.CategoryID = &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(categoryID)}
 
 	var pages []SubcategoriesConnectionResponse
 	err := pageQuery(ctx, operator, filter, &pages)
@@ -87,50 +120,15 @@ func (sccs AmsSubCategoryConnectionService) GetByCategory(ctx context.Context, o
 			log.Any("filter", filter))
 		return []*SubCategory{}, nil
 	}
-	subCategories := make([]*SubCategory, 0, pages[0].TotalCount)
-	exists := make(map[string]bool)
-	for _, p := range pages {
-		for _, v := range p.Edges {
-			if _, ok := exists[v.Node.ID]; ok {
-				log.Warn(ctx, "subcategory exist",
-					log.Any("subcategory", v),
-					log.Any("operator", operator),
-					log.Any("filter", filter))
-				continue
-			}
-			exists[v.Node.ID] = true
-			obj := &SubCategory{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			subCategories = append(subCategories, obj)
-		}
-	}
+	subCategories := sccs.pageNodes(ctx, operator, pages)
 	return subCategories, nil
 }
 func (sccs AmsSubCategoryConnectionService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*SubCategory, error) {
-	condition := NewCondition(options...)
+	filter := sccs.NewSubcategoryFilter(ctx, operator, options...)
 
-	filter := SubcategoryFilter{
-		Status: &StringFilter{
-			Operator: StringOperator(OperatorTypeEq),
-			Value:    Active.String(),
-		},
-		OR: []SubcategoryFilter{
-			{OrganizationID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(operator.OrgID)}},
-			{System: &BooleanFilter{Operator: OperatorTypeEq, Value: true}},
-		},
-	}
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
-	}
-	if condition.System.Valid {
-		filter.System = &BooleanFilter{
-			Operator: OperatorTypeEq,
-			Value:    condition.System.Valid,
-		}
+	filter.OR = []SubcategoryFilter{
+		{OrganizationID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(operator.OrgID)}},
+		{System: &BooleanFilter{Operator: OperatorTypeEq, Value: true}},
 	}
 
 	var pages []SubcategoriesConnectionResponse
@@ -142,32 +140,7 @@ func (sccs AmsSubCategoryConnectionService) GetByOrganization(ctx context.Contex
 			log.Any("filter", filter))
 		return nil, err
 	}
-	if len(pages) == 0 {
-		log.Debug(ctx, "subcategory is empty",
-			log.Any("operator", operator),
-			log.Any("filter", filter))
-		return []*SubCategory{}, nil
-	}
-	subCategories := make([]*SubCategory, 0, pages[0].TotalCount)
-	exists := make(map[string]bool)
-	for _, p := range pages {
-		for _, v := range p.Edges {
-			if _, ok := exists[v.Node.ID]; ok {
-				log.Warn(ctx, "subcategory exist",
-					log.Any("subcategory", v),
-					log.Any("operator", operator),
-					log.Any("filter", filter))
-				continue
-			}
-			exists[v.Node.ID] = true
-			obj := &SubCategory{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			subCategories = append(subCategories, obj)
-		}
-	}
+
+	subCategories := sccs.pageNodes(ctx, operator, pages)
 	return subCategories, nil
 }

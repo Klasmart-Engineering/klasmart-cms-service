@@ -90,5 +90,5 @@ func TestSubPageQuerying(t *testing.T) {
 	}
 	testOperator.Token = sToken
 	result := make(map[string][]SchoolMembershipsConnectionResponse)
-	subPageQuery(ctx, testOperator, "userNode", "schoolMembershipsConnection", IDs, result)
+	subPageQuery(ctx, testOperator, "userNode", SchoolMembershipFilter{}, IDs, result)
 }

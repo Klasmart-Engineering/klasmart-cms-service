@@ -8,6 +8,7 @@ type OperatorType string
 const (
 	Active   APStatus = "active"
 	Inactive APStatus = "inactive"
+	Ignore   APStatus = "ignore"
 )
 
 const (

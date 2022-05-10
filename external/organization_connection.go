@@ -275,22 +275,58 @@ func (aocs AmsOrganizationConnectionService) GetNameMapByOrganizationOrSchool(ct
 	}
 	return nameMap, nil
 }
-func (aocs AmsOrganizationConnectionService) GetByUserID(ctx context.Context, operator *entity.Operator, id string, options ...APOption) ([]*Organization, error) {
+
+func (aocs AmsOrganizationConnectionService) pageNodes(ctx context.Context, operator *entity.Operator, pages []OrganizationsConnectionResponse) []*Organization {
+	if len(pages) == 0 {
+		log.Warn(ctx, "pageNodes is empty",
+			log.Any("operator", operator))
+		return []*Organization{}
+	}
+	organizations := make([]*Organization, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
+	for _, page := range pages {
+		for _, edge := range page.Edges {
+			if _, ok := exists[edge.Node.ID]; ok {
+				log.Warn(ctx, "pageNodes: organization exist",
+					log.Any("organization", edge.Node),
+					log.Any("operator", operator))
+				continue
+			}
+			exists[edge.Node.ID] = true
+			org := Organization{
+				ID:     edge.Node.ID,
+				Name:   edge.Node.Name,
+				Status: APStatus(edge.Node.Status),
+			}
+			organizations = append(organizations, &org)
+		}
+	}
+	return organizations
+}
+
+func (aocs AmsOrganizationConnectionService) NewOrganizationFilter(ctx context.Context, operator *entity.Operator, options ...APOption) *OrganizationFilter {
 	condition := NewCondition(options...)
-	filter := OrganizationFilter{
-		UserID: &UUIDFilter{
-			Operator: UUIDOperator(OperatorTypeEq),
-			Value:    UUID(id),
-		},
-		Status: &StringFilter{
+	var filter OrganizationFilter
+	if condition.Status.Valid && condition.Status.Status != Ignore {
+		filter.Status = &StringFilter{
+			Operator: StringOperator(OperatorTypeEq),
+			Value:    condition.Status.Status.String(),
+		}
+	} else if !condition.Status.Valid {
+		filter.Status = &StringFilter{
 			Operator: StringOperator(OperatorTypeEq),
 			Value:    Active.String(),
-		},
+		}
+	}
+	return &filter
+}
+func (aocs AmsOrganizationConnectionService) GetByUserID(ctx context.Context, operator *entity.Operator, id string, options ...APOption) ([]*Organization, error) {
+	filter := aocs.NewOrganizationFilter(ctx, operator, options...)
+	filter.UserID = &UUIDFilter{
+		Operator: UUIDOperator(OperatorTypeEq),
+		Value:    UUID(id),
 	}
 
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
-	}
 	var pages []OrganizationsConnectionResponse
 	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
@@ -306,25 +342,7 @@ func (aocs AmsOrganizationConnectionService) GetByUserID(ctx context.Context, op
 			log.Any("filter", filter))
 		return []*Organization{}, nil
 	}
-	organizations := make([]*Organization, 0, pages[0].TotalCount)
-	exists := make(map[string]bool)
-	for _, page := range pages {
-		for _, v := range page.Edges {
-			if _, ok := exists[v.Node.ID]; ok {
-				log.Warn(ctx, "organization exists",
-					log.Any("org", v.Node),
-					log.Any("operator", operator),
-					log.Any("filter", filter))
-				continue
-			}
-			exists[v.Node.ID] = true
-			org := Organization{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-			}
-			organizations = append(organizations, &org)
-		}
-	}
+
+	organizations := aocs.pageNodes(ctx, operator, pages)
 	return organizations, nil
 }
