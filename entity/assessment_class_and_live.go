@@ -2,7 +2,8 @@ package entity
 
 import (
 	"database/sql"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
+
+	"github.com/KL-Engineering/dbo"
 )
 
 type AddClassAndLiveAssessmentArgs struct {

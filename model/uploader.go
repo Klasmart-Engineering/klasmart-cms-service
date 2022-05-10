@@ -5,9 +5,9 @@ import (
 	"strings"
 	"sync"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/model/storage"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 type IResourceUploaderModel interface {

@@ -4,10 +4,10 @@ import (
 	"context"
 	"sync"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 type IOutcomeAttendanceDA interface {
@@ -36,7 +36,7 @@ type outcomeAttendanceDA struct {
 }
 
 func (d *outcomeAttendanceDA) BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Context, assessmentID string, outcomeIDs []string) ([]*entity.OutcomeAttendance, error) {
-	tx:=dbo.MustGetDB(ctx)
+	tx := dbo.MustGetDB(ctx)
 	tx.ResetCondition()
 
 	var items []*entity.OutcomeAttendance

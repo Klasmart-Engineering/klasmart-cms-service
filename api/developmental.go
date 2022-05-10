@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
 	"github.com/gin-gonic/gin"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
 
 // @Summary getDevelopmental

@@ -1,7 +1,7 @@
 package v2
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 )
 
 type Assessment struct {

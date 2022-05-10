@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"github.com/KL-Engineering/dbo"
 )
 
 func TestDeleteTx(t *testing.T) {

@@ -4,16 +4,16 @@ import (
 	"context"
 	"strings"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"github.com/KL-Engineering/common-log/log"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"github.com/KL-Engineering/kidsloop-cms-service/da"
 
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 func (m *reportModel) GetStudentUsageMaterialViewCount(ctx context.Context, op *entity.Operator, req *entity.StudentUsageMaterialViewCountReportRequest) (res *entity.StudentUsageMaterialViewCountReportResponse, err error) {
@@ -145,7 +145,7 @@ func (m *reportModel) AddStudentUsageRecordTx(ctx context.Context, tx *dbo.DBCon
 		usageRecord.StudentEmail = student.Email
 		models = append(models, usageRecord)
 	}
-	_,err = da.GetStudentUsageDA().InsertTx(ctx, tx, models)
+	_, err = da.GetStudentUsageDA().InsertTx(ctx, tx, models)
 	if err != nil {
 		return
 	}

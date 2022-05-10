@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 )
 
 func TestMain(m *testing.M) {

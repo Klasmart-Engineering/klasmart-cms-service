@@ -1,8 +1,8 @@
 package entity
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 type HomeFunStudy struct {

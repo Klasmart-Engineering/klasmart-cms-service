@@ -1,8 +1,8 @@
 package entity
 
 import (
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 	"github.com/dgrijalva/jwt-go"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
 type StudentUsageRecord struct {

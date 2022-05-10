@@ -4,14 +4,14 @@ import (
 	"context"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 
-	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"github.com/KL-Engineering/dbo"
 )
 
 func (r *ReportDA) GetLessonPlanFilter(ctx context.Context, op *entity.Operator, classID string) (items []*entity.ScheduleShortInfo, err error) {

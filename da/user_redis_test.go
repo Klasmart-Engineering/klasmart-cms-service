@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
 )
 
 func TestSetUsers(t *testing.T) {

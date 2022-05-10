@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/test/utils"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/test/utils"
 )
 
 func TestCreateScheduleReview(t *testing.T) {

@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
 
 	"sync"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/ro"
+	"github.com/KL-Engineering/ro"
 )
 
 var (

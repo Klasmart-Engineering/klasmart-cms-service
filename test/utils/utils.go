@@ -5,11 +5,11 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/KL-Engineering/common-log/log"
 	"github.com/dgrijalva/jwt-go"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 func InitOperator(ctx context.Context, tokenString, orgID string) *entity.Operator {

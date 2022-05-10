@@ -3,13 +3,13 @@ package api
 import (
 	"net/http"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	"github.com/KL-Engineering/kidsloop-cms-service/model"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"github.com/KL-Engineering/common-log/log"
 
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	"github.com/gin-gonic/gin"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 // @Summary get student usage of material report

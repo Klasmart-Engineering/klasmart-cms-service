@@ -7,10 +7,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"log"
 	"os"
+
+	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 )
 
 func main() {

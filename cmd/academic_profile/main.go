@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/KL-Engineering/kidsloop-cms-service/cmd/academic_profile/mapping"
 	"github.com/urfave/cli/v2"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/cmd/academic_profile/mapping"
 )
 
 func main() {

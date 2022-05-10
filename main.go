@@ -6,17 +6,17 @@ import (
 	"os/signal"
 	"syscall"
 
-	"gitlab.badanamu.com.cn/calmisland/common-cn/common"
-	"gitlab.badanamu.com.cn/calmisland/common-cn/helper"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/api"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/decorator"
+	gintrace "github.com/KL-Engineering/gin-trace"
+	"github.com/KL-Engineering/kidsloop-cache/cache"
+	"github.com/KL-Engineering/kidsloop-cms-service/api"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/da"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
+	"github.com/KL-Engineering/kidsloop-cms-service/model/storage"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils/kl2cache"
 )
 
 func initDataSource() {
@@ -57,7 +57,7 @@ func initCache(ctx context.Context) {
 
 func initLogger() {
 	logger := log.New(log.WithDynamicFields(func(ctx context.Context) (fields []log.Field) {
-		badaCtx, ok := helper.GetBadaCtx(ctx)
+		badaCtx, ok := gintrace.GetBadaCtx(ctx)
 		if !ok {
 			return
 		}
@@ -118,12 +118,12 @@ func main() {
 	log.Debug(ctx, "init storage successfully")
 
 	if os.Getenv("env") == "HTTP" {
-		common.Setenv(common.EnvHTTP)
+		decorator.Setenv(decorator.EnvHTTP)
 	} else {
-		common.Setenv(common.EnvLAMBDA)
+		decorator.Setenv(decorator.EnvLAMBDA)
 	}
 
-	go common.RunWithHTTPHandler(api.NewServer(), ":8088")
+	go decorator.RunWithHTTPHandler(api.NewServer(), ":8088")
 
 	log.Debug(ctx, "init api server successfully")
 

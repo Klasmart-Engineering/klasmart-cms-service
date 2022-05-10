@@ -1,7 +1,7 @@
 package entity
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"github.com/KL-Engineering/dbo"
 )
 
 type ListStudyAssessmentsArgs struct {

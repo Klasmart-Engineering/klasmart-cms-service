@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"testing"
 
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
 	"github.com/go-playground/assert/v2"
 	"github.com/go-redis/redis/v8"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
 
 func TestSet(t *testing.T) {

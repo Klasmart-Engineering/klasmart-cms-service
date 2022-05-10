@@ -1,6 +1,6 @@
 package entity
 
-import "gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+import "github.com/KL-Engineering/kidsloop-cms-service/constant"
 
 type ScheduleFeedback struct {
 	ID         string `json:"id" gorm:"column:id;PRIMARY_KEY"`

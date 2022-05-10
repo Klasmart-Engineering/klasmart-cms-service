@@ -4,12 +4,12 @@ import (
 	"net/http"
 	"strings"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
 
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/model"
 	"github.com/gin-gonic/gin"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
 // @ID createOutcomeSet

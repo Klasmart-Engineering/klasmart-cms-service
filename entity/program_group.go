@@ -1,6 +1,6 @@
 package entity
 
-import "gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+import "github.com/KL-Engineering/kidsloop-cms-service/constant"
 
 type ProgramGroup struct {
 	ProgramID string           `gorm:"column:program_id;type:varchar(100);PRIMARY_KEY"`

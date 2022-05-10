@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
+	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 type IStudentProgressLearnOutcomeAchievement interface {

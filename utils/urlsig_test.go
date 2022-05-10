@@ -3,8 +3,9 @@ package utils
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"testing"
+
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 )
 
 func TestURLSig(t *testing.T) {

@@ -3,13 +3,13 @@ package utils
 import (
 	"context"
 
-	"gitlab.badanamu.com.cn/calmisland/common-cn/helper"
+	gintrace "github.com/KL-Engineering/gin-trace"
 )
 
 func CloneContextWithTrace(ctx context.Context) context.Context {
 	newContext := context.Background()
 
-	badaCtx, ok := helper.GetBadaCtx(ctx)
+	badaCtx, ok := gintrace.GetBadaCtx(ctx)
 	if ok {
 		newContext, _ = badaCtx.EmbedIntoContext(newContext)
 	}

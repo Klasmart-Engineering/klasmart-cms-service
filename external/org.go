@@ -7,13 +7,12 @@ import (
 	"strings"
 	"text/template"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+	"github.com/KL-Engineering/kidsloop-cache/cache"
 
-	"gitlab.badanamu.com.cn/calmisland/chlorine"
-	cl "gitlab.badanamu.com.cn/calmisland/chlorine"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/chlorine"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 type OrganizationServiceProvider interface {
@@ -86,7 +85,7 @@ func (s AmsOrganizationService) QueryByIDs(ctx context.Context, ids []string, op
 
 	_ids := utils.SliceDeduplication(ids)
 
-	req := cl.NewRequest(q, chlorine.ReqToken(operator.Token))
+	req := chlorine.NewRequest(q, chlorine.ReqToken(operator.Token))
 	req.Var("orgIDs", _ids)
 
 	data := struct {

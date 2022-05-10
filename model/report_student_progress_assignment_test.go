@@ -3,8 +3,9 @@ package model
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"testing"
+
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 func TestGetAssignmentCompletion(t *testing.T) {

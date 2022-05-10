@@ -2,10 +2,11 @@ package model
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
+
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 const (

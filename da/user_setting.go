@@ -2,8 +2,9 @@ package da
 
 import (
 	"database/sql"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"sync"
+
+	"github.com/KL-Engineering/dbo"
 )
 
 type IUserSettingDA interface {

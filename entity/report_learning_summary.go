@@ -1,6 +1,6 @@
 package entity
 
-import "gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+import "github.com/KL-Engineering/kidsloop-cms-service/utils"
 
 type QueryLearningSummaryTimeFilterArgs struct {
 	TimeOffset  int                 `json:"time_offset"`

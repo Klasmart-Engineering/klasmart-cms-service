@@ -3,11 +3,12 @@ package external
 import (
 	"bytes"
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"net/http"
 	"sync"
 	"text/template"
+
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 var graphQLString = `

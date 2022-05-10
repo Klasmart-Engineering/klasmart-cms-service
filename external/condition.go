@@ -1,6 +1,6 @@
 package external
 
-import "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+import "github.com/KL-Engineering/kidsloop-cms-service/entity"
 
 // APCondition academic profile query condition
 type APCondition struct {

@@ -3,9 +3,10 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"net/http"
 	"testing"
+
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 func TestGetClassesAssignmentsOverview(t *testing.T) {

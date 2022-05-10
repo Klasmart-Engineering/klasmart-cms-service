@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 )
 
 func TestUserLogin(t *testing.T) {

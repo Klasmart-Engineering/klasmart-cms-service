@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"github.com/KL-Engineering/dbo"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 )
 
 const assessmentOpToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MDI2MTk2OCwiaXNzIjoia2lkc2xvb3AifQ.Tn_XvqnMiZX7NuCXOweR0Gz_6Ts-Z7qbOu_FXLNGU4IbPhjWlOS6A5nVZTKfMy2c_DuHODNEpMAImRufjxT6Psu9Pl4gSbNd6L76ZN_3LSg-fJnKnSu9RoGue36Y3wgpNGnOJbH_qxUciV6pBYzcXoemTjlVTJPbB8Ig90s-tkl1xPy7hI1Mmj49fMbsfXDqxB1XYonzhj0blYSCn_-aeIjGFAayZUda93VRZGmHx81Ny1zKO5hiecQXBRA0y78jYyONWRZ8LZFCmfgeeyzSvXbP-WZat5ZHYNG7UBUgTGN83Nu0IKzdztZB18t6EIUWPDsQGcMIc0FVQX68ybsXuw"

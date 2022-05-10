@@ -5,12 +5,12 @@ import (
 	"database/sql"
 	"testing"
 
-	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"github.com/KL-Engineering/dbo"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	testUtils "gitlab.badanamu.com.cn/calmisland/kidsloop2/test/utils"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/kidsloop-cms-service/da"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	testUtils "github.com/KL-Engineering/kidsloop-cms-service/test/utils"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 func TestAdd(t *testing.T) {

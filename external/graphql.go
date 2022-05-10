@@ -5,12 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	newrelic "github.com/newrelic/go-agent"
-	"gitlab.badanamu.com.cn/calmisland/common-cn/helper"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/KL-Engineering/common-log/log"
+	gintrace "github.com/KL-Engineering/gin-trace"
+	newrelic "github.com/newrelic/go-agent"
 )
 
 type GraphQLError []struct {
@@ -141,7 +142,7 @@ func (c *GraphGLClient) Run(ctx context.Context, req *GraphQLRequest, resp inter
 		log.Warn(ctxWithTimeout, "Run: New httpRequest failed", log.Err(err), log.Any("reqBody", reqBody))
 		return 0, err
 	}
-	if bada, ok := helper.GetBadaCtx(ctxWithTimeout); ok {
+	if bada, ok := gintrace.GetBadaCtx(ctxWithTimeout); ok {
 		bada.SetHeader(request.Header)
 	}
 	request.Header = req.Header

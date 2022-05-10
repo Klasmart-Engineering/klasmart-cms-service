@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"github.com/KL-Engineering/common-log/log"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 type RepeatType string
@@ -700,7 +700,7 @@ type ScheduleVariable struct {
 	*Schedule
 	RoomID           string               `json:"room_id"`
 	Subjects         []*ScheduleShortInfo `json:"subjects"`
-	ClassRosterClass *ScheduleShortInfo   `json:"subjects"`
+	ClassRosterClass *ScheduleShortInfo   `json:"class_roster_class"`
 }
 
 type ScheduleInclude struct {

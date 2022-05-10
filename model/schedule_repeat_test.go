@@ -1,11 +1,12 @@
 package model
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"golang.org/x/net/context"
 	"testing"
 	"time"
+
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
+	"golang.org/x/net/context"
 )
 
 func TestDynamicDayInterval_RepeatEndAfterCount(t *testing.T) {

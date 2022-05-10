@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/KL-Engineering/kidsloop-cms-service/model"
 	"github.com/tidwall/gjson"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
 func TestCreateMilestone(t *testing.T) {

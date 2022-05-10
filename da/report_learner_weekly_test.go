@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 func TestReportDA_GetLearnerWeeklyReportOverview(t *testing.T) {

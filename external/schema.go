@@ -2,11 +2,12 @@ package external
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/chlorine"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"net/http"
+
+	"github.com/KL-Engineering/chlorine"
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
 type Iterator interface {
@@ -368,12 +369,12 @@ type ConnectionFilter interface {
 
 type ConnectionResponse interface {
 	OrganizationsConnectionResponse |
-	ProgramsConnectionResponse |
-	SubjectsConnectionResponse |
-	CategoriesConnectionResponse |
-	SubcategoriesConnectionResponse |
-	GradesConnectionResponse |
-	AgesConnectionResponse
+		ProgramsConnectionResponse |
+		SubjectsConnectionResponse |
+		CategoriesConnectionResponse |
+		SubcategoriesConnectionResponse |
+		GradesConnectionResponse |
+		AgesConnectionResponse
 
 	GetPageInfo() *ConnectionPageInfo
 }
