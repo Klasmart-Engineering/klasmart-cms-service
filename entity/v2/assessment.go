@@ -115,25 +115,28 @@ type ScheduleEndClassCallBackResp struct {
 	ScheduleID string `json:"schedule_id"`
 }
 
+type AssessmentTeacher struct {
+	ID string `json:"id"`
+}
 type AssessmentDetailReply struct {
-	ID                string           `json:"id"`
-	Title             string           `json:"title"`
-	AssessmentType    AssessmentType   `json:"assessment_type"`
-	Status            AssessmentStatus `json:"status"`
-	RoomID            string           `json:"room_id"`
-	Class             *entity.IDName   `json:"class"`
-	Teachers          []*entity.IDName `json:"teachers"`
-	Program           *entity.IDName   `json:"program"`
-	Subjects          []*entity.IDName `json:"subjects"`
-	ClassEndAt        int64            `json:"class_end_at"`
-	ClassLength       int              `json:"class_length"`
-	RemainingTime     int64            `json:"remaining_time"`
-	CompleteAt        int64            `json:"complete_at"`
-	ScheduleTitle     string           `json:"schedule_title"`
-	ScheduleDueAt     int64            `json:"schedule_due_at"`
-	CompleteRate      float64          `json:"complete_rate"`
-	IsAnyOneAttempted bool             `json:"is_anyone_attempted"`
-	Description       string           `json:"description"`
+	ID                string               `json:"id"`
+	Title             string               `json:"title"`
+	AssessmentType    AssessmentType       `json:"assessment_type"`
+	Status            AssessmentStatus     `json:"status"`
+	RoomID            string               `json:"room_id"`
+	Class             *entity.IDName       `json:"class"`
+	Teachers          []*AssessmentTeacher `json:"teachers"`
+	Program           *entity.IDName       `json:"program"`
+	Subjects          []*entity.IDName     `json:"subjects"`
+	ClassEndAt        int64                `json:"class_end_at"`
+	ClassLength       int                  `json:"class_length"`
+	RemainingTime     int64                `json:"remaining_time"`
+	CompleteAt        int64                `json:"complete_at"`
+	ScheduleTitle     string               `json:"schedule_title"`
+	ScheduleDueAt     int64                `json:"schedule_due_at"`
+	CompleteRate      float64              `json:"complete_rate"`
+	IsAnyOneAttempted bool                 `json:"is_anyone_attempted"`
+	Description       string               `json:"description"`
 
 	Outcomes []*AssessmentOutcomeReply `json:"outcomes"`
 	Contents []*AssessmentContentReply `json:"contents"`
