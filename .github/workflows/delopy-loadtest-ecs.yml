@@ -3,7 +3,7 @@ name: Deploy LoadTest To Amazon ECS
 on:
   push:
     branches:
-      - loadtest
+      - cms-385
   pull_request:
     branches:
       - loadtest
@@ -13,12 +13,12 @@ env:
   ECR_REPOSITORY: loadtest
   ECS_SERVICE: loadtestcms
   ECS_CLUSTER: load-testing
-  ECS_TASK_DEFINITION: ECS_TASK_DEFINITION
-  CONTAINER_NAME: CONTAINER_NAME
+  ECS_TASK_DEFINITION: loadtest
+  CONTAINER_NAME: loadtest
   GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
 
 jobs:
-  build-to-ecs:
+  build-to-ecr:
     name: Build
     runs-on: ubuntu-latest
     steps:
@@ -49,8 +49,7 @@ jobs:
     - name: Build
       run: |
         go build -o main -ldflags "-X github.com/KL-Engineering/kidsloop-cms-service/constant.GitHash=$(git rev-list -1 HEAD) -X github.com/KL-Engineering/kidsloop-cms-service/constant.BuildTimestamp=$(date +%s) -X github.com/KL-Engineering/kidsloop-cms-service/constant.LatestMigrate=$(ls schema/migrate | tail -1)"
-        ls -la
-     
+
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
@@ -73,3 +72,30 @@ jobs:
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+  deploy-ecs:
+    name: DEPLOY_ECS
+    needs: build-to-ecr
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition --task-definition $ECS_TASK_DEFINITION \
+          --query taskDefinition > task-definition.json
+          
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+            task-definition: task-definition.json
+            container-name: ${{ env.CONTAINER_NAME }}
+            image: ${{ steps.build-image.outputs.image }}
+        
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+            task-definition: ${{ steps.task-def.outputs.task-definition }}
+            service: ${{ env.ECS_SERVICE }}
+            cluster: ${{ env.ECS_CLUSTER }}
+            wait-for-service-stability: true
+                
