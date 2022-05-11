@@ -8,7 +8,6 @@ import (
 
 	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/decorator"
-	gintrace "github.com/KL-Engineering/gin-trace"
 	"github.com/KL-Engineering/kidsloop-cache/cache"
 	"github.com/KL-Engineering/kidsloop-cms-service/api"
 	"github.com/KL-Engineering/kidsloop-cms-service/config"
@@ -17,6 +16,7 @@ import (
 	"github.com/KL-Engineering/kidsloop-cms-service/external"
 	"github.com/KL-Engineering/kidsloop-cms-service/model/storage"
 	"github.com/KL-Engineering/kidsloop-cms-service/utils/kl2cache"
+	"github.com/KL-Engineering/tracecontext"
 )
 
 func initDataSource() {
@@ -57,7 +57,7 @@ func initCache(ctx context.Context) {
 
 func initLogger() {
 	logger := log.New(log.WithDynamicFields(func(ctx context.Context) (fields []log.Field) {
-		badaCtx, ok := gintrace.GetBadaCtx(ctx)
+		badaCtx, ok := tracecontext.GetTraceContext(ctx)
 		if !ok {
 			return
 		}
