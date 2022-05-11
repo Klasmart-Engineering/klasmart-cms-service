@@ -21,12 +21,11 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-      with:
-        persist-credentials: false
+    - name: Checkout
+      uses: actions/checkout@v3
 
-    - name: Reconfigure git to use HTTP authentication
-      run: git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com".insteadOf https://github.com/
+          #- name: Reconfigure git to use HTTP authentication
+          #run: git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com".insteadOf https://github.com/
 
     - name: Set up Go
       uses: actions/setup-go@v3
@@ -43,7 +42,10 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Build
+    - name: Configure git credentials
+      uses: oleksiyrudenko/gha-git-credentials@v2-latest  
+      with:
+        token: '${{ secrets.GITHUB_TOKEN }}'
       run: |
         go env -w GOPROXY="https://goproxy.cn,direct"
         go env -w GOPRIVATE="github.com"
