@@ -40,7 +40,10 @@ jobs:
           ${{ runner.os }}-go-
 
     - name: Configure git credentials
-      run: git config --global url."git@github.com:".insteadOf "https://github.com/"
+      run: |
+        git config --global user.name "jiangxiaobao"
+        git config --global user.email "byron.jiang@kidsloop.live"
+        git config --global url."git@github.com:".insteadOf "https://github.com/"
 
     - name: Build
       run: |
