@@ -40,6 +40,7 @@ jobs:
     
     - name: Build
       run: |
+        git config --global --add url."git@github.com:".insteadOf "https://github.com/"
         go env -w GOPROXY="https://goproxy.cn,direct"
         go build -o main -ldflags "-X github.com/KL-Engineering/kidsloop-cms-service/constant.GitHash=$(git rev-list -1 HEAD) -X github.com/KL-Engineering/kidsloop-cms-service/constant.BuildTimestamp=$(date +%s) -X github.com/KL-Engineering/kidsloop-cms-service/constant.LatestMigrate=$(ls schema/migrate | tail -1)"
         ls -la
