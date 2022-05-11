@@ -29,8 +29,13 @@ type TeacherServiceProvider interface {
 }
 
 type Teacher struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID         string `json:"id"`
+	GivenName  string `json:"given_name"`
+	FamilyName string `json:"family_name"`
+}
+
+func (t Teacher) Name() string {
+	return t.GivenName + " " + t.FamilyName
 }
 
 type NullableTeacher struct {
@@ -102,8 +107,9 @@ func (s AmsTeacherService) QueryByIDs(ctx context.Context, ids []string, options
 		}
 		if user.Valid {
 			teacher.Teacher = &Teacher{
-				ID:   user.User.ID,
-				Name: user.User.Name,
+				ID:         user.User.ID,
+				GivenName:  user.User.GivenName,
+				FamilyName: user.User.FamilyName,
 			}
 		}
 		teachers[index] = teacher
@@ -140,7 +146,8 @@ func (s AmsTeacherService) GetByOrganization(ctx context.Context, operator *enti
 			classes{
 				teachers{
 					id: user_id
-					name: user_name
+					given_name
+					family_name
 				}
 			}    
 		}
@@ -188,7 +195,7 @@ func (s AmsTeacherService) GetByOrganizations(ctx context.Context, operator *ent
 	sb := new(strings.Builder)
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$organization_id_", ": ID!", len(organizationIDs)))
 	for index := range organizationIDs {
-		fmt.Fprintf(sb, "q%d: organization(organization_id: $organization_id_%d) {classes{teachers{id:user_id name:user_name}}}\n", index, index)
+		fmt.Fprintf(sb, "q%d: organization(organization_id: $organization_id_%d) {classes{teachers{id:user_id given_name family_name}}}\n", index, index)
 	}
 	sb.WriteString("}")
 
@@ -240,7 +247,7 @@ func (s AmsTeacherService) GetBySchools(ctx context.Context, operator *entity.Op
 	sb := new(strings.Builder)
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$school_id_", ": ID!", len(schoolIDs)))
 	for index := range schoolIDs {
-		fmt.Fprintf(sb, "q%d: school(school_id: $school_id_%d) {classes{teachers{id:user_id name:user_name}}}\n", index, index)
+		fmt.Fprintf(sb, "q%d: school(school_id: $school_id_%d) {classes{teachers{id:user_id given_name family_name}}}\n", index, index)
 	}
 	sb.WriteString("}")
 
@@ -292,7 +299,7 @@ func (s AmsTeacherService) GetByClasses(ctx context.Context, operator *entity.Op
 	sb := new(strings.Builder)
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$class_id_", ": ID!", len(classIDs)))
 	for index := range classIDs {
-		fmt.Fprintf(sb, "q%d: class(class_id: $class_id_%d) {teachers{id:user_id name:user_name}}\n", index, index)
+		fmt.Fprintf(sb, "q%d: class(class_id: $class_id_%d) {teachers{id:user_id given_name family_name}}\n", index, index)
 	}
 	sb.WriteString("}")
 
@@ -341,8 +348,9 @@ func (s AmsTeacherService) Query(ctx context.Context, operator *entity.Operator,
 	teachers := make([]*Teacher, len(users))
 	for index, user := range users {
 		teachers[index] = &Teacher{
-			ID:   user.ID,
-			Name: user.Name,
+			ID:         user.ID,
+			GivenName:  user.GivenName,
+			FamilyName: user.FamilyName,
 		}
 	}
 

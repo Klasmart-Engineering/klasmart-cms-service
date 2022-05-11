@@ -677,10 +677,10 @@ func (f *FolderModel) GetFolderByIDTx(ctx context.Context, tx *dbo.DBContext, fo
 	}
 	for i := range users {
 		if users[i].Valid && users[i].ID == result.Creator {
-			result.CreatorName = users[i].Name
+			result.CreatorName = users[i].Name()
 		}
 		if users[i].Valid && users[i].ID == result.Editor {
-			result.EditorName = users[i].Name
+			result.EditorName = users[i].Name()
 		}
 	}
 	//if folder item is folder, add children items

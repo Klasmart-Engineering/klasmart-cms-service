@@ -3,6 +3,8 @@ package model
 import (
 	"context"
 	"database/sql"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -12,7 +14,6 @@ import (
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"strings"
 )
 
 type AssessmentsGrainInit int
@@ -468,7 +469,7 @@ func (ag *AssessmentMulGrainItem) GetUserMap() (map[string]*entity.IDName, error
 		}
 		ag.userMap[item.ID] = &entity.IDName{
 			ID:   item.ID,
-			Name: item.Name,
+			Name: item.Name(),
 		}
 	}
 

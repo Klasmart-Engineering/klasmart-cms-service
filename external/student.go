@@ -29,8 +29,13 @@ type StudentServiceProvider interface {
 }
 
 type Student struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID         string `json:"id"`
+	GivenName  string `json:"given_name"`
+	FamilyName string `json:"family_name"`
+}
+
+func (s Student) Name() string {
+	return s.GivenName + " " + s.FamilyName
 }
 
 type NullableStudent struct {
@@ -118,8 +123,9 @@ func (s AmsStudentService) QueryByIDs(ctx context.Context, ids []string, options
 		}
 		if user.Valid {
 			student.Student = &Student{
-				ID:   user.User.ID,
-				Name: user.User.Name,
+				ID:         user.User.ID,
+				GivenName:  user.User.GivenName,
+				FamilyName: user.User.FamilyName,
 			}
 		}
 		students[index] = student
@@ -159,7 +165,8 @@ func (s AmsStudentService) GetByClassID(ctx context.Context, operator *entity.Op
 	class(class_id: $classID){
 		students{
 			id: user_id
-			name: user_name
+			given_name
+			family_name
 		}
   	}
 }`
@@ -202,7 +209,7 @@ func (s AmsStudentService) GetByClassIDs(ctx context.Context, operator *entity.O
 
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$class_id_", ": ID!", len(classIDs)))
 	for index := range classIDs {
-		fmt.Fprintf(sb, "q%d: class(class_id: $class_id_%d) {students{id:user_id name:user_name}}\n", index, index)
+		fmt.Fprintf(sb, "q%d: class(class_id: $class_id_%d) {students{id:user_id given_name family_name}}\n", index, index)
 	}
 	sb.WriteString("}")
 
@@ -251,8 +258,9 @@ func (s AmsStudentService) Query(ctx context.Context, operator *entity.Operator,
 	students := make([]*Student, len(users))
 	for index, user := range users {
 		students[index] = &Student{
-			ID:   user.ID,
-			Name: user.Name,
+			ID:         user.ID,
+			GivenName:  user.GivenName,
+			FamilyName: user.FamilyName,
 		}
 	}
 

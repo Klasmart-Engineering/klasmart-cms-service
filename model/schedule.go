@@ -501,28 +501,28 @@ func (s *scheduleModel) ConflictDetection(ctx context.Context, op *entity.Operat
 		if _, ok := classTeachersMap[item.ID]; ok {
 			result.ClassRosterTeachers = append(result.ClassRosterTeachers, entity.ScheduleConflictUserView{
 				ID:   item.ID,
-				Name: item.Name,
+				Name: item.Name(),
 			})
 			continue
 		}
 		if _, ok := classStudentsMap[item.ID]; ok {
 			result.ClassRosterStudents = append(result.ClassRosterStudents, entity.ScheduleConflictUserView{
 				ID:   item.ID,
-				Name: item.Name,
+				Name: item.Name(),
 			})
 			continue
 		}
 		if _, ok := partTeachersMap[item.ID]; ok {
 			result.ParticipantsTeachers = append(result.ParticipantsTeachers, entity.ScheduleConflictUserView{
 				ID:   item.ID,
-				Name: item.Name,
+				Name: item.Name(),
 			})
 			continue
 		}
 		if _, ok := partStudentsMap[item.ID]; ok {
 			result.ParticipantsStudents = append(result.ParticipantsStudents, entity.ScheduleConflictUserView{
 				ID:   item.ID,
-				Name: item.Name,
+				Name: item.Name(),
 			})
 			continue
 		}
@@ -1557,7 +1557,7 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 			if teacher, ok := teacherMap[scheduleRelation.RelationID]; ok {
 				resultMap[scheduleRelation.ScheduleID].MemberTeachers = append(resultMap[scheduleRelation.ScheduleID].MemberTeachers, &entity.ScheduleShortInfo{
 					ID:   teacher.ID,
-					Name: teacher.Name,
+					Name: teacher.Name(),
 				})
 			}
 		case entity.ScheduleRelationTypeClassRosterStudent, entity.ScheduleRelationTypeParticipantStudent:
@@ -1930,7 +1930,7 @@ func (s *scheduleModel) accessibleParticipantUser(ctx context.Context, operator 
 		if user, ok := usersMap[item.ID]; ok {
 			info := &entity.ScheduleAccessibleUserView{
 				ID:     item.ID,
-				Name:   item.Name,
+				Name:   item.Name(),
 				Type:   user.Type,
 				Enable: false,
 			}
@@ -3860,7 +3860,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 		if user, ok := userMap[classclassRoasterTeacherID]; ok && user.Valid {
 			item := &entity.ScheduleAccessibleUserView{
 				ID:     user.ID,
-				Name:   user.Name,
+				Name:   user.Name(),
 				Type:   entity.ScheduleRelationTypeClassRosterTeacher,
 				Enable: isClassAccessible,
 			}
@@ -3873,7 +3873,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 		if user, ok := userMap[classclassRoasterStudentID]; ok && user.Valid {
 			item := &entity.ScheduleAccessibleUserView{
 				ID:     user.ID,
-				Name:   user.Name,
+				Name:   user.Name(),
 				Type:   entity.ScheduleRelationTypeClassRosterStudent,
 				Enable: isClassAccessible,
 			}
@@ -3897,7 +3897,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 			}
 			item := &entity.ScheduleAccessibleUserView{
 				ID:     user.ID,
-				Name:   user.Name,
+				Name:   user.Name(),
 				Type:   entity.ScheduleRelationTypeParticipantTeacher,
 				Enable: enable,
 			}
@@ -3921,7 +3921,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 			}
 			item := &entity.ScheduleAccessibleUserView{
 				ID:     user.ID,
-				Name:   user.Name,
+				Name:   user.Name(),
 				Type:   entity.ScheduleRelationTypeParticipantStudent,
 				Enable: enable,
 			}
@@ -4311,7 +4311,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 		if user, ok := userMap[teacherID]; ok && user.Valid {
 			scheduleViewDetail.Teachers = append(scheduleViewDetail.Teachers, &entity.ScheduleShortInfo{
 				ID:   user.ID,
-				Name: user.Name,
+				Name: user.Name(),
 			})
 		} else {
 			log.Warn(ctx, "teacher info not found", log.String("teacherID", teacherID))
@@ -4322,7 +4322,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 		if user, ok := userMap[studentID]; ok && user.Valid {
 			scheduleViewDetail.Students = append(scheduleViewDetail.Students, &entity.ScheduleShortInfo{
 				ID:   user.ID,
-				Name: user.Name,
+				Name: user.Name(),
 			})
 		} else {
 			log.Warn(ctx, "student info not found", log.String("studentID", studentID))
@@ -4342,12 +4342,12 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 				case entity.ScheduleReviewTypeStandard:
 					scheduleViewDetail.RandomReviewStudents = append(scheduleViewDetail.RandomReviewStudents, &entity.ScheduleShortInfo{
 						ID:   user.ID,
-						Name: user.Name,
+						Name: user.Name(),
 					})
 				case entity.ScheduleReviewTypePersonalized:
 					scheduleViewDetail.PersonalizedReviewStudents = append(scheduleViewDetail.PersonalizedReviewStudents, &entity.ScheduleShortInfo{
 						ID:   user.ID,
-						Name: user.Name,
+						Name: user.Name(),
 					})
 				}
 			} else {
