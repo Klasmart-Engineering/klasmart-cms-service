@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"strings"
 	"sync"
 	"text/template"
@@ -51,7 +52,10 @@ func (n *NullableClass) RelatedIDs() []*cache.RelatedEntity {
 	return nil
 }
 func GetClassServiceProvider() ClassServiceProvider {
-	return &AmsClassService{}
+	if config.Get().AMS.UseDeprecatedQuery {
+		return &AmsClassService{}
+	}
+	return &AmsClassConnectionService{}
 }
 
 type AmsClassService struct{}

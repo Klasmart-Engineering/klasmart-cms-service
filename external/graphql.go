@@ -22,6 +22,7 @@ type GraphQLError []struct {
 	Extensions struct {
 		Code      string `json:"code"`
 		Exception struct {
+			Code       string   `json:"code"`
 			Stacktrace []string `json:"stacktrace"`
 		} `json:"exception"`
 	}
@@ -42,6 +43,10 @@ type GraphQLRequest struct {
 	Header http.Header
 }
 
+type GraphQLSubResponse struct {
+	Data   interface{}  `json:"data,omitempty"`
+	Errors GraphQLError `json:"errors,omitempty"`
+}
 type OptionFunc func(*GraphQLRequest)
 
 func RequestToken(token string) OptionFunc {

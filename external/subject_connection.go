@@ -2,8 +2,13 @@ package external
 
 import (
 	"context"
+	"fmt"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type SubjectFilter struct {
@@ -19,7 +24,11 @@ type SubjectFilter struct {
 	OR             []SubjectFilter `json:"OR,omitempty" gqls:"OR,omitempty"`
 }
 
-func (SubjectFilter) FilterType() FilterOfType {
+func (SubjectFilter) FilterName() FilterType {
+	return SubjectFilterType
+}
+
+func (SubjectFilter) ConnectionName() ConnectionType {
 	return SubjectsConnectionType
 }
 
@@ -49,31 +58,67 @@ type AmsSubjectConnectionService struct {
 	AmsSubjectService
 }
 
-func (scs AmsSubjectConnectionService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Subject, error) {
-	condition := NewCondition(options...)
+func (scs AmsSubjectConnectionService) pageNodes(ctx context.Context, operator *entity.Operator, pages []SubjectsConnectionResponse) []*Subject {
+	if len(pages) == 0 {
+		log.Warn(ctx, "pageNodes is empty",
+			log.Any("operator", operator))
+		return []*Subject{}
+	}
+	subjects := make([]*Subject, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
+	for _, page := range pages {
+		for _, edge := range page.Edges {
+			if _, ok := exists[edge.Node.ID]; ok {
+				log.Warn(ctx, "pageNodes: subcategory exist",
+					log.Any("subcategory", edge.Node),
+					log.Any("operator", operator))
+				continue
+			}
+			exists[edge.Node.ID] = true
+			obj := &Subject{
+				ID:     edge.Node.ID,
+				Name:   edge.Node.Name,
+				Status: APStatus(edge.Node.Status),
+				System: edge.Node.System,
+			}
+			subjects = append(subjects, obj)
+		}
+	}
+	return subjects
+}
 
-	filter := SubjectFilter{
-		ProgramID: &UUIDFilter{
-			Operator: UUIDOperator(OperatorTypeEq),
-			Value:    UUID(programID),
-		},
-		Status: &StringFilter{
+func (scs AmsSubjectConnectionService) NewSubjectFilter(ctx context.Context, operator *entity.Operator, options ...APOption) *SubjectFilter {
+	condition := NewCondition(options...)
+	var filter SubjectFilter
+	if condition.Status.Valid && condition.Status.Status != Ignore {
+		filter.Status = &StringFilter{
+			Operator: StringOperator(OperatorTypeEq),
+			Value:    condition.Status.Status.String(),
+		}
+	} else if !condition.Status.Valid {
+		filter.Status = &StringFilter{
 			Operator: StringOperator(OperatorTypeEq),
 			Value:    Active.String(),
-		},
-	}
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
+		}
 	}
 	if condition.System.Valid {
 		filter.System = &BooleanFilter{
 			Operator: OperatorTypeEq,
-			Value:    condition.System.Valid,
+			Value:    condition.System.Bool,
 		}
 	}
-	var subjects []*Subject
+	return &filter
+}
+
+func (scs AmsSubjectConnectionService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Subject, error) {
+	filter := scs.NewSubjectFilter(ctx, operator, options...)
+	filter.ProgramID = &UUIDFilter{
+		Operator: UUIDOperator(OperatorTypeEq),
+		Value:    UUID(programID),
+	}
+
 	var pages []SubjectsConnectionResponse
-	err := pageQuery(ctx, operator, filter.FilterType(), filter, &pages)
+	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
 		log.Error(ctx, "get subject by program failed",
 			log.Err(err),
@@ -81,44 +126,18 @@ func (scs AmsSubjectConnectionService) GetByProgram(ctx context.Context, operato
 			log.Any("filter", filter))
 		return nil, err
 	}
-	for _, p := range pages {
-		for _, v := range p.Edges {
-			obj := &Subject{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			subjects = append(subjects, obj)
-		}
-	}
+
+	subjects := scs.pageNodes(ctx, operator, pages)
 	return subjects, nil
 }
 func (scs AmsSubjectConnectionService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Subject, error) {
-	condition := NewCondition(options...)
-
-	filter := SubjectFilter{
-		OrganizationID: &UUIDFilter{
-			Operator: UUIDOperator(OperatorTypeEq),
-			Value:    UUID(operator.OrgID),
-		},
-		Status: &StringFilter{
-			Operator: StringOperator(OperatorTypeEq),
-			Value:    Active.String(),
-		},
+	filter := scs.NewSubjectFilter(ctx, operator, options...)
+	filter.OR = []SubjectFilter{
+		{OrganizationID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(operator.OrgID)}},
+		{System: &BooleanFilter{Operator: OperatorTypeEq, Value: true}},
 	}
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
-	}
-	if condition.System.Valid {
-		filter.System = &BooleanFilter{
-			Operator: OperatorTypeEq,
-			Value:    condition.System.Valid,
-		}
-	}
-	var subjects []*Subject
 	var pages []SubjectsConnectionResponse
-	err := pageQuery(ctx, operator, filter.FilterType(), filter, &pages)
+	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
 		log.Error(ctx, "get subject by organization failed",
 			log.Err(err),
@@ -126,16 +145,68 @@ func (scs AmsSubjectConnectionService) GetByOrganization(ctx context.Context, op
 			log.Any("filter", filter))
 		return nil, err
 	}
-	for _, p := range pages {
-		for _, v := range p.Edges {
-			obj := &Subject{
-				ID:     v.Node.ID,
-				Name:   v.Node.Name,
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			subjects = append(subjects, obj)
-		}
+
+	subjects := scs.pageNodes(ctx, operator, pages)
+	return subjects, nil
+}
+
+func (scs AmsSubjectConnectionService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
 	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+
+	sb := new(strings.Builder)
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$subject_id_", ": ID!", len(_ids)))
+	for index := range _ids {
+		fmt.Fprintf(sb, "q%d: subjectNode(id: $subject_id_%d) {id name status system}\n", index, index)
+	}
+	sb.WriteString("}")
+
+	request := NewRequest(sb.String(), RequestToken(operator.Token))
+	for index, id := range _ids {
+		request.Var(fmt.Sprintf("subject_id_%d", index), id)
+	}
+
+	data := map[string]*Subject{}
+	response := &GraphQLSubResponse{
+		Data: &data,
+	}
+
+	_, err = GetAmsConnection().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get subjects by ids failed",
+			log.Err(err),
+			log.Strings("ids", ids))
+		return nil, err
+	}
+
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "get subjects by ids failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator),
+			log.Strings("ids", ids))
+		return nil, response.Errors
+	}
+
+	subjects := make([]cache.Object, 0, len(data))
+	for index := range ids {
+		subject := data[fmt.Sprintf("q%d", indexMapping[index])]
+		if subject == nil {
+			log.Debug(ctx, "subject not found", log.String("id", ids[index]))
+			continue
+		}
+		subjects = append(subjects, subject)
+	}
+
+	log.Info(ctx, "get subjects by ids success",
+		log.Strings("ids", ids),
+		log.Any("subjects", subjects))
+
 	return subjects, nil
 }

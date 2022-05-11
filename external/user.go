@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -30,7 +32,6 @@ type UserServiceProvider interface {
 	Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*User, error)
 	GetByOrganization(ctx context.Context, operator *entity.Operator, organizationID string) ([]*User, error)
 	NewUser(ctx context.Context, operator *entity.Operator, email string) (string, error)
-	FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error)
 	GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Operator, orgID string) ([]*User, error)
 	GetUserCount(ctx context.Context, op *entity.Operator, cond *entity.GetUserCountCondition) (count int, err error)
 }
@@ -58,15 +59,18 @@ func (n *NullableUser) RelatedIDs() []*cache.RelatedEntity {
 }
 
 var (
-	_amsUserService *AmsUserService
+	_amsUserService UserServiceProvider
 	_amsUserOnce    sync.Once
 )
 
 func GetUserServiceProvider() UserServiceProvider {
 	_amsUserOnce.Do(func() {
-		_amsUserService = &AmsUserService{}
+		if config.Get().AMS.UseDeprecatedQuery {
+			_amsUserService = &AmsUserService{}
+		} else {
+			_amsUserService = &AmsUserConnectionService{}
+		}
 	})
-
 	return _amsUserService
 }
 

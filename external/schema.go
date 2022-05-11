@@ -24,14 +24,16 @@ var (
 type UUID string
 type UUIDOperator OperatorType
 type StringOperator OperatorType
+type UUIDExclusiveOperator OperatorType
 
 type UUIDFilter struct {
 	Operator UUIDOperator `json:"operator" gqls:"operator,noquoted"`
 	Value    UUID         `json:"value" gqls:"value"`
 }
 
-type UserFilter struct {
-	UserID UUIDFilter `json:"userId" gqls:"userId"`
+type UUIDExclusiveFilter struct {
+	Operator UUIDExclusiveOperator `json:"operator" gqls:"operator,noquoted"`
+	Value    *UUID                 `json:"value,omitempty" gqls:"value"`
 }
 
 type StringFilter struct {
@@ -45,14 +47,10 @@ type BooleanFilter struct {
 	Value    bool         `json:"value" gqls:"value"`
 }
 
-type ClassFilter struct {
-	ID             *UUIDFilter   `json:"id,omitempty" gqls:"id,omitempty"`
-	Name           *StringFilter `json:"name,omitempty" gqls:"name,omitempty"`
-	Status         *StringFilter `json:"status,omitempty" gqls:"status,omitempty"`
-	OrganizationID *UUIDFilter   `json:"organizationId,omitempty" gqls:"organizationId,omitempty"`
-	TeacherID      *UUIDFilter   `json:"teacherId,omitempty" gqls:"teacherId,omitempty"`
+type Branding struct {
+	IconImageURL string `json:"iconImageURL,omitempty" gqls:"iconImageURL,omitempty"`
+	PrimaryColor string `json:"primaryColor,omitempty" gqls:"primaryColor,omitempty"`
 }
-
 type PageInfo struct {
 	HasNextPage     bool   `json:"hasNextPage"`
 	HasPreviousPage bool   `json:"hasPreviousPage"`
@@ -80,13 +78,6 @@ func (pageInfo *PageInfo) BackwardCursor() string {
 		return pageInfo.StartCursor
 	}
 	return ""
-}
-
-type UserConnectionNode struct {
-	ID         string   `json:"id"`
-	GivenName  string   `json:"givenName"`
-	FamilyName string   `json:"familyName"`
-	Status     APStatus `json:"status"`
 }
 
 type UserConnectionEdge struct {
@@ -288,29 +279,51 @@ type AgeRangeTypeFilter struct {
 	Value    AgeRangeValue `gqls:"value"`
 }
 
-//type ConnectionDirection string
-//
-//const (
-//	FORWARD  ConnectionDirection = "FORWARD"
-//	BACKWARD ConnectionDirection = "BACKWARD"
-//)
-
 const (
 	PagerDirection string = "direction"
+	DirectionArgs  string = "directionArgs"
 	PagerCursor    string = "cursor"
 	PagerCount     string = "count"
 )
 
-type FilterOfType string
+type FilterType string
 
 const (
-	OrganizationsConnectionType FilterOfType = "organizationsConnection"
-	ProgramsConnectionType      FilterOfType = "programsConnection"
-	SubjectsConnectionType      FilterOfType = "subjectsConnection"
-	CategoriesConnectionType    FilterOfType = "categoriesConnection"
-	SubcategoriesConnectionType FilterOfType = "subcategoriesConnection"
-	GradesConnectionType        FilterOfType = "gradesConnection"
-	AgeRangesConnectionType     FilterOfType = "ageRangesConnection"
+	OrganizationFilterType     FilterType = "OrganizationFilter"
+	SchoolFilterType           FilterType = "SchoolFilter"
+	SchoolMembershipFilterType FilterType = "SchoolMembershipFilter"
+	UserFilterType             FilterType = "UserFilter"
+	ClassFilterType            FilterType = "ClassFilter"
+	RoleFilterType             FilterType = "RoleFilter"
+	PermissionFilterType       FilterType = "PermissionFilter"
+	ProgramFilterType          FilterType = "ProgramFilter"
+	SubjectFilterType          FilterType = "SubjectFilter"
+	CategoryFilterType         FilterType = "CategoryFilter"
+	SubcategoryFilterType      FilterType = "SubcategoryFilter"
+	GradeFilterType            FilterType = "GradeFilter"
+	AgeRangeFilterType         FilterType = "AgeRangeFilter"
+)
+
+type ConnectionType string
+
+const (
+	OrganizationsConnectionType     ConnectionType = "organizationsConnection"
+	SchoolsConnectionType           ConnectionType = "schoolsConnection"
+	SchoolMembershipsConnectionType ConnectionType = "schoolMembershipsConnection"
+	UsersConnectionType             ConnectionType = "usersConnection"
+	TeachersConnectionType          ConnectionType = "teachersConnection"
+	StudentsConnectionType          ConnectionType = "studentsConnection"
+	ClassesConnectionType           ConnectionType = "classesConnection"
+	ClassesTeachingConnectionType   ConnectionType = "classesTeachingConnection"
+	ClassesStudyingConnectionType   ConnectionType = "classesStudyingConnection"
+	RolesConnectionType             ConnectionType = "rolesConnection"
+	PermissionsConnectionType       ConnectionType = "permissionsConnection"
+	ProgramsConnectionType          ConnectionType = "programsConnection"
+	SubjectsConnectionType          ConnectionType = "subjectsConnection"
+	CategoriesConnectionType        ConnectionType = "categoriesConnection"
+	SubcategoriesConnectionType     ConnectionType = "subcategoriesConnection"
+	GradesConnectionType            ConnectionType = "gradesConnection"
+	AgeRangesConnectionType         ConnectionType = "ageRangesConnection"
 )
 
 const (
@@ -342,8 +355,10 @@ func (pager *ConnectionPageInfo) Pager(direction Direction, count int) map[strin
 	if pager == nil {
 		return map[string]interface{}{
 			PagerDirection: Forward,
-			PagerCursor:    "",
-			PagerCount:     PageDefaultCount,
+			DirectionArgs: map[string]interface{}{
+				PagerCursor: "",
+				PagerCount:  PageDefaultCount,
+			},
 		}
 	}
 	if direction == Forward {
@@ -357,13 +372,16 @@ func (pager *ConnectionPageInfo) Pager(direction Direction, count int) map[strin
 	}
 	return map[string]interface{}{
 		PagerDirection: direction,
-		PagerCursor:    cursor,
-		PagerCount:     count,
+		DirectionArgs: map[string]interface{}{
+			PagerCursor: cursor,
+			PagerCount:  count,
+		},
 	}
 }
 
 type ConnectionFilter interface {
-	FilterType() FilterOfType
+	FilterName() FilterType
+	ConnectionName() ConnectionType
 }
 
 type ConnectionResponse interface {
@@ -373,7 +391,21 @@ type ConnectionResponse interface {
 	CategoriesConnectionResponse |
 	SubcategoriesConnectionResponse |
 	GradesConnectionResponse |
-	AgesConnectionResponse
+	AgesConnectionResponse |
+	ClassesConnectionResponse |
+	SchoolsConnectionResponse |
+	UsersConnectionResponse |
+	SchoolMembershipsConnectionResponse
 
 	GetPageInfo() *ConnectionPageInfo
+}
+
+type TemplateArguments struct {
+	//Direction      bool
+	DirectionArgs  bool
+	Filter         bool
+	Sort           bool
+	FilterName     string
+	ConnectionName string
+	ResultString   string
 }

@@ -8,6 +8,7 @@ type OperatorType string
 const (
 	Active   APStatus = "active"
 	Inactive APStatus = "inactive"
+	Ignore   APStatus = "ignore"
 )
 
 const (
@@ -19,6 +20,7 @@ const (
 	OperatorTypeContains OperatorType = "contains"
 	OperatorTypeEq       OperatorType = "eq"
 	OperatorTypeNeq      OperatorType = "neq"
+	OperatorTypeIsNull   OperatorType = "isNull"
 )
 
 func (o OperatorType) String() string {

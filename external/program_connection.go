@@ -2,27 +2,37 @@ package external
 
 import (
 	"context"
+	"fmt"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type ProgramFilter struct {
-	ID             *UUIDFilter         `gqls:"id,omitempty"`
-	Name           *StringFilter       `gqls:"name,omitempty"`
-	Status         *StringFilter       `gqls:"status,omitempty"`
-	System         *BooleanFilter      `gqls:"system,omitempty"`
-	OrganizationID *UUIDFilter         `gqls:"organizationId,omitempty"`
-	GradeID        *UUIDFilter         `gqls:"gradeId,omitempty"`
-	AgeRangeFrom   *AgeRangeTypeFilter `gqls:"ageRangeFrom,omitempty"`
-	AgeRangeTo     *AgeRangeTypeFilter `gqls:"ageRangeTo,omitempty"`
-	SubjectID      *UUIDFilter         `gqls:"subjectId,omitempty"`
-	SchoolID       *UUIDFilter         `gqls:"schoolId,omitempty"`
-	ClassID        *UUIDFilter         `gqls:"classId,omitempty"`
-	AND            []ProgramFilter     `gqls:"AND,omitempty"`
-	OR             []ProgramFilter     `gqls:"OR,omitempty"`
+	ID             *UUIDFilter         `json:"id,omitempty" gqls:"id,omitempty"`
+	Name           *StringFilter       `json:"name,omitempty" gqls:"name,omitempty"`
+	Status         *StringFilter       `json:"status,omitempty" gqls:"status,omitempty"`
+	System         *BooleanFilter      `json:"system,omitempty" gqls:"system,omitempty"`
+	OrganizationID *UUIDFilter         `json:"organizationId,omitempty" gqls:"organizationId,omitempty"`
+	GradeID        *UUIDFilter         `json:"gradeId,omitempty" gqls:"gradeId,omitempty"`
+	AgeRangeFrom   *AgeRangeTypeFilter `json:"ageRangeFrom,omitempty" gqls:"ageRangeFrom,omitempty"`
+	AgeRangeTo     *AgeRangeTypeFilter `json:"ageRangeTo,omitempty" gqls:"ageRangeTo,omitempty"`
+	SubjectID      *UUIDFilter         `json:"subjectId,omitempty" gqls:"subjectId,omitempty"`
+	SchoolID       *UUIDFilter         `json:"schoolId,omitempty" gqls:"schoolId,omitempty"`
+	ClassID        *UUIDFilter         `json:"classId,omitempty" gqls:"classId,omitempty"`
+	AND            []ProgramFilter     `json:"AND,omitempty" gqls:"AND,omitempty"`
+	OR             []ProgramFilter     `json:"OR,omitempty" gqls:"OR,omitempty"`
 }
 
-func (ProgramFilter) FilterType() FilterOfType {
+func (ProgramFilter) FilterName() FilterType {
+	return ProgramFilterType
+}
+
+func (ProgramFilter) ConnectionName() ConnectionType {
 	return ProgramsConnectionType
 }
 
@@ -51,32 +61,69 @@ type AmsProgramConnectionService struct {
 	AmsProgramService
 }
 
-func (pcs AmsProgramConnectionService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Program, error) {
-	condition := NewCondition(options...)
+func (pcs AmsProgramConnectionService) pageNodes(ctx context.Context, operator *entity.Operator, pages []ProgramsConnectionResponse) []*Program {
+	if len(pages) == 0 {
+		log.Warn(ctx, "pageNodes is empty",
+			log.Any("operator", operator))
+		return []*Program{}
+	}
+	programs := make([]*Program, 0, pages[0].TotalCount)
+	exists := make(map[string]bool)
+	for _, page := range pages {
+		for _, edge := range page.Edges {
+			if _, ok := exists[edge.Node.ID]; ok {
+				log.Warn(ctx, "pageNodes: category exist",
+					log.Any("category", edge.Node),
+					log.Any("operator", operator))
+				continue
+			}
+			exists[edge.Node.ID] = true
+			obj := &Program{
+				ID:   edge.Node.ID,
+				Name: edge.Node.Name,
+				//GroupName:
+				Status: APStatus(edge.Node.Status),
+				System: edge.Node.System,
+			}
+			programs = append(programs, obj)
+		}
+	}
+	return programs
+}
 
-	filter := ProgramFilter{
-		OrganizationID: &UUIDFilter{
-			Operator: UUIDOperator(OperatorTypeEq),
-			Value:    UUID(operator.OrgID),
-		},
-		Status: &StringFilter{
+func (pcs AmsProgramConnectionService) NewProgramFilter(ctx context.Context, operator *entity.Operator, options ...APOption) *ProgramFilter {
+	condition := NewCondition(options...)
+	var filter ProgramFilter
+	if condition.Status.Valid && condition.Status.Status != Ignore {
+		filter.Status = &StringFilter{
+			Operator: StringOperator(OperatorTypeEq),
+			Value:    condition.Status.Status.String(),
+		}
+	} else if !condition.Status.Valid {
+		filter.Status = &StringFilter{
 			Operator: StringOperator(OperatorTypeEq),
 			Value:    Active.String(),
-		},
-	}
-	if condition.Status.Valid {
-		filter.Status.Value = condition.Status.Status.String()
+		}
 	}
 	if condition.System.Valid {
 		filter.System = &BooleanFilter{
 			Operator: OperatorTypeEq,
-			Value:    condition.System.Valid,
+			Value:    condition.System.Bool,
 		}
 	}
+	return &filter
+}
 
-	var programs []*Program
+func (pcs AmsProgramConnectionService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Program, error) {
+	filter := pcs.NewProgramFilter(ctx, operator, options...)
+
+	filter.OR = []ProgramFilter{
+		{OrganizationID: &UUIDFilter{Operator: UUIDOperator(OperatorTypeEq), Value: UUID(operator.OrgID)}},
+		{System: &BooleanFilter{Operator: OperatorTypeEq, Value: true}},
+	}
+
 	var pages []ProgramsConnectionResponse
-	err := pageQuery(ctx, operator, filter.FilterType(), filter, &pages)
+	err := pageQuery(ctx, operator, filter, &pages)
 	if err != nil {
 		log.Error(ctx, "get programs by ids failed",
 			log.Err(err),
@@ -84,17 +131,70 @@ func (pcs AmsProgramConnectionService) GetByOrganization(ctx context.Context, op
 			log.Any("filter", filter))
 		return nil, err
 	}
-	for _, p := range pages {
-		for _, v := range p.Edges {
-			obj := &Program{
-				ID:   v.Node.ID,
-				Name: v.Node.Name,
-				//GroupName:
-				Status: APStatus(v.Node.Status),
-				System: v.Node.System,
-			}
-			programs = append(programs, obj)
-		}
+
+	programs := pcs.pageNodes(ctx, operator, pages)
+	return programs, nil
+}
+
+func (pcs AmsProgramConnectionService) QueryByIDs(ctx context.Context, ids []string, options ...interface{}) ([]cache.Object, error) {
+	if len(ids) == 0 {
+		return nil, nil
 	}
+	operator, err := optionsWithOperator(ctx, options...)
+	if err != nil {
+		fmt.Println("options:", options)
+		return nil, err
+	}
+
+	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+
+	sb := new(strings.Builder)
+
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$program_id_", ": ID!", len(_ids)))
+	for index := range _ids {
+		fmt.Fprintf(sb, "q%d: programNode(id: $program_id_%d) {id name status system}\n", index, index)
+	}
+	sb.WriteString("}")
+
+	request := NewRequest(sb.String(), RequestToken(operator.Token))
+	for index, id := range _ids {
+		request.Var(fmt.Sprintf("program_id_%d", index), id)
+	}
+
+	data := map[string]*Program{}
+	response := &GraphQLSubResponse{
+		Data: &data,
+	}
+
+	_, err = GetAmsConnection().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get programs by ids failed",
+			log.Err(err),
+			log.Strings("ids", ids))
+		return nil, err
+	}
+
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "get programs by ids failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator),
+			log.Strings("ids", ids))
+		return nil, response.Errors
+	}
+
+	programs := make([]cache.Object, 0, len(data))
+	for index := range ids {
+		program := data[fmt.Sprintf("q%d", indexMapping[index])]
+		if program == nil {
+			log.Error(ctx, "program not found", log.String("id", ids[index]))
+			return nil, constant.ErrRecordNotFound
+		}
+		programs = append(programs, program)
+	}
+
+	log.Info(ctx, "get programs by ids success",
+		log.Strings("ids", ids),
+		log.Any("programs", programs))
+
 	return programs, nil
 }

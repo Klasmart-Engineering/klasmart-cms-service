@@ -6,22 +6,18 @@ import (
 	"strings"
 	"sync"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
-
-	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
-
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-
+	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/kl2cache"
 )
 
 type SchoolServiceProvider interface {
 	cache.IDataSource
-	Get(ctx context.Context, operator *entity.Operator, id string) (*School, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableSchool, error)
 	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableSchool, error)
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
@@ -33,9 +29,10 @@ type SchoolServiceProvider interface {
 }
 
 type School struct {
-	ID     string   `json:"id"`
-	Name   string   `json:"name"`
-	Status APStatus `json:"status"`
+	ID             string   `json:"id"`
+	Name           string   `json:"name"`
+	Status         APStatus `json:"status"`
+	OrganizationId string   `json:"organizationId" gqls:"organizationId"`
 }
 
 type NullableSchool struct {
@@ -52,17 +49,21 @@ func (n *NullableSchool) RelatedIDs() []*cache.RelatedEntity {
 }
 
 var (
-	_amsSchoolService *AmsSchoolService
+	_amsSchoolService SchoolServiceProvider
 	_amsSchoolOnce    sync.Once
 )
 
 func GetSchoolServiceProvider() SchoolServiceProvider {
 	_amsSchoolOnce.Do(func() {
-		_amsSchoolService = &AmsSchoolService{
-			BaseCacheKey: kl2cache.KeyByStrings{
-				"kl2cache",
-				"AmsSchoolService",
-			},
+		if config.Get().AMS.UseDeprecatedQuery {
+			_amsSchoolService = &AmsSchoolService{
+				BaseCacheKey: kl2cache.KeyByStrings{
+					"kl2cache",
+					"AmsSchoolService",
+				},
+			}
+		} else {
+			_amsSchoolService = &AmsSchoolConnectionService{}
 		}
 	})
 
@@ -71,19 +72,6 @@ func GetSchoolServiceProvider() SchoolServiceProvider {
 
 type AmsSchoolService struct {
 	BaseCacheKey kl2cache.KeyByStrings
-}
-
-func (s AmsSchoolService) Get(ctx context.Context, operator *entity.Operator, id string) (*School, error) {
-	schools, err := s.BatchGet(ctx, operator, []string{id})
-	if err != nil {
-		return nil, err
-	}
-
-	if schools[0].School == nil || !schools[0].Valid {
-		return nil, constant.ErrRecordNotFound
-	}
-
-	return schools[0].School, nil
 }
 
 func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableSchool, error) {

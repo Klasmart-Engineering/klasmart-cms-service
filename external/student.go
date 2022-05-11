@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop-cache/cache"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -24,7 +26,6 @@ type StudentServiceProvider interface {
 	GetByClassID(ctx context.Context, operator *entity.Operator, classID string) ([]*Student, error)
 	GetByClassIDs(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*Student, error)
 	Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*Student, error)
-	FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error)
 }
 
 type Student struct {
@@ -46,13 +47,17 @@ func (n *NullableStudent) RelatedIDs() []*cache.RelatedEntity {
 }
 
 var (
-	_amsStudentService *AmsStudentService
+	_amsStudentService StudentServiceProvider
 	_amsStudentOnce    sync.Once
 )
 
 func GetStudentServiceProvider() StudentServiceProvider {
 	_amsStudentOnce.Do(func() {
-		_amsStudentService = &AmsStudentService{}
+		if config.Get().AMS.UseDeprecatedQuery {
+			_amsStudentService = &AmsStudentService{}
+		} else {
+			_amsStudentService = &AmsStudentConnectionService{}
+		}
 	})
 
 	return _amsStudentService
@@ -254,9 +259,6 @@ func (s AmsStudentService) Query(ctx context.Context, operator *entity.Operator,
 	return students, nil
 }
 
-func (s AmsStudentService) FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error) {
-	return GetUserServiceProvider().FilterByPermission(ctx, operator, userIDs, permissionName)
-}
 func (s AmsStudentService) Name() string {
 	return "ams_student_service"
 }
