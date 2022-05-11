@@ -46,6 +46,8 @@ jobs:
       uses: oleksiyrudenko/gha-git-credentials@v2-latest  
       with:
         token: '${{ secrets.GITHUB_TOKEN }}'
+
+    - name: Build
       run: |
         go env -w GOPROXY="https://goproxy.cn,direct"
         go env -w GOPRIVATE="github.com"
