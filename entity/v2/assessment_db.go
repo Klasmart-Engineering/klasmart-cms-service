@@ -26,12 +26,18 @@ func (Assessment) TableName() string {
 }
 
 type AssessmentUser struct {
-	ID             string               `gorm:"column:id;PRIMARY_KEY"`
-	AssessmentID   string               `gorm:"assessment_id"`
-	UserID         string               `gorm:"user_id"`
-	UserType       AssessmentUserType   `gorm:"user_type"`
-	StatusBySystem AssessmentUserStatus `gorm:"status_by_system"` // state of student attendance
-	StatusByUser   AssessmentUserStatus `gorm:"status_by_user"`   // status of student participation in assessment
+	ID             string                     `gorm:"column:id;PRIMARY_KEY"`
+	AssessmentID   string                     `gorm:"assessment_id"`
+	UserID         string                     `gorm:"user_id"`
+	UserType       AssessmentUserType         `gorm:"user_type"`
+	StatusBySystem AssessmentUserSystemStatus `gorm:"status_by_system"` // state of student attendance
+	StatusByUser   AssessmentUserStatus       `gorm:"status_by_user"`   // status of student participation in assessment
+
+	// The time at which the student's status occurred while participating in the course
+	InProgressAt  int64 `gorm:"column:in_progress_at;type:bigint"`
+	DoneAt        int64 `gorm:"column:done_at;type:bigint"`
+	ResubmittedAt int64 `gorm:"column:resubmitted_at;type:bigint"`
+	CompletedAt   int64 `gorm:"column:completed_at;type:bigint"`
 
 	CreateAt int64 `gorm:"column:create_at;type:bigint"`
 	UpdateAt int64 `gorm:"column:update_at;type:bigint"`
@@ -60,15 +66,16 @@ func (AssessmentContent) TableName() string {
 	return constant.TableNameAssessmentsContentsV2
 }
 
+// CompleteAt and Status field need to be discarded
 type AssessmentReviewerFeedback struct {
-	ID                string                  `gorm:"column:id;PRIMARY_KEY"`
-	AssessmentUserID  string                  `gorm:"assessment_user_id"`
-	CompleteAt        int64                   `gorm:"complete_at"`
-	Status            UserResultProcessStatus `gorm:"status"`
-	ReviewerID        string                  `gorm:"reviewer_id"`
-	StudentFeedbackID string                  `gorm:"student_feedback_id"`
-	AssessScore       AssessmentUserAssess    `gorm:"assess_score"`
-	ReviewerComment   string                  `gorm:"reviewer_comment"`
+	ID               string `gorm:"column:id;PRIMARY_KEY"`
+	AssessmentUserID string `gorm:"assessment_user_id"`
+	//CompleteAt       int64  `gorm:"complete_at"`
+	//Status            UserResultProcessStatus `gorm:"status"`
+	ReviewerID        string               `gorm:"reviewer_id"`
+	StudentFeedbackID string               `gorm:"student_feedback_id"`
+	AssessScore       AssessmentUserAssess `gorm:"assess_score"`
+	ReviewerComment   string               `gorm:"reviewer_comment"`
 
 	CreateAt int64 `gorm:"column:create_at;type:bigint"`
 	UpdateAt int64 `gorm:"column:update_at;type:bigint"`
@@ -97,8 +104,18 @@ func (AssessmentUserOutcome) TableName() string {
 
 type AssessmentUserResultDBView struct {
 	AssessmentReviewerFeedback
-	ScheduleID   string `gorm:"schedule_id"`
-	AssessmentID string `gorm:"assessment_id"`
-	UserID       string `gorm:"user_id"`
-	Title        string `gorm:"title"`
+	ScheduleID     string                     `gorm:"schedule_id"`
+	AssessmentID   string                     `gorm:"assessment_id"`
+	UserID         string                     `gorm:"user_id"`
+	Title          string                     `gorm:"title"`
+	StatusBySystem AssessmentUserSystemStatus `gorm:"status_by_system"`
+	CompleteAt     int64                      `gorm:"complete_at"`
+}
+
+type StudentAssessmentDBView struct {
+	AssessmentID   string         `gorm:"assessment_id"`
+	Title          string         `gorm:"title"`
+	AssessmentType AssessmentType `gorm:"assessment_type"`
+	ScheduleID     string         `gorm:"schedule_id"`
+	AssessmentUser
 }

@@ -5,6 +5,8 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 )
@@ -32,7 +34,7 @@ from (
 			av.schedule_id ,
 			s.end_at -s.start_at as duratopn,
 			s.class_type ,
-			if(auv.status_by_system = ?,1,0) as is_attended 
+			if(auv.status_by_system != ?,1,0) as is_attended 
 		from assessments_users_v2 auv 
 		inner join assessments_v2 av on av.id = auv.assessment_id 
 		inner join schedules s on s.id = av.schedule_id 
@@ -60,7 +62,7 @@ group by teacher_id;
 		entity.ScheduleClassTypeOfflineClass,
 		entity.ScheduleClassTypeOnlineClass,
 		entity.ScheduleClassTypeOfflineClass,
-		v2.AssessmentUserStatusParticipate,
+		v2.AssessmentUserSystemStatusNotStarted,
 		entity.ScheduleRelationTypeClassRosterClass,
 		args.ClassIDs,
 		v2.AssessmentUserTypeTeacher,
@@ -100,7 +102,7 @@ from (
 			av.schedule_id ,
 			s.end_at -s.start_at as duration,
 			s.class_type ,
-			if(auv.status_by_system = ?,1,0) as is_attended 
+			if(auv.status_by_system != ?,1,0) as is_attended 
 	from assessments_users_v2 auv 
 	inner join assessments_v2 av on av.id = auv.assessment_id 
 	inner join schedules s on s.id = av.schedule_id 
@@ -131,7 +133,7 @@ from (
 		entity.ScheduleClassTypeOnlineClass,
 		entity.ScheduleClassTypeOfflineClass,
 		entity.ScheduleClassTypeOfflineClass,
-		v2.AssessmentUserStatusParticipate,
+		v2.AssessmentUserSystemStatusNotStarted,
 		entity.ScheduleRelationTypeClassRosterClass,
 		args.ClassIDs,
 		v2.AssessmentUserTypeTeacher,
@@ -270,7 +272,46 @@ func (r *ReportDA) MissedLessonsListTotal(ctx context.Context, request *entity.T
 	}
 	return
 }
-func (r *ReportDA) GetTeacherLoadItems(ctx context.Context, op *entity.Operator, tr entity.TimeRange, teacherIDs []string, classIDs []string) (res []*entity.TeacherLoadItem, err error) {
+
+func (r *ReportDA) GetTeacherLoadItems(ctx context.Context, op *entity.Operator, tr entity.TimeRange, teacherIDs []string, classIDs []string) ([]*entity.TeacherLoadItem, error) {
+	if !config.Get().RedisConfig.OpenCache {
+		return r.getTeacherLoadItemsFromMySQL(ctx, op, tr, teacherIDs, classIDs)
+	}
+
+	request := &getTeacherUsageOverviewQueryCondition{
+		Operator:   op,
+		TimeRange:  tr,
+		TeacherIDs: teacherIDs,
+		ClassIDs:   classIDs,
+	}
+
+	response := []*entity.TeacherLoadItem{}
+	err := r.teacherUsageOverviewCache.Get(ctx, request, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+type getTeacherUsageOverviewQueryCondition struct {
+	Operator   *entity.Operator `json:"operator"`
+	TimeRange  entity.TimeRange `json:"time_range"`
+	TeacherIDs []string         `json:"teacher_ids"`
+	ClassIDs   []string         `json:"class_ids"`
+}
+
+func (r *ReportDA) getTeacherUsageOverview(ctx context.Context, condition interface{}) (interface{}, error) {
+	request, ok := condition.(*getTeacherUsageOverviewQueryCondition)
+	if !ok {
+		log.Error(ctx, "invalid request", log.Any("condition", condition))
+		return nil, constant.ErrInvalidArgs
+	}
+
+	return r.getTeacherLoadItemsFromMySQL(ctx, request.Operator, request.TimeRange, request.TeacherIDs, request.ClassIDs)
+}
+
+func (r *ReportDA) getTeacherLoadItemsFromMySQL(ctx context.Context, op *entity.Operator, tr entity.TimeRange, teacherIDs []string, classIDs []string) (res []*entity.TeacherLoadItem, err error) {
 	start, end, err := tr.Value(ctx)
 	if err != nil {
 		return
@@ -279,7 +320,7 @@ func (r *ReportDA) GetTeacherLoadItems(ctx context.Context, op *entity.Operator,
 select 
 	auv.user_id as teacher_id,
 	count(1) as total_lessons, 
-	sum(if(auv.status_by_system='NotParticipate',1,0)) as missed_lessons
+	sum(if(auv.status_by_system=?,1,0)) as missed_lessons
 from assessments_users_v2 auv  
 inner join assessments_v2 av on av.id =auv.assessment_id  
 inner join schedules s on s.id =av.schedule_id 
@@ -292,6 +333,7 @@ and av.org_id = ?
 group by auv.user_id 
 `
 	args := []interface{}{
+		v2.AssessmentUserSystemStatusNotStarted,
 		entity.ScheduleRelationTypeClassRosterClass,
 		classIDs,
 		v2.AssessmentUserTypeTeacher,

@@ -1,4 +1,4 @@
-package da
+package utils
 
 import (
 	"context"
@@ -25,7 +25,7 @@ func TestLazyRefreshCache_Get(t *testing.T) {
 	cast := time.Second * 1
 
 	cache, _ := NewLazyRefreshCache(&LazyRefreshCacheOption{
-		RedisKeyPrefix:  RedisKeyPrefixContentFolderQuery,
+		RedisKeyPrefix:  "content:folder:query",
 		RefreshDuration: time.Second * 5,
 		RawQuery: func(ctx context.Context, input interface{}) (interface{}, error) {
 			condition := input.(*request)
@@ -78,7 +78,7 @@ func BenchmarkLazyRefreshCache_Get(b *testing.B) {
 	cast := time.Second * 1
 
 	cache, _ := NewLazyRefreshCache(&LazyRefreshCacheOption{
-		RedisKeyPrefix:  RedisKeyPrefixContentFolderQuery,
+		RedisKeyPrefix:  "content:folder:query",
 		RefreshDuration: time.Second * 5,
 		RawQuery: func(ctx context.Context, input interface{}) (interface{}, error) {
 			condition := input.(*request)

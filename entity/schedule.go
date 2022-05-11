@@ -414,8 +414,7 @@ func (s ScheduleStatus) GetScheduleStatus(input ScheduleStatusInput) ScheduleSta
 	switch input.ClassType {
 	case ScheduleClassTypeHomework, ScheduleClassTypeTask:
 		if input.DueAt > 0 {
-			endAt := utils.TodayEndByTimeStamp(input.DueAt, time.Local).Unix()
-			if endAt < time.Now().Unix() {
+			if input.DueAt < time.Now().Unix() {
 				status = ScheduleStatusClosed
 			}
 		}
@@ -507,7 +506,7 @@ type ScheduleEditValidation struct {
 	IsReview               bool
 }
 
-func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
+func (s *ScheduleAddView) ToSchedule(ctx context.Context, op *Operator) (*Schedule, error) {
 	schedule := &Schedule{
 		ID:              utils.NewID(),
 		Title:           s.Title,
@@ -530,6 +529,8 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 		ReviewStatus:    "",
 		ContentStartAt:  s.ContentStartAt,
 		ContentEndAt:    s.ContentEndAt,
+		CreatedID:       op.UserID,
+		UpdatedID:       op.UserID,
 	}
 
 	if s.IsReview {

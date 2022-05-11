@@ -58,7 +58,8 @@ func (s Server) registeRoute() {
 		content.GET("/contents_private", s.mustLogin, s.queryPrivateContent)
 		content.GET("/contents_pending", s.mustLogin, s.queryPendingContent)
 		content.GET("/contents_folders", s.mustLogin, s.queryFolderContent)
-		content.GET("/contents_authed", s.mustLogin, s.queryAuthContent)
+		content.GET("/contents_authed", s.mustLogin, s.querySharedContent)
+		content.GET("/contents_shared", s.mustLogin, s.querySharedContentV2)
 
 		content.PUT("/contents_bulk/publish", s.mustLogin, s.publishContentBulk)
 		content.DELETE("/contents_bulk", s.mustLogin, s.deleteContentBulk)
@@ -112,9 +113,9 @@ func (s Server) registeRoute() {
 		assessments.POST("/assessments", s.addAssessment)
 
 		// offlineStudy
-		assessments.GET("/user_offline_study", s.mustLogin, s.queryUserOfflineStudy)
-		assessments.GET("/user_offline_study/:id", s.mustLogin, s.getUserOfflineStudyByID)
-		assessments.PUT("/user_offline_study/:id", s.mustLogin, s.updateUserOfflineStudy)
+		//assessments.GET("/user_offline_study", s.mustLogin, s.queryUserOfflineStudy)
+		//assessments.GET("/user_offline_study/:id", s.mustLogin, s.getUserOfflineStudyByID)
+		//assessments.PUT("/user_offline_study/:id", s.mustLogin, s.updateUserOfflineStudy)
 
 		// home page
 		assessments.GET("/assessments_summary", s.mustLogin, s.getAssessmentsSummary)
@@ -160,7 +161,7 @@ func (s Server) registeRoute() {
 		reports.POST("/reports/student_progress/learn_outcome_achievement", s.mustLogin, s.getLearnOutcomeAchievement)
 		reports.POST("/reports/student_progress/class_attendance", s.mustLogin, s.getClassAttendance)
 		reports.POST("/reports/student_progress/assignment_completion", s.mustLogin, s.getAssignmentsCompletion)
-
+		reports.GET("/reports/student_progress/app/insight_message", s.mustLogin, s.getAppInsightMessage)
 		reports.POST("/reports/learner_usage/overview", s.mustLogin, s.getLearnerUsageOverview)
 	}
 

@@ -88,7 +88,7 @@ left join learning_outcomes lo on lo.id =t.outcome_id
 }
 func (r *ReportDA) QueryAssignmentsSummaryV2(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, filter *entity.LearningSummaryFilter) (items []*entity.AssignmentsSummaryItemV2, err error) {
 	items = []*entity.AssignmentsSummaryItemV2{}
-	sbSchedule, err := r.getSqlBuilderOfSchedulesByLearningSummaryFilter(ctx, operator, filter, entity.LearningSummaryTypeLiveClass)
+	sbSchedule, err := r.getSqlBuilderOfSchedulesByLearningSummaryFilter(ctx, operator, filter, entity.LearningSummaryTypeAssignment)
 	if err != nil {
 		return
 	}
@@ -105,14 +105,14 @@ select
 	{{.sbAssessmentType}}
 	{{.sbStatus}}
 	av.title  as assessment_title,
-	cc.content_name as lesson_plan_name,	 
+	if(cc.content_name is null,"",cc.content_name) as lesson_plan_name,	 
 	av.schedule_id,
 	av.id as assessment_id,
 	av.complete_at,
 	av.create_at
 from assessments_v2 av 
 inner join schedules s on s.id = av.schedule_id 
-inner join cms_contents cc on cc.id = s.lesson_plan_id 
+left join cms_contents cc on cc.id = s.lesson_plan_id 
 {{.sbWhere}}
 `
 	sb := NewSqlBuilder(ctx, sql).
@@ -132,6 +132,13 @@ inner join cms_contents cc on cc.id = s.lesson_plan_id
 }
 
 func (r *ReportDA) getSqlBuilderOfSchedulesByLearningSummaryFilter(ctx context.Context, operator *entity.Operator, filter *entity.LearningSummaryFilter, typ entity.LearningSummaryType) (sb *sqlBuilder, err error) {
+	classType := entity.ScheduleClassTypeOnlineClass
+	switch typ {
+	case entity.LearningSummaryTypeAssignment:
+		classType = entity.ScheduleClassTypeHomework
+	case entity.LearningSummaryTypeLiveClass:
+		classType = entity.ScheduleClassTypeOnlineClass
+	}
 	sqlSchedule := strings.Builder{}
 	sqlSchedule.WriteString(`
 select 
@@ -148,19 +155,17 @@ and exists (
 		sr.relation_id in (?)
 		and sr.relation_type in (?,?)
 		and s.id = sr.schedule_id)
-and (s.delete_at = 0) 
+and (s.delete_at = 0)  
 `)
 	argsSchedule := []interface{}{
 		operator.OrgID,
-		entity.ScheduleClassTypeOnlineClass,
+		classType,
 		filter.StudentID,
 		entity.ScheduleRelationTypeClassRosterStudent,
 		entity.ScheduleRelationTypeParticipantStudent,
 	}
 	switch typ {
 	case entity.LearningSummaryTypeLiveClass:
-		sqlSchedule.WriteString(`and s.class_type = ? `)
-		argsSchedule = append(argsSchedule, entity.ScheduleClassTypeOnlineClass)
 		if filter.WeekStart > 0 {
 			sqlSchedule.WriteString(`and s.start_at >= ? `)
 			argsSchedule = append(argsSchedule, filter.WeekStart)
@@ -170,15 +175,11 @@ and (s.delete_at = 0)
 			argsSchedule = append(argsSchedule, filter.WeekEnd)
 		}
 	case entity.LearningSummaryTypeAssignment:
-		sqlSchedule.WriteString(`and s.class_type = ? `)
-		argsSchedule = append(argsSchedule, entity.ScheduleClassTypeHomework)
-		if filter.WeekStart > 0 {
-			sqlSchedule.WriteString(`and s.complete_time >= ? `)
-			argsSchedule = append(argsSchedule, filter.WeekStart)
-		}
-		if filter.WeekEnd > 0 {
-			sqlSchedule.WriteString(`and s.complete_time < ? `)
-			argsSchedule = append(argsSchedule, filter.WeekEnd)
+		if filter.WeekStart > 0 && filter.WeekEnd > 0 {
+			sqlSchedule.WriteString(`and exists (
+select 1 from assessments_v2 av where av.schedule_id =s.id and  av.complete_at BETWEEN ? and  ?
+)`)
+			argsSchedule = append(argsSchedule, filter.WeekStart, filter.WeekEnd)
 		}
 	}
 
@@ -333,8 +334,8 @@ select av.id from assessments_v2 av where av.schedule_id in ({{.sbSchedule}})
 IF(av.status=?,?,?) as status,
 `, v2.AssessmentStatusComplete, entity.AssessmentStatusComplete, entity.AssessmentStatusInProgress)
 	sbAbsentSelect := NewSqlBuilder(ctx, `
-IF(sum(IF(auv.status_by_system =?,1,0))>0,0,1) as absent
-`, v2.AssessmentUserStatusParticipate)
+IF(sum(IF(auv.status_by_system != ?,1,0))>0,0,1) as absent
+`, v2.AssessmentUserSystemStatusNotStarted)
 	sbWhere := NewSqlBuilder(ctx, `
 and auv.user_type = ?
 and auv.user_id in (?)
@@ -479,7 +480,7 @@ group by user_id
 	if cond.StudentID.Valid {
 		sbWhereUserID = NewSqlBuilder(ctx, "and user_id =?", cond.StudentID.String)
 	}
-	sbSelectRate := NewSqlBuilder(ctx, "sum(if(status_by_system=?,1,0))/count(1) as rate ", v2.AssessmentUserStatusParticipate)
+	sbSelectRate := NewSqlBuilder(ctx, "sum(if(status_by_system!=?,1,0))/count(1) as rate ", v2.AssessmentUserSystemStatusNotStarted)
 	sb := NewSqlBuilder(ctx, sql).
 		Replace(ctx, "sbAssessmentOnlineClass", sbAssessmentOnlineClass).
 		Replace(ctx, "sbAssessmentStudy", sbAssessmentStudy).

@@ -45,7 +45,7 @@ where
 	and av.delete_at =0
 
 	and av.status = ?
-	and auv.status_by_system= ?
+	and auv.status_by_system != ?
  	and srClass.relation_id = ?	
 	and EXISTS (
 		select 1 from schedules_relations sr where sr.schedule_id =av.schedule_id and sr.relation_id =auv.user_id and sr.relation_type=?
@@ -55,7 +55,7 @@ where
 		entity.ScheduleRelationTypeSubject,
 		entity.ScheduleRelationTypeClassRosterClass,
 		v2.AssessmentStatusComplete,
-		v2.AssessmentUserStatusParticipate,
+		v2.AssessmentUserSystemStatusNotStarted,
 		req.ClassID,
 		entity.ScheduleRelationTypeClassRosterStudent,
 	)

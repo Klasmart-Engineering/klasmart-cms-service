@@ -88,6 +88,8 @@ func (aes *AssessmentExternalService) StudentScores(ctx context.Context, userSco
 			continue
 		}
 
+		// content id
+		userContentScoreMap := make(map[string]*RoomUserScore)
 		for _, scoreItem := range userScoreItem.Scores {
 			if scoreItem.Score == nil {
 				log.Warn(ctx, "user score item is nil", log.String("userID", userScoreItem.User.UserID), log.Any("scoreItem", scoreItem))
@@ -121,27 +123,19 @@ func (aes *AssessmentExternalService) StudentScores(ctx context.Context, userSco
 				contentMaxScoreMap[contentUniqueID] = 0
 			}
 
-			userScoreResultItem := &RoomUserScore{
-				ContentUniqueID: contentUniqueID,
-				Seen:            scoreItem.Seen,
-			}
-
-			if len(scoreItem.TeacherScores) > 0 {
-				userScoreResultItem.Score = scoreItem.TeacherScores[len(scoreItem.TeacherScores)-1].Score
-			} else if len(scoreItem.Score.Scores) > 0 {
-				userScoreResultItem.Score = scoreItem.Score.Scores[0]
-			} else {
-				userScoreResultItem.Score = 0
-			}
-
-			if len(scoreItem.Score.Answers) > 0 {
-				userScoreResultItem.Answer = scoreItem.Score.Answers[0].Answer
-				if contentMaxScoreMap[userScoreResultItem.ContentUniqueID] < scoreItem.Score.Answers[0].MaximumPossibleScore {
-					contentMaxScoreMap[userScoreResultItem.ContentUniqueID] = scoreItem.Score.Answers[0].MaximumPossibleScore
+			if userContentScoreItem, ok := userContentScoreMap[contentUniqueID]; ok {
+				if !userContentScoreItem.Seen {
+					aes.setStudentScore(userContentScoreItem, scoreItem, contentMaxScoreMap)
 				}
-			}
+			} else {
+				userScoreResultItem := &RoomUserScore{
+					ContentUniqueID: contentUniqueID,
+				}
+				aes.setStudentScore(userScoreResultItem, scoreItem, contentMaxScoreMap)
 
-			userScoreMap[userScoreItem.User.UserID] = append(userScoreMap[userScoreItem.User.UserID], userScoreResultItem)
+				userScoreMap[userScoreItem.User.UserID] = append(userScoreMap[userScoreItem.User.UserID], userScoreResultItem)
+				userContentScoreMap[contentUniqueID] = userScoreResultItem
+			}
 		}
 	}
 
@@ -153,6 +147,25 @@ func (aes *AssessmentExternalService) StudentScores(ctx context.Context, userSco
 	}
 
 	return userScoreMap, tree, nil
+}
+
+func (aes *AssessmentExternalService) setStudentScore(userScoreResultItem *RoomUserScore, scoreItem *external.H5PUserContentScore, contentMaxScoreMap map[string]float64) {
+	if scoreItem.Seen {
+		userScoreResultItem.Seen = true
+		if len(scoreItem.TeacherScores) > 0 {
+			userScoreResultItem.Score = scoreItem.TeacherScores[len(scoreItem.TeacherScores)-1].Score
+		} else if len(scoreItem.Score.Scores) > 0 {
+			userScoreResultItem.Score = scoreItem.Score.Scores[0]
+		} else {
+			userScoreResultItem.Score = 0
+		}
+		if len(scoreItem.Score.Answers) > 0 {
+			userScoreResultItem.Answer = scoreItem.Score.Answers[0].Answer
+			if contentMaxScoreMap[userScoreResultItem.ContentUniqueID] < scoreItem.Score.Answers[0].MaximumPossibleScore {
+				contentMaxScoreMap[userScoreResultItem.ContentUniqueID] = scoreItem.Score.Answers[0].MaximumPossibleScore
+			}
+		}
+	}
 }
 
 func (aes *AssessmentExternalService) StudentCommentMap(ctx context.Context, teacherComments []*external.H5PTeacherCommentsByStudent) (map[string]string, error) {
@@ -208,11 +221,11 @@ func (aes *AssessmentExternalService) deconstructUserRoomInfo(userRoomInfos []*R
 	return result
 }
 
-func (aes *AssessmentExternalService) calcRoomCompleteRate(ctx context.Context, userScores []*external.H5PUserScores, studentCount int) float64 {
-	attemptedCount := 0
+// TODO: refactor
+func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseSomeContent(ctx context.Context, userScores []*external.H5PUserScores, studentCount int) float64 {
 	contentCount := 0
 	contentMap := make(map[string]struct{})
-
+	attemptedMap := make(map[string]struct{})
 	for _, item := range userScores {
 		if item.User == nil {
 			continue
@@ -227,13 +240,15 @@ func (aes *AssessmentExternalService) calcRoomCompleteRate(ctx context.Context, 
 				continue
 			}
 
-			contentKey := aes.ParseTreeID(scoreItem.Content)
+			contentKey := aes.ParseContentUniqueID(scoreItem.Content)
 			if _, ok := contentMap[contentKey]; !ok {
 				contentCount++
 				contentMap[contentKey] = struct{}{}
 			}
+
 			if scoreItem.Seen {
-				attemptedCount++
+				userContentKey := fmt.Sprintf("%s:%s", item.User.UserID, contentKey)
+				attemptedMap[userContentKey] = struct{}{}
 			}
 		}
 	}
@@ -241,6 +256,7 @@ func (aes *AssessmentExternalService) calcRoomCompleteRate(ctx context.Context, 
 	var result float64
 
 	total := float64(studentCount * contentCount)
+	attemptedCount := len(attemptedMap)
 	if total > 0 {
 		result = float64(attemptedCount) / total
 
@@ -248,6 +264,63 @@ func (aes *AssessmentExternalService) calcRoomCompleteRate(ctx context.Context, 
 			log.Warn(ctx, "calcRoomCompleteRate greater than 1",
 				log.Int("studentCount", studentCount),
 				log.Int("contentCount", contentCount),
+				log.Int("attemptedCount", attemptedCount),
+			)
+
+			result = 1
+		}
+	}
+
+	log.Debug(ctx, "calcRoomCompleteRate info debug",
+		log.Int("studentCount", studentCount),
+		log.Int("contentCount", contentCount),
+		log.Int("attemptedCount", attemptedCount),
+		log.Any("contentMap", contentMap),
+	)
+	return result
+}
+
+func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseDiffContent(ctx context.Context, userScores []*external.H5PUserScores, contentTotalCount int) float64 {
+	attemptedCount := 0
+	childCount := 0
+	for _, item := range userScores {
+		if item.User == nil {
+			continue
+		}
+
+		if len(item.Scores) <= 0 {
+			continue
+		}
+
+		for _, scoreItem := range item.Scores {
+			if scoreItem.Content == nil {
+				continue
+			}
+
+			// At present, the review types are all h5p types
+			if scoreItem.Content.FileType != external.FileTypeH5P {
+				continue
+			}
+
+			if scoreItem.Seen {
+				attemptedCount++
+			}
+
+			if scoreItem.Content.ParentID != "" {
+				childCount++
+			}
+		}
+	}
+
+	var result float64
+
+	// number of attempts /（parent count + child count）
+	if contentTotalCount > 0 {
+		result = float64(attemptedCount) / float64(contentTotalCount+childCount)
+
+		if result > 1 {
+			log.Warn(ctx, "calcRoomCompleteRate greater than 1",
+				log.Int("contentTotalCount", contentTotalCount),
 				log.Int("attemptedCount", attemptedCount),
 			)
 

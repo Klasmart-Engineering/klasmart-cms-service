@@ -142,18 +142,18 @@ type QueryAssignmentsSummaryResultV2 struct {
 }
 
 type AssignmentsSummaryItemV2 struct {
-	Type            AssessmentType   `json:"assessment_type" enums:"class,live,study,home_fun_study"`
-	Status          AssessmentStatus `json:"status" enums:"in_progress,complete"`
-	AssessmentTitle string           `json:"assessment_title"`
-	LessonPlanName  string           `json:"lesson_plan_name"`
-	TeacherFeedback string           `json:"teacher_feedback"`
+	AssessmentType  AssessmentType   `json:"assessment_type" gorm:"column:assessment_type" enums:"class,live,study,home_fun_study"`
+	Status          AssessmentStatus `json:"status" gorm:"column:status" enums:"in_progress,complete"`
+	AssessmentTitle string           `json:"assessment_title" gorm:"column:assessment_title" `
+	LessonPlanName  string           `json:"lesson_plan_name" gorm:"column:lesson_plan_name" `
+	TeacherFeedback string           `json:"teacher_feedback" gorm:"column:teacher_feedback" `
 
 	// for debug
-	ScheduleID   string `json:"schedule_id"`
-	AssessmentID string `json:"assessment_id"`
+	ScheduleID   string `json:"schedule_id" gorm:"column:schedule_id" `
+	AssessmentID string `json:"assessment_id" gorm:"column:assessment_id" `
 	// for sorting
-	CompleteAt int64 `json:"complete_at"`
-	CreateAt   int64 `json:"create_at"`
+	CompleteAt int64 `json:"complete_at" gorm:"column:complete_at" `
+	CreateAt   int64 `json:"create_at" gorm:"column:create_at" `
 }
 
 type QueryAssignmentsSummaryResult struct {

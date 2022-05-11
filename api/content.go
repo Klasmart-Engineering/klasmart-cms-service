@@ -623,8 +623,8 @@ func (s *Server) queryContent(c *gin.Context) {
 	}
 }
 
-// @Summary queryAuthContent
-// @ID queryAuthContent
+// @Summary querySharedContent
+// @ID querySharedContent
 // @Description query authed content by condition
 // @Accept json
 // @Produce json
@@ -643,11 +643,11 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents_authed [get]
-func (s *Server) queryAuthContent(c *gin.Context) {
+func (s *Server) querySharedContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := s.queryContentCondition(c, op)
-	total, results, err := model.GetContentModel().SearchAuthedContent(ctx, dbo.MustGetDB(ctx), &condition, op)
+	total, results, err := model.GetContentModel().SearchSharedContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, s.convertQueryContentResult(ctx, &entity.ContentInfoWithDetailsResponse{
@@ -662,6 +662,48 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 		s.defaultErrorHandler(c, err)
 	}
 }
+
+// @Summary querySharedContentV2
+// @ID querySharedContentV2
+// @Description query shared content by condition
+// @Accept json
+// @Produce json
+// @Param name query string false "search content name"
+// @Param content_type query string false "search content type"
+// @Param program query string false "search content program"
+// @Param content_name query string false "search content name"
+// @Param program_group query string false "search program group"
+// @Param submenu query string false "search page sub menu"
+// @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
+// @Param page_size query int false "content list page size"
+// @Param page query int false "content list page index"
+// @Param parent_id query string false "parent_id"
+// @Tags content
+// @Success 200 {object} entity.QuerySharedContentV2Response
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Router /contents_shared [get]
+func (s *Server) querySharedContentV2(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	condition := s.queryContentCondition(c, op)
+	condition.ParentID = c.Query("parent_id")
+	if condition.ParentID == "" {
+		condition.ParentID = "/"
+	}
+	response, err := model.GetContentModel().SearchSharedContentV2(ctx, dbo.MustGetDB(ctx), &condition, op)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, response)
+	case model.ErrInvalidVisibilitySetting:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoPermissionToQuery:
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
+	default:
+		s.defaultErrorHandler(c, err)
+	}
+}
+
 func (s *Server) convertQueryContentResult(ctx context.Context, cdr *entity.ContentInfoWithDetailsResponse) (qcr *entity.QueryContentResponse) {
 	qcr = &entity.QueryContentResponse{
 		List: []*entity.QueryContentItem{},

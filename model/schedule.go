@@ -88,7 +88,7 @@ type IScheduleModel interface {
 	GetScheduleRelationIDs(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleRelationIDs, error)
 	CheckScheduleReviewData(ctx context.Context, op *entity.Operator, request *entity.CheckScheduleReviewDataRequest) (*entity.CheckScheduleReviewDataResponse, error)
 	UpdateScheduleReviewStatus(ctx context.Context, request *entity.UpdateScheduleReviewStatusRequest) error
-	GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleReview, error)
+	GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]*entity.ScheduleReview, error)
 	GetScheduleAttendance(ctx context.Context, timeframeFrom, timeframeTo int, scheduleTypes []string) ([]*entity.ScheduleAttendance, error)
 }
 
@@ -130,7 +130,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 		viewData.SubjectIDs = nil
 	}
 
-	schedule, err := viewData.ToSchedule(ctx)
+	schedule, err := viewData.ToSchedule(ctx, op)
 
 	relationInput := &entity.ScheduleRelationInput{
 		ClassRosterClassID:     viewData.ClassID,
@@ -833,8 +833,6 @@ func (s *scheduleModel) prepareScheduleUpdateData(ctx context.Context, op *entit
 	newSchedule.Description = viewData.Description
 	newSchedule.DueAt = viewData.DueAt
 	newSchedule.ClassType = viewData.ClassType
-	newSchedule.CreatedID = op.UserID
-	newSchedule.CreatedAt = time.Now().Unix()
 	newSchedule.UpdatedID = op.UserID
 	newSchedule.UpdatedAt = time.Now().Unix()
 	newSchedule.DeletedID = ""
@@ -989,12 +987,11 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 	case entity.ScheduleClassTypeHomework, entity.ScheduleClassTypeTask:
 		if schedule.DueAt > 0 {
 			now := time.Now().Unix()
-			dueAtEnd := utils.TodayEndByTimeStamp(schedule.DueAt, time.Local).Unix()
-			if dueAtEnd < now {
+			if schedule.DueAt < now {
 				log.Warn(ctx, "checkScheduleStatus: the due_at time has expired",
 					log.Any("schedule", schedule),
 					log.Any("now", now),
-					log.Any("dueAtEnd", dueAtEnd),
+					log.Any("schedule.DueAt", schedule.DueAt),
 				)
 				return nil, ErrScheduleEditMissTimeForDueAt
 			}
@@ -1198,7 +1195,8 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 		return err
 	}
 
-	if schedule.IsReview {
+	// if review schedule is pending
+	if schedule.IsReview && schedule.ReviewStatus == entity.ScheduleReviewStatusPending {
 		deleteScheduleReviewRequest := external.DeleteScheduleReviewRequest{
 			ScheduleIDs: []string{schedule.ID},
 		}
@@ -1208,15 +1206,11 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 				log.Err(err),
 				log.Any("deleteScheduleReviewRequest", deleteScheduleReviewRequest),
 			)
-			return err
-		}
-
-		if len(resp.Succeeded) != 1 && resp.Succeeded[0] != schedule.ID {
+		} else if len(resp.Succeeded) != 1 || resp.Succeeded[0] != schedule.ID {
 			log.Error(ctx, "delete schedule review failed",
 				log.Any("resp", resp),
 				log.Any("deleteScheduleReviewRequest", deleteScheduleReviewRequest),
 			)
-			return errors.New("delete schedule review failed")
 		}
 	}
 
@@ -1599,7 +1593,7 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 		return nil, err
 	}
 
-	completeHomefunStudyAssessmentMap, err := GetAssessmentOfflineStudyModel().IsAnyOneCompleteByScheduleIDs(ctx, op, homeFunScheduleIDs)
+	completeHomefunStudyAssessmentMap, err := GetAssessmentFeedbackModel().IsCompleteByScheduleIDs(ctx, op, homeFunScheduleIDs)
 	if err != nil {
 		log.Error(ctx, "judgment home fun anyone attempt error", log.Err(err), log.Any("scheduleIDs", homeFunScheduleIDs))
 		return nil, err
@@ -3199,12 +3193,17 @@ func (s *scheduleModel) UpdateScheduleReviewStatus(ctx context.Context, request 
 	return nil
 }
 
-func (s *scheduleModel) GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleReview, error) {
+func (s *scheduleModel) GetSuccessScheduleReview(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]*entity.ScheduleReview, error) {
+	if len(scheduleIDs) == 0 {
+		return map[string][]*entity.ScheduleReview{}, nil
+	}
+
 	var scheduleReviews []*entity.ScheduleReview
+	scheduleReviewsMap := make(map[string][]*entity.ScheduleReview, len(scheduleIDs))
 	daCondition := da.ScheduleReviewCondition{
 		ScheduleIDs: entity.NullStrings{
 			Valid:   true,
-			Strings: []string{scheduleID},
+			Strings: scheduleIDs,
 		},
 		ReviewStatuses: entity.NullStrings{
 			Valid:   true,
@@ -3219,7 +3218,15 @@ func (s *scheduleModel) GetSuccessScheduleReview(ctx context.Context, op *entity
 		return nil, err
 	}
 
-	return scheduleReviews, nil
+	for _, v := range scheduleReviews {
+		if _, ok := scheduleReviewsMap[v.ScheduleID]; ok {
+			scheduleReviewsMap[v.ScheduleID] = append(scheduleReviewsMap[v.ScheduleID], v)
+		} else {
+			scheduleReviewsMap[v.ScheduleID] = []*entity.ScheduleReview{v}
+		}
+	}
+
+	return scheduleReviewsMap, nil
 }
 
 func (s *scheduleModel) GetScheduleAttendance(ctx context.Context, timeframeFrom, timeframeTo int, scheduleTypes []string) ([]*entity.ScheduleAttendance, error) {
@@ -3673,7 +3680,7 @@ func (s *scheduleModel) transformToScheduleDetailsView(ctx context.Context, oper
 	// check if the assessment completed, homefun homework
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun && !schedule.IsReview {
 		g.Go(func() error {
-			scheduleAssessmentMap, err := GetAssessmentOfflineStudyModel().IsAnyOneCompleteByScheduleIDs(ctx, operator, []string{schedule.ID})
+			scheduleAssessmentMap, err := GetAssessmentFeedbackModel().IsCompleteByScheduleIDs(ctx, operator, []string{schedule.ID})
 			if err != nil {
 				log.Error(ctx, "s.homefunStudyModel.Query error",
 					log.Err(err),
@@ -4238,7 +4245,7 @@ func (s *scheduleModel) transformToScheduleViewDetail(ctx context.Context, opera
 	// check if the assessment completed, homefun homework
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun && !schedule.IsReview {
 		g.Go(func() error {
-			scheduleAssessmentMap, err := GetAssessmentOfflineStudyModel().IsAnyOneCompleteByScheduleIDs(ctx, operator, []string{schedule.ID})
+			scheduleAssessmentMap, err := GetAssessmentFeedbackModel().IsCompleteByScheduleIDs(ctx, operator, []string{schedule.ID})
 			if err != nil {
 				log.Error(ctx, "s.homefunStudyModel.Query error",
 					log.Err(err),
@@ -4394,7 +4401,7 @@ func (s *scheduleModel) transformToScheduleListView(ctx context.Context, operato
 	g.Go(func() error {
 		if len(homefunHomeworkIDs) > 0 {
 			var err error
-			scheduleCompleteAssessmentMap, err = GetAssessmentOfflineStudyModel().IsAnyOneCompleteByScheduleIDs(ctx, operator, homefunHomeworkIDs)
+			scheduleCompleteAssessmentMap, err = GetAssessmentFeedbackModel().IsCompleteByScheduleIDs(ctx, operator, homefunHomeworkIDs)
 			if err != nil {
 				log.Error(ctx, "s.homefunStudyModel.Query error",
 					log.Err(err),
@@ -4651,9 +4658,9 @@ func (s *scheduleModel) transformToScheduleTimeView(ctx context.Context, operato
 		}
 
 		if len(homefunHomeworkIDs) > 0 {
-			offlineStudyResult, err := GetAssessmentOfflineStudyModel().GetUserResult(ctx, operator, homefunHomeworkIDs, []string{operator.UserID})
+			offlineStudyResult, err := GetAssessmentFeedbackModel().GetUserResult(ctx, operator, homefunHomeworkIDs, []string{operator.UserID})
 			if err != nil {
-				log.Error(ctx, "GetAssessmentOfflineStudyModel().GetUserResult error",
+				log.Error(ctx, "GetAssessmentFeedbackModel().GetUserResult error",
 					log.Err(err),
 					log.Strings("homefunHomeworkIDs", homefunHomeworkIDs),
 					log.String("studentID", operator.UserID))
@@ -4662,10 +4669,10 @@ func (s *scheduleModel) transformToScheduleTimeView(ctx context.Context, operato
 
 			for scheduleID, homefunStudyAssessment := range offlineStudyResult {
 				if len(homefunStudyAssessment) > 0 {
-					switch homefunStudyAssessment[0].Status {
-					case v2.UserResultProcessStatusComplete:
+					switch homefunStudyAssessment[0].StatusBySystem {
+					case v2.AssessmentUserSystemStatusCompleted:
 						assessmentStatusMap[scheduleID] = entity.AssessmentStatusComplete
-					case v2.UserResultProcessStatusStarted, v2.UserResultProcessStatusDraft:
+					case v2.AssessmentUserSystemStatusDone, v2.AssessmentUserSystemStatusResubmitted, v2.AssessmentUserSystemStatusInProgress:
 						assessmentStatusMap[scheduleID] = entity.AssessmentStatusInProgress
 					}
 				}

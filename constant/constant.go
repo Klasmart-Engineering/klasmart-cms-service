@@ -164,13 +164,3 @@ const (
 	DBDefaultConnMaxLifetime = 4 * time.Hour
 	DBDefaultSlowThreshold   = 200 * time.Millisecond
 )
-
-const (
-	ContentFolderQueryCacheRefreshDuration = time.Minute
-	ContentFolderQueryCacheExpiration      = 0 // never expire
-)
-
-const (
-	ReportQueryCacheExpiration      = time.Minute * 5
-	ReportQueryCacheRefreshDuration = time.Minute
-)

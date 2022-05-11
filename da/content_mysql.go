@@ -619,3 +619,160 @@ FROM
 WHERE ` + rawQuery1 + `
 )) AS records;`
 }
+
+func (cd *ContentMySQLDA) SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, op *entity.Operator) (response entity.QuerySharedContentV2Response, err error) {
+	response.Items = []*entity.QuerySharedContentV2Item{}
+	sbFolderID := NewSqlBuilder(ctx, `
+select id from cms_folder_items cfi 
+where cfi.id in (
+	SELECT
+		csf.folder_id
+	from
+		cms_shared_folders csf
+	where
+		csf.org_id in (?)
+		and csf.delete_at = 0
+		 
+	) 
+and cfi.parent_id = ?
+and cfi.delete_at = 0
+`,
+		[]interface{}{op.OrgID, constant.ShareToAll},
+		condition.ParentID,
+	)
+
+	sbFolderSelect := NewSqlBuilder(ctx, `
+cfi.id,
+? as content_type,
+cfi.name,
+cfi.thumbnail,
+cfi.creator as author,
+? as publish_status, 
+cfi.update_at,
+cfi.create_at,
+cfi.name as content_name
+`, entity.AliasContentTypeFolder, entity.ContentStatusPublished)
+	sbParentID := NewSqlBuilder(ctx, `
+and cfi.parent_id = ?
+`, condition.ParentID)
+	sbName := NewSqlBuilder(ctx, ``)
+	if condition.Name != "" {
+		sbName = NewSqlBuilder(ctx, `and match(cfi.name, cfi.description, cfi.keywords) against(? in boolean mode)`, condition.Name)
+	}
+	sbContentName := NewSqlBuilder(ctx, ``)
+	if condition.ContentName != "" {
+		sbContentName = NewSqlBuilder(ctx, `and cfi.name= ? `, condition.ContentName)
+	}
+	sqlFolder := strings.Builder{}
+	sqlFolder.WriteString(`
+select 
+	{{.sbFolderSelect}}
+from cms_folder_items cfi 
+where  
+cfi.delete_at = 0
+{{.sbParentID}}
+{{.sbName}}
+{{.sbContentName}}
+`)
+	if condition.ParentID == "/" {
+		sqlFolder.WriteString("and cfi.id  in ({{.sbFolderID}})")
+	}
+	sbFolder := NewSqlBuilder(ctx, sqlFolder.String()).
+		Replace(ctx, "sbFolderSelect", sbFolderSelect).
+		Replace(ctx, "sbParentID", sbParentID).
+		Replace(ctx, "sbName", sbName).
+		Replace(ctx, "sbContentName", sbContentName).
+		Replace(ctx, "sbFolderID", sbFolderID)
+	sb := NewSqlBuilder(ctx, `
+{{.sbFolder}}
+{{.sbContent}}
+`).Replace(ctx, "sbFolder", sbFolder)
+	sbContent := NewSqlBuilder(ctx, ``)
+	if condition.ParentID != "/" {
+		sqlWhere := strings.Builder{}
+		sqlWhere.WriteString(`
+where  cc.parent_folder = ?
+and cc.publish_status = ?
+and cc.delete_at = 0
+`)
+		argsWhere := []interface{}{
+			condition.ParentID,
+			entity.ContentStatusPublished,
+		}
+		if utils.ContainsString(condition.GroupNames, entity.LessonPlanGroupNameMoreFeaturedContent.String()) {
+			sqlWhere.WriteString(`
+and EXISTS ( 
+	SELECT
+		1
+	FROM
+		cms_content_properties ccp
+	WHERE
+		ccp.property_type = ?
+		and ccp.content_id = cc.id
+		AND ccp.property_id not IN (select program_id from programs_groups  )
+)
+`)
+			argsWhere = append(argsWhere, entity.ContentPropertyTypeProgram)
+
+		} else if len(condition.Program) > 0 {
+			sqlWhere.WriteString(`
+and EXISTS ( 
+	SELECT
+		1
+	FROM
+		cms_content_properties ccp
+	WHERE
+		ccp.property_type = ?
+		and ccp.content_id = cc.id
+		AND ccp.property_id  IN (?)
+)
+`)
+			argsWhere = append(argsWhere, entity.ContentPropertyTypeProgram, condition.Program)
+		}
+
+		if condition.Name != "" {
+			sqlWhere.WriteString(`
+and match(cc.content_name, cc.description, cc.keywords) against(? in boolean mode)
+`)
+			argsWhere = append(argsWhere, condition.Name)
+		}
+		if condition.ContentName != "" {
+			sqlWhere.WriteString(`
+and cc.content_name = ?
+`)
+			argsWhere = append(argsWhere, condition.ContentName)
+		}
+		sbWhere := NewSqlBuilder(ctx, sqlWhere.String(), argsWhere...)
+
+		sqlContent := `
+union all
+select 
+	cc.id,
+	cc.	content_type,
+	cc.content_name as name,
+	cc.thumbnail ,
+	cc.author ,
+	cc.publish_status , 
+	cc.update_at,
+	cc.create_at,
+	cc.content_name
+from cms_contents cc 
+{{.sbWhere}}
+`
+		sbContent = NewSqlBuilder(ctx, sqlContent).Replace(ctx, "sbWhere", sbWhere)
+	}
+	sb = sb.Replace(ctx, "sbContent", sbContent)
+	sql, args, err := sb.Build(ctx)
+	if err != nil {
+		return
+	}
+
+	response.Total, err = cd.PageRawSQL(ctx, &response.Items, NewContentOrderBy(condition.OrderBy).ToSQL(), sql, dbo.Pager{
+		Page:     int(condition.Pager.PageIndex),
+		PageSize: int(condition.Pager.PageSize),
+	}, args...)
+	if err != nil {
+		return
+	}
+	return
+}

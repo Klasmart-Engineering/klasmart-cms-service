@@ -111,12 +111,12 @@ func GetAssessmentUserDA() IAssessmentUserDA {
 }
 
 type AssessmentUserCondition struct {
-	AssessmentID   sql.NullString
-	AssessmentIDs  entity.NullStrings
-	UserType       sql.NullString
-	UserIDs        entity.NullStrings
-	StatusBySystem sql.NullString
-	StatusByUser   sql.NullString
+	AssessmentID  sql.NullString
+	AssessmentIDs entity.NullStrings
+	UserType      sql.NullString
+	UserIDs       entity.NullStrings
+	//StatusBySystem sql.NullString
+	StatusByUser sql.NullString
 }
 
 func (c AssessmentUserCondition) GetConditions() ([]string, []interface{}) {
@@ -141,10 +141,10 @@ func (c AssessmentUserCondition) GetConditions() ([]string, []interface{}) {
 		wheres = append(wheres, "user_id in (?)")
 		params = append(params, c.UserIDs.Strings)
 	}
-	if c.StatusBySystem.Valid {
-		wheres = append(wheres, "status_by_system = (?)")
-		params = append(params, c.StatusBySystem.String)
-	}
+	//if c.StatusBySystem.Valid {
+	//	wheres = append(wheres, "status_by_system = (?)")
+	//	params = append(params, c.StatusBySystem.String)
+	//}
 	if c.StatusByUser.Valid {
 		wheres = append(wheres, "status_by_user = (?)")
 		params = append(params, c.StatusByUser.String)

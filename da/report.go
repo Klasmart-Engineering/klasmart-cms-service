@@ -6,6 +6,7 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type IReportDA interface {
@@ -17,11 +18,14 @@ type IReportDA interface {
 	IClassAttendance
 	ILearningOutcomeReport
 	ILearnerWeekly
+	ISkillCoverage
 }
 type ReportDA struct {
 	BaseDA
-	learnerReportOverviewCache   *LazyRefreshCache
-	learningOutcomeOverviewCache *LazyRefreshCache
+	learnerReportOverviewCache   *utils.LazyRefreshCache
+	learningOutcomeOverviewCache *utils.LazyRefreshCache
+	teacherUsageOverviewCache    *utils.LazyRefreshCache
+	skillCoverageCache           *utils.LazyRefreshCache
 }
 
 var _reportDA *ReportDA
@@ -31,7 +35,7 @@ func GetReportDA() IReportDA {
 	_reportDAOnce.Do(func() {
 		_reportDA = new(ReportDA)
 
-		learnerReportOverviewCache, err := NewLazyRefreshCache(&LazyRefreshCacheOption{
+		learnerReportOverviewCache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
 			RedisKeyPrefix:  RedisKeyPrefixReportLearnerReportOverview,
 			Expiration:      constant.ReportQueryCacheExpiration,
 			RefreshDuration: constant.ReportQueryCacheRefreshDuration,
@@ -42,7 +46,7 @@ func GetReportDA() IReportDA {
 
 		_reportDA.learnerReportOverviewCache = learnerReportOverviewCache
 
-		learningOutcomeOverviewCache, err := NewLazyRefreshCache(&LazyRefreshCacheOption{
+		learningOutcomeOverviewCache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
 			RedisKeyPrefix:  RedisKeyPrefixReportLearningOutcomeOverview,
 			Expiration:      constant.ReportQueryCacheExpiration,
 			RefreshDuration: constant.ReportQueryCacheRefreshDuration,
@@ -52,6 +56,28 @@ func GetReportDA() IReportDA {
 		}
 
 		_reportDA.learningOutcomeOverviewCache = learningOutcomeOverviewCache
+
+		teacherUsageOverviewCache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
+			RedisKeyPrefix:  RedisKeyPrefixReportTeacherUsageOverview,
+			Expiration:      constant.ReportQueryCacheExpiration,
+			RefreshDuration: constant.ReportQueryCacheRefreshDuration,
+			RawQuery:        _reportDA.getTeacherUsageOverview})
+		if err != nil {
+			log.Panic(context.Background(), "create teacher usage overview cache failed", log.Err(err))
+		}
+
+		_reportDA.teacherUsageOverviewCache = teacherUsageOverviewCache
+
+		skillCoverageCache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
+			RedisKeyPrefix:  RedisKeyPrefixReportSkillCoverage,
+			Expiration:      constant.ReportQueryCacheExpiration,
+			RefreshDuration: constant.ReportQueryCacheRefreshDuration,
+			RawQuery:        _reportDA.getSkillCoverage})
+		if err != nil {
+			log.Panic(context.Background(), "create skill coverage cache failed", log.Err(err))
+		}
+
+		_reportDA.skillCoverageCache = skillCoverageCache
 
 	})
 	return _reportDA

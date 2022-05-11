@@ -7,12 +7,10 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da/assessmentV2"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	v2 "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity/v2"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strings"
 	"sync"
@@ -41,16 +39,16 @@ type IAssessmentInternalModelV2 interface {
 }
 
 func (a *assessmentInternalModel) ScheduleEndClassCallback(ctx context.Context, op *entity.Operator, req *v2.ScheduleEndClassCallBackReq) error {
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixScheduleID, req.ScheduleID)
-	if err != nil {
-		log.Error(ctx, "ScheduleEndClassCallback: lock fail",
-			log.Err(err),
-			log.Any("req", req),
-		)
-		return err
-	}
-	locker.Lock()
-	defer locker.Unlock()
+	//locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixScheduleID, req.ScheduleID)
+	//if err != nil {
+	//	log.Error(ctx, "ScheduleEndClassCallback: lock fail",
+	//		log.Err(err),
+	//		log.Any("req", req),
+	//	)
+	//	return err
+	//}
+	//locker.Lock()
+	//defer locker.Unlock()
 
 	req.AttendanceIDs = utils.SliceDeduplicationExcludeEmpty(req.AttendanceIDs)
 	if req.ScheduleID == "" || len(req.AttendanceIDs) <= 0 {
@@ -116,9 +114,7 @@ func (a *assessmentInternalModel) AddWhenCreateSchedules(ctx context.Context, tx
 			CreateAt:       now,
 			MigrateFlag:    constant.AssessmentCurrentFlag,
 		}
-		if req.AssessmentType == v2.AssessmentTypeOfflineStudy {
-			assessmentItem.Status = v2.AssessmentStatusNotStarted
-		}
+
 		if req.AssessmentType == v2.AssessmentTypeReviewStudy {
 			assessmentItem.Status = v2.AssessmentStatusPending
 		}
@@ -132,7 +128,7 @@ func (a *assessmentInternalModel) AddWhenCreateSchedules(ctx context.Context, tx
 				AssessmentID:   assessmentItem.ID,
 				UserID:         userItem.UserID,
 				UserType:       userItem.UserType,
-				StatusBySystem: v2.AssessmentUserStatusNotParticipate,
+				StatusBySystem: v2.AssessmentUserSystemStatusNotStarted,
 				StatusByUser:   v2.AssessmentUserStatusParticipate,
 				CreateAt:       now,
 			}
@@ -171,8 +167,11 @@ func (a *assessmentInternalModel) LockAssessmentContentAndOutcome(ctx context.Co
 
 	now := time.Now().Unix()
 
-	ags := NewAssessmentGrainSingle(ctx, op, assessment)
-	contentsFromSchedule, err := ags.getLockedContentBySchedule(schedule)
+	at, err := NewAssessmentTool(ctx, op, []*v2.Assessment{assessment})
+	if err != nil {
+		return err
+	}
+	contentsFromSchedule, err := at.firstGetLockedContentBySchedule(schedule)
 	if err != nil {
 		return err
 	}
@@ -209,7 +208,7 @@ func (a *assessmentInternalModel) LockAssessmentContentAndOutcome(ctx context.Co
 	assessmentUserIDs := make([]string, 0)
 
 	if len(outcomeIDs) > 0 {
-		assessmentUserMap, err := ags.GetAssessmentUserMap()
+		assessmentUserMap, err := at.GetAssessmentUserMap()
 		if err != nil {
 			return err
 		}
@@ -346,12 +345,31 @@ func (a *assessmentInternalModel) DeleteByScheduleIDsTx(ctx context.Context, op 
 	return err
 }
 
-func (a *assessmentInternalModel) endClassCallbackUpdateAssessment(ctx context.Context, op *entity.Operator, req *v2.ScheduleEndClassCallBackReq, assessment *v2.Assessment) error {
-	attendanceReqMap := make(map[string]struct{})
-	for _, item := range req.AttendanceIDs {
-		attendanceReqMap[item] = struct{}{}
+// TODO:: refactor
+func (a *assessmentInternalModel) UpdateAssessmentUserStatusTime(ctx context.Context, waitUpdateAssessmentUsers []*v2.AssessmentUser) error {
+	now := time.Now().Unix()
+	for _, item := range waitUpdateAssessmentUsers {
+		switch item.StatusBySystem {
+		case v2.AssessmentUserSystemStatusNotStarted:
+		case v2.AssessmentUserSystemStatusInProgress:
+			if item.InProgressAt == 0 {
+				item.InProgressAt = now
+			}
+		case v2.AssessmentUserSystemStatusDone:
+			if item.DoneAt == 0 {
+				item.DoneAt = now
+			}
+		case v2.AssessmentUserSystemStatusResubmitted:
+			item.ResubmittedAt = now
+		case v2.AssessmentUserSystemStatusCompleted:
+			if item.CompletedAt == 0 {
+				item.CompletedAt = now
+			}
+		}
 	}
-
+	return nil
+}
+func (a *assessmentInternalModel) endClassCallbackUpdateAssessment(ctx context.Context, op *entity.Operator, req *v2.ScheduleEndClassCallBackReq, assessment *v2.Assessment) error {
 	now := time.Now().Unix()
 
 	attendanceCondition := &assessmentV2.AssessmentUserCondition{
@@ -363,10 +381,11 @@ func (a *assessmentInternalModel) endClassCallbackUpdateAssessment(ctx context.C
 			Strings: req.AttendanceIDs,
 			Valid:   true,
 		},
-		StatusBySystem: sql.NullString{
-			String: v2.AssessmentUserStatusNotParticipate.String(),
-			Valid:  true,
-		},
+	}
+	var assessmentUsers []*v2.AssessmentUser
+	err := assessmentV2.GetAssessmentUserDA().Query(ctx, attendanceCondition, &assessmentUsers)
+	if err != nil {
+		return err
 	}
 
 	if assessment.Status == v2.AssessmentStatusNotStarted {
@@ -390,26 +409,65 @@ func (a *assessmentInternalModel) endClassCallbackUpdateAssessment(ctx context.C
 		assessment.ClassLength = req.ClassLength
 		assessment.ClassEndAt = req.ClassEndAt
 
+		for _, userItem := range assessmentUsers {
+			userItem.StatusBySystem = v2.AssessmentUserSystemStatusDone
+			userItem.StatusByUser = v2.AssessmentUserStatusParticipate
+			userItem.UpdateAt = now
+		}
+
+		err = a.UpdateAssessmentUserStatusTime(ctx, assessmentUsers)
+		if err != nil {
+			return err
+		}
 		return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 			_, err := assessmentV2.GetAssessmentDA().UpdateTx(ctx, tx, assessment)
 			if err != nil {
 				return err
 			}
 
-			err = assessmentV2.GetAssessmentUserDA().UpdateStatusTx(ctx, dbo.MustGetDB(ctx), attendanceCondition, v2.AssessmentUserStatusParticipate)
-			if err != nil {
-				return err
+			if len(assessmentUsers) > 0 {
+				_, err := assessmentV2.GetAssessmentUserDA().UpdateTx(ctx, tx, assessmentUsers)
+				if err != nil {
+					return err
+				}
 			}
 
 			return nil
 		})
 	} else if assessment.Status == v2.AssessmentStatusStarted {
-		err := assessmentV2.GetAssessmentUserDA().UpdateStatusTx(ctx, dbo.MustGetDB(ctx), attendanceCondition, v2.AssessmentUserStatusParticipate)
+		for _, userItem := range assessmentUsers {
+			if userItem.StatusBySystem == v2.AssessmentUserSystemStatusDone {
+				userItem.StatusBySystem = v2.AssessmentUserSystemStatusResubmitted
+			} else {
+				userItem.StatusBySystem = v2.AssessmentUserSystemStatusDone
+			}
+
+			userItem.StatusByUser = v2.AssessmentUserStatusParticipate
+			userItem.UpdateAt = now
+		}
+		err = a.UpdateAssessmentUserStatusTime(ctx, assessmentUsers)
+		if err != nil {
+			return err
+		}
+		_, err := assessmentV2.GetAssessmentUserDA().Update(ctx, assessmentUsers)
 		if err != nil {
 			return err
 		}
 	} else {
-		err := assessmentV2.GetAssessmentUserDA().UpdateSystemStatusTx(ctx, dbo.MustGetDB(ctx), attendanceCondition, v2.AssessmentUserStatusParticipate)
+		for _, userItem := range assessmentUsers {
+			if userItem.StatusBySystem == v2.AssessmentUserSystemStatusDone {
+				userItem.StatusBySystem = v2.AssessmentUserSystemStatusResubmitted
+			} else {
+				userItem.StatusBySystem = v2.AssessmentUserSystemStatusDone
+			}
+
+			userItem.UpdateAt = now
+		}
+		err = a.UpdateAssessmentUserStatusTime(ctx, assessmentUsers)
+		if err != nil {
+			return err
+		}
+		_, err := assessmentV2.GetAssessmentUserDA().Update(ctx, assessmentUsers)
 		if err != nil {
 			return err
 		}
@@ -456,34 +514,10 @@ func (a *assessmentInternalModel) AnyoneAttemptedByScheduleIDs(ctx context.Conte
 		assessmentIDs[i] = item.ID
 	}
 
-	assessmentUserCond := &assessmentV2.AssessmentUserCondition{
-		AssessmentIDs: entity.NullStrings{
-			Strings: assessmentIDs,
-			Valid:   true,
-		},
-		StatusBySystem: sql.NullString{
-			String: v2.AssessmentUserStatusParticipate.String(),
-			Valid:  true,
-		},
-	}
-	var assessmentUsers []*v2.AssessmentUser
-	err = assessmentV2.GetAssessmentUserDA().Query(ctx, assessmentUserCond, &assessmentUsers)
-	if err != nil {
-		log.Error(ctx, "query assessment user error", log.Err(err), log.Any("assessmentUserCond", assessmentUserCond), log.Any("op", op))
-		return nil, err
-	}
-	assessmentUserMap := make(map[string]bool)
-	for _, item := range assessmentUsers {
-		if _, ok := assessmentUserMap[item.AssessmentID]; !ok {
-			assessmentUserMap[item.AssessmentID] = true
-		}
-	}
-
 	result := make(map[string]*v2.AssessmentAnyoneAttemptedReply, len(assessments))
 	for _, item := range assessments {
 		resultItem := &v2.AssessmentAnyoneAttemptedReply{
-			IsAnyoneAttempted: assessmentUserMap[item.ID],
-			AssessmentStatus:  item.Status,
+			AssessmentStatus: item.Status,
 		}
 
 		result[item.ScheduleID] = resultItem
