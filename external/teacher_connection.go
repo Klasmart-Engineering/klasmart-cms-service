@@ -2,6 +2,7 @@ package external
 
 import (
 	"context"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -90,8 +91,9 @@ func (ascs AmsTeacherConnectionService) pageNodes(ctx context.Context, operator 
 			}
 			exists[edge.Node.ID] = true
 			teacher := Teacher{
-				ID:   edge.Node.ID,
-				Name: edge.Node.GivenName,
+				ID:         edge.Node.ID,
+				GivenName:  edge.Node.GivenName,
+				FamilyName: edge.Node.FamilyName,
 			}
 			teachers = append(teachers, &teacher)
 		}

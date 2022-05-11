@@ -185,7 +185,7 @@ func (m *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	for _, student := range students {
 		item := &entity.StudentAchievementReportItem{
 			StudentID:         student.ID,
-			StudentName:       student.Name,
+			StudentName:       student.Name(),
 			Attend:            false,
 			AchievedCount:     0,
 			NotAchievedCount:  0,
@@ -351,7 +351,7 @@ func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 		log.Any("not_achieved_attendance_id_2_outcome_ids_map", notAchievedAttendanceID2OutcomeIDsMap),
 	)
 
-	var result = entity.StudentAchievementReportResponse{StudentName: student.Name, AssessmentIDs: assessmentIDs}
+	var result = entity.StudentAchievementReportResponse{StudentName: student.Name(), AssessmentIDs: assessmentIDs}
 	if !attendanceIDExistsMap[req.StudentID] {
 		result.Attend = false
 		return &result, nil
@@ -731,7 +731,7 @@ func (m *reportModel) ListStudentsPerformanceReport(ctx context.Context, tx *dbo
 
 	var result = entity.ListStudentsPerformanceReportResponse{AssessmentIDs: assessmentIDs}
 	for _, student := range students {
-		newItem := entity.StudentsPerformanceReportItem{StudentID: student.ID, StudentName: student.Name}
+		newItem := entity.StudentsPerformanceReportItem{StudentID: student.ID, StudentName: student.Name()}
 		if !attendanceIDExistsMap[student.ID] {
 			newItem.Attend = false
 			result.Items = append(result.Items, &newItem)
@@ -915,7 +915,7 @@ func (m *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.D
 	for _, a := range assessments {
 		newItem := entity.StudentPerformanceReportItem{
 			StudentID:   student.ID,
-			StudentName: student.Name,
+			StudentName: student.Name(),
 			Attend:      attendanceIDExistsMap[req.StudentID],
 			ScheduleID:  a.ScheduleID,
 		}

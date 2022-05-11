@@ -91,7 +91,6 @@ func (aucs AmsUserConnectionService) pageNodes(ctx context.Context, operator *en
 			exists[edge.Node.ID] = true
 			user := User{
 				ID:         edge.Node.ID,
-				Name:       edge.Node.GivenName + " " + edge.Node.FamilyName,
 				GivenName:  edge.Node.GivenName,
 				FamilyName: edge.Node.FamilyName,
 				Email:      edge.Node.ContactInfo.Email,
@@ -153,7 +152,6 @@ type UserNode struct {
 func (u UserNode) ToUser() *User {
 	return &User{
 		ID:         u.ID,
-		Name:       u.Name,
 		GivenName:  u.GivenName,
 		FamilyName: u.FamilyName,
 		Avatar:     u.Avatar,

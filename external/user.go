@@ -38,11 +38,14 @@ type UserServiceProvider interface {
 
 type User struct {
 	ID         string `json:"id"`
-	Name       string `json:"name"`
 	GivenName  string `json:"given_name"`
 	FamilyName string `json:"family_name"`
 	Email      string `json:"email"`
 	Avatar     string `json:"avatar"`
+}
+
+func (u User) Name() string {
+	return u.GivenName + " " + u.FamilyName
 }
 
 type NullableUser struct {
@@ -234,7 +237,7 @@ func (s AmsUserService) QueryByIDs(ctx context.Context, ids []string, options ..
 	sb := new(strings.Builder)
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$user_id_", ": ID!", len(_ids)))
 	for index := range _ids {
-		fmt.Fprintf(sb, "q%d: user(user_id: $user_id_%d) {id:user_id name:user_name given_name family_name email avatar}\n", index, index)
+		fmt.Fprintf(sb, "q%d: user(user_id: $user_id_%d) {id:user_id given_name family_name email avatar}\n", index, index)
 	}
 	sb.WriteString("}")
 
@@ -259,12 +262,6 @@ func (s AmsUserService) QueryByIDs(ctx context.Context, ids []string, options ..
 		user := data[fmt.Sprintf("q%d", indexMapping[index])]
 		if user == nil {
 			continue
-		}
-		// user service no longer provides username. So we need to construct
-		// the username based on the given name and family name, so that no other
-		// places need to be modified
-		if user != nil && user.Name == "" && user.FamilyName != "" && user.GivenName != "" {
-			user.Name = user.GivenName + " " + user.FamilyName
 		}
 
 		users = append(users, &NullableUser{
@@ -312,7 +309,7 @@ func (s AmsUserService) BatchGetNameMap(ctx context.Context, operator *entity.Op
 		if user.User == nil || !user.Valid {
 			continue
 		}
-		dict[user.ID] = user.Name
+		dict[user.ID] = user.Name()
 	}
 	log.Debug(ctx, "BatchGetNameMap:dict", log.Any("dict", dict))
 	return dict, nil
@@ -328,7 +325,6 @@ func (s AmsUserService) Query(ctx context.Context, operator *entity.Operator, or
 			findMembers(search_query: $keyword) {
 				user{
 					id: user_id
-					name: user_name
 					given_name
 					family_name
 					email
@@ -381,7 +377,6 @@ func (s AmsUserService) GetByOrganization(ctx context.Context, operator *entity.
 		  memberships{
 			user{
 			  id: user_id
-			  name: user_name
 			  given_name
 			  family_name
 			  email
@@ -452,72 +447,6 @@ func (s AmsUserService) NewUser(ctx context.Context, operator *entity.Operator, 
 	}
 
 	return data.NewUser.UserID, nil
-}
-
-//TODO:Test Failed
-func (s AmsUserService) FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error) {
-	if len(userIDs) == 0 {
-		return []string{}, nil
-	}
-
-	_ids, indexMapping := utils.SliceDeduplicationMap(userIDs)
-
-	sb := new(strings.Builder)
-	fmt.Fprintf(sb, "query ($organization_id: ID! $permission_name: ID! %s) {", utils.StringCountRange(ctx, "$user_id_", ": ID!", len(_ids)))
-	for index := range _ids {
-		fmt.Fprintf(sb, "q%d: user(user_id: $user_id_%d) {membership(organization_id: $organization_id) {checkAllowed(permission_name: $permission_name)}}\n", index, index)
-	}
-	sb.WriteString("}")
-
-	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
-	request.Var("organization_id", operator.OrgID)
-	request.Var("permission_name", permissionName.String())
-	for index, id := range _ids {
-		request.Var(fmt.Sprintf("user_id_%d", index), id)
-	}
-
-	data := map[string]*struct {
-		Membership struct {
-			CheckAllowed bool `json:"checkAllowed"`
-		} `json:"membership"`
-	}{}
-	response := &chlorine.Response{
-		Data: &data,
-	}
-
-	_, err := GetAmsClient().Run(ctx, request, response)
-	if err != nil {
-		log.Error(ctx, "filter users by permission failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Strings("userIDs", userIDs),
-			log.String("permission", permissionName.String()))
-		return nil, err
-	}
-
-	filtered := make([]string, 0, len(userIDs))
-	appended := make(map[string]bool, len(_ids))
-	for index, UserID := range userIDs {
-		if appended[UserID] {
-			continue
-		}
-
-		user := data[fmt.Sprintf("q%d", indexMapping[index])]
-		if user == nil || !user.Membership.CheckAllowed {
-			continue
-		}
-
-		filtered = append(filtered, UserID)
-		appended[UserID] = true
-	}
-
-	log.Info(ctx, "filter users by permission success",
-		log.Any("operator", operator),
-		log.Strings("userIDs", userIDs),
-		log.String("permission", permissionName.String()),
-		log.Strings("result", filtered))
-
-	return filtered, nil
 }
 
 func (s AmsUserService) GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Operator, orgID string) ([]*User, error) {

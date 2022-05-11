@@ -458,7 +458,7 @@ func (at *AssessmentTool) initTeacherMap() error {
 		}
 		result[item.ID] = &entity.IDName{
 			ID:   item.ID,
-			Name: item.Name,
+			Name: item.Name(),
 		}
 	}
 
