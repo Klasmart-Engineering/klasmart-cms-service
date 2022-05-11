@@ -24,9 +24,6 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
-          #- name: Reconfigure git to use HTTP authentication
-          #run: git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com".insteadOf https://github.com/
-
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
@@ -43,13 +40,7 @@ jobs:
           ${{ runner.os }}-go-
 
     - name: Configure git credentials
-      uses: oleksiyrudenko/gha-git-credentials@v2.1  
-      with:
-        global: true
-        name: 'jiangxiaobao'
-        email: 'byron.jiang@kidsloop.live'
-        actor: 'kidsloop2'
-        token: '${{ secrets.GITHUB_TOKEN }}'
+      run: git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 
     - name: Build
       run: |
