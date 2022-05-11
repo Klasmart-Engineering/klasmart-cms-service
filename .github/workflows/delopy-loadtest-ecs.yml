@@ -43,8 +43,12 @@ jobs:
           ${{ runner.os }}-go-
 
     - name: Configure git credentials
-      uses: oleksiyrudenko/gha-git-credentials@v2-latest  
+      uses: oleksiyrudenko/gha-git-credentials@v2.1  
       with:
+        global: true
+        name: 'jiangxiaobao'
+        email: 'byron.jiang@kidsloop.live'
+        actor: 'kidsloop2'
         token: '${{ secrets.GITHUB_TOKEN }}'
 
     - name: Build
