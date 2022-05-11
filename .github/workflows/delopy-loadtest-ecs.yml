@@ -1,0 +1,80 @@
+name: Deploy LoadTest To Amazon ECS
+
+on:
+  push:
+    branches:
+      - cms-385
+  pull_request:
+    branches:
+      - main
+
+env:
+  AWS_REGION: cn-north-1
+  ECR_REPOSITORY: loadtest
+  ECS_SERVICE: loadtestcms
+  ECS_CLUSTER: load-testing
+  ECS_TASK_DEFINITION: ECS_TASK_DEFINITION
+  CONTAINER_NAME: CONTAINER_NAME
+
+jobs:
+  build-golang:
+  name:Build
+  runs-on: ubuntu-latest
+  steps:
+  - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.18
+
+    - name: Cache Go Modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    
+    - name: Build
+      run: |
+        go env -w GOPROXY="https://goproxy.cn,direct"
+        go build -o main -ldflags "-X github.com/KL-Engineering/kidsloop-cms-service/constant.GitHash=$(git rev-list -1 HEAD) -X github.com/KL-Engineering/kidsloop-cms-service/constant.BuildTimestamp=$(date +%s) -X github.com/KL-Engineering/kidsloop-cms-service/constant.LatestMigrate=$(ls schema/migrate | tail -1)"
+        ls -la
+     
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.ECR_AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.ECR_AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          set +x
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
