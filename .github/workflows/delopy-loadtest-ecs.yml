@@ -3,10 +3,10 @@ name: Deploy LoadTest To Amazon ECS
 on:
   push:
     branches:
-      - cms-385
+      - loadtest
   pull_request:
     branches:
-      - main
+      - loadtest
 
 env:
   AWS_REGION: cn-north-1
