@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        persist-credentials: false
 
     - name: Set up Go
       uses: actions/setup-go@v3
@@ -39,7 +41,7 @@ jobs:
           ${{ runner.os }}-go-
     
     - name: Reconfigure git to use HTTP authentication
-      run: git config --global --add url."git@github.com:".insteadOf "https://github.com/"
+      run: git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
 
     - name: Build
       run: |
