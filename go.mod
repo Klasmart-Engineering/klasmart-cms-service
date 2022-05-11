@@ -3,15 +3,15 @@ module github.com/KL-Engineering/kidsloop-cms-service
 go 1.18
 
 require (
-	github.com/KL-Engineering/chlorine v0.3.1
+	github.com/KL-Engineering/chlorine v0.3.2
 	github.com/KL-Engineering/common-log v0.3.0
 	github.com/KL-Engineering/dbo v0.5.0
 	github.com/KL-Engineering/decorator v1.1.0
 	github.com/KL-Engineering/distributed_lock v0.2.1
-	github.com/KL-Engineering/gin-trace v1.0.1
-	github.com/KL-Engineering/imq v0.3.0
-	github.com/KL-Engineering/kidsloop-cache v0.1.0
+	github.com/KL-Engineering/imq v0.3.1
+	github.com/KL-Engineering/kidsloop-cache v0.1.1
 	github.com/KL-Engineering/ro v0.3.0
+	github.com/KL-Engineering/tracecontext v0.1.0
 	github.com/aws/aws-sdk-go v1.35.23
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-contrib/cors v1.3.1
@@ -28,7 +28,7 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go v1.0.62
 	github.com/tidwall/gjson v1.6.0
 	github.com/urfave/cli/v2 v2.3.0
-	go.mongodb.org/mongo-driver v1.8.3
+	go.mongodb.org/mongo-driver v1.9.1
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
@@ -47,11 +47,12 @@ require (
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/go-redis/redis v6.15.9+incompatible // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/golang/snappy v0.0.1 // indirect
+	github.com/golang/snappy v0.0.4 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.10 // indirect
+	github.com/klauspost/compress v1.15.3 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
@@ -59,12 +60,13 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
-	github.com/nsqio/go-nsq v1.0.8 // indirect
+	github.com/nsqio/go-nsq v1.1.0 // indirect
+	github.com/pierrec/lz4/v4 v4.1.14 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
-	github.com/segmentio/kafka-go v0.3.6 // indirect
-	github.com/segmentio/nsq-go v1.2.4 // indirect
+	github.com/segmentio/kafka-go v0.4.31 // indirect
+	github.com/segmentio/nsq-go v1.2.5 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/tencentyun/scf-go-lib v0.0.0-20211123032342-f972dcd16ff6 // indirect
 	github.com/tidwall/match v1.0.1 // indirect
