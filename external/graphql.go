@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/KL-Engineering/common-log/log"
-	gintrace "github.com/KL-Engineering/gin-trace"
+	"github.com/KL-Engineering/tracecontext"
 	newrelic "github.com/newrelic/go-agent"
 )
 
@@ -142,8 +142,8 @@ func (c *GraphGLClient) Run(ctx context.Context, req *GraphQLRequest, resp inter
 		log.Warn(ctxWithTimeout, "Run: New httpRequest failed", log.Err(err), log.Any("reqBody", reqBody))
 		return 0, err
 	}
-	if bada, ok := gintrace.GetBadaCtx(ctxWithTimeout); ok {
-		bada.SetHeader(request.Header)
+	if traceContext, ok := tracecontext.GetTraceContext(ctxWithTimeout); ok {
+		traceContext.SetHeader(request.Header)
 	}
 	request.Header = req.Header
 	request.Header.Set("Content-Type", "application/json; charset=utf-8")
