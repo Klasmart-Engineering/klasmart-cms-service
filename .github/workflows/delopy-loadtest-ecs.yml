@@ -25,7 +25,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
       with:
-        persist-credentials: true
+        persist-credentials: false
 
     - name: Set up Go
       uses: actions/setup-go@v3
@@ -44,8 +44,7 @@ jobs:
 
     - name: Configure git credentials
       run: |
-        git config --global url."git@github.com:".insteadOf https://github.com/
-        git config --global http.extraheader "PRIVATE-TOKEN: $GIT_TOKEN"
+        git config --global url.https://$GIT_TOKEN@github.com/.insteadOf https://github.com/
 
     - name: Build
       run: |
