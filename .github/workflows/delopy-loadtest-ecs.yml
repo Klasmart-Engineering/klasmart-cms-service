@@ -44,7 +44,7 @@ jobs:
 
     - name: Configure git credentials
       run: |
-        git config --global url."git@github.com:".insteadOf "https://github.com/"
+        git config --global url."git@github.com:".insteadOf https://github.com/
         git config --global http.extraheader "PRIVATE-TOKEN: $GIT_TOKEN"
 
     - name: Build
