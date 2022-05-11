@@ -39,9 +39,12 @@ func makeClassConnectionRequest(ids []string) (string, map[string]interface{}, c
 		cf.TeacherID.Value = UUID(v)
 		classOr = append(classOr, cf)
 
-		uf := UserFilter{}
-		uf.UserID.Operator = UUIDOperator(OperatorTypeEq)
-		uf.UserID.Value = UUID(v)
+		uf := UserFilter{
+			UserID: &UUIDFilter{
+				Operator: UUIDOperator(OperatorTypeEq),
+				Value:    UUID(v),
+			},
+		}
 		userOr = append(userOr, uf)
 	}
 
@@ -163,9 +166,12 @@ func makeStudentsConnectionRequest(classID string) (string, map[string]interface
 func makeTeacherConnectionRequest(classID string, teacherIDs []string) (string, map[string]interface{}, chlorine.Response) {
 	userOr := make([]UserFilter, 0, len(teacherIDs))
 	for _, v := range teacherIDs {
-		uf := UserFilter{}
-		uf.UserID.Operator = UUIDOperator(OperatorTypeEq)
-		uf.UserID.Value = UUID(v)
+		uf := UserFilter{
+			UserID: &UUIDFilter{
+				Operator: UUIDOperator(OperatorTypeEq),
+				Value:    UUID(v),
+			},
+		}
 		userOr = append(userOr, uf)
 	}
 	teachersQuery := `
