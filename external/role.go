@@ -6,13 +6,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/KL-Engineering/kidsloop-cms-service/constant"
-
-	"github.com/KL-Engineering/common-log/log"
-
 	"github.com/KL-Engineering/chlorine"
+	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/kidsloop-cms-service/config"
-
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
@@ -25,8 +22,12 @@ var _amsRoleService RoleServiceProvider
 
 func GetRoleServiceProvider() RoleServiceProvider {
 	_roleOnce.Do(func() {
-		_amsRoleService = &AmsRoleService{
-			client: chlorine.NewClient(config.Get().AMS.EndPoint),
+		if config.Get().AMS.UseDeprecatedQuery {
+			_amsRoleService = &AmsRoleService{
+				client: chlorine.NewClient(config.Get().AMS.EndPoint),
+			}
+		} else {
+			_amsRoleService = &AmsRoleConnectionService{}
 		}
 	})
 

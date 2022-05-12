@@ -129,7 +129,7 @@ func (m *homeFunStudyModel) GetDetail(ctx context.Context, operator *entity.Oper
 		)
 		return nil, err
 	}
-	studentName = student.Name
+	studentName = student.Name()
 	teachers, err := external.GetTeacherServiceProvider().BatchGet(ctx, operator, study.TeacherIDs)
 	if err != nil {
 		log.Error(ctx, "external.GetTeacherServiceProvider().BatchGet: batch get failed",
@@ -140,7 +140,7 @@ func (m *homeFunStudyModel) GetDetail(ctx context.Context, operator *entity.Oper
 		return nil, err
 	}
 	for _, t := range teachers {
-		teacherNames = append(teacherNames, t.Name)
+		teacherNames = append(teacherNames, t.Name())
 	}
 
 	result := &entity.GetHomeFunStudyResult{

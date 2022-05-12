@@ -186,7 +186,7 @@ func (s *scheduleRelationModel) GetUsers(ctx context.Context, op *entity.Operato
 		if user, ok := userMap[id]; ok {
 			result.Teachers = append(result.Teachers, &entity.ScheduleShortInfo{
 				ID:   user.ID,
-				Name: user.Name,
+				Name: user.Name(),
 			})
 		}
 	}
@@ -196,7 +196,7 @@ func (s *scheduleRelationModel) GetUsers(ctx context.Context, op *entity.Operato
 		if user, ok := userMap[id]; ok {
 			result.Students = append(result.Students, &entity.ScheduleShortInfo{
 				ID:   user.ID,
-				Name: user.Name,
+				Name: user.Name(),
 			})
 		}
 	}

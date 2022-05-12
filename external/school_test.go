@@ -2,68 +2,52 @@ package external
 
 import (
 	"context"
+	"fmt"
 	"testing"
 )
 
+var schToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MjA1OTIwMCwiaXNzIjoia2lkc2xvb3AifQ.S-rNdS57cN3T3slBy4MTqzQJa0bs7mq5wMPn6493vAGflKZRny8ooGDy9f2TRb7h-ud5E_Xcqf_l4aRzBmgCEWlrvBBDBPYXk5Zrav8y9p5BeyvY35j4S9iCR6uv2-IPAsFr_uu8S41l81vG0JKH6VgdBVlLYWmAb_fxxj-krKYrS3C8Ppp7DNw783Ov67Vt6nGHV3LQ6M9HbagbjXL-MJYQJGSCUqbLNGwCZzZG1NnbpV7bzJfpsH8XYBLCXb2z38BrV7dqTkluk9mftiqH3mNITpYkqsqOKJIz6zf_02vaU31BUkJ8ajdf-Queq4OIOwrde_wB1sU6S0CXWIjTOw"
+
+// 0ff7769f-cc94-4a80-a780-dcb0947db18b
+// 00429737-f515-4348-b24f-919c2f82a2aa
+var clsIDs = []string{
+	"0ff7769f-cc94-4a80-a780-dcb0947db18b",
+	"00429737-f515-4348-b24f-919c2f82a2aa",
+}
+
 func TestAmsSchoolService_GetByClasses(t *testing.T) {
-	orgClassMap, err := GetClassServiceProvider().GetByOrganizationIDs(context.TODO(), testOperator, []string{testOperator.OrgID})
-	if err != nil {
-		t.Errorf("error = %v", err)
-		return
-	}
-	orgClassList, ok := orgClassMap[testOperator.OrgID]
-	if !ok || len(orgClassList) <= 0 {
-		t.Errorf("error = %v", err)
-		return
-	}
-	orgClassIDs := make([]string, len(orgClassList))
-	for i, item := range orgClassList {
-		orgClassIDs[i] = item.ID
-	}
-	t.Log(len(orgClassIDs))
-	schools, err := GetSchoolServiceProvider().GetByClasses(context.TODO(),
-		testOperator,
-		orgClassIDs,
-		WithStatus(Active))
-	if err != nil {
-		t.Errorf("GetSchoolServiceProvider().GetByClasses() error = %v", err)
-		return
-	}
+	ctx := context.Background()
+	testOperator.Token = schToken
+	IDs := make([]string, 0, len(clsIDs))
+	IDs = append(IDs, clsIDs...)
+	provider := AmsSchoolConnectionService{}
 
-	if len(schools) == 0 {
-		t.Error("GetSchoolServiceProvider().GetByClasses() get empty slice")
-		return
+	result1, err := provider.AmsSchoolService.GetByClasses(ctx, testOperator, IDs)
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	for _, school := range schools {
-		if school == nil {
-			t.Error("GetSchoolServiceProvider().GetByClasses() get null")
-			return
-		}
+	result2, err := provider.GetByClasses(ctx, testOperator, IDs)
+	if err != nil {
+		t.Fatal(err)
 	}
+	fmt.Println("len:", len(result1) == len(result2))
 }
 
 func TestAmsSchoolService_GetByOrganizationID(t *testing.T) {
-	schools, err := GetSchoolServiceProvider().GetByOrganizationID(context.TODO(),
-		testOperator,
-		"9e285fc9-50fd-4cf2-ba5b-3f191c3338b4",
-		WithStatus(Active))
+	ctx := context.Background()
+	testOperator.Token = schToken
+	provider := AmsSchoolConnectionService{}
+	schools1, err := provider.AmsSchoolService.GetByOrganizationID(ctx, testOperator, orgID)
 	if err != nil {
 		t.Errorf("GetSchoolServiceProvider().GetByOrganizationID() error = %v", err)
 		return
 	}
-
-	if len(schools) == 0 {
-		t.Error("GetSchoolServiceProvider().GetByOrganizationID() get empty slice")
+	schools2, err := provider.GetByOrganizationID(ctx, testOperator, orgID)
+	if err != nil {
+		t.Errorf("GetSchoolServiceProvider().GetByOrganizationID() error = %v", err)
 		return
 	}
-
-	for _, school := range schools {
-		if school == nil {
-			t.Error("GetSchoolServiceProvider().GetByOrganizationID() get null")
-			return
-		}
-	}
+	fmt.Println("len:", len(schools1) == len(schools2))
 }
 
 func TestAmsSchoolService_GetByPermission(t *testing.T) {
@@ -90,65 +74,40 @@ func TestAmsSchoolService_GetByPermission(t *testing.T) {
 }
 
 func TestAmsSchoolService_GetByOperator(t *testing.T) {
-	schools, err := GetSchoolServiceProvider().GetByOperator(context.TODO(),
-		testOperator,
-		WithStatus(Active))
+	testOperator.Token = schToken
+	provider := AmsSchoolConnectionService{}
+	schools1, err := provider.AmsSchoolService.GetByOperator(context.TODO(), testOperator, WithStatus(Active))
 	if err != nil {
 		t.Errorf("GetSchoolServiceProvider().GetByOperator() error = %v", err)
 		return
 	}
 
-	// if len(schools) == 0 {
-	// 	t.Error("GetSchoolServiceProvider().GetByOperator() get empty slice")
-	// 	return
-	// }
-
-	for _, school := range schools {
-		if school == nil {
-			t.Error("GetSchoolServiceProvider().GetByOperator() get null")
-			return
-		}
+	schools2, err := provider.GetByOperator(context.TODO(), testOperator, WithStatus(Active))
+	if err != nil {
+		t.Errorf("GetSchoolServiceProvider().GetByOperator() error = %v", err)
+		return
 	}
+
+	fmt.Println("len:", len(schools1) == len(schools2))
 }
 
 func TestAmsSchoolService_GetByUsers(t *testing.T) {
-	userInfos, err := GetUserServiceProvider().GetByOrganization(context.TODO(), testOperator, testOperator.OrgID)
+	ctx := context.Background()
+	testOperator.Token = schToken
+	IDs := []string{
+		"1dd1d0b4-df1a-4486-bd6c-a89f9b92f779",
+		"1e200965-df57-461e-8af3-e255886e8e41",
+	}
+	provider := AmsSchoolConnectionService{}
+	schools1, err := provider.AmsSchoolService.GetByUsers(ctx, testOperator, orgID, IDs)
 	if err != nil {
-		t.Error("GetUserServiceProvider.GetByOrganization error")
-		return
+		t.Fatal(err)
 	}
-	userIDs := make([]string, len(userInfos))
-	for i, item := range userInfos {
-		userIDs[i] = item.ID
-	}
-	userIDs = append(userIDs, userIDs...)
-	userIDs = append(userIDs, userIDs...)
-	schools, err := GetSchoolServiceProvider().GetByUsers(context.TODO(),
-		testOperator,
-		testOperator.OrgID,
-		userIDs,
-		WithStatus(Active))
+	schools2, err := provider.GetByUsers(ctx, testOperator, orgID, IDs)
 	if err != nil {
-		t.Errorf("GetSchoolServiceProvider().GetByUsers() error = %v", err)
-		return
+		t.Fatal(err)
 	}
-
-	if len(schools) == 0 {
-		t.Error("GetSchoolServiceProvider().GetByUsers() get empty slice")
-		return
-	}
-	count := 0
-	for key, school := range schools {
-		if school == nil {
-			t.Error("GetSchoolServiceProvider().GetByUsers() get null")
-			return
-		}
-		t.Logf("%s:%d", key, len(school))
-		if len(school) == 0 {
-			count++
-		}
-	}
-	t.Log(count)
+	fmt.Println("len:", len(schools1) == len(schools2))
 }
 
 func TestAmsSchoolService_BatchGet(t *testing.T) {

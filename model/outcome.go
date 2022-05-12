@@ -1640,7 +1640,7 @@ func (ocm OutcomeModel) getAuthorNameByID(ctx context.Context, operator *entity.
 			log.String("user_id", id))
 		return "", err
 	}
-	return user.Name, nil
+	return user.Name(), nil
 }
 
 func allowDeleteOutcome(ctx context.Context, operator *entity.Operator, perms map[external.PermissionName]bool, outcome *entity.Outcome) bool {

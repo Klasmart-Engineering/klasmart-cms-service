@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/decorator"
@@ -127,7 +125,5 @@ func main() {
 
 	log.Debug(ctx, "init api server successfully")
 
-	quit := make(chan os.Signal)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	select {}
 }

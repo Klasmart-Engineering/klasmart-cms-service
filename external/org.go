@@ -7,10 +7,10 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/KL-Engineering/kidsloop-cache/cache"
-
 	"github.com/KL-Engineering/chlorine"
 	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cache/cache"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
@@ -24,7 +24,6 @@ type OrganizationServiceProvider interface {
 	GetNameByOrganizationOrSchool(ctx context.Context, operator *entity.Operator, id []string) ([]string, error)
 	GetNameMapByOrganizationOrSchool(ctx context.Context, operator *entity.Operator, id []string) (map[string]string, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName, options ...APOption) ([]*Organization, error)
-	GetByUserID(ctx context.Context, operator *entity.Operator, id string, options ...APOption) ([]*Organization, error)
 }
 
 type Organization struct {
@@ -47,7 +46,10 @@ func (n *NullableOrganization) RelatedIDs() []*cache.RelatedEntity {
 }
 
 func GetOrganizationServiceProvider() OrganizationServiceProvider {
-	return &AmsOrganizationService{}
+	if config.Get().AMS.UseDeprecatedQuery {
+		return &AmsOrganizationService{}
+	}
+	return &AmsOrganizationConnectionService{}
 }
 
 type AmsOrganizationService struct{}
@@ -399,70 +401,6 @@ func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *e
 	log.Info(ctx, "get orgs by permission success",
 		log.Any("operator", operator),
 		log.String("permissionName", permissionName.String()),
-		log.Any("orgs", orgs))
-
-	return orgs, nil
-}
-
-func (s AmsOrganizationService) GetByUserID(ctx context.Context, operator *entity.Operator, id string, options ...APOption) ([]*Organization, error) {
-	condition := NewCondition(options...)
-
-	request := chlorine.NewRequest(`
-	query($user_id: ID!) {
-		user(user_id: $user_id) {
-			memberships{
-				organization{
-					id:organization_id
-					name:organization_name
-					status
-				}
-			}
-		}
-	}`, chlorine.ReqToken(operator.Token))
-	request.Var("user_id", id)
-
-	data := &struct {
-		User struct {
-			Memberships []struct {
-				Organization Organization `json:"organization"`
-			} `json:"memberships"`
-		} `json:"user"`
-	}{}
-
-	response := &chlorine.Response{
-		Data: data,
-	}
-
-	_, err := GetAmsClient().Run(ctx, request, response)
-	if err != nil {
-		log.Error(ctx, "get orgs by user failed",
-			log.Err(err),
-			log.String("userID", id))
-		return nil, err
-	}
-
-	orgs := make([]*Organization, 0)
-	for _, membership := range data.User.Memberships {
-		if condition.Status.Valid {
-			if condition.Status.Status != membership.Organization.Status {
-				continue
-			}
-		} else {
-			// only status = "Active" data is returned by default
-			if membership.Organization.Status != Active {
-				continue
-			}
-		}
-
-		orgs = append(orgs, &Organization{
-			ID:     membership.Organization.ID,
-			Name:   membership.Organization.Name,
-			Status: membership.Organization.Status,
-		})
-	}
-
-	log.Info(ctx, "get orgs by user success",
-		log.String("userID", id),
 		log.Any("orgs", orgs))
 
 	return orgs, nil
