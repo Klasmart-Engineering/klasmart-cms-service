@@ -3,7 +3,7 @@ name: Deploy LoadTest To Amazon ECS
 on:
   push:
     branches:
-      - loadtest
+      - cms-385
   pull_request:
     branches:
       - loadtest
