@@ -56,6 +56,9 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
         aws-region: ${{ env.AWS_REGION }}
+    
+    - name: sync s3 secret file to deploy/
+      run: aws s3 cp s3://$S3_BUCKET/keys/ deploy/ --recursive --sse aws:kms --sse-kms-key-id $KMS_KEY
 
     - name: Login to Amazon ECR
       id: login-ecr
