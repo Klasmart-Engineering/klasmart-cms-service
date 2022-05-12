@@ -16,6 +16,8 @@ env:
   ECS_TASK_DEFINITION: kidsloop-alpha-cms
   CONTAINER_NAME: kidsloop-alpha-cms
   GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+  S3_BUCKET: ${{ secrets.S3_BUCKET }}
+  KMS_KEY: ${{ secrets.KMS_KEY }}
 
 jobs:
   build-to-ecr:
