@@ -25,6 +25,10 @@ func (Assessment) TableName() string {
 	return constant.TableNameAssessmentV2
 }
 
+func (a Assessment) Clone() *Assessment {
+	return &a
+}
+
 type AssessmentUser struct {
 	ID             string                     `gorm:"column:id;PRIMARY_KEY"`
 	AssessmentID   string                     `gorm:"assessment_id"`
@@ -46,6 +50,10 @@ type AssessmentUser struct {
 
 func (AssessmentUser) TableName() string {
 	return constant.TableNameAssessmentsUsersV2
+}
+
+func (au AssessmentUser) Clone() *AssessmentUser {
+	return &au
 }
 
 // AssessmentContent: from ContentLibrary and ScheduleAttachment

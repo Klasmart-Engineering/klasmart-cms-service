@@ -346,30 +346,86 @@ func (a *assessmentInternalModel) DeleteByScheduleIDsTx(ctx context.Context, op 
 	return err
 }
 
-// TODO:: refactor
-func (a *assessmentInternalModel) UpdateAssessmentUserStatusTime(ctx context.Context, waitUpdateAssessmentUsers []*v2.AssessmentUser) error {
+func (a *assessmentInternalModel) updateAssessmentUsersWhenLiveCallback(ctx context.Context, action v2.AssessmentUserLiveAction, assessmentStatus v2.AssessmentStatus, oldAssessmentUsers []*v2.AssessmentUser) ([]*v2.AssessmentUser, error) {
 	now := time.Now().Unix()
-	for _, item := range waitUpdateAssessmentUsers {
-		switch item.StatusBySystem {
-		case v2.AssessmentUserSystemStatusNotStarted:
-		case v2.AssessmentUserSystemStatusInProgress:
-			if item.InProgressAt == 0 {
+
+	newData := make([]*v2.AssessmentUser, 0, len(oldAssessmentUsers))
+
+	if action == "" {
+		for _, item := range oldAssessmentUsers {
+			if item.StatusBySystem == v2.AssessmentUserSystemStatusCompleted {
+				continue
+			}
+
+			newItem := item.Clone()
+
+			if item.StatusBySystem == v2.AssessmentUserSystemStatusDone {
+				newItem.StatusBySystem = v2.AssessmentUserSystemStatusResubmitted
+				newItem.ResubmittedAt = now
+			} else {
+				newItem.StatusBySystem = v2.AssessmentUserSystemStatusDone
+				newItem.DoneAt = now
+			}
+
+			if assessmentStatus == v2.AssessmentStatusNotStarted || assessmentStatus == v2.AssessmentStatusStarted {
+				newItem.StatusByUser = v2.AssessmentUserStatusParticipate
+			}
+
+			newItem.UpdateAt = now
+
+			newData = append(newData, newItem)
+		}
+
+		return newData, nil
+	}
+
+	if action == v2.AssessmentUserLiveActionEnterLiveRoom {
+		for _, item := range oldAssessmentUsers {
+			if item.StatusBySystem == v2.AssessmentUserSystemStatusNotStarted {
+				newItem := item.Clone()
+
+				newItem.StatusBySystem = v2.AssessmentUserSystemStatusInProgress
 				item.InProgressAt = now
-			}
-		case v2.AssessmentUserSystemStatusDone:
-			if item.DoneAt == 0 {
-				item.DoneAt = now
-			}
-		case v2.AssessmentUserSystemStatusResubmitted:
-			item.ResubmittedAt = now
-		case v2.AssessmentUserSystemStatusCompleted:
-			if item.CompletedAt == 0 {
-				item.CompletedAt = now
+				item.UpdateAt = now
+
+				newData = append(newData, newItem)
 			}
 		}
+
+		return newData, nil
 	}
-	return nil
+
+	if action == v2.AssessmentUserLiveActionLeaveLiveRoom {
+		for _, item := range oldAssessmentUsers {
+			newItem := item.Clone()
+
+			switch item.StatusBySystem {
+			case v2.AssessmentUserSystemStatusInProgress:
+				newItem.StatusBySystem = v2.AssessmentUserSystemStatusDone
+				newItem.DoneAt = now
+			case v2.AssessmentUserSystemStatusDone:
+				newItem.StatusBySystem = v2.AssessmentUserSystemStatusResubmitted
+				newItem.ResubmittedAt = now
+			case v2.AssessmentUserSystemStatusResubmitted:
+				newItem.ResubmittedAt = now
+			}
+
+			if assessmentStatus == v2.AssessmentStatusNotStarted || assessmentStatus == v2.AssessmentStatusStarted {
+				newItem.StatusByUser = v2.AssessmentUserStatusParticipate
+			}
+
+			newItem.UpdateAt = now
+
+			newData = append(newData, newItem)
+		}
+
+		return newData, nil
+	}
+
+	log.Warn(ctx, "action args is invalid", log.Any("action", action))
+	return nil, constant.ErrInvalidArgs
 }
+
 func (a *assessmentInternalModel) endClassCallbackUpdateAssessment(ctx context.Context, op *entity.Operator, req *v2.ScheduleEndClassCallBackReq, assessment *v2.Assessment) error {
 	now := time.Now().Unix()
 
@@ -390,7 +446,15 @@ func (a *assessmentInternalModel) endClassCallbackUpdateAssessment(ctx context.C
 	}
 
 	if assessment.Status == v2.AssessmentStatusNotStarted {
+		// update assessment users
+		waitUpdateAssessmentUsers, err := a.updateAssessmentUsersWhenLiveCallback(ctx, req.Action, assessment.Status, assessmentUsers)
+		if err != nil {
+			return err
+		}
+
 		// update assessment
+		waitUpdateAssessment := assessment.Clone()
+
 		if assessment.AssessmentType == v2.AssessmentTypeOfflineClass ||
 			assessment.AssessmentType == v2.AssessmentTypeOnlineClass {
 			// update assessment title
@@ -400,34 +464,24 @@ func (a *assessmentInternalModel) endClassCallbackUpdateAssessment(ctx context.C
 				var timeStr string
 				if req.ClassEndAt > 0 {
 					timeStr = time.Unix(req.ClassEndAt, 0).Format("20060102")
-					assessment.Title = fmt.Sprintf("%s-%s", timeStr, titleSplit[1])
+					waitUpdateAssessment.Title = fmt.Sprintf("%s-%s", timeStr, titleSplit[1])
 				}
 			}
 		}
 
-		assessment.Status = v2.AssessmentStatusStarted
-		assessment.UpdateAt = now
-		assessment.ClassLength = req.ClassLength
-		assessment.ClassEndAt = req.ClassEndAt
+		waitUpdateAssessment.Status = v2.AssessmentStatusStarted
+		waitUpdateAssessment.UpdateAt = now
+		waitUpdateAssessment.ClassLength = req.ClassLength
+		waitUpdateAssessment.ClassEndAt = req.ClassEndAt
 
-		for _, userItem := range assessmentUsers {
-			userItem.StatusBySystem = v2.AssessmentUserSystemStatusDone
-			userItem.StatusByUser = v2.AssessmentUserStatusParticipate
-			userItem.UpdateAt = now
-		}
-
-		err = a.UpdateAssessmentUserStatusTime(ctx, assessmentUsers)
-		if err != nil {
-			return err
-		}
 		return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-			_, err := assessmentV2.GetAssessmentDA().UpdateTx(ctx, tx, assessment)
+			_, err := assessmentV2.GetAssessmentDA().UpdateTx(ctx, tx, waitUpdateAssessment)
 			if err != nil {
 				return err
 			}
 
-			if len(assessmentUsers) > 0 {
-				_, err := assessmentV2.GetAssessmentUserDA().UpdateTx(ctx, tx, assessmentUsers)
+			if len(waitUpdateAssessmentUsers) > 0 {
+				_, err := assessmentV2.GetAssessmentUserDA().UpdateTx(ctx, tx, waitUpdateAssessmentUsers)
 				if err != nil {
 					return err
 				}
@@ -435,42 +489,17 @@ func (a *assessmentInternalModel) endClassCallbackUpdateAssessment(ctx context.C
 
 			return nil
 		})
-	} else if assessment.Status == v2.AssessmentStatusStarted {
-		for _, userItem := range assessmentUsers {
-			if userItem.StatusBySystem == v2.AssessmentUserSystemStatusDone {
-				userItem.StatusBySystem = v2.AssessmentUserSystemStatusResubmitted
-			} else {
-				userItem.StatusBySystem = v2.AssessmentUserSystemStatusDone
-			}
-
-			userItem.StatusByUser = v2.AssessmentUserStatusParticipate
-			userItem.UpdateAt = now
-		}
-		err = a.UpdateAssessmentUserStatusTime(ctx, assessmentUsers)
-		if err != nil {
-			return err
-		}
-		_, err := assessmentV2.GetAssessmentUserDA().Update(ctx, assessmentUsers)
-		if err != nil {
-			return err
-		}
 	} else {
-		for _, userItem := range assessmentUsers {
-			if userItem.StatusBySystem == v2.AssessmentUserSystemStatusDone {
-				userItem.StatusBySystem = v2.AssessmentUserSystemStatusResubmitted
-			} else {
-				userItem.StatusBySystem = v2.AssessmentUserSystemStatusDone
+		// update assessment users
+		waitUpdateAssessmentUsers, err := a.updateAssessmentUsersWhenLiveCallback(ctx, req.Action, assessment.Status, assessmentUsers)
+		if err != nil {
+			return err
+		}
+		if len(waitUpdateAssessmentUsers) > 0 {
+			_, err = assessmentV2.GetAssessmentUserDA().Update(ctx, waitUpdateAssessmentUsers)
+			if err != nil {
+				return err
 			}
-
-			userItem.UpdateAt = now
-		}
-		err = a.UpdateAssessmentUserStatusTime(ctx, assessmentUsers)
-		if err != nil {
-			return err
-		}
-		_, err := assessmentV2.GetAssessmentUserDA().Update(ctx, assessmentUsers)
-		if err != nil {
-			return err
 		}
 	}
 
