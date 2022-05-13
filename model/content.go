@@ -166,7 +166,6 @@ type IContentModel interface {
 	GetLatestContentIDMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) (map[string]string, error)
 
 	CleanCache(ctx context.Context)
-	GetContentFolderTree(ctx context.Context, req *entity.ContentFolderTreeRequest, operator *entity.Operator) (res *entity.ContentFolderTreeResponse, err error)
 }
 
 func (cm *ContentModel) GetSpecifiedLessonPlan(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, planID string, materialIDs []string, withAP bool) (*entity.ContentInfoWithDetails, error) {
@@ -4157,7 +4156,4 @@ func GetContentModel() IContentModel {
 	})
 
 	return _contentModel
-}
-func (cm *ContentModel) GetContentFolderTree(ctx context.Context, req *entity.ContentFolderTreeRequest, operator *entity.Operator) (res *entity.ContentFolderTreeResponse, err error) {
-	return
 }

@@ -812,17 +812,3 @@ type GetLessonPlansCanScheduleResponse struct {
 	Total int                      `json:"total"`
 	Data  []*LessonPlanForSchedule `json:"data"`
 }
-
-type ContentFolderTreeRequest struct {
-	Name        string `json:"name" form:"name"`
-	Author      string `json:"author" form:"author"`
-	ContentName string `json:"content_name" form:"content_name"`
-}
-
-type ContentFolderTreeResponse struct {
-	FolderID        string                       `json:"folder_id"`
-	FolderName      string                       `json:"folder_name"`
-	FolderItemCount int                          `json:"folder_item_count"`
-	FolderDirPath   string                       `json:"folder_dir_path"`
-	FolderChild     []*ContentFolderTreeResponse `json:"folder_child"`
-}
