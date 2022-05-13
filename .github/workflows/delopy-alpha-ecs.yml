@@ -3,7 +3,7 @@ name: Deploy Alpha To Amazon ECS
 on:
   push:
     branches:
-      - main
+      - cms-385
   pull_request:
     branches:
       - main
@@ -59,8 +59,8 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
         aws-region: ${{ env.AWS_REGION }}
 
-    - name: sync s3 secret file to deploy/
-      run: aws s3 cp s3://$S3_BUCKET/keys/ deploy/ --recursive --sse aws:kms --sse-kms-key-id $KMS_KEY
+    #- name: sync s3 secret file to deploy/
+    #run: aws s3 cp s3://$S3_BUCKET/keys/ deploy/ --recursive --sse aws:kms --sse-kms-key-id $KMS_KEY
 
     - name: Login to Amazon ECR
       id: login-ecr
@@ -87,14 +87,14 @@ jobs:
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
       with:
-          task-definition: task-definition.json
-          container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.build-image.outputs.image }}
+        task-definition: task-definition.json
+        container-name: ${{ env.CONTAINER_NAME }}
+        image: ${{ steps.build-image.outputs.image }}
 
-    # - name: Deploy Amazon ECS task definition
-    #   uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-    #   with:
-    #       task-definition: ${{ steps.task-def.outputs.task-definition }}
-    #       service: ${{ env.ECS_SERVICE }}
-    #       cluster: ${{ env.ECS_CLUSTER }}
-    #       wait-for-service-stability: true
+    - name: Deploy Amazon ECS task definition
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true

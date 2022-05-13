@@ -3,7 +3,7 @@ name: Deploy LoadTest To Amazon ECS
 on:
   push:
     branches:
-      - cms-385
+      - loadtest
   pull_request:
     branches:
       - loadtest
@@ -66,9 +66,8 @@ jobs:
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-        IMAGE_TAG: gh-latest
+        IMAGE_TAG: ${{ github.sha }}
       run: |
-        set +x
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
@@ -84,7 +83,7 @@ jobs:
           .registeredAt,
           .registeredBy
         )' > task-definition.json
-
+        
     - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
@@ -92,7 +91,11 @@ jobs:
           task-definition: task-definition.json
           container-name: ${{ env.CONTAINER_NAME }}
           image: ${{ steps.build-image.outputs.image }}
-
+      
     - name: Deploy Amazon ECS task definition
-      run: |
-        aws ecs update-service --service arn:aws-cn:ecs:cn-north-1:503677224658:service/load-testing/loadtestcms --force-new-deployment --cluster load-testing
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
