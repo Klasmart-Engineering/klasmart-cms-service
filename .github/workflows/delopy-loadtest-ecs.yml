@@ -75,7 +75,7 @@ jobs:
 
     - name: Download task definition
       run: |
-        aws ecs describe-task-definition --task-definition api --query $ECS_TASK_DEFINITION | jq -r 'del(
+        aws ecs describe-task-definition --task-definition $ECS_TASK_DEFINITION --query taskDefinition  | jq -r 'del(
           .taskDefinitionArn,
           .requiresAttributes,
           .compatibilities,
