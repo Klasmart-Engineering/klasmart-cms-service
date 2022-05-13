@@ -533,7 +533,7 @@ type FolderItemsResponseWithTotal struct {
 // @Param key query string true "search content key"
 // @Param type query integer true "0 all,1 name"
 // @Param only_for_me query integer true "0 all,1 only for me"
-// @Success 200 {object} entity.ContentFolderTreeResponse
+// @Success 200 {object} entity.TreeResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
