@@ -95,8 +95,6 @@ type IFolderModel interface {
 
 	BatchUpdateFolderItemCount(ctx context.Context, tx *dbo.DBContext, ids []string) error
 	BatchUpdateAncestorEmptyField(ctx context.Context, tx *dbo.DBContext, ids []string) error
-
-	GetFolderTree(ctx context.Context, req entity.FolderTreeRequest, operator *entity.Operator) (res entity.FolderTreeResponse, err error)
 }
 
 type FolderModel struct{}
@@ -2242,10 +2240,6 @@ func parseLink(ctx context.Context, link string) (entity.FolderFileType, string,
 	fileType := entity.NewFolderFileType(linkPairs[0])
 	id := linkPairs[1]
 	return fileType, id, nil
-}
-
-func (f *FolderModel) GetFolderTree(ctx context.Context, req entity.FolderTreeRequest, operator *entity.Operator) (res entity.FolderTreeResponse, err error) {
-	return
 }
 
 var (

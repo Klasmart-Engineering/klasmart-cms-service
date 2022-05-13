@@ -377,16 +377,3 @@ type SearchFolderCondition struct {
 	OrderBy string
 	Pager   utils.Pager
 }
-
-type FolderTreeRequest struct {
-	Name        string `json:"name" form:"name"`
-	Author      string `json:"author" form:"author"`
-	ContentName string `json:"content_name" form:"content_name"`
-}
-
-type FolderTreeResponse struct {
-	FolderID        string               `json:"folder_id"`
-	FolderName      string               `json:"folder_name"`
-	FolderItemCount int                  `json:"folder_item_count"`
-	FolderChild     []FolderTreeResponse `json:"folder_child"`
-}
