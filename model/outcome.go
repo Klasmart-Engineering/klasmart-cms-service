@@ -40,6 +40,7 @@ type IOutcomeModel interface {
 	SearchPrivate(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (*SearchOutcomeResponse, error)
 	SearchPending(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (*SearchOutcomeResponse, error)
 	SearchPublished(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (*SearchPublishedOutcomeResponse, error)
+	Export(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (*entity.ExportOutcomeResponse, error)
 
 	Lock(ctx context.Context, operator *entity.Operator, outcomeID string) (string, error)
 	HasLocked(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (bool, error)
@@ -1045,6 +1046,43 @@ func (o OutcomeModel) SearchPublished(ctx context.Context, op *entity.Operator, 
 		Total: total,
 		List:  publishedOutcomeViewList,
 	}, err
+}
+
+func (o OutcomeModel) Export(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (*entity.ExportOutcomeResponse, error) {
+	var outcomes []*entity.Outcome
+	daCondition := da.NewOutcomeCondition(condition)
+	total, err := o.outcomeDA.Page(ctx, daCondition, &outcomes)
+	if err != nil {
+		log.Error(ctx, "o.outcomeDA.Page error",
+			log.Any("operator", operator),
+			log.Any("daCondition", daCondition),
+			log.Err(err))
+		return nil, err
+	}
+
+	if len(outcomes) == 0 {
+		log.Debug(ctx, "outcome record not found",
+			log.Any("operator", operator),
+			log.Any("daCondition", daCondition))
+		return &entity.ExportOutcomeResponse{
+			TotalCount: total,
+			Data:       []*entity.ExportOutcomeView{},
+		}, nil
+	}
+
+	exportOutcomeViewList, err := o.transformToExportOutcomeView(ctx, operator, outcomes)
+	if err != nil {
+		log.Error(ctx, "o.transformToExportOutcomeView error",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("outcomes", outcomes))
+		return nil, err
+	}
+
+	return &entity.ExportOutcomeResponse{
+		TotalCount: total,
+		Data:       exportOutcomeViewList,
+	}, nil
 }
 
 func (ocm OutcomeModel) Approve(ctx context.Context, operator *entity.Operator, outcomeID string) error {
@@ -2701,6 +2739,371 @@ func (o OutcomeModel) transformToOutcomeDetailView(ctx context.Context, operator
 					})
 			} else {
 				log.Error(ctx, "age record not found", log.String("ageID", outcomeRelation.RelationID))
+			}
+		}
+	}
+
+	return result, nil
+}
+
+func (o OutcomeModel) transformToExportOutcomeView(ctx context.Context, operator *entity.Operator, outcomes []*entity.Outcome) ([]*entity.ExportOutcomeView, error) {
+	result := make([]*entity.ExportOutcomeView, len(outcomes))
+	resultMap := make(map[string]*entity.ExportOutcomeView, len(outcomes))
+	outcomeIDs := make([]string, len(outcomes))
+	userIDs := make([]string, 0, len(outcomes))
+	var outcomeRelations []*entity.OutcomeRelation
+	programIDs := make([]string, 0, len(outcomes))
+	subjectIDs := make([]string, 0, len(outcomes))
+	categoryIDs := make([]string, 0, len(outcomes))
+	subcategoryIDs := make([]string, 0, len(outcomes))
+	ageIDs := make([]string, 0, len(outcomes))
+	gradeIDs := make([]string, 0, len(outcomes))
+	outcomeAncestorIDs := make([]string, 0, len(outcomes))
+
+	for i, outcome := range outcomes {
+		result[i] = &entity.ExportOutcomeView{
+			OutcomeID:      outcome.ID,
+			OutcomeName:    outcome.Name,
+			Shortcode:      outcome.Shortcode,
+			Assumed:        outcome.Assumed,
+			Description:    outcome.Description,
+			Author:         outcome.AuthorName,
+			Keywords:       strings.Split(outcome.Keywords, ","),
+			Program:        []string{},
+			Subject:        []string{},
+			Category:       []string{},
+			Subcategory:    []string{},
+			Age:            []string{},
+			Grade:          []string{},
+			Sets:           []string{},
+			Milestones:     []string{},
+			CreatedAt:      outcome.CreateAt,
+			ScoreThreshold: outcome.ScoreThreshold,
+		}
+
+		userIDs = append(userIDs, outcome.AuthorID)
+		outcomeIDs[i] = outcome.ID
+		resultMap[outcome.ID] = result[i]
+		outcomeAncestorIDs = append(outcomeAncestorIDs, outcome.AncestorID)
+	}
+
+	err := o.outcomeRelationDA.Query(ctx, &da.OutcomeRelationCondition{
+		MasterIDs: dbo.NullStrings{
+			Strings: outcomeIDs,
+			Valid:   true,
+		},
+	}, &outcomeRelations)
+	if err != nil {
+		log.Error(ctx, "o.outcomeRelationDA.Query error",
+			log.Err(err),
+			log.Strings("outcomeIDs", outcomeIDs))
+		return nil, err
+	}
+
+	for _, outcomeRelation := range outcomeRelations {
+		switch outcomeRelation.RelationType {
+		case entity.ProgramType:
+			programIDs = append(programIDs, outcomeRelation.RelationID)
+		case entity.SubjectType:
+			subjectIDs = append(subjectIDs, outcomeRelation.RelationID)
+		case entity.CategoryType:
+			categoryIDs = append(categoryIDs, outcomeRelation.RelationID)
+		case entity.SubcategoryType:
+			subcategoryIDs = append(subcategoryIDs, outcomeRelation.RelationID)
+		case entity.AgeType:
+			ageIDs = append(ageIDs, outcomeRelation.RelationID)
+		case entity.GradeType:
+			gradeIDs = append(gradeIDs, outcomeRelation.RelationID)
+		}
+	}
+
+	userIDs = utils.StableSliceDeduplication(userIDs)
+	programIDs = utils.StableSliceDeduplication(programIDs)
+	subjectIDs = utils.StableSliceDeduplication(subjectIDs)
+	categoryIDs = utils.StableSliceDeduplication(categoryIDs)
+	subcategoryIDs = utils.StableSliceDeduplication(subcategoryIDs)
+	ageIDs = utils.StableSliceDeduplication(ageIDs)
+	gradeIDs = utils.StableSliceDeduplication(gradeIDs)
+	outcomeAncestorIDs = utils.StableSliceDeduplication(outcomeAncestorIDs)
+
+	g := new(errgroup.Group)
+	var outcomeSetMap map[string][]*entity.Set
+	var userNameMap map[string]string
+	var programMap map[string]string
+	var subjectMap map[string]string
+	var categoryMap map[string]string
+	var subcategoryMap map[string]string
+	var ageMap map[string]string
+	var gradeMap map[string]string
+	var outcomeMilestoneMap map[string][]string
+
+	// get outcome set
+	g.Go(func() error {
+		outcomeSets, err := o.outcomeSetDA.SearchSetsByOutcome(ctx, dbo.MustGetDB(ctx), outcomeIDs)
+		if err != nil {
+			log.Error(ctx, "o.outcomeSetDA.SearchSetsByOutcome error",
+				log.Err(err),
+				log.Strings("outcomeIDs", outcomeIDs))
+			return err
+		}
+
+		outcomeSetMap = outcomeSets
+		return nil
+	})
+
+	// get user name map
+	if len(userIDs) > 0 {
+		g.Go(func() error {
+			users, err := o.userService.BatchGetNameMap(ctx, operator, userIDs)
+			if err != nil {
+				log.Error(ctx, "s.userService.BatchGetMap error",
+					log.Err(err),
+					log.Strings("userIDs", userIDs))
+				return err
+			}
+
+			userNameMap = users
+
+			return nil
+		})
+	}
+
+	// get program info
+	if len(programIDs) > 0 {
+		g.Go(func() error {
+			programs, err := o.programService.BatchGetNameMap(ctx, operator, programIDs)
+			if err != nil {
+				log.Error(ctx, "o.programService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("programIDs", programIDs))
+				return err
+			}
+
+			programMap = programs
+
+			return nil
+		})
+	}
+
+	// get subject info
+	if len(subjectIDs) > 0 {
+		g.Go(func() error {
+			subjects, err := o.subjectService.BatchGetNameMap(ctx, operator, subjectIDs)
+			if err != nil {
+				log.Error(ctx, "o.subjectService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("subjectIDs", subjectIDs))
+				return err
+			}
+
+			subjectMap = subjects
+
+			return nil
+		})
+	}
+
+	// get category info
+	if len(categoryIDs) > 0 {
+		g.Go(func() error {
+			categories, err := o.categoryService.BatchGetNameMap(ctx, operator, categoryIDs)
+			if err != nil {
+				log.Error(ctx, "o.categoryService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("categoryIDs", categoryIDs))
+				return err
+			}
+
+			categoryMap = categories
+
+			return nil
+		})
+	}
+
+	// get subcategory info
+	if len(subcategoryIDs) > 0 {
+		g.Go(func() error {
+			subcategories, err := o.subCategoryService.BatchGetNameMap(ctx, operator, subcategoryIDs)
+			if err != nil {
+				log.Error(ctx, "o.subCategoryService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("subcategoryIDs", subcategoryIDs))
+				return err
+			}
+
+			subcategoryMap = subcategories
+
+			return nil
+		})
+	}
+
+	// get age info
+	if len(ageIDs) > 0 {
+		g.Go(func() error {
+			ages, err := o.ageService.BatchGetNameMap(ctx, operator, ageIDs)
+			if err != nil {
+				log.Error(ctx, "o.ageService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("ageIDs", ageIDs))
+				return err
+			}
+
+			ageMap = ages
+
+			return nil
+		})
+	}
+
+	// get grade info
+	if len(gradeIDs) > 0 {
+		g.Go(func() error {
+			grades, err := o.gradeService.BatchGetNameMap(ctx, operator, gradeIDs)
+			if err != nil {
+				log.Error(ctx, "o.gradeService.BatchGetNameMap error",
+					log.Err(err),
+					log.Strings("gradeIDs", gradeIDs))
+				return err
+			}
+
+			gradeMap = grades
+
+			return nil
+		})
+	}
+
+	// TODO: bad database query
+	// get milestones
+	g.Go(func() error {
+		milestoneOutcomes, err := o.milestoneOutcomeDA.SearchTx(ctx, dbo.MustGetDB(ctx),
+			&da.MilestoneOutcomeCondition{
+				OutcomeAncestors: dbo.NullStrings{Strings: outcomeAncestorIDs, Valid: true},
+			})
+		if err != nil {
+			log.Error(ctx, "o.milestoneOutcomeDA.SearchTx error",
+				log.Err(err),
+				log.Any("OutcomeAncestors", outcomeAncestorIDs))
+			return err
+		}
+
+		milestoneIDOutcomeAncestorMap := make(map[string][]string, len(outcomeAncestorIDs))
+		milestoneIDs := make([]string, len(milestoneOutcomes))
+		for i, milestoneOutcome := range milestoneOutcomes {
+			milestoneIDs[i] = milestoneOutcome.MilestoneID
+			if _, ok := milestoneIDOutcomeAncestorMap[milestoneOutcome.OutcomeAncestor]; ok {
+				milestoneIDOutcomeAncestorMap[milestoneOutcome.OutcomeAncestor] = append(milestoneIDOutcomeAncestorMap[milestoneOutcome.OutcomeAncestor], milestoneOutcome.MilestoneID)
+			} else {
+				milestoneIDOutcomeAncestorMap[milestoneOutcome.OutcomeAncestor] = []string{milestoneOutcome.MilestoneID}
+			}
+		}
+
+		if len(milestoneIDs) == 0 {
+			log.Debug(ctx, "milestone outcome relation record not found")
+			return nil
+		}
+
+		_, milestones, err := o.milestoneDA.Search(ctx, dbo.MustGetDB(ctx), &da.MilestoneCondition{
+			IDs: dbo.NullStrings{Strings: milestoneIDs, Valid: true},
+			Statuses: dbo.NullStrings{Strings: []string{
+				string(entity.MilestoneStatusPublished),
+				string(entity.MilestoneStatusDraft),
+			}, Valid: true},
+			OrderBy: da.OrderByMilestoneUpdatedAtDesc,
+		})
+		if err != nil {
+			log.Error(ctx, "o.MilestoneDA.Search error",
+				log.Strings("milestoneIDs", milestoneIDs))
+			return err
+		}
+		milestoneMap := make(map[string]*entity.Milestone, len(milestones))
+		for _, v := range milestones {
+			milestoneMap[v.ID] = v
+		}
+
+		milestoneNameOutcomeAncestorMap := make(map[string][]string)
+		for outcomeAncestorID, milestoneIDs := range milestoneIDOutcomeAncestorMap {
+			for _, milemilestoneID := range milestoneIDs {
+				if milestone, ok := milestoneMap[milemilestoneID]; ok {
+					if milestone.Status == entity.OutcomeStatusDraft && milestone.SourceID != milestone.ID {
+						continue
+					}
+
+					milestoneNameOutcomeAncestorMap[outcomeAncestorID] = append(milestoneNameOutcomeAncestorMap[outcomeAncestorID], milestone.Name)
+				}
+			}
+		}
+
+		outcomeMilestoneMap = milestoneNameOutcomeAncestorMap
+
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		log.Error(ctx, "transformToExportOutcomeView error",
+			log.Err(err))
+		return nil, err
+	}
+
+	for i, outcome := range outcomes {
+		exportOutcomeView := result[i]
+		// fill outcome sets
+		if outcomeSets, ok := outcomeSetMap[outcome.ID]; ok {
+			for _, set := range outcomeSets {
+				exportOutcomeView.Sets = append(exportOutcomeView.Sets, set.Name)
+			}
+		}
+
+		// fill author name
+		if userName, ok := userNameMap[outcome.AuthorID]; ok {
+			exportOutcomeView.Author = userName
+		} else {
+			log.Error(ctx, "author not found", log.String("userID", outcome.AuthorID))
+		}
+
+		// fill outcome milestones
+		if milestones, ok := outcomeMilestoneMap[outcome.AncestorID]; ok {
+			exportOutcomeView.Milestones = milestones
+		}
+	}
+
+	// fill program and category
+	for _, outcomeRelation := range outcomeRelations {
+		if exportOutcomeView, ok := resultMap[outcomeRelation.MasterID]; ok {
+			switch outcomeRelation.RelationType {
+			case entity.ProgramType:
+				if program, ok := programMap[outcomeRelation.RelationID]; ok {
+					exportOutcomeView.Program = append(exportOutcomeView.Program, program)
+				} else {
+					log.Error(ctx, "program record not found", log.String("programID", outcomeRelation.RelationID))
+				}
+			case entity.SubjectType:
+				if subject, ok := subjectMap[outcomeRelation.RelationID]; ok {
+					exportOutcomeView.Subject = append(exportOutcomeView.Subject, subject)
+				} else {
+					log.Error(ctx, "subject record not found", log.String("subjectID", outcomeRelation.RelationID))
+				}
+			case entity.CategoryType:
+				if category, ok := categoryMap[outcomeRelation.RelationID]; ok {
+					exportOutcomeView.Category = append(exportOutcomeView.Category, category)
+				} else {
+					log.Error(ctx, "category record not found", log.String("categoryID", outcomeRelation.RelationID))
+				}
+			case entity.SubcategoryType:
+				if subcategory, ok := subcategoryMap[outcomeRelation.RelationID]; ok {
+					exportOutcomeView.Subcategory = append(exportOutcomeView.Subcategory, subcategory)
+				} else {
+					log.Error(ctx, "subcategory record not found", log.String("subcategoryID", outcomeRelation.RelationID))
+				}
+			case entity.AgeType:
+				if age, ok := ageMap[outcomeRelation.RelationID]; ok {
+					exportOutcomeView.Age = append(exportOutcomeView.Age, age)
+				} else {
+					log.Error(ctx, "age record not found", log.String("ageID", outcomeRelation.RelationID))
+				}
+			case entity.GradeType:
+				if grade, ok := gradeMap[outcomeRelation.RelationID]; ok {
+					exportOutcomeView.Grade = append(exportOutcomeView.Grade, grade)
+				} else {
+					log.Error(ctx, "grade record not found", log.String("gradeID", outcomeRelation.RelationID))
+				}
 			}
 		}
 	}

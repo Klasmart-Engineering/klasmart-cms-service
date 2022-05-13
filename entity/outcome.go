@@ -95,6 +95,7 @@ type OutcomeCondition struct {
 	PublishScope   string   `json:"publish_scope" form:"publish_scope"`
 	OrganizationID string   `json:"organization_id" form:"organization_id"`
 	SetName        string   `json:"set_name" form:"set_name"`
+	IsLocked       *bool    `json:"is_locked"`
 
 	ProgramIDs     []string `json:"program_ids" form:"program_ids"`
 	SubjectIDs     []string `json:"subject_ids" form:"subject_ids"`
@@ -102,4 +103,37 @@ type OutcomeCondition struct {
 	SubCategoryIDs []string `json:"sub_category_ids" form:"sub_category_ids"`
 	AgeIDs         []string `json:"age_ids" form:"age_ids"`
 	GradeIDs       []string `json:"grade_ids" form:"grade_ids"`
+}
+
+type ExportOutcomeRequest struct {
+	// Maximum array length is 50
+	OutcomeIDs []string `json:"outcome_ids" binding:"max=50"`
+	IsLocked   *bool    `json:"is_locked"`
+	Page       int      `json:"page"`
+	PageSize   int      `json:"page_size"`
+}
+
+type ExportOutcomeResponse struct {
+	Data       []*ExportOutcomeView `json:"data"`
+	TotalCount int                  `json:"total_count"`
+}
+
+type ExportOutcomeView struct {
+	OutcomeID      string   `json:"outcome_id"`
+	OutcomeName    string   `json:"outcome_name"`
+	Shortcode      string   `json:"shortcode"`
+	Assumed        bool     `json:"assumed"`
+	Description    string   `json:"description"`
+	Author         string   `json:"author"`
+	Keywords       []string `json:"keywords"`
+	Program        []string `json:"program"`
+	Subject        []string `json:"subject"`
+	Category       []string `json:"category"`
+	Subcategory    []string `json:"subcategory"`
+	Age            []string `json:"age"`
+	Grade          []string `json:"grade"`
+	Sets           []string `json:"sets"`
+	Milestones     []string `json:"milestones"`
+	CreatedAt      int64    `json:"created_at"`
+	ScoreThreshold float32  `json:"score_threshold"`
 }
