@@ -3,10 +3,10 @@ name: Deploy Alpha To Amazon ECS
 on:
   push:
     branches:
-      - cms-385
+      - main
   pull_request:
     branches:
-      - loadtest
+      - main
 
 env:
   AWS_REGION: ap-northeast-2
