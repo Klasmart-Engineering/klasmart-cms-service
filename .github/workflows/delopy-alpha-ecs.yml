@@ -3,7 +3,7 @@ name: Deploy Alpha To Amazon ECS
 on:
   push:
     branches:
-      - cms-385
+      - main
   pull_request:
     branches:
       - main
@@ -15,6 +15,7 @@ env:
   ECS_CLUSTER: kidsloop-alpha
   ECS_TASK_DEFINITION: kidsloop-alpha-cms
   CONTAINER_NAME: kidsloop-alpha-cms
+  DOCKER_ALPHA_REPO: ${{ secrets.DOCKER_ALPHA_REPO }}
   GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
   S3_BUCKET: ${{ secrets.S3_BUCKET }}
   KMS_KEY: ${{ secrets.KMS_KEY }}
@@ -73,15 +74,22 @@ jobs:
         ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 871601235178.dkr.ecr.ap-northeast-2.amazonaws.com
+        aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 942095822719.dkr.ecr.eu-west-2.amazonaws.com
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG deploy/
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
     - name: Download task definition
       run: |
-        aws ecs describe-task-definition --task-definition $ECS_TASK_DEFINITION \
-        --query taskDefinition > task-definition.json
+        aws ecs describe-task-definition --task-definition $ECS_TASK_DEFINITION --query taskDefinition  | jq -r 'del(
+          .taskDefinitionArn,
+          .requiresAttributes,
+          .compatibilities,
+          .revision,
+          .status,
+          .registeredAt,
+          .registeredBy
+        )' > task-definition.json
 
     - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
