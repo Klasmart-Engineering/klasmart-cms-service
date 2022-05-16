@@ -3,19 +3,12 @@ name: Deploy Alpha To Amazon ECS
 on:
   push:
     branches:
-      - main
+      - alpha-action
   pull_request:
     branches:
       - main
 
 env:
-  AWS_REGION: ap-northeast-2
-  ECR_REPOSITORY: kidsloop-alpha-cms-intent-turtle
-  ECS_SERVICE: kidsloop-alpha-cms
-  ECS_CLUSTER: kidsloop-alpha
-  ECS_TASK_DEFINITION: kidsloop-alpha-cms
-  CONTAINER_NAME: kidsloop-alpha-cms
-  DOCKER_ALPHA_REPO: ${{ secrets.DOCKER_ALPHA_REPO }}
   GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
   S3_BUCKET: ${{ secrets.S3_BUCKET }}
   KMS_KEY: ${{ secrets.KMS_KEY }}
@@ -53,56 +46,28 @@ jobs:
       run: |
         GOOS=linux GOARCH=amd64 go build -o deploy/handler -ldflags "-X github.com/KL-Engineering/kidsloop-cms-service/constant.GitHash=$(git rev-list -1 HEAD) -X github.com/KL-Engineering/kidsloop-cms-service/constant.BuildTimestamp=$(date +%s) -X github.com/KL-Engineering/kidsloop-cms-service/constant.LatestMigrate=$(ls schema/migrate | tail -1)"
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
-        aws-region: ${{ env.AWS_REGION }}
-
     #- name: sync s3 secret file to deploy/
     #run: aws s3 cp s3://$S3_BUCKET/keys/ deploy/ --recursive --sse aws:kms --sse-kms-key-id $KMS_KEY
 
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
-
-    - name: Build, tag, and push image to Amazon ECR
-      id: build-image
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-        IMAGE_TAG: ${{ github.sha }}
-      run: |
-        aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 942095822719.dkr.ecr.eu-west-2.amazonaws.com
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG deploy/
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-
-    - name: Download task definition
-      run: |
-        aws ecs describe-task-definition --task-definition $ECS_TASK_DEFINITION --query taskDefinition  | jq -r 'del(
-          .taskDefinitionArn,
-          .requiresAttributes,
-          .compatibilities,
-          .revision,
-          .status,
-          .registeredAt,
-          .registeredBy
-        )' > task-definition.json
-
-    - name: Fill in the new image ID in the Amazon ECS task definition
-      id: task-def
-      uses: aws-actions/amazon-ecs-render-task-definition@v1
+    - name: Build and Push Container
+      uses: ./.github/actions/docker-build-and-push
       with:
-        task-definition: task-definition.json
-        container-name: ${{ env.CONTAINER_NAME }}
-        image: ${{ steps.build-image.outputs.image }}
+        environment: ${{ needs.generate-version.outputs.tag }}
+        region: global
+        ecr_repository: kidsloop-cms-backend
+        dockerfile_dir: deploy
+        dockerfile_name: Dockerfile
+        dockerfile_context: .
+        ecr_aws_region: eu-west-2
+        ecr_registry: 942095822719.dkr.ecr.eu-west-2.amazonaws.com
+        ECR_AWS_ACCESS_KEY_ID: ${{ secrets.ECR_AWS_ACCESS_KEY_ID }}
+        ECR_AWS_SECRET_ACCESS_KEY: ${{ secrets.ECR_AWS_SECRET_ACCESS_KEY }}
 
-    - name: Deploy Amazon ECS task definition
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-      with:
-        task-definition: ${{ steps.task-def.outputs.task-definition }}
-        service: ${{ env.ECS_SERVICE }}
-        cluster: ${{ env.ECS_CLUSTER }}
-        wait-for-service-stability: true
+  deploy-alpha-dev-test:
+    uses: ./.github/workflows/deploy-alpha-dev-call.yml
+    with:
+      ecs_aws_service: kidsloop-alpha-cms
+      desired_ocitag: alpha-dev-latest
+    secrets:
+      AWS_ACCESS_KEY_ID_ALPHA_DEV: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
+      AWS_SECRET_ACCESS_KEY_ALPHA_DEV: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
