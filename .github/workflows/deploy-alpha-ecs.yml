@@ -59,11 +59,11 @@ jobs:
         AMS_ASSESSMENT_JWT_PUBLIC_KEY : ${{ env.AMS_ASSESSMENT_JWT_PUBLIC_KEY }}
         LIVE_TOKEN_PRIVATE_KEY : ${{ env.LIVE_TOKEN_PRIVATE_KEY }}
       run: |
-        echo "$H5P_PRIVATE_KEY" | base64 -d > deploy/h5p_private_key.pem
-        echo "$H5P_PUBLIC_KEY" | base64 -d > deploy/h5p_public_key.pem
-        echo "$JWT_PUBLIC_KEY" | base64 -d > deploy/jwt_public_key.pem
-        echo "$AMS_ASSESSMENT_JWT_PUBLIC_KEY" | base64 -d > deploy/ams_assessment_jwt_public_key.pem
-        echo "$LIVE_TOKEN_PRIVATE_KEY" | base64 -d > deploy/live_token_private_key.pem
+        echo "$H5P_PRIVATE_KEY" | base64 -d > ./h5p_private_key.pem
+        echo "$H5P_PUBLIC_KEY" | base64 -d > ./h5p_public_key.pem
+        echo "$JWT_PUBLIC_KEY" | base64 -d > ./jwt_public_key.pem
+        echo "$AMS_ASSESSMENT_JWT_PUBLIC_KEY" | base64 -d > ./ams_assessment_jwt_public_key.pem
+        echo "$LIVE_TOKEN_PRIVATE_KEY" | base64 -d > ./live_token_private_key.pem
 
     #- name: sync s3 secret file to deploy/
     #run: aws s3 cp s3://$S3_BUCKET/keys/ deploy/ --recursive --sse aws:kms --sse-kms-key-id $KMS_KEY
@@ -83,6 +83,7 @@ jobs:
         ECR_AWS_SECRET_ACCESS_KEY: ${{ secrets.ECR_AWS_SECRET_ACCESS_KEY }}
 
   deploy-alpha-dev-test:
+    needs: build-to-ecr
     uses: ./.github/workflows/deploy-alpha-dev-call.yml
     with:
       ecs_aws_service: kidsloop-alpha-cms
