@@ -101,3 +101,41 @@ func TestSearchPublished(t *testing.T) {
 		t.Log(v)
 	}
 }
+
+func TestSearchPublishedOutcome(t *testing.T) {
+	ctx := context.TODO()
+	result, err := GetOutcomeModel().SearchPublished(ctx, &entity.Operator{}, &entity.OutcomeCondition{
+		ProgramIDs:     []string{"program_test_1"},
+		SubjectIDs:     []string{"subject_test_1"},
+		CategoryIDs:    []string{"category_test_1"},
+		SubCategoryIDs: []string{"subcategory_test_1"},
+		AgeIDs:         []string{"age_test_1"},
+		GradeIDs:       []string{"grade_test_1"},
+		Page:           1,
+		PageSize:       5,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(result.Total)
+	for _, v := range result.List {
+		t.Log(v)
+	}
+}
+
+func TestExportOutcomes(t *testing.T) {
+	ctx := context.TODO()
+	isLocked := false
+	cond := &entity.OutcomeCondition{
+		OrganizationID: "24aee19b-ad5b-41bb-adf9-28dad0d3264a",
+		Assumed:        -1,
+		IsLocked:       &isLocked,
+		Page:           1,
+		PageSize:       50,
+	}
+	result, err := GetOutcomeModel().Export(ctx, &entity.Operator{OrgID: "6300b3c5-8936-497e-ba1f-d67164b59c65"}, cond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(result.TotalCount)
+}

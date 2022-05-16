@@ -8,11 +8,10 @@ import (
 	"sync"
 	"text/template"
 
-	"github.com/KL-Engineering/kidsloop-cache/cache"
-
 	"github.com/KL-Engineering/chlorine"
 	"github.com/KL-Engineering/common-log/log"
-
+	"github.com/KL-Engineering/kidsloop-cache/cache"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	"github.com/KL-Engineering/kidsloop-cms-service/utils"
@@ -51,7 +50,10 @@ func (n *NullableClass) RelatedIDs() []*cache.RelatedEntity {
 	return nil
 }
 func GetClassServiceProvider() ClassServiceProvider {
-	return &AmsClassService{}
+	if config.Get().AMS.UseDeprecatedQuery {
+		return &AmsClassService{}
+	}
+	return &AmsClassConnectionService{}
 }
 
 type AmsClassService struct{}

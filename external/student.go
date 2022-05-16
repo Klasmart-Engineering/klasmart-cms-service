@@ -6,10 +6,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/KL-Engineering/kidsloop-cache/cache"
-
 	"github.com/KL-Engineering/chlorine"
 	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cache/cache"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	"github.com/KL-Engineering/kidsloop-cms-service/utils"
@@ -24,12 +24,16 @@ type StudentServiceProvider interface {
 	GetByClassID(ctx context.Context, operator *entity.Operator, classID string) ([]*Student, error)
 	GetByClassIDs(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*Student, error)
 	Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*Student, error)
-	FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error)
 }
 
 type Student struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID         string `json:"id"`
+	GivenName  string `json:"given_name"`
+	FamilyName string `json:"family_name"`
+}
+
+func (s Student) Name() string {
+	return s.GivenName + " " + s.FamilyName
 }
 
 type NullableStudent struct {
@@ -46,13 +50,17 @@ func (n *NullableStudent) RelatedIDs() []*cache.RelatedEntity {
 }
 
 var (
-	_amsStudentService *AmsStudentService
+	_amsStudentService StudentServiceProvider
 	_amsStudentOnce    sync.Once
 )
 
 func GetStudentServiceProvider() StudentServiceProvider {
 	_amsStudentOnce.Do(func() {
-		_amsStudentService = &AmsStudentService{}
+		if config.Get().AMS.UseDeprecatedQuery {
+			_amsStudentService = &AmsStudentService{}
+		} else {
+			_amsStudentService = &AmsStudentConnectionService{}
+		}
 	})
 
 	return _amsStudentService
@@ -113,8 +121,9 @@ func (s AmsStudentService) QueryByIDs(ctx context.Context, ids []string, options
 		}
 		if user.Valid {
 			student.Student = &Student{
-				ID:   user.User.ID,
-				Name: user.User.Name,
+				ID:         user.User.ID,
+				GivenName:  user.User.GivenName,
+				FamilyName: user.User.FamilyName,
 			}
 		}
 		students[index] = student
@@ -154,7 +163,8 @@ func (s AmsStudentService) GetByClassID(ctx context.Context, operator *entity.Op
 	class(class_id: $classID){
 		students{
 			id: user_id
-			name: user_name
+			given_name
+			family_name
 		}
   	}
 }`
@@ -197,7 +207,7 @@ func (s AmsStudentService) GetByClassIDs(ctx context.Context, operator *entity.O
 
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$class_id_", ": ID!", len(classIDs)))
 	for index := range classIDs {
-		fmt.Fprintf(sb, "q%d: class(class_id: $class_id_%d) {students{id:user_id name:user_name}}\n", index, index)
+		fmt.Fprintf(sb, "q%d: class(class_id: $class_id_%d) {students{id:user_id given_name family_name}}\n", index, index)
 	}
 	sb.WriteString("}")
 
@@ -246,17 +256,15 @@ func (s AmsStudentService) Query(ctx context.Context, operator *entity.Operator,
 	students := make([]*Student, len(users))
 	for index, user := range users {
 		students[index] = &Student{
-			ID:   user.ID,
-			Name: user.Name,
+			ID:         user.ID,
+			GivenName:  user.GivenName,
+			FamilyName: user.FamilyName,
 		}
 	}
 
 	return students, nil
 }
 
-func (s AmsStudentService) FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error) {
-	return GetUserServiceProvider().FilterByPermission(ctx, operator, userIDs, permissionName)
-}
 func (s AmsStudentService) Name() string {
 	return "ams_student_service"
 }

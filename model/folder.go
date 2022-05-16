@@ -95,6 +95,7 @@ type IFolderModel interface {
 
 	BatchUpdateFolderItemCount(ctx context.Context, tx *dbo.DBContext, ids []string) error
 	BatchUpdateAncestorEmptyField(ctx context.Context, tx *dbo.DBContext, ids []string) error
+	GetTree(ctx context.Context, req *entity.TreeRequest, operator *entity.Operator) (res *entity.TreeResponse, err error)
 }
 
 type FolderModel struct{}
@@ -677,10 +678,10 @@ func (f *FolderModel) GetFolderByIDTx(ctx context.Context, tx *dbo.DBContext, fo
 	}
 	for i := range users {
 		if users[i].Valid && users[i].ID == result.Creator {
-			result.CreatorName = users[i].Name
+			result.CreatorName = users[i].Name()
 		}
 		if users[i].Valid && users[i].ID == result.Editor {
-			result.EditorName = users[i].Name
+			result.EditorName = users[i].Name()
 		}
 	}
 	//if folder item is folder, add children items
@@ -2240,6 +2241,10 @@ func parseLink(ctx context.Context, link string) (entity.FolderFileType, string,
 	fileType := entity.NewFolderFileType(linkPairs[0])
 	id := linkPairs[1]
 	return fileType, id, nil
+}
+
+func (f *FolderModel) GetTree(ctx context.Context, req *entity.TreeRequest, operator *entity.Operator) (res *entity.TreeResponse, err error) {
+	return
 }
 
 var (

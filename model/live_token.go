@@ -354,7 +354,7 @@ func (s *liveTokenModel) getUserName(ctx context.Context, op *entity.Operator) (
 		)
 		return "", err
 	}
-	return userInfo.Name, nil
+	return userInfo.Name(), nil
 }
 
 func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.LiveTokenInfo, expiresAt int64) (string, error) {

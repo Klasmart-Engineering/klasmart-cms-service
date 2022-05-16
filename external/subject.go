@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KL-Engineering/kidsloop-cms-service/config"
-
 	"github.com/KL-Engineering/chlorine"
 	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/kidsloop-cache/cache"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )

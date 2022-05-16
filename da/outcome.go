@@ -10,6 +10,7 @@ import (
 
 	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 )
 
@@ -56,6 +57,7 @@ type OutcomeCondition struct {
 	AuthorName             sql.NullString
 	AuthorID               sql.NullString
 	Assumed                sql.NullBool
+	IsLocked               sql.NullBool
 	OrganizationID         sql.NullString
 	SourceID               sql.NullString
 	SourceIDs              dbo.NullStrings
@@ -170,6 +172,16 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.Assumed.Bool)
 	}
 
+	if c.IsLocked.Valid {
+		if c.IsLocked.Bool {
+			wheres = append(wheres, "locked_by != ? AND locked_by != ?")
+			params = append(params, "", constant.LockedByNoBody)
+		} else {
+			wheres = append(wheres, "(locked_by = ? || locked_by = ?)")
+			params = append(params, "", constant.LockedByNoBody)
+		}
+	}
+
 	if c.RelationProgramIDs.Valid {
 		sql := fmt.Sprintf(`exists(SELECT 1 FROM %s WHERE relation_id IN (?) AND relation_type = "%s" AND %s.id = %s.master_id)`,
 			entity.OutcomeRelationTable, entity.ProgramType, entity.OutcomeTable, entity.OutcomeRelationTable)
@@ -220,7 +232,7 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 }
 
 func NewOutcomeCondition(condition *entity.OutcomeCondition) *OutcomeCondition {
-	return &OutcomeCondition{
+	cond := &OutcomeCondition{
 		IDs:            dbo.NullStrings{Strings: condition.IDs, Valid: len(condition.IDs) > 0},
 		Name:           sql.NullString{String: condition.OutcomeName, Valid: condition.OutcomeName != ""},
 		Description:    sql.NullString{String: condition.Description, Valid: condition.Description != ""},
@@ -244,6 +256,15 @@ func NewOutcomeCondition(condition *entity.OutcomeCondition) *OutcomeCondition {
 		OrderBy: NewOrderBy(condition.OrderBy),
 		Pager:   NewPage(condition.Page, condition.PageSize),
 	}
+
+	if condition.IsLocked != nil {
+		cond.IsLocked = sql.NullBool{
+			Bool:  *condition.IsLocked,
+			Valid: true,
+		}
+	}
+
+	return cond
 }
 
 type OutcomeOrderBy int
