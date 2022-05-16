@@ -76,6 +76,21 @@ type RoomUserScore struct {
 }
 
 func (aes *AssessmentExternalService) StudentScores(ctx context.Context, userScores []*external.H5PUserScores) (map[string][]*RoomUserScore, []*RoomContentTree, error) {
+	scoresData, err := aes.processStudentScoresData(ctx, userScores, true)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return scoresData.UserScores, scoresData.ContentTree, nil
+}
+
+type processStudentScoresOutput struct {
+	UserScores  map[string][]*RoomUserScore
+	ContentTree []*RoomContentTree
+	ContentMap  map[string]*RoomContentTree
+}
+
+func (aes *AssessmentExternalService) processStudentScoresData(ctx context.Context, userScores []*external.H5PUserScores, isNeedContentTree bool) (*processStudentScoresOutput, error) {
 	userScoreMap := make(map[string][]*RoomUserScore, len(userScores))
 	contentMaxScoreMap := make(map[string]float64)
 	contents := make([]*RoomContentTree, 0)
@@ -140,14 +155,21 @@ func (aes *AssessmentExternalService) StudentScores(ctx context.Context, userSco
 		}
 	}
 
-	tree := aes.deconstructUserRoomInfo(contents)
-	//aes.setUserRoomItemNumber(tree, "")
+	result := &processStudentScoresOutput{
+		UserScores: userScoreMap,
+		ContentMap: make(map[string]*RoomContentTree),
+	}
 
 	for _, item := range contents {
 		item.MaxScore = contentMaxScoreMap[item.ContentUniqueID]
+		result.ContentMap[item.ContentUniqueID] = item
 	}
 
-	return userScoreMap, tree, nil
+	if isNeedContentTree {
+		result.ContentTree = aes.deconstructUserRoomInfo(contents)
+	}
+
+	return result, nil
 }
 
 func (aes *AssessmentExternalService) setStudentScore(userScoreResultItem *RoomUserScore, scoreItem *external.H5PUserContentScore, contentMaxScoreMap map[string]float64) {
@@ -335,58 +357,35 @@ func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseDiffContent(ctx
 type AllowEditScoreContent struct {
 	ContentID    string
 	SubContentID string
+	Attempted    bool
 }
 
-func (aes *AssessmentExternalService) AllowEditScoreContent(ctx context.Context, userScores []*external.H5PUserScores) (map[string]*AllowEditScoreContent, error) {
-	contentMap := make(map[string]*external.H5PContent)
+func (aes *AssessmentExternalService) AllowEditScoreContent(ctx context.Context, userScores []*external.H5PUserScores) (map[string]map[string]*AllowEditScoreContent, error) {
+	scoresData, err := aes.processStudentScoresData(ctx, userScores, false)
+	if err != nil {
+		return nil, err
+	}
 
-	contentMaxScoreMap := make(map[string]float64)
-	for _, item := range userScores {
-		if item.User == nil {
-			log.Warn(ctx, "room user data is null", log.Any("roomDataItem", item))
-			continue
-		}
-
-		if len(item.Scores) <= 0 {
-			log.Warn(ctx, "room user scores data is null", log.Any("roomDataItem", item))
-			continue
-		}
-
-		for _, scoreItem := range item.Scores {
-			if scoreItem.Content == nil {
-				log.Warn(ctx, "room user scores about content data is null", log.Any("roomDataItem", item))
+	result := make(map[string]map[string]*AllowEditScoreContent)
+	for stuID, stuScores := range scoresData.UserScores {
+		result[stuID] = make(map[string]*AllowEditScoreContent)
+		for _, scoreItem := range stuScores {
+			contentItem, ok := scoresData.ContentMap[scoreItem.ContentUniqueID]
+			if !ok {
 				continue
 			}
-			contentKey := aes.ParseContentUniqueID(scoreItem.Content)
-			if _, ok := contentMap[contentKey]; !ok {
-				contentMap[contentKey] = scoreItem.Content
-				contentMaxScoreMap[contentKey] = 0
-			}
 
-			if scoreItem.Score != nil {
-				if len(scoreItem.Score.Answers) > 0 {
-					if contentMaxScoreMap[contentKey] < scoreItem.Score.Answers[0].MaximumPossibleScore {
-						contentMaxScoreMap[contentKey] = scoreItem.Score.Answers[0].MaximumPossibleScore
-					}
+			if contentItem.MaxScore > 0 && canSetScoreMap[contentItem.Type] {
+				result[stuID][scoreItem.ContentUniqueID] = &AllowEditScoreContent{
+					ContentID:    contentItem.ContentID,
+					SubContentID: contentItem.SubContentID,
 				}
 			}
+
 		}
 	}
 
-	result := make(map[string]*AllowEditScoreContent)
-	for key, contentItem := range contentMap {
-		if maxScore, ok := contentMaxScoreMap[key]; ok && maxScore > 0 && canSetScoreMap[contentItem.Type] {
-			result[key] = &AllowEditScoreContent{
-				ContentID:    contentItem.ContentID,
-				SubContentID: contentItem.SubContentID,
-			}
-		}
-	}
-
-	log.Debug(ctx, "can set score info",
-		log.Any("contentMap", contentMap),
-		log.Any("contentMaxScoreMap", contentMaxScoreMap),
-		log.Any("result", result))
+	log.Debug(ctx, "can set score info", log.Any("result", result))
 	return result, nil
 }
 

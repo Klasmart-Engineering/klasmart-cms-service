@@ -841,17 +841,10 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		return err
 	}
 	roomData, hasScore := roomDataMap[waitUpdatedAssessment.ScheduleID]
-	userRoomData := make(map[string][]*external.H5PUserContentScore)
-	canSetScoreContentMap := make(map[string]*AllowEditScoreContent)
+	//userRoomData := make(map[string]*external.H5PUserContentScore)
+	canSetScoreContentMap := make(map[string]map[string]*AllowEditScoreContent)
 	studentCommentMap := make(map[string]string)
 	if hasScore {
-		for _, item := range roomData.ScoresByUser {
-			if item.User == nil {
-				continue
-			}
-			userRoomData[item.User.UserID] = item.Scores
-		}
-
 		canSetScoreContentMap, err = GetAssessmentExternalService().AllowEditScoreContent(ctx, roomData.ScoresByUser)
 		if err != nil {
 			return err
@@ -870,7 +863,6 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			waitUpdatedUsers:      waitUpdatedUsers,
 			userIDAndUserTypeMap:  userIDAndUserTypeMap,
 			at:                    at,
-			userRoomData:          userRoomData,
 			canSetScoreContentMap: canSetScoreContentMap,
 			studentCommentMap:     studentCommentMap,
 		})
@@ -1033,8 +1025,8 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 				}
 			}
 			if contentItem, ok := contentReqMap[stuResult.ContentID]; ok {
-				if _, ok := userRoomData[stuItem.StudentID]; ok {
-					if canSetScoreContentItem, ok := canSetScoreContentMap[contentItem.ContentID]; ok {
+				if stuContentMap, ok := canSetScoreContentMap[stuItem.StudentID]; ok {
+					if canSetScoreContentItem, ok := stuContentMap[contentItem.ContentID]; ok {
 						newScore := &external.H5PSetScoreRequest{
 							RoomID:    waitUpdatedAssessment.ScheduleID,
 							StudentID: stuItem.StudentID,
@@ -1174,8 +1166,7 @@ type updateReviewStudyAssessmentInput struct {
 	waitUpdatedUsers      []*v2.AssessmentUser
 	userIDAndUserTypeMap  map[string]*v2.AssessmentUser
 	at                    *AssessmentTool
-	userRoomData          map[string][]*external.H5PUserContentScore
-	canSetScoreContentMap map[string]*AllowEditScoreContent
+	canSetScoreContentMap map[string]map[string]*AllowEditScoreContent
 	studentCommentMap     map[string]string
 }
 
@@ -1217,8 +1208,8 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 
 		for _, stuResult := range stuItem.Results {
 			if contentItem, ok := contentReqMap[stuResult.ContentID]; ok {
-				if _, ok := input.userRoomData[stuItem.StudentID]; ok {
-					if canSetScoreContentItem, ok := input.canSetScoreContentMap[contentItem.ContentID]; ok {
+				if stuContentMap, ok := input.canSetScoreContentMap[stuItem.StudentID]; ok {
+					if canSetScoreContentItem, ok := stuContentMap[contentItem.ContentID]; ok {
 						newScore := &external.H5PSetScoreRequest{
 							RoomID:    input.waitUpdatedAssessment.ScheduleID,
 							StudentID: stuItem.StudentID,
