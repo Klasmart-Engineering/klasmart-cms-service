@@ -14,15 +14,117 @@ import (
 )
 
 type AssessmentServiceProvider interface {
-	GetScoresWithCommentsByRoomIDs(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]*RoomInfo, error)
+	Get(ctx context.Context, operator *entity.Operator, roomIDs []string, options ...AssessmentServiceOption) (map[string]*RoomInfo, error)
 	SetScoreAndComment(ctx context.Context, operator *entity.Operator, scores []*SetScoreAndComment) error
+}
+
+type AssessmentServiceOption func(option *AssessmentServiceGetOption)
+
+type AssessmentServiceGetOption struct {
+	Score          *AssessmentServiceGetQuery
+	TeacherComment *AssessmentServiceGetQuery
+}
+
+type AssessmentServiceGetQuery struct {
+	Field    string
+	Fragment string
+}
+
+func WithAssessmentGetScore(score bool) AssessmentServiceOption {
+	return func(option *AssessmentServiceGetOption) {
+		option.Score = new(AssessmentServiceGetQuery)
+
+		if !score {
+			return
+		}
+
+		option.Score.Field = "...scoresByUser"
+		option.Score.Fragment = `
+fragment scoresByUser on Room {
+	scoresByUser {
+		user {
+			user_id
+		}
+		scores {
+			seen
+			content {
+				parent_id
+				content_id
+				name
+				type
+				fileType
+				h5p_id
+				subcontent_id
+			}
+			score {
+				min
+				max
+				sum
+				scoreFrequency
+				mean
+				scores
+				answers {
+					answer
+					score
+					date
+					minimumPossibleScore
+					maximumPossibleScore
+				}
+			}
+			teacherScores {
+				teacher {
+					user_id
+				}
+				student {
+					user_id
+				}
+				content {
+					content_id
+					name
+					type
+					fileType
+					h5p_id
+					subcontent_id
+				}
+				score
+				date
+			}
+		}
+	}`
+	}
+}
+
+func WithAssessmentGetTeacherComment(teacherComment bool) AssessmentServiceOption {
+	return func(option *AssessmentServiceGetOption) {
+		option.TeacherComment = new(AssessmentServiceGetQuery)
+
+		if !teacherComment {
+			return
+		}
+
+		option.TeacherComment.Field = "...teacherCommentsByStudent"
+		option.TeacherComment.Fragment = `fragment teacherCommentsByStudent on Room {
+		teacherCommentsByStudent {
+			student {
+				user_id
+			}
+			teacherComments {
+				teacher {
+					user_id
+				}
+				date
+				comment
+			}
+		}`
+	}
 }
 
 func GetAssessmentServiceProvider() AssessmentServiceProvider {
 	return &AssessmentService{}
 }
 
-type AssessmentService struct{}
+type AssessmentService struct {
+}
 
 type SetScoreAndComment struct {
 	RoomID    string
@@ -269,90 +371,35 @@ type RoomInfo struct {
 	TeacherCommentsByStudent []*H5PTeacherCommentsByStudent `json:"teacherCommentsByStudent"`
 }
 
-func (s *AssessmentService) GetScoresWithCommentsByRoomIDs(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]*RoomInfo, error) {
+func (s *AssessmentService) Get(ctx context.Context, operator *entity.Operator, roomIDs []string, options ...AssessmentServiceOption) (map[string]*RoomInfo, error) {
 	result := make(map[string]*RoomInfo)
 
 	if len(roomIDs) == 0 {
 		return result, nil
 	}
 
-	query := `
+	getOption := &AssessmentServiceGetOption{}
+	for _, op := range options {
+		op(getOption)
+	}
+
+	query := fmt.Sprintf(`
 query {
 	{{range $i, $e := .}}
 	q{{$i}}: Room(room_id: "{{$e}}") {
-	...scoresByUser
-	...teacherCommentsByStudent
+	%s
+	%s
 }
 {{end}}
 }
 
-fragment teacherCommentsByStudent on Room {
-	teacherCommentsByStudent {
-	  student {
-		  user_id
-	  }
-	  teacherComments {
-		  teacher {
-			  user_id
-		  }
-		  date
-		  comment
-	  }
-  	}
-}
-fragment scoresByUser on Room {
-	scoresByUser {
-		user {
-			user_id
-		}
-		scores {
-			seen
-			content {
-				parent_id
-				content_id
-				name
-				type
-				fileType
-				h5p_id
-				subcontent_id
-			}
-			score {
-				min
-				max
-				sum
-				scoreFrequency
-				mean
-				scores
-				answers {
-					answer
-					score
-					date
-					minimumPossibleScore
-					maximumPossibleScore
-				}
-			}
-			teacherScores {
-				teacher {
-					user_id
-				}
-				student {
-					user_id
-				}
-				content {
-					content_id
-					name
-					type
-					fileType
-					h5p_id
-					subcontent_id
-				}
-				score
-				date
-			}
-		}
-	}
-}
-`
+%s
+%s
+}`,
+		getOption.Score.Field,
+		getOption.TeacherComment.Field,
+		getOption.Score.Fragment,
+		getOption.TeacherComment.Fragment)
 
 	temp, err := template.New("").Parse(query)
 	if err != nil {

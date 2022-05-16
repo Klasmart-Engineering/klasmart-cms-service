@@ -163,44 +163,56 @@ func (o *BaseAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
 	return result, nil
 }
 
-func GetAssessmentPageMatch(assessmentType v2.AssessmentType, at *AssessmentTool) IAssessmentMatch {
+func GetAssessmentPageMatch(assessmentType v2.AssessmentType, at *AssessmentTool) (IAssessmentMatch, AssessmentExternalInclude) {
 	var match IAssessmentMatch
+	var include AssessmentExternalInclude
 	switch assessmentType {
 	case v2.AssessmentTypeOnlineClass:
 		match = NewOnlineClassAssessmentPage(at)
+		include = OnlineAndOfflineClassExternalDataInclude[AssessmentMatchActionPage]
 	case v2.AssessmentTypeOfflineClass:
 		match = NewOfflineClassAssessmentPage(at)
+		include = OnlineAndOfflineClassExternalDataInclude[AssessmentMatchActionPage]
 	case v2.AssessmentTypeOnlineStudy:
 		match = NewOnlineStudyAssessmentPage(at)
+		include = OnlineAndReviewStudyExternalDataInclude[AssessmentMatchActionPage]
 	case v2.AssessmentTypeReviewStudy:
 		match = NewReviewStudyAssessmentPage(at)
+		include = OnlineAndReviewStudyExternalDataInclude[AssessmentMatchActionPage]
 	case v2.AssessmentTypeOfflineStudy:
 		match = NewOfflineStudyAssessmentPage(at)
+		include = OfflineStudyExternalDataInclude[AssessmentMatchActionPage]
 	default:
 		match = NewEmptyAssessment()
 	}
 
-	return match
+	return match, include
 }
 
-func GetAssessmentDetailMatch(assessmentType v2.AssessmentType, at *AssessmentTool) IAssessmentMatch {
+func GetAssessmentDetailMatch(assessmentType v2.AssessmentType, at *AssessmentTool) (IAssessmentMatch, AssessmentExternalInclude) {
 	var match IAssessmentMatch
+	var include AssessmentExternalInclude
 	switch assessmentType {
 	case v2.AssessmentTypeOnlineClass:
 		match = NewOnlineClassAssessmentDetail(at)
+		include = OnlineAndOfflineClassExternalDataInclude[AssessmentMatchActionDetail]
 	case v2.AssessmentTypeOfflineClass:
 		match = NewOfflineClassAssessmentDetail(at)
+		include = OnlineAndOfflineClassExternalDataInclude[AssessmentMatchActionDetail]
 	case v2.AssessmentTypeOnlineStudy:
 		match = NewOnlineStudyAssessmentDetail(at)
+		include = OnlineAndReviewStudyExternalDataInclude[AssessmentMatchActionDetail]
 	case v2.AssessmentTypeReviewStudy:
 		match = NewReviewStudyAssessmentDetail(at)
+		include = OnlineAndReviewStudyExternalDataInclude[AssessmentMatchActionDetail]
 	case v2.AssessmentTypeOfflineStudy:
 		match = NewOfflineStudyAssessmentDetail(at)
+		include = OfflineStudyExternalDataInclude[AssessmentMatchActionDetail]
 	default:
 		match = NewEmptyAssessment()
 	}
 
-	return match
+	return match, include
 }
 
 func ConvertAssessmentPageReply(ctx context.Context, op *entity.Operator, assessmentType v2.AssessmentType, assessments []*v2.Assessment) ([]*v2.AssessmentQueryReply, error) {
@@ -208,7 +220,11 @@ func ConvertAssessmentPageReply(ctx context.Context, op *entity.Operator, assess
 	if err != nil {
 		return nil, err
 	}
-	match := GetAssessmentPageMatch(assessmentType, at)
+	match, include := GetAssessmentPageMatch(assessmentType, at)
+	err = at.AsyncInitExternalData(include)
+	if err != nil {
+		return nil, err
+	}
 
 	scheduleMap, err := match.MatchSchedule()
 	if err != nil {
@@ -291,7 +307,11 @@ func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, asse
 	if err != nil {
 		return nil, err
 	}
-	match := GetAssessmentDetailMatch(assessment.AssessmentType, at)
+	match, include := GetAssessmentDetailMatch(assessment.AssessmentType, at)
+	err = at.AsyncInitExternalData(include)
+	if err != nil {
+		return nil, err
+	}
 
 	scheduleMap, err := match.MatchSchedule()
 	if err != nil {
@@ -463,4 +483,61 @@ func (o EmptyAssessment) MatchSubject() (map[string][]*entity.IDName, error) {
 
 func (o EmptyAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
 	return make(map[string][]*entity.IDName), nil
+}
+
+var OnlineAndOfflineClassExternalDataInclude = map[AssessmentMatchAction]AssessmentExternalInclude{
+	AssessmentMatchActionPage: {
+		userServiceInclude: &ExternalUserServiceInclude{
+			Program: true,
+			Subject: true,
+			Teacher: true,
+		},
+	},
+	AssessmentMatchActionDetail: {
+		userServiceInclude: &ExternalUserServiceInclude{
+			Program: true,
+			Subject: true,
+			Teacher: true,
+			Class:   true,
+		},
+		assessmentServiceInclude: &ExternalAssessmentServiceInclude{
+			StudentScore:   true,
+			TeacherComment: true,
+		},
+	},
+}
+var OnlineAndReviewStudyExternalDataInclude = map[AssessmentMatchAction]AssessmentExternalInclude{
+	AssessmentMatchActionPage: {
+		userServiceInclude: &ExternalUserServiceInclude{
+			Teacher: true,
+			Class:   true,
+		},
+		assessmentServiceInclude: &ExternalAssessmentServiceInclude{
+			StudentScore: true,
+		},
+	},
+	AssessmentMatchActionDetail: {
+		userServiceInclude: &ExternalUserServiceInclude{
+			Teacher: true,
+			Class:   true,
+		},
+		assessmentServiceInclude: &ExternalAssessmentServiceInclude{
+			StudentScore:   true,
+			TeacherComment: true,
+		},
+	},
+}
+
+var OfflineStudyExternalDataInclude = map[AssessmentMatchAction]AssessmentExternalInclude{
+	AssessmentMatchActionPage: {
+		userServiceInclude: &ExternalUserServiceInclude{
+			Teacher: true,
+			Class:   true,
+		},
+	},
+	AssessmentMatchActionDetail: {
+		userServiceInclude: &ExternalUserServiceInclude{
+			Class: true,
+		},
+	},
 }

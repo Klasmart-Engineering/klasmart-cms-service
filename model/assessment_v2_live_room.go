@@ -244,7 +244,6 @@ func (aes *AssessmentExternalService) deconstructUserRoomInfo(userRoomInfos []*R
 	return result
 }
 
-// TODO: refactor
 func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseSomeContent(ctx context.Context, userScores []*external.H5PUserScores, studentCount int) float64 {
 	contentCount := 0
 	contentMap := make(map[string]struct{})
@@ -294,12 +293,6 @@ func (aes *AssessmentExternalService) calcRoomCompleteRateWhenUseSomeContent(ctx
 		}
 	}
 
-	log.Debug(ctx, "calcRoomCompleteRate info debug",
-		log.Int("studentCount", studentCount),
-		log.Int("contentCount", contentCount),
-		log.Int("attemptedCount", attemptedCount),
-		log.Any("contentMap", contentMap),
-	)
 	return result
 }
 
