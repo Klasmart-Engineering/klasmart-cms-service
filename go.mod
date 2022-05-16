@@ -6,7 +6,7 @@ require (
 	github.com/KL-Engineering/chlorine v0.3.2
 	github.com/KL-Engineering/common-log v0.3.0
 	github.com/KL-Engineering/dbo v0.5.0
-	github.com/KL-Engineering/decorator v1.1.0
+	github.com/KL-Engineering/decorator v1.1.1
 	github.com/KL-Engineering/distributed_lock v0.2.1
 	github.com/KL-Engineering/imq v0.3.1
 	github.com/KL-Engineering/kidsloop-cache v0.1.1
