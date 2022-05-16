@@ -2,8 +2,8 @@ name: Deploy Alpha To Amazon ECS
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
+    types: [closed]
 
 env:
   GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
@@ -15,6 +15,7 @@ env:
 
 jobs:
   build-to-ecr:
+    if: github.event.pull_request.merged == true
     name: Build And Deploy ECS
     runs-on: ubuntu-latest
     steps:
@@ -75,6 +76,7 @@ jobs:
         ECR_AWS_SECRET_ACCESS_KEY: ${{ secrets.ECR_AWS_SECRET_ACCESS_KEY }}
 
   deploy-alpha-dev-test:
+    if: github.event.pull_request.merged == true
     needs: build-to-ecr
     uses: ./.github/workflows/deploy-alpha-dev-call.yml
     with:
