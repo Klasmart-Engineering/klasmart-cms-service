@@ -1,9 +1,6 @@
 name: Deploy Alpha To Amazon ECS
 
 on:
-  push:
-    branches:
-      - alpha-action
   pull_request:
     branches:
       - main
