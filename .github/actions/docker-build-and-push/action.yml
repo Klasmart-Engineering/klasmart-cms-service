@@ -11,7 +11,7 @@ inputs:
   dockerfile_dir:
     description: "Directory containing the Dockerfile"
     required: true
-    default: deploy/
+    default: deploy
   dockerfile_name:
     required: false
     description: "Dockerfile name"

@@ -64,6 +64,8 @@ jobs:
         echo "$JWT_PUBLIC_KEY" | base64 -d > ./jwt_public_key.pem
         echo "$AMS_ASSESSMENT_JWT_PUBLIC_KEY" | base64 -d > ./ams_assessment_jwt_public_key.pem
         echo "$LIVE_TOKEN_PRIVATE_KEY" | base64 -d > ./live_token_private_key.pem
+        ls -la
+        ls -la deploy/
 
     #- name: sync s3 secret file to deploy/
     #run: aws s3 cp s3://$S3_BUCKET/keys/ deploy/ --recursive --sse aws:kms --sse-kms-key-id $KMS_KEY
