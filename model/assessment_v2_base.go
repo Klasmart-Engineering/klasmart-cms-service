@@ -42,14 +42,6 @@ func NewBaseAssessment(at *AssessmentTool, action AssessmentMatchAction) BaseAss
 	}
 }
 
-//func NewEmptyAssessmentDetail(ctx context.Context, op *entity.Operator, assessment *v2.Assessment) IAssessmentMatch {
-//	return &BaseAssessment{
-//		ctx: ctx,
-//		op:  op,
-//		at: NewAssessmentsGrain(ctx, op, []*v2.Assessment{assessment}),
-//	}
-//}
-
 type BaseAssessment struct {
 	at     *AssessmentTool
 	action AssessmentMatchAction
@@ -163,51 +155,25 @@ func (o *BaseAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
 	return result, nil
 }
 
-func GetAssessmentPageMatch(assessmentType v2.AssessmentType, at *AssessmentTool) (IAssessmentMatch, AssessmentExternalInclude) {
+func GetAssessmentMatch(assessmentType v2.AssessmentType, at *AssessmentTool, action AssessmentMatchAction) (IAssessmentMatch, AssessmentExternalInclude) {
 	var match IAssessmentMatch
 	var include AssessmentExternalInclude
 	switch assessmentType {
 	case v2.AssessmentTypeOnlineClass:
-		match = NewOnlineClassAssessmentPage(at)
-		include = OnlineAndOfflineClassExternalDataInclude[AssessmentMatchActionPage]
+		match = NewOnlineClassAssessment(at, action)
+		include = OnlineAndOfflineClassExternalDataInclude[action]
 	case v2.AssessmentTypeOfflineClass:
-		match = NewOfflineClassAssessmentPage(at)
-		include = OnlineAndOfflineClassExternalDataInclude[AssessmentMatchActionPage]
+		match = NewOfflineClassAssessment(at, action)
+		include = OnlineAndOfflineClassExternalDataInclude[action]
 	case v2.AssessmentTypeOnlineStudy:
-		match = NewOnlineStudyAssessmentPage(at)
-		include = OnlineAndReviewStudyExternalDataInclude[AssessmentMatchActionPage]
+		match = NewOnlineStudyAssessment(at, action)
+		include = OnlineAndReviewStudyExternalDataInclude[action]
 	case v2.AssessmentTypeReviewStudy:
-		match = NewReviewStudyAssessmentPage(at)
-		include = OnlineAndReviewStudyExternalDataInclude[AssessmentMatchActionPage]
+		match = NewReviewStudyAssessment(at, action)
+		include = OnlineAndReviewStudyExternalDataInclude[action]
 	case v2.AssessmentTypeOfflineStudy:
-		match = NewOfflineStudyAssessmentPage(at)
-		include = OfflineStudyExternalDataInclude[AssessmentMatchActionPage]
-	default:
-		match = NewEmptyAssessment()
-	}
-
-	return match, include
-}
-
-func GetAssessmentDetailMatch(assessmentType v2.AssessmentType, at *AssessmentTool) (IAssessmentMatch, AssessmentExternalInclude) {
-	var match IAssessmentMatch
-	var include AssessmentExternalInclude
-	switch assessmentType {
-	case v2.AssessmentTypeOnlineClass:
-		match = NewOnlineClassAssessmentDetail(at)
-		include = OnlineAndOfflineClassExternalDataInclude[AssessmentMatchActionDetail]
-	case v2.AssessmentTypeOfflineClass:
-		match = NewOfflineClassAssessmentDetail(at)
-		include = OnlineAndOfflineClassExternalDataInclude[AssessmentMatchActionDetail]
-	case v2.AssessmentTypeOnlineStudy:
-		match = NewOnlineStudyAssessmentDetail(at)
-		include = OnlineAndReviewStudyExternalDataInclude[AssessmentMatchActionDetail]
-	case v2.AssessmentTypeReviewStudy:
-		match = NewReviewStudyAssessmentDetail(at)
-		include = OnlineAndReviewStudyExternalDataInclude[AssessmentMatchActionDetail]
-	case v2.AssessmentTypeOfflineStudy:
-		match = NewOfflineStudyAssessmentDetail(at)
-		include = OfflineStudyExternalDataInclude[AssessmentMatchActionDetail]
+		match = NewOfflineStudyAssessment(at, action)
+		include = OfflineStudyExternalDataInclude[action]
 	default:
 		match = NewEmptyAssessment()
 	}
@@ -220,7 +186,7 @@ func ConvertAssessmentPageReply(ctx context.Context, op *entity.Operator, assess
 	if err != nil {
 		return nil, err
 	}
-	match, include := GetAssessmentPageMatch(assessmentType, at)
+	match, include := GetAssessmentMatch(assessmentType, at, AssessmentMatchActionPage)
 	err = at.AsyncInitExternalData(include)
 	if err != nil {
 		return nil, err
@@ -307,7 +273,7 @@ func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, asse
 	if err != nil {
 		return nil, err
 	}
-	match, include := GetAssessmentDetailMatch(assessment.AssessmentType, at)
+	match, include := GetAssessmentMatch(assessment.AssessmentType, at, AssessmentMatchActionDetail)
 	err = at.AsyncInitExternalData(include)
 	if err != nil {
 		return nil, err

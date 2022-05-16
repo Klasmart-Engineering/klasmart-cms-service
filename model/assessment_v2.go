@@ -804,7 +804,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		return err
 	}
 	if waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeOfflineStudy {
-		match, _ := GetAssessmentDetailMatch(waitUpdatedAssessment.AssessmentType, at)
+		match, _ := GetAssessmentMatch(waitUpdatedAssessment.AssessmentType, at, AssessmentMatchActionDetail)
 		return match.Update(req)
 	}
 
@@ -1136,7 +1136,7 @@ type updateStudentCommentAndScoreInput struct {
 }
 
 func (a *assessmentModelV2) updateStudentCommentAndScore(ctx context.Context, op *entity.Operator, input *updateStudentCommentAndScoreInput) error {
-	match, _ := GetAssessmentDetailMatch(input.assessmentType, input.at)
+	match, _ := GetAssessmentMatch(input.assessmentType, input.at, AssessmentMatchActionDetail)
 	isAnyoneAttempted, _ := match.MatchAnyOneAttempted()
 	if !isAnyoneAttempted {
 		return nil
@@ -1171,7 +1171,7 @@ type updateReviewStudyAssessmentInput struct {
 }
 
 func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op *entity.Operator, input updateReviewStudyAssessmentInput) error {
-	match, _ := GetAssessmentDetailMatch(input.waitUpdatedAssessment.AssessmentType, input.at)
+	match, _ := GetAssessmentMatch(input.waitUpdatedAssessment.AssessmentType, input.at, AssessmentMatchActionDetail)
 	remainingTimeMap, err := match.MatchRemainingTime()
 	if err != nil {
 		return err

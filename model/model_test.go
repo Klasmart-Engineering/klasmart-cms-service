@@ -24,6 +24,7 @@ func TestMain(m *testing.M) {
 	da.InitRedis(ctx)
 
 	config.LoadAMSConfig(ctx)
+	config.LoadH5PServiceConfig(ctx)
 
 	initCache(ctx)
 	initDataSource(ctx)

@@ -21,8 +21,8 @@ type AssessmentServiceProvider interface {
 type AssessmentServiceOption func(option *AssessmentServiceGetOption)
 
 type AssessmentServiceGetOption struct {
-	Score          *AssessmentServiceGetQuery
-	TeacherComment *AssessmentServiceGetQuery
+	Score          AssessmentServiceGetQuery
+	TeacherComment AssessmentServiceGetQuery
 }
 
 type AssessmentServiceGetQuery struct {
@@ -32,7 +32,7 @@ type AssessmentServiceGetQuery struct {
 
 func WithAssessmentGetScore(score bool) AssessmentServiceOption {
 	return func(option *AssessmentServiceGetOption) {
-		option.Score = new(AssessmentServiceGetQuery)
+		option.Score = AssessmentServiceGetQuery{}
 
 		if !score {
 			return
@@ -90,20 +90,22 @@ fragment scoresByUser on Room {
 				date
 			}
 		}
-	}`
+	}
+}`
 	}
 }
 
 func WithAssessmentGetTeacherComment(teacherComment bool) AssessmentServiceOption {
 	return func(option *AssessmentServiceGetOption) {
-		option.TeacherComment = new(AssessmentServiceGetQuery)
+		option.TeacherComment = AssessmentServiceGetQuery{}
 
 		if !teacherComment {
 			return
 		}
 
 		option.TeacherComment.Field = "...teacherCommentsByStudent"
-		option.TeacherComment.Fragment = `fragment teacherCommentsByStudent on Room {
+		option.TeacherComment.Fragment = `
+fragment teacherCommentsByStudent on Room {
 		teacherCommentsByStudent {
 			student {
 				user_id
@@ -115,7 +117,8 @@ func WithAssessmentGetTeacherComment(teacherComment bool) AssessmentServiceOptio
 				date
 				comment
 			}
-		}`
+		}
+}`
 	}
 }
 
@@ -379,6 +382,10 @@ func (s *AssessmentService) Get(ctx context.Context, operator *entity.Operator, 
 	}
 
 	getOption := &AssessmentServiceGetOption{}
+	if len(options) <= 0 {
+		options = []AssessmentServiceOption{WithAssessmentGetScore(true)}
+	}
+
 	for _, op := range options {
 		op(getOption)
 	}
@@ -395,7 +402,7 @@ query {
 
 %s
 %s
-}`,
+`,
 		getOption.Score.Field,
 		getOption.TeacherComment.Field,
 		getOption.Score.Fragment,
