@@ -11,7 +11,7 @@ inputs:
   dockerfile_dir:
     description: "Directory containing the Dockerfile"
     required: true
-    default: deploy/
+    default: deploy
   dockerfile_name:
     required: false
     description: "Dockerfile name"
@@ -59,7 +59,7 @@ runs:
         set +x
         export BRANCH_TAG=$(echo "${GITHUB_REF_NAME}" | sed -E 's/([^0-9a-zA-Z\.]+)/-/g' | awk '{print tolower($0)}')
         printf '"BRANCH_TAG":"%s", "Git commit":"%s"' $BRANCH_TAG ${GITHUB_SHA::7}
-        docker build -t $ECR_REPOSITORY:$BRANCH_TAG-latest -f ${{ inputs.dockerfile_dir }}/${{ inputs.dockerfile_name }} ${{ inputs.dockerfile_context }}
+        docker build -t $ECR_REPOSITORY:$BRANCH_TAG-latest deploy/
         docker tag $ECR_REPOSITORY:$BRANCH_TAG-latest $ECR_REGISTRY/$ECR_REPOSITORY:$BRANCH_TAG-${GITHUB_SHA::7}
         docker tag $ECR_REPOSITORY:$BRANCH_TAG-latest $ECR_REGISTRY/$ECR_REPOSITORY:alpha-dev-latest
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:alpha-dev-latest

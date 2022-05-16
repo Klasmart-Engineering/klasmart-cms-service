@@ -1,20 +1,21 @@
 name: Deploy Alpha To Amazon ECS
 
 on:
-  push:
-    branches:
-      - alpha-action
   pull_request:
-    branches:
-      - main
+    branches: [main]
+    types: [closed]
 
 env:
   GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
-  S3_BUCKET: ${{ secrets.S3_BUCKET }}
-  KMS_KEY: ${{ secrets.KMS_KEY }}
+  H5P_PRIVATE_KEY: ${{ secrets.H5P_PRIVATE_KEY }}
+  H5P_PUBLIC_KEY: ${{ secrets.H5P_PUBLIC_KEY }}
+  JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
+  AMS_ASSESSMENT_JWT_PUBLIC_KEY: ${{ secrets.AMS_ASSESSMENT_JWT_PUBLIC_KEY }}
+  LIVE_TOKEN_PRIVATE_KEY: ${{ secrets.LIVE_TOKEN_PRIVATE_KEY }}
 
 jobs:
   build-to-ecr:
+    if: github.event.pull_request.merged == true
     name: Build And Deploy ECS
     runs-on: ubuntu-latest
     steps:
@@ -44,10 +45,21 @@ jobs:
 
     - name: Build
       run: |
-        GOOS=linux GOARCH=amd64 go build -o deploy/handler -ldflags "-X github.com/KL-Engineering/kidsloop-cms-service/constant.GitHash=$(git rev-list -1 HEAD) -X github.com/KL-Engineering/kidsloop-cms-service/constant.BuildTimestamp=$(date +%s) -X github.com/KL-Engineering/kidsloop-cms-service/constant.LatestMigrate=$(ls schema/migrate | tail -1)"
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o deploy/handler -ldflags "-X github.com/KL-Engineering/kidsloop-cms-service/constant.GitHash=$(git rev-list -1 HEAD) -X github.com/KL-Engineering/kidsloop-cms-service/constant.BuildTimestamp=$(date +%s) -X github.com/KL-Engineering/kidsloop-cms-service/constant.LatestMigrate=$(ls schema/migrate | tail -1)"
 
-    #- name: sync s3 secret file to deploy/
-    #run: aws s3 cp s3://$S3_BUCKET/keys/ deploy/ --recursive --sse aws:kms --sse-kms-key-id $KMS_KEY
+    - name: prepare tokens
+      env:
+        H5P_PRIVATE_KEY : ${{ env.H5P_PRIVATE_KEY }}
+        H5P_PUBLIC_KEY : ${{ env.H5P_PUBLIC_KEY }}
+        JWT_PUBLIC_KEY : ${{ env.JWT_PUBLIC_KEY }}
+        AMS_ASSESSMENT_JWT_PUBLIC_KEY : ${{ env.AMS_ASSESSMENT_JWT_PUBLIC_KEY }}
+        LIVE_TOKEN_PRIVATE_KEY : ${{ env.LIVE_TOKEN_PRIVATE_KEY }}
+      run: |
+        echo "$H5P_PRIVATE_KEY" | base64 -d > deploy/h5p_private_key.pem
+        echo "$H5P_PUBLIC_KEY" | base64 -d > deploy/h5p_public_key.pem
+        echo "$JWT_PUBLIC_KEY" | base64 -d > deploy/jwt_public_key.pem
+        echo "$AMS_ASSESSMENT_JWT_PUBLIC_KEY" | base64 -d > deploy/ams_assessment_jwt_public_key.pem
+        echo "$LIVE_TOKEN_PRIVATE_KEY" | base64 -d > deploy/live_token_private_key.pem
 
     - name: Build and Push Container
       uses: ./.github/actions/docker-build-and-push
@@ -64,6 +76,8 @@ jobs:
         ECR_AWS_SECRET_ACCESS_KEY: ${{ secrets.ECR_AWS_SECRET_ACCESS_KEY }}
 
   deploy-alpha-dev-test:
+    if: github.event.pull_request.merged == true
+    needs: build-to-ecr
     uses: ./.github/workflows/deploy-alpha-dev-call.yml
     with:
       ecs_aws_service: kidsloop-alpha-cms
