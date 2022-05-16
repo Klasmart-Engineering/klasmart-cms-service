@@ -1,22 +1,24 @@
-name: Deploy LoadTest To Amazon ECS
+name: Deploy Alpha To Amazon ECS
 
 on:
   push:
     branches:
-      - loadtest
+      - main
   pull_request:
     branches:
-      - loadtest
+      - main
 
 env:
-  AWS_REGION: cn-north-1
-  ECR_REPOSITORY: loadtest
-  ECS_SERVICE: loadtestcms
-  ECS_CLUSTER: load-testing
-  ECS_TASK_DEFINITION: loadtest
-  CONTAINER_NAME: loadtest
+  AWS_REGION: ap-northeast-2
+  ECR_REPOSITORY: kidsloop-alpha-cms-intent-turtle
+  ECS_SERVICE: kidsloop-alpha-cms
+  ECS_CLUSTER: kidsloop-alpha
+  ECS_TASK_DEFINITION: kidsloop-alpha-cms
+  CONTAINER_NAME: kidsloop-alpha-cms
+  DOCKER_ALPHA_REPO: ${{ secrets.DOCKER_ALPHA_REPO }}
   GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
-  LD_S3_BUCKET: ${{ secrets.LD_S3_BUCKET }}
+  S3_BUCKET: ${{ secrets.S3_BUCKET }}
+  KMS_KEY: ${{ secrets.KMS_KEY }}
 
 jobs:
   build-to-ecr:
@@ -49,32 +51,31 @@ jobs:
 
     - name: Build
       run: |
-        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main -a -tags netgo -ldflags "-X github.com/KL-Engineering/kidsloop-cms-service/constant.GitHash=$(git rev-list -1 HEAD) -X github.com/KL-Engineering/kidsloop-cms-service/constant.BuildTimestamp=$(date +%s) -X github.com/KL-Engineering/kidsloop-cms-service/constant.LatestMigrate=$(ls schema/migrate | tail -1)"
+        GOOS=linux GOARCH=amd64 go build -o deploy/handler -ldflags "-X github.com/KL-Engineering/kidsloop-cms-service/constant.GitHash=$(git rev-list -1 HEAD) -X github.com/KL-Engineering/kidsloop-cms-service/constant.BuildTimestamp=$(date +%s) -X github.com/KL-Engineering/kidsloop-cms-service/constant.LatestMigrate=$(ls schema/migrate | tail -1)"
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
-        aws-access-key-id: ${{ secrets.ECR_AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.ECR_AWS_SECRET_ACCESS_KEY }}
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
         aws-region: ${{ env.AWS_REGION }}
+
+    #- name: sync s3 secret file to deploy/
+    #run: aws s3 cp s3://$S3_BUCKET/keys/ deploy/ --recursive --sse aws:kms --sse-kms-key-id $KMS_KEY
 
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
-    # - name: Sync Keys To Local
-    #   run: |
-    #     aws s3 cp s3://$LD_S3_BUCKET/keys/ ./ --recursive --sse aws:kms
-
     - name: Build, tag, and push image to Amazon ECR
-      shell: bash
       id: build-image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG} .
+        aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 942095822719.dkr.ecr.eu-west-2.amazonaws.com
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG deploy/
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
@@ -89,19 +90,19 @@ jobs:
           .registeredAt,
           .registeredBy
         )' > task-definition.json
-        
+
     - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
       with:
-          task-definition: task-definition.json
-          container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.build-image.outputs.image }}
-      
+        task-definition: task-definition.json
+        container-name: ${{ env.CONTAINER_NAME }}
+        image: ${{ steps.build-image.outputs.image }}
+
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: true
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true
