@@ -172,6 +172,7 @@ func (s Server) registeRoute() {
 		outcomes.PUT("/learning_outcomes/:id", s.mustLogin, s.updateOutcome)
 		outcomes.DELETE("/learning_outcomes/:id", s.mustLogin, s.deleteOutcome)
 		outcomes.GET("/learning_outcomes", s.mustLogin, s.queryOutcomes)
+		outcomes.POST("/learning_outcomes/export", s.mustLogin, s.exportOutcomes)
 
 		outcomes.PUT("/learning_outcomes/:id/lock", s.mustLogin, s.lockOutcome)
 		outcomes.PUT("/learning_outcomes/:id/publish", s.mustLogin, s.publishOutcome)
