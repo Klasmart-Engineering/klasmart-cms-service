@@ -7,6 +7,8 @@ github.com/KL-Engineering/dbo v0.5.0 h1:CwYqP1ZtlusX8CAUfkksqpumGorqkkg8AeXe586w
 github.com/KL-Engineering/dbo v0.5.0/go.mod h1:JNjlRwQOLfMhfG6PhM3bL7gvAWNWzSwHbDwE0lXschc=
 github.com/KL-Engineering/decorator v1.1.0 h1:ghaG3rKTQkGHheittozz+MCL/0GNb2D+zy4Nr8QCe84=
 github.com/KL-Engineering/decorator v1.1.0/go.mod h1:GQoUCyRs/Okw/0bzC8+nnpeK1KSbQKKpfxHZrhrA0nA=
+github.com/KL-Engineering/decorator v1.1.1 h1:D2QP1DJoICbjiETxz+99BTxcN+kWSLWR57AF8wnqL7o=
+github.com/KL-Engineering/decorator v1.1.1/go.mod h1:IDFO40ozj/ZHE/ESjW2npW9Y8To79Ap3wi0XkdwW5F0=
 github.com/KL-Engineering/distributed_lock v0.2.1 h1:4fD+ftt2OyVa0b7rg0h+UYe8jgiIQ/ylkzwskkxI4Iw=
 github.com/KL-Engineering/distributed_lock v0.2.1/go.mod h1:pEAewBH2eLAiugpbguLfpjqMaCcZHUr/WiG/eskOI2Y=
 github.com/KL-Engineering/imq v0.3.1 h1:3z/N8XzIfdMejPdbuBNXqAsUx12ZaAKQhZud9LQwFTs=
