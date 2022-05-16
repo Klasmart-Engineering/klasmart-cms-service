@@ -59,12 +59,13 @@ jobs:
         AMS_ASSESSMENT_JWT_PUBLIC_KEY : ${{ env.AMS_ASSESSMENT_JWT_PUBLIC_KEY }}
         LIVE_TOKEN_PRIVATE_KEY : ${{ env.LIVE_TOKEN_PRIVATE_KEY }}
       run: |
-        echo "$H5P_PRIVATE_KEY" | base64 -d > ./h5p_private_key.pem
-        echo "$H5P_PUBLIC_KEY" | base64 -d > ./h5p_public_key.pem
-        echo "$JWT_PUBLIC_KEY" | base64 -d > ./jwt_public_key.pem
-        echo "$AMS_ASSESSMENT_JWT_PUBLIC_KEY" | base64 -d > ./ams_assessment_jwt_public_key.pem
-        echo "$LIVE_TOKEN_PRIVATE_KEY" | base64 -d > ./live_token_private_key.pem
+        echo "$H5P_PRIVATE_KEY" | base64 -d > deploy/h5p_private_key.pem
+        echo "$H5P_PUBLIC_KEY" | base64 -d > deploy/h5p_public_key.pem
+        echo "$JWT_PUBLIC_KEY" | base64 -d > deploy/jwt_public_key.pem
+        echo "$AMS_ASSESSMENT_JWT_PUBLIC_KEY" | base64 -d > deploy/ams_assessment_jwt_public_key.pem
+        echo "$LIVE_TOKEN_PRIVATE_KEY" | base64 -d > deploy/live_token_private_key.pem
         ls -la
+        echo "*******************************"
         ls -la deploy/
 
     #- name: sync s3 secret file to deploy/
