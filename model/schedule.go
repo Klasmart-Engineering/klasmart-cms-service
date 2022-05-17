@@ -2701,6 +2701,13 @@ func (s *scheduleModel) PrepareScheduleTimeViewCondition(ctx context.Context, qu
 		}
 	}
 
+	if len(query.StudyTypes) > 0 {
+		condition.StudyTypes = entity.NullStrings{
+			Strings: query.StudyTypes,
+			Valid:   true,
+		}
+	}
+
 	if len(query.UserIDs) > 0 {
 		condition.RelationUserIDs = entity.NullStrings{
 			Strings: query.UserIDs,
@@ -2833,7 +2840,7 @@ func (s *scheduleModel) QueryUnsafe(ctx context.Context, condition *entity.Sched
 }
 
 func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity.ScheduleTimeViewListRequest, op *entity.Operator, loc *time.Location) (int, []*entity.ScheduleTimeView, error) {
-	condition, err := s.PrepareScheduleTimeViewCondition(ctx, &entity.ScheduleTimeViewQuery{
+	scheduleTimeViewQuery := &entity.ScheduleTimeViewQuery{
 		ViewType:       query.ViewType,
 		TimeAt:         query.TimeAt,
 		TimeZoneOffset: query.TimeZoneOffset,
@@ -2844,11 +2851,13 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 		ProgramIDs:     query.ProgramIDs,
 		UserIDs:        query.UserIDs,
 		ClassTypes:     query.ClassTypes,
+		StudyTypes:     query.StudyTypes,
 		StartAtGe:      query.StartAtGe,
 		EndAtLe:        query.EndAtLe,
 		Anytime:        query.Anytime,
 		OrderBy:        query.OrderBy,
-	}, op, loc)
+	}
+	condition, err := s.PrepareScheduleTimeViewCondition(ctx, scheduleTimeViewQuery, op, loc)
 	if err != nil {
 		return 0, nil, err
 	}
