@@ -966,6 +966,7 @@ func (s *Server) exportOutcomes(c *gin.Context) {
 		Page:           req.Page,
 		PageSize:       req.PageSize,
 		OrganizationID: op.OrgID,
+		PublishStatus:  entity.OutcomeStatusPublished,
 
 		// Avoid zero value as default
 		Assumed: -1,
