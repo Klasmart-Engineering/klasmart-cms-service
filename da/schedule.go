@@ -569,10 +569,10 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	}
 	if c.StudyTypes.Valid {
 		if utils.SliceEqual(c.StudyTypes.Strings, []string{string(entity.ScheduleStudyTypeNormal)}) {
-			wheres = append(wheres, "is_homefun = ? and is_review = ?")
+			wheres = append(wheres, "is_home_fun = ? and is_review = ?")
 			params = append(params, false, false)
 		} else if utils.SliceEqual(c.StudyTypes.Strings, []string{string(entity.ScheduleStudyTypeHomefun)}) {
-			wheres = append(wheres, "is_homefun = ?")
+			wheres = append(wheres, "is_home_fun = ?")
 			params = append(params, true)
 		} else if utils.SliceEqual(c.StudyTypes.Strings, []string{string(entity.ScheduleStudyTypeReview)}) {
 			wheres = append(wheres, "is_review = ?")
@@ -587,13 +587,13 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 			string(entity.ScheduleStudyTypeNormal),
 			string(entity.ScheduleStudyTypeReview),
 		}) {
-			wheres = append(wheres, "is_homefun = ?")
+			wheres = append(wheres, "is_home_fun = ?")
 			params = append(params, false)
 		} else if utils.SliceEqual(c.StudyTypes.Strings, []string{
 			string(entity.ScheduleStudyTypeHomefun),
 			string(entity.ScheduleStudyTypeReview),
 		}) {
-			wheres = append(wheres, "(is_homefun = ? or is_review = ?)")
+			wheres = append(wheres, "(is_home_fun = ? or is_review = ?)")
 			params = append(params, true, true)
 		}
 	}
