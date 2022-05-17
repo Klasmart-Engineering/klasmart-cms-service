@@ -261,6 +261,14 @@ func (s ScheduleClassType) ToLabel() ScheduleClassTypeLabel {
 	return ScheduleClassTypeLabelInvalid
 }
 
+type ScheduleStudyType string
+
+const (
+	ScheduleStudyTypeNormal  ScheduleStudyType = "normal"
+	ScheduleStudyTypeHomefun ScheduleStudyType = "homefun"
+	ScheduleStudyTypeReview  ScheduleStudyType = "review"
+)
+
 type NullScheduleClassType struct {
 	Value ScheduleClassType
 	Valid bool
@@ -952,6 +960,7 @@ type ScheduleTimeViewQuery struct {
 	ProgramIDs     []string `json:"program_ids"`
 	UserIDs        []string `json:"user_ids"`
 	ClassTypes     []string `json:"class_types"`
+	StudyTypes     []string `json:"study_types"`
 	StartAtGe      int64    `json:"start_at_ge"`
 	EndAtLe        int64    `json:"end_at_le"`
 	Anytime        bool     `json:"anytime"`
@@ -1019,10 +1028,12 @@ type ScheduleTimeViewListRequest struct {
 	SubjectIDs     []string `json:"subject_ids"`
 	ProgramIDs     []string `json:"program_ids"`
 	ClassTypes     []string `json:"class_types"`
-	StartAtGe      int64    `json:"start_at_ge"`
-	EndAtLe        int64    `json:"end_at_le"`
-	DueAtEq        int64    `json:"due_at_eq"`
-	Anytime        bool     `json:"anytime"`
+	// indicates query different types of Study
+	StudyTypes []string `json:"study_types" enums:"normal,homefun,review"`
+	StartAtGe  int64    `json:"start_at_ge"`
+	EndAtLe    int64    `json:"end_at_le"`
+	DueAtEq    int64    `json:"due_at_eq"`
+	Anytime    bool     `json:"anytime"`
 	// apply to StartAtGe and EndAtLe, union will include schedules that are only partially within the specified time frame, intersect will not
 	TimeBoundary         string `json:"time_boundary" enums:"intersect,union" default:"intersect"`
 	WithAssessmentStatus bool   `json:"with_assessment_status"`

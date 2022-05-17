@@ -916,3 +916,84 @@ func (s *Server) queryPublishedOutcomes(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
+
+// @ID exportLearningOutcomes
+// @Summary export learning outcome
+// @Tags learning_outcomes
+// @Description export learning outcome
+// @Accept json
+// @Produce json
+// @Param outcome body entity.ExportOutcomeRequest true "export outcome condition"
+// @Success 200 {object} entity.ExportOutcomeResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /learning_outcomes/export [post]
+// export learning outcomes
+func (s *Server) exportOutcomes(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var req entity.ExportOutcomeRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		log.Warn(ctx, "exportOutcomes error",
+			log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ViewPublishedLearningOutcome)
+	if err != nil {
+		log.Error(ctx, "exportOutcomes: HasOrganizationPermission failed",
+			log.Any("op", op),
+			log.String("perm", string(external.ViewPublishedLearningOutcome)),
+			log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "exportOutcomes: HasOrganizationPermission failed",
+			log.Any("op", op),
+			log.String("perm", string(external.ViewPublishedLearningOutcome)))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
+
+	condition := &entity.OutcomeCondition{
+		IDs:            req.OutcomeIDs,
+		IsLocked:       req.IsLocked,
+		Page:           req.Page,
+		PageSize:       req.PageSize,
+		OrganizationID: op.OrgID,
+		PublishStatus:  entity.OutcomeStatusPublished,
+
+		// Avoid zero value as default
+		Assumed: -1,
+	}
+	response, err := model.GetOutcomeModel().Export(ctx, op, condition)
+	switch err {
+	case model.ErrBadRequest:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidResourceID:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrResourceNotFound:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrRequireContentName:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrRequirePublishScope:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrInvalidContentType:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case constant.ErrOperateNotAllowed:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case nil:
+		c.JSON(http.StatusOK, response)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}

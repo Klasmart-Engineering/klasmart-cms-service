@@ -523,3 +523,38 @@ type FolderItemsResponseWithTotal struct {
 	Items []*entity.FolderItemInfo `json:"items"`
 	Total int                      `json:"total"`
 }
+
+// @Summary getTree
+// @ID getTree
+// @Tags folder
+// @Description get tree
+// @Accept json
+// @Produce json
+// @Param key query string true "search content key"
+// @Param type query integer true "0 all,1 name"
+// @Param only_for_me query integer true "0 all,1 only for me"
+// @Success 200 {object} entity.TreeResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /folders/tree [get]
+func (s *Server) getTree(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var request entity.TreeRequest
+	err := c.ShouldBindQuery(&request)
+	if err != nil {
+		log.Warn(ctx, "getTree: ShouldBindQuery failed",
+			log.Err(err),
+			log.Any("request", request))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	result, err := model.GetFolderModel().GetTree(ctx, &request, op)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		s.defaultErrorHandler(c, err)
+	}
+}

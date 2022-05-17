@@ -5,8 +5,8 @@ github.com/KL-Engineering/common-log v0.3.0 h1:RdMuV0ZxTUcapKOR603WC6pIDRFWz58ZC
 github.com/KL-Engineering/common-log v0.3.0/go.mod h1:5KKLNVpE+u45xY3kfgdiOYI6w1mGXJdXch7x+p1SYZ4=
 github.com/KL-Engineering/dbo v0.5.0 h1:CwYqP1ZtlusX8CAUfkksqpumGorqkkg8AeXe586w788=
 github.com/KL-Engineering/dbo v0.5.0/go.mod h1:JNjlRwQOLfMhfG6PhM3bL7gvAWNWzSwHbDwE0lXschc=
-github.com/KL-Engineering/decorator v1.1.1 h1:D2QP1DJoICbjiETxz+99BTxcN+kWSLWR57AF8wnqL7o=
-github.com/KL-Engineering/decorator v1.1.1/go.mod h1:IDFO40ozj/ZHE/ESjW2npW9Y8To79Ap3wi0XkdwW5F0=
+github.com/KL-Engineering/decorator v1.1.2 h1:wqIjen+M8+bStjX0Uo8+HCOMdhtIEu2tMNGcDMW5m00=
+github.com/KL-Engineering/decorator v1.1.2/go.mod h1:W8s5iOLOaohEfWzEVTgNfSTtt0zFf60YRvBofegTE44=
 github.com/KL-Engineering/distributed_lock v0.2.1 h1:4fD+ftt2OyVa0b7rg0h+UYe8jgiIQ/ylkzwskkxI4Iw=
 github.com/KL-Engineering/distributed_lock v0.2.1/go.mod h1:pEAewBH2eLAiugpbguLfpjqMaCcZHUr/WiG/eskOI2Y=
 github.com/KL-Engineering/imq v0.3.1 h1:3z/N8XzIfdMejPdbuBNXqAsUx12ZaAKQhZud9LQwFTs=
@@ -15,8 +15,8 @@ github.com/KL-Engineering/kidsloop-cache v0.1.1 h1:TPv+Bk4GXP/XElRPqP1aTT3B9CkZB
 github.com/KL-Engineering/kidsloop-cache v0.1.1/go.mod h1:Z2q31OT5QgMqs/8RcAF9T6P5GGn+OjavNcgw4skjYFY=
 github.com/KL-Engineering/ro v0.3.0 h1:PKpFZcBtq8iAcC/UyLwlXjogWz1k9GxUcwSaHr+d/Is=
 github.com/KL-Engineering/ro v0.3.0/go.mod h1:JU2mcEEXhJp7SRgPLAYQ8YDsCD9avvjTHibBKp2ZsRY=
-github.com/KL-Engineering/tracecontext v0.1.0 h1:Vrmwz6YJruU4v3mwypRG+1LnqSbXaWL9ezSbflOlBug=
-github.com/KL-Engineering/tracecontext v0.1.0/go.mod h1:7Z1AZJwoLyRY4+CqWd+QWaylTsft429V9/MhoVztDwc=
+github.com/KL-Engineering/tracecontext v0.1.1 h1:pRVt9MfgfyOnGNV0sbE3x19ZKJDpKWMPZfVeNjwcv70=
+github.com/KL-Engineering/tracecontext v0.1.1/go.mod h1:7Z1AZJwoLyRY4+CqWd+QWaylTsft429V9/MhoVztDwc=
 github.com/PuerkitoBio/goquery v1.5.1/go.mod h1:GsLWisAFVj4WgDibEWF4pvYnkVQBpKBKeU+7zCJoLcc=
 github.com/andybalholm/cascadia v1.1.0/go.mod h1:GsXiBklL0woXo1j/WYWtSYYC4ouU9PqHO0sqidkEA4Y=
 github.com/aws/aws-lambda-go v1.31.0 h1:g2hMHH1SxTOiKSFbX6I4HAIXQAr8D7CeBprXQCce05I=

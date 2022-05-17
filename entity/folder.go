@@ -377,3 +377,17 @@ type SearchFolderCondition struct {
 	OrderBy string
 	Pager   utils.Pager
 }
+
+type TreeRequest struct {
+	Key       string `json:"key" form:"key"`
+	Type      int    `json:"type" form:"type"`
+	OnlyForMe bool   `json:"only_for_me" form:"only_for_me"`
+}
+
+type TreeResponse struct {
+	ID        string          `json:"id"`
+	Name      string          `json:"name"`
+	ItemCount int             `json:"item_count"`
+	DirPath   string          `json:"dir_path"`
+	Children  []*TreeResponse `json:"children"`
+}
