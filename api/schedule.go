@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -1432,6 +1433,8 @@ func (s *Server) getScheduleTimeViewList(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+	// Sort for easy comparison, default order [homefun normal review]
+	sort.Strings(requestBody.StudyTypes)
 
 	loc := utils.GetTimeLocationByOffset(requestBody.TimeZoneOffset)
 	log.Debug(ctx, "utils.GetTimeLocationByOffset", log.Any("loc", loc), log.Any("TimeZoneOffset", requestBody.TimeZoneOffset))

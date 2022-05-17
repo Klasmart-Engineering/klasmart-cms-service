@@ -13,6 +13,7 @@ import (
 	"github.com/KL-Engineering/dbo"
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 	"github.com/jinzhu/gorm"
 )
 
@@ -416,6 +417,7 @@ type ScheduleCondition struct {
 	RelationIDs              entity.NullStrings
 	RelationSchoolIDs        entity.NullStrings
 	ClassTypes               entity.NullStrings
+	StudyTypes               entity.NullStrings
 	IsHomefun                sql.NullBool
 	ReviewStatus             entity.NullStrings
 	SuccessReviewStudentID   sql.NullString
@@ -564,6 +566,36 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	if c.ClassTypes.Valid {
 		wheres = append(wheres, "class_type in (?)")
 		params = append(params, c.ClassTypes.Strings)
+	}
+	if c.StudyTypes.Valid {
+		if utils.SliceEqual(c.StudyTypes.Strings, []string{string(entity.ScheduleStudyTypeNormal)}) {
+			wheres = append(wheres, "is_homefun = ? and is_review = ?")
+			params = append(params, false, false)
+		} else if utils.SliceEqual(c.StudyTypes.Strings, []string{string(entity.ScheduleStudyTypeHomefun)}) {
+			wheres = append(wheres, "is_homefun = ?")
+			params = append(params, true)
+		} else if utils.SliceEqual(c.StudyTypes.Strings, []string{string(entity.ScheduleStudyTypeReview)}) {
+			wheres = append(wheres, "is_review = ?")
+			params = append(params, true)
+		} else if utils.SliceEqual(c.StudyTypes.Strings, []string{
+			string(entity.ScheduleStudyTypeHomefun),
+			string(entity.ScheduleStudyTypeNormal),
+		}) {
+			wheres = append(wheres, "is_review = ?")
+			params = append(params, false)
+		} else if utils.SliceEqual(c.StudyTypes.Strings, []string{
+			string(entity.ScheduleStudyTypeNormal),
+			string(entity.ScheduleStudyTypeReview),
+		}) {
+			wheres = append(wheres, "is_homefun = ?")
+			params = append(params, false)
+		} else if utils.SliceEqual(c.StudyTypes.Strings, []string{
+			string(entity.ScheduleStudyTypeHomefun),
+			string(entity.ScheduleStudyTypeReview),
+		}) {
+			wheres = append(wheres, "is_homefun = ? and is_review = ?")
+			params = append(params, true, true)
+		}
 	}
 
 	if c.IsHomefun.Valid {
