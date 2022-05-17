@@ -8,19 +8,11 @@ import (
 	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 )
 
-func NewOfflineClassAssessmentPage(at *AssessmentTool) IAssessmentMatch {
+func NewOfflineClassAssessment(at *AssessmentTool, action AssessmentMatchAction) IAssessmentMatch {
 	return &OfflineClassAssessment{
 		at:     at,
-		action: AssessmentMatchActionPage,
-		base:   NewBaseAssessment(at, AssessmentMatchActionPage),
-	}
-}
-
-func NewOfflineClassAssessmentDetail(at *AssessmentTool) IAssessmentMatch {
-	return &OfflineClassAssessment{
-		at:     at,
-		action: AssessmentMatchActionDetail,
-		base:   NewBaseAssessment(at, AssessmentMatchActionDetail),
+		action: action,
+		base:   NewBaseAssessment(at, action),
 	}
 }
 
@@ -41,13 +33,13 @@ func (o *OfflineClassAssessment) MatchLessPlan() (map[string]*v2.AssessmentConte
 }
 
 func (o *OfflineClassAssessment) MatchProgram() (map[string]*entity.IDName, error) {
-	onlineClass := NewOnlineClassAssessmentPage(o.at)
+	onlineClass := NewOnlineClassAssessment(o.at, o.action)
 
 	return onlineClass.MatchProgram()
 }
 
 func (o *OfflineClassAssessment) MatchSubject() (map[string][]*entity.IDName, error) {
-	onlineClass := NewOnlineClassAssessmentPage(o.at)
+	onlineClass := NewOnlineClassAssessment(o.at, o.action)
 
 	return onlineClass.MatchSubject()
 }
@@ -57,13 +49,13 @@ func (o *OfflineClassAssessment) MatchTeacher() (map[string][]*entity.IDName, er
 }
 
 func (o *OfflineClassAssessment) MatchClass() (map[string]*entity.IDName, error) {
-	onlineClass := NewOnlineClassAssessmentDetail(o.at)
+	onlineClass := NewOnlineClassAssessment(o.at, o.action)
 
 	return onlineClass.MatchClass()
 }
 
 func (o *OfflineClassAssessment) MatchOutcomes() (map[string]*v2.AssessmentOutcomeReply, error) {
-	onlineClass := NewOnlineClassAssessmentDetail(o.at)
+	onlineClass := NewOnlineClassAssessment(o.at, o.action)
 
 	return onlineClass.MatchOutcomes()
 }
