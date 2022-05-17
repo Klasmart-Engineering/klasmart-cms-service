@@ -1307,20 +1307,16 @@ func (at *AssessmentTool) AsyncInitExternalData(include AssessmentExternalInclud
 			}
 
 			g.Go(func() error {
-				programs, err := external.GetProgramServiceProvider().BatchGet(ctx, op, programIDs)
+				programMap, err := external.GetProgramServiceProvider().BatchGetNameMap(ctx, op, programIDs)
 				if err != nil {
 					return err
 				}
 
 				result := make(map[string]*entity.IDName)
-				for _, item := range programs {
-					if item == nil || item.ID == "" {
-						log.Warn(ctx, "program id is empty", log.Any("programs", programs))
-						continue
-					}
-					result[item.ID] = &entity.IDName{
-						ID:   item.ID,
-						Name: item.Name,
+				for id, name := range programMap {
+					result[id] = &entity.IDName{
+						ID:   id,
+						Name: name,
 					}
 				}
 
@@ -1336,20 +1332,16 @@ func (at *AssessmentTool) AsyncInitExternalData(include AssessmentExternalInclud
 				return err
 			}
 			g.Go(func() error {
-				subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, op, subjectIDs)
+				subjectMap, err := external.GetSubjectServiceProvider().BatchGetNameMap(ctx, op, subjectIDs)
 				if err != nil {
 					return err
 				}
 
 				result := make(map[string]*entity.IDName)
-				for _, item := range subjects {
-					if item == nil || item.ID == "" {
-						log.Warn(ctx, "subject is empty", log.Any("subjects", subjects))
-						continue
-					}
-					result[item.ID] = &entity.IDName{
-						ID:   item.ID,
-						Name: item.Name,
+				for id, name := range subjectMap {
+					result[id] = &entity.IDName{
+						ID:   id,
+						Name: name,
 					}
 				}
 
