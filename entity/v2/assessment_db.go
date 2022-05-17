@@ -25,6 +25,7 @@ func (Assessment) TableName() string {
 	return constant.TableNameAssessmentV2
 }
 
+// Clone this method can be used in fields where there is no pointer type
 func (a Assessment) Clone() *Assessment {
 	return &a
 }
@@ -52,6 +53,7 @@ func (AssessmentUser) TableName() string {
 	return constant.TableNameAssessmentsUsersV2
 }
 
+// Clone this method can be used in fields where there is no pointer type
 func (au AssessmentUser) Clone() *AssessmentUser {
 	return &au
 }

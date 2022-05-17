@@ -1365,19 +1365,16 @@ func (at *AssessmentTool) AsyncInitExternalData(include AssessmentExternalInclud
 				return err
 			}
 			g.Go(func() error {
-				classes, err := external.GetClassServiceProvider().BatchGet(ctx, op, classIDs)
+				classMap, err := external.GetClassServiceProvider().BatchGetNameMap(ctx, op, classIDs)
 				if err != nil {
 					return err
 				}
 
 				result := make(map[string]*entity.IDName)
-				for _, item := range classes {
-					if item == nil || item.ID == "" {
-						continue
-					}
-					result[item.ID] = &entity.IDName{
-						ID:   item.ID,
-						Name: item.Name,
+				for classID, className := range classMap {
+					result[classID] = &entity.IDName{
+						ID:   classID,
+						Name: className,
 					}
 				}
 
@@ -1394,20 +1391,16 @@ func (at *AssessmentTool) AsyncInitExternalData(include AssessmentExternalInclud
 			}
 
 			g.Go(func() error {
-				users, err := external.GetUserServiceProvider().BatchGet(ctx, op, teacherIDs)
+				userMap, err := external.GetUserServiceProvider().BatchGetNameMap(ctx, op, teacherIDs)
 				if err != nil {
 					return err
 				}
 
 				result := make(map[string]*entity.IDName)
-				for _, item := range users {
-					if !item.Valid {
-						log.Warn(ctx, "user is inValid", log.Any("item", item))
-						continue
-					}
-					result[item.ID] = &entity.IDName{
-						ID:   item.ID,
-						Name: item.Name(),
+				for userID, name := range userMap {
+					result[userID] = &entity.IDName{
+						ID:   userID,
+						Name: name,
 					}
 				}
 
