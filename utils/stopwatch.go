@@ -9,6 +9,10 @@ import (
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 )
 
+type stopWatchContextKeyType struct{}
+
+var stopWatchContextKey stopWatchContextKeyType
+
 type Stopwatch struct {
 	mutex         sync.RWMutex
 	remains       int64
@@ -56,11 +60,11 @@ func SetupStopwatch(ctx context.Context) context.Context {
 		string(constant.ExternalStopwatch): NewStopwatch(),
 	}
 
-	return context.WithValue(ctx, constant.ContextStopwatchKey, stopwatches)
+	return context.WithValue(ctx, stopWatchContextKey, stopwatches)
 }
 
 func GetStopwatches(ctx context.Context) (map[string]*Stopwatch, bool) {
-	stopwatches := ctx.Value(constant.ContextStopwatchKey)
+	stopwatches := ctx.Value(stopWatchContextKey)
 	if stopwatches == nil {
 		log.Debug(ctx, "context stopwatches not found")
 		return nil, false

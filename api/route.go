@@ -70,6 +70,7 @@ func (s Server) registeRoute() {
 		content.GET("/contents_resources/:resource_id/check", s.mustLoginWithoutOrgID, s.checkExist)
 		content.GET("/contents/:content_id/live/token", s.mustLogin, s.getContentLiveToken)
 		content.POST("/contents_lesson_plans", s.mustLogin, s.getLessonPlansCanSchedule)
+
 	}
 
 	schedules := s.engine.Group("/v1")
@@ -211,7 +212,7 @@ func (s Server) registeRoute() {
 
 		folders.GET("/share", s.mustLogin, s.getFoldersSharedRecords)
 		folders.PUT("/share", s.mustLogin, s.shareFolders)
-
+		folders.GET("/tree", s.mustLogin, s.getTree)
 	}
 
 	crypto := s.engine.Group("/v1/crypto")

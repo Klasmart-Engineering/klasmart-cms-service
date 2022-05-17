@@ -10,19 +10,11 @@ import (
 	"github.com/KL-Engineering/kidsloop-cms-service/external"
 )
 
-func NewOnlineClassAssessmentPage(at *AssessmentTool) IAssessmentMatch {
+func NewOnlineClassAssessment(at *AssessmentTool, action AssessmentMatchAction) IAssessmentMatch {
 	return &OnlineClassAssessment{
 		at:     at,
-		action: AssessmentMatchActionPage,
-		base:   NewBaseAssessment(at, AssessmentMatchActionPage),
-	}
-}
-
-func NewOnlineClassAssessmentDetail(at *AssessmentTool) IAssessmentMatch {
-	return &OnlineClassAssessment{
-		at:     at,
-		action: AssessmentMatchActionDetail,
-		base:   NewBaseAssessment(at, AssessmentMatchActionDetail),
+		action: action,
+		base:   NewBaseAssessment(at, action),
 	}
 }
 
