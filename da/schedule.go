@@ -593,7 +593,7 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 			string(entity.ScheduleStudyTypeHomefun),
 			string(entity.ScheduleStudyTypeReview),
 		}) {
-			wheres = append(wheres, "is_homefun = ? and is_review = ?")
+			wheres = append(wheres, "(is_homefun = ? or is_review = ?)")
 			params = append(params, true, true)
 		}
 	}
