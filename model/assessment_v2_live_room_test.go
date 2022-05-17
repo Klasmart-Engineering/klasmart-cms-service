@@ -487,7 +487,7 @@ func TestAssessmentExternalService_ContentsToTree(t *testing.T) {
 		OrgID:  "60c064cc-bbd8-4724-b3f6-b886dce4774f", // Badanamu HQ
 		Token:  "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ2NTNmODgwLWI5MjAtNDM1Zi04ZjJkLTk4YjVkNDYyMWViOCIsImVtYWlsIjoic2Nob29sXzAzMDMyOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY0OTA3OTI4MCwiaXNzIjoia2lkc2xvb3AifQ.uk1nBxFRcFVU20dwN5uVS3_4Oot6Jktppup-sEvOuye0Jf3_hZ4Do6H8_bsLpCTTpM4fKOididI9NZCtAZUxKQGB8-d2nEJd_wr5U-QE2tyOgCAPwcftP9Ra9J8jhDQGz30YuVO_-ieEnHcTxMaINIfaM0DUEpSgzLxcnn83xBFTTvGfT4CRGx5npfKoYMBDXqaFnUSfrHovLSc5cDvsoDveZ5xUEY4oy99Yc5MuPCmXdxTbygPdCiUn2dvUwUe5xWxC9kgk_4kJZsE8qbs9MQ1V4kK1jebpw9G6_O7fdldv2b5Aqh6lHDb2C8wEXjDCnu7U_RUf94foLXxeYtCmMQ",
 	}
-	roomInfo, err := external.GetAssessmentServiceProvider().GetScoresWithCommentsByRoomIDs(ctx, testOperator, []string{"62454aee4c6e70e130530dbc"})
+	roomInfo, err := external.GetAssessmentServiceProvider().Get(ctx, testOperator, []string{"62454aee4c6e70e130530dbc"})
 	if err != nil {
 		t.Error(err)
 	}
