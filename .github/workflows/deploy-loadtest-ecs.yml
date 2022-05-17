@@ -1,12 +1,9 @@
 name: Deploy LoadTest To Amazon ECS
 
 on:
-  push:
-    branches:
-      - cms-385
   pull_request:
-    branches:
-      - loadtest
+    branches: [loadtest]
+    types: [closed]
 
 env:
   AWS_REGION: cn-north-1
@@ -16,9 +13,11 @@ env:
   ECS_TASK_DEFINITION: loadtest
   CONTAINER_NAME: loadtest
   GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+  LD_S3_BUCKET: ${{ secrets.LD_S3_BUCKET }}
 
 jobs:
   build-to-ecr:
+    if: github.event.pull_request.merged == true
     name: Build And Deploy ECS
     runs-on: ubuntu-latest
     steps:
@@ -48,35 +47,46 @@ jobs:
 
     - name: Build
       run: |
-        go build -o main -ldflags "-X github.com/KL-Engineering/kidsloop-cms-service/constant.GitHash=$(git rev-list -1 HEAD) -X github.com/KL-Engineering/kidsloop-cms-service/constant.BuildTimestamp=$(date +%s) -X github.com/KL-Engineering/kidsloop-cms-service/constant.LatestMigrate=$(ls schema/migrate | tail -1)"
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main -a -tags netgo -ldflags "-X github.com/KL-Engineering/kidsloop-cms-service/constant.GitHash=$(git rev-list -1 HEAD) -X github.com/KL-Engineering/kidsloop-cms-service/constant.BuildTimestamp=$(date +%s) -X github.com/KL-Engineering/kidsloop-cms-service/constant.LatestMigrate=$(ls schema/migrate | tail -1)"
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
-        aws-access-key-id: ${{ secrets.ECR_AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.ECR_AWS_SECRET_ACCESS_KEY }}
+        aws-access-key-id: ${{ secrets.LD_ECR_AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.LD_ECR_AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
+    # - name: Sync Keys To Local
+    #   run: |
+    #     aws s3 cp s3://$LD_S3_BUCKET/keys/ ./ --recursive --sse aws:kms
+
     - name: Build, tag, and push image to Amazon ECR
+      shell: bash
       id: build-image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        set +x
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG} .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
     - name: Download task definition
       run: |
-        aws ecs describe-task-definition --task-definition $ECS_TASK_DEFINITION \
-        --query taskDefinition > task-definition.json
+        aws ecs describe-task-definition --task-definition $ECS_TASK_DEFINITION --query taskDefinition  | jq -r 'del(
+          .taskDefinitionArn,
+          .requiresAttributes,
+          .compatibilities,
+          .revision,
+          .status,
+          .registeredAt,
+          .registeredBy
+        )' > task-definition.json
         
     - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
@@ -93,4 +103,3 @@ jobs:
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
-              
