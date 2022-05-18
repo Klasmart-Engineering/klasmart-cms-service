@@ -7,8 +7,8 @@ import (
 	"github.com/KL-Engineering/kidsloop-cms-service/config"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	"github.com/KL-Engineering/kidsloop-cms-service/model"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 )
 
 // @Summary classAddMembersEvent

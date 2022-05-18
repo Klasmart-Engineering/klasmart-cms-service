@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"testing"
 
 	"github.com/KL-Engineering/kidsloop-cms-service/model"
-	"github.com/tidwall/gjson"
 )
 
 func TestCreateMilestone(t *testing.T) {
@@ -79,61 +77,6 @@ func TestDeleteMilestone(t *testing.T) {
 	}
 	res := DoHttpWithOperator(http.MethodDelete, op, prefix+"/milestones"+"?org_id="+op.OrgID, string(data))
 	fmt.Println(res)
-}
-
-func TestSearchMilestone(t *testing.T) {
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
-	queryCondition := []string{
-		//"search_key=name01",
-		//"name=name01",
-		//"description=math",
-		//"shortcode=00001",
-		"status=published",
-		"page=1",
-		"page_size=10",
-		"order_by=created_at",
-	}
-	condition := "&" + strings.Join(queryCondition, "&")
-	res := DoHttpWithOperator(http.MethodGet, op, prefix+"/milestones"+"?org_id="+op.OrgID+condition, "")
-	obj := gjson.Parse(res)
-	for _, v := range obj.Get("milestones").Array() {
-		str := fmt.Sprintf("milestone_id: %v, locked_by: %v, last_edited_at: %v, last_edited_by: %v, locked_location: %v",
-			v.Get("milestone_id"),
-			v.Get("locked_by"),
-			v.Get("last_edited_at"),
-			v.Get("last_edited_by"),
-			v.Get("locked_location"))
-		t.Log(str)
-	}
-	t.Log(obj.Get("total"))
-}
-
-func TestSearchPrivateMilestone(t *testing.T) {
-	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "", "")
-	queryCondition := []string{
-		//"search_key=name01",
-		//"name=name01",
-		//"description=math",
-		//"shortcode=00001",
-		"status=published",
-		"page=1",
-		"page_size=10",
-		"order_by=created_at",
-	}
-	op.UserID = "46790f5c-708f-59c2-9c2f-f24db63b86ad"
-	condition := "&" + strings.Join(queryCondition, "&")
-	res := DoHttpWithOperator(http.MethodGet, op, prefix+"/private_milestones"+"?org_id="+op.OrgID+condition, "")
-	obj := gjson.Parse(res)
-	for _, v := range obj.Get("milestones").Array() {
-		str := fmt.Sprintf("milestone_id: %v, locked_by: %v, last_edited_at: %v, last_edited_by: %v, locked_location: %v",
-			v.Get("milestone_id"),
-			v.Get("locked_by"),
-			v.Get("last_edited_at"),
-			v.Get("last_edited_by"),
-			v.Get("locked_location"))
-		t.Log(str)
-	}
-	t.Log(obj.Get("total"))
 }
 
 func TestPublishMilestone(t *testing.T) {

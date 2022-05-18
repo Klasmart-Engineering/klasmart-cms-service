@@ -12,7 +12,7 @@ import (
 
 	"github.com/KL-Engineering/ro"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 
 	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/dbo"

@@ -2,7 +2,7 @@ package entity
 
 import (
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 )
 
 type StudentUsageRecord struct {

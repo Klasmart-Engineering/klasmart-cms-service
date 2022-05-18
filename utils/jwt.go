@@ -2,7 +2,7 @@ package utils
 
 import (
 	"context"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 )
 
 func CreateJWT(ctx context.Context, claims jwt.Claims, privateKey interface{}) (string, error) {

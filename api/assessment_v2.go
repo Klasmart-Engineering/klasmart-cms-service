@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/KL-Engineering/common-log/log"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 
 	"github.com/KL-Engineering/kidsloop-cms-service/config"
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
