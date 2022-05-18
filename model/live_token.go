@@ -12,7 +12,7 @@ import (
 	"github.com/KL-Engineering/kidsloop-cms-service/config"
 	"github.com/KL-Engineering/kidsloop-cms-service/da"
 	"github.com/KL-Engineering/kidsloop-cms-service/external"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"

@@ -13,13 +13,13 @@ require (
 	github.com/KL-Engineering/ro v0.3.0
 	github.com/KL-Engineering/tracecontext v0.1.1
 	github.com/aws/aws-sdk-go v1.35.23
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-contrib/pprof v1.3.0
 	github.com/gin-gonic/gin v1.7.7
 	github.com/go-playground/assert/v2 v2.0.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-sql-driver/mysql v1.6.0
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.3.0
 	github.com/hgfischer/go-otp v1.0.0
 	github.com/jinzhu/gorm v1.9.16

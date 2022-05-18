@@ -12,8 +12,8 @@ import (
 
 	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/go-redis/redis/v8"
+	"github.com/golang-jwt/jwt"
 )
 
 var (
