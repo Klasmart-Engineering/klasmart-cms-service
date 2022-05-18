@@ -686,7 +686,7 @@ func (s *Server) querySharedContent(c *gin.Context) {
 func (s *Server) querySharedContentV2(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	condition := s.queryContentCondition(c, op)
+	condition := s.querySharedContentCondition(c, op)
 	condition.ParentID = c.Query("parent_id")
 	if condition.ParentID == "" {
 		condition.ParentID = "/"
@@ -1098,6 +1098,54 @@ func (s *Server) queryContentCondition(c *gin.Context, op *entity.Operator) enti
 			}
 			condition.Program = append(condition.Program, programIDs...)
 		}
+	}
+	if sourceType != "" {
+		condition.SourceType = sourceType
+	}
+	return condition
+}
+
+func (s *Server) querySharedContentCondition(c *gin.Context, op *entity.Operator) entity.ContentConditionRequest {
+	contentTypeStr := c.Query("content_type")
+	scope := c.Query("scope")
+	publish := c.Query("publish_status")
+	programs := c.Query("programs")
+	path := c.Query("path")
+	condition := entity.ContentConditionRequest{
+		Author:      parseAuthor(c, op),
+		Org:         parseOrg(c, op),
+		DirPath:     path,
+		OrderBy:     c.Query("order_by"),
+		Pager:       utils.GetPager(c.Query("page"), c.Query("page_size")),
+		Name:        strings.TrimSpace(c.Query("name")),
+		ContentName: strings.TrimSpace(c.Query("content_name")),
+	}
+	sourceType := c.Query("source_type")
+	//if len(keywords) > 0 {
+	//	condition.Name = keywords
+	//}
+	if contentTypeStr != "" {
+		contentTypeList := strings.Split(contentTypeStr, constant.StringArraySeparator)
+		for i := range contentTypeList {
+			contentType, err := strconv.Atoi(contentTypeList[i])
+			if err != nil {
+				log.Warn(c.Request.Context(), "parse contentType failed", log.Err(err), log.String("contentType", contentTypeStr))
+				continue
+			}
+			ct := entity.NewContentType(contentType)
+			condition.ContentType = append(condition.ContentType, ct.ContentTypeInt()...)
+		}
+	}
+	if scope != "" {
+		scopes := strings.Split(scope, constant.StringArraySeparator)
+		condition.VisibilitySettings = append(condition.VisibilitySettings, scopes...)
+	}
+	if publish != "" {
+		condition.PublishStatus = append(condition.PublishStatus, publish)
+	}
+	if programs != "" {
+		program := strings.Split(programs, constant.StringArraySeparator)
+		condition.Program = program
 	}
 	if sourceType != "" {
 		condition.SourceType = sourceType
