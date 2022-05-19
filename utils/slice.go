@@ -194,22 +194,6 @@ func ContainsAnyString(list []string, elems ...string) bool {
 	return false
 }
 
-func HasSubset(parent, children []string) bool {
-	for _, s1 := range children {
-		ok := false
-		for _, s2 := range parent {
-			if s1 == s2 {
-				ok = true
-				break
-			}
-		}
-		if !ok {
-			return false
-		}
-	}
-	return true
-}
-
 func ReverseSliceInPlace(s interface{}) {
 	n := reflect.ValueOf(s).Len()
 	swap := reflect.Swapper(s)
@@ -230,4 +214,19 @@ func SliceEqual[E comparable](s1, s2 []E) bool {
 	}
 
 	return true
+}
+
+func ExistIntersection[E comparable](s1, s2 []E) bool {
+	set := make(map[E]bool, len(s1))
+	for _, e := range s1 {
+		set[e] = true
+	}
+
+	for _, e := range s2 {
+		if set[e] {
+			return true
+		}
+	}
+
+	return false
 }
