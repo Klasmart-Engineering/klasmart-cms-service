@@ -32,6 +32,7 @@ var (
 	ErrScheduleAlreadyHidden        = errors.New("schedule already hidden")
 	ErrScheduleAlreadyFeedback      = errors.New("students already submitted feedback")
 	ErrScheduleStudyAlreadyProgress = errors.New("students already started")
+	ErrScheduleNoPermissionRedirect = errors.New("no permission redirect")
 )
 
 type IScheduleModel interface {
@@ -1830,6 +1831,15 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 		return nil, constant.ErrRecordNotFound
 	}
 
+	err = s.checkSchedulePermission(ctx, operator, schedule)
+	if err != nil {
+		log.Error(ctx, "checkSchedulePermission error",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("schedule", schedule))
+		return nil, err
+	}
+
 	return s.transformToScheduleDetailsView(ctx, operator, schedule)
 }
 
@@ -2584,6 +2594,15 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 		log.Error(ctx, "schedule reocord has been deleted",
 			log.Any("schedule", schedule))
 		return nil, constant.ErrRecordNotFound
+	}
+
+	err = s.checkSchedulePermission(ctx, op, schedule)
+	if err != nil {
+		log.Error(ctx, "checkSchedulePermission error",
+			log.Err(err),
+			log.Any("operator", op),
+			log.Any("schedule", schedule))
+		return nil, err
 	}
 
 	return s.transformToScheduleViewDetail(ctx, op, schedule)
@@ -4803,6 +4822,89 @@ func (s *scheduleModel) getAssessmentAddWhenCreateSchedulesReq(ctx context.Conte
 	}
 
 	return assessmentAddReq, nil
+}
+
+func (s *scheduleModel) checkSchedulePermission(ctx context.Context, operator *entity.Operator, schedule *entity.Schedule) error {
+	if operator.OrgID != schedule.OrgID {
+		return ErrScheduleNoPermissionRedirect
+	}
+
+	permissionMap, err := GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, operator, []external.PermissionName{
+		external.ScheduleViewOrgCalendar,
+		external.ScheduleViewSchoolCalendar,
+		external.ScheduleViewMyCalendar,
+	})
+	if err == constant.ErrForbidden {
+		return ErrScheduleNoPermissionRedirect
+	}
+	if err != nil {
+		log.Error(ctx, "GetSchedulePermissionModel().HasScheduleOrgPermissions error",
+			log.Err(err),
+			log.Any("operator", operator),
+		)
+		return constant.ErrInternalServer
+	}
+
+	if permissionMap[external.ScheduleViewOrgCalendar] {
+		return nil
+	}
+
+	var scheduleRelations []*entity.ScheduleRelation
+	err = s.scheduleRelationDA.Query(ctx, &da.ScheduleRelationCondition{
+		ScheduleID: sql.NullString{
+			String: schedule.ID,
+			Valid:  true,
+		},
+	}, &scheduleRelations)
+	if err != nil {
+		log.Error(ctx, "s.scheduleRelationDA.Query error",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.String("scheduleID", schedule.ID),
+		)
+		return constant.ErrInternalServer
+	}
+
+	var schoolIDs []string
+	var participants []string
+	for _, v := range scheduleRelations {
+		switch v.RelationType {
+		case entity.ScheduleRelationTypeSchool:
+			schoolIDs = append(schoolIDs, v.RelationID)
+		case entity.ScheduleRelationTypeClassRosterTeacher,
+			entity.ScheduleRelationTypeClassRosterStudent,
+			entity.ScheduleRelationTypeParticipantTeacher,
+			entity.ScheduleRelationTypeParticipantStudent:
+			participants = append(participants, v.RelationID)
+		}
+	}
+
+	if permissionMap[external.ScheduleViewSchoolCalendar] {
+		schoolList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, operator, external.ScheduleViewSchoolCalendar)
+		if err != nil {
+			log.Error(ctx, "GetSchoolServiceProvider.GetByPermission error",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.String("permission", external.ScheduleViewSchoolCalendar.String()),
+			)
+			return constant.ErrInternalServer
+		}
+
+		var hasPermissionSchoolIds []string
+		for _, item := range schoolList {
+			hasPermissionSchoolIds = append(hasPermissionSchoolIds, item.ID)
+		}
+
+		if utils.ExistIntersection(schoolIDs, hasPermissionSchoolIds) {
+			return nil
+		}
+	} else if permissionMap[external.ScheduleViewMyCalendar] {
+		if utils.ContainsString(participants, operator.UserID) {
+			return nil
+		}
+	}
+
+	return ErrScheduleNoPermissionRedirect
 }
 
 // model package interval function
