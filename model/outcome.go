@@ -2778,6 +2778,7 @@ func (o OutcomeModel) transformToExportOutcomeView(ctx context.Context, operator
 			Sets:           []string{},
 			Milestones:     []string{},
 			CreatedAt:      outcome.CreateAt,
+			UpdatedAt:      outcome.UpdateAt,
 			ScoreThreshold: outcome.ScoreThreshold,
 		}
 

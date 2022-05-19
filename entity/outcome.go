@@ -135,5 +135,6 @@ type ExportOutcomeView struct {
 	Sets           []string `json:"sets"`
 	Milestones     []string `json:"milestones"`
 	CreatedAt      int64    `json:"created_at"`
+	UpdatedAt      int64    `json:"updated_at"`
 	ScoreThreshold float32  `json:"score_threshold"`
 }
