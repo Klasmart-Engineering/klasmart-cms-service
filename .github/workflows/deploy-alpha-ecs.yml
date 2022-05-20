@@ -59,6 +59,17 @@ jobs:
           echo "$JWT_PUBLIC_KEY" | base64 -d > deploy/jwt_public_key.pem
           echo "$AMS_ASSESSMENT_JWT_PUBLIC_KEY" | base64 -d > deploy/ams_assessment_jwt_public_key.pem
           echo "$LIVE_TOKEN_PRIVATE_KEY" | base64 -d > deploy/live_token_private_key.pem
+    
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: false
+          prerelease: false
 
       # - name: Build and Push Container
       #   uses: ./.github/actions/docker-build-and-push
