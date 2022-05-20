@@ -3,7 +3,7 @@ name: Deploy Alpha To Amazon ECS
 on:
   push:
     tags:
-      - v*
+      - 'v*'
 
 env:
   GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
