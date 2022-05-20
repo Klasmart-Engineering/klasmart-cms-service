@@ -3,8 +3,6 @@ name: Deploy Alpha To Amazon ECS
 on:
   pull_request:
     branches: [byron-action]
-    types: [closed]
-
 env:
   GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
   H5P_PRIVATE_KEY: ${{ secrets.H5P_PRIVATE_KEY }}
