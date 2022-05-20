@@ -1,10 +1,8 @@
 name: Deploy Alpha To Amazon ECS
 
 on:
-  pull_request:
-    branches: [byron-action]
-    types: [closed]
-  create:
+  release:
+    types: [published]
 
 env:
   GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
@@ -16,7 +14,6 @@ env:
 
 jobs:
   build-to-ecr:
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     name: Build And Deploy ECS
     runs-on: ubuntu-latest
     steps:
