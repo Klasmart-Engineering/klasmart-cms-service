@@ -1,11 +1,8 @@
 name: Deploy Alpha To Amazon ECS
 
 on:
-  push:
-    branches:
-      - hotfix/*
   pull_request:
-    branches: [main]
+    branches: [byron-action]
     types: [closed]
 
 env:
@@ -64,27 +61,27 @@ jobs:
           echo "$AMS_ASSESSMENT_JWT_PUBLIC_KEY" | base64 -d > deploy/ams_assessment_jwt_public_key.pem
           echo "$LIVE_TOKEN_PRIVATE_KEY" | base64 -d > deploy/live_token_private_key.pem
 
-      - name: Build and Push Container
-        uses: ./.github/actions/docker-build-and-push
-        with:
-          environment: ${{ needs.generate-version.outputs.tag }}
-          region: global
-          ecr_repository: kidsloop-cms-backend
-          dockerfile_dir: deploy
-          dockerfile_name: Dockerfile
-          dockerfile_context: .
-          ecr_aws_region: eu-west-2
-          ecr_registry: 942095822719.dkr.ecr.eu-west-2.amazonaws.com
-          ECR_AWS_ACCESS_KEY_ID: ${{ secrets.ECR_AWS_ACCESS_KEY_ID }}
-          ECR_AWS_SECRET_ACCESS_KEY: ${{ secrets.ECR_AWS_SECRET_ACCESS_KEY }}
+      # - name: Build and Push Container
+      #   uses: ./.github/actions/docker-build-and-push
+      #   with:
+      #     environment: ${{ needs.generate-version.outputs.tag }}
+      #     region: global
+      #     ecr_repository: kidsloop-cms-backend
+      #     dockerfile_dir: deploy
+      #     dockerfile_name: Dockerfile
+      #     dockerfile_context: .
+      #     ecr_aws_region: eu-west-2
+      #     ecr_registry: 942095822719.dkr.ecr.eu-west-2.amazonaws.com
+      #     ECR_AWS_ACCESS_KEY_ID: ${{ secrets.ECR_AWS_ACCESS_KEY_ID }}
+      #     ECR_AWS_SECRET_ACCESS_KEY: ${{ secrets.ECR_AWS_SECRET_ACCESS_KEY }}
 
-  deploy-alpha-dev-test:
-    #if: github.event.pull_request.merged == true
-    needs: build-to-ecr
-    uses: ./.github/workflows/deploy-alpha-dev-call.yml
-    with:
-      ecs_aws_service: kidsloop-alpha-cms
-      desired_ocitag: alpha-dev-latest
-    secrets:
-      AWS_ACCESS_KEY_ID_ALPHA_DEV: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
-      AWS_SECRET_ACCESS_KEY_ALPHA_DEV: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
+  # deploy-alpha-dev-test:
+  #   #if: github.event.pull_request.merged == true
+  #   needs: build-to-ecr
+  #   uses: ./.github/workflows/deploy-alpha-dev-call.yml
+  #   with:
+  #     ecs_aws_service: kidsloop-alpha-cms
+  #     desired_ocitag: alpha-dev-latest
+  #   secrets:
+  #     AWS_ACCESS_KEY_ID_ALPHA_DEV: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
+  #     AWS_SECRET_ACCESS_KEY_ALPHA_DEV: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
