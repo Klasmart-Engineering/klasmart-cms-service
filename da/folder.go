@@ -47,6 +47,8 @@ type IFolderDA interface {
 	GetSharedContentParentPath(ctx context.Context, tx *dbo.DBContext, orgIDs []string) ([]string, error)
 
 	UpdateEmptyField(ctx context.Context, tx *dbo.DBContext, fIDs []string) error
+	GetPrivateTree(ctx context.Context, contentCondition *ContentCondition, folderCondition *FolderCondition) (data []*entity.TreeData, err error)
+	GetAllTree(ctx context.Context, combineCondition *CombineConditions, folderCondition *FolderCondition) (data []*entity.TreeData, err error)
 }
 
 type FolderDA struct {
@@ -404,6 +406,231 @@ func (fda *FolderDA) SearchFolderCount(ctx context.Context, tx *dbo.DBContext, c
 	}
 
 	return total, nil
+}
+func (fda *FolderDA) GetPrivateTree(ctx context.Context, contentCondition *ContentCondition, folderCondition *FolderCondition) (data []*entity.TreeData, err error) {
+	sql := getPrivateTreeSql(contentCondition)
+	params := map[string]interface{}{
+		"PublishStatus":   entity.ContentStatusPublished,
+		"Author":          contentCondition.Author,
+		"VisibilityID":    contentCondition.VisibilitySettings,
+		"JoinUser":        contentCondition.JoinUserIDList,
+		"Name":            contentCondition.Name,
+		"ContentName":     contentCondition.ContentName,
+		"Path":            constant.RootPath,
+		"OwnerType":       entity.OwnerTypeOrganization,
+		"FolderPartition": entity.FolderPartitionMaterialAndPlans,
+		"OrgID":           folderCondition.Owner,
+		"FolderItemType":  entity.FolderItemTypeFolder,
+	}
+	err = fda.s.QueryRawSQL(ctx, &data, sql, params)
+	if err != nil {
+		log.Error(ctx, "exec GetPrivateTree sql failed",
+			log.Err(err),
+			log.String("sql", sql),
+			log.Any("params1", params))
+		return
+	}
+	return
+}
+
+func getPrivateTreeSql(contentCondition *ContentCondition) string {
+	var sql []string
+	var whereRootForMeContentSql []string
+	var whereNoRootForMeContentSql []string
+	var whereRootForMeContentSqlString string
+	var whereNoRootForMeContentSqlString string
+	whereRootForMeContentSql = append(whereRootForMeContentSql, `( content_type in (1,2,10)
+                      and publish_status in (@PublishStatus) and author =@Author and delete_at=0 `)
+	if len(contentCondition.VisibilitySettings) > 0 {
+		whereRootForMeContentSql = append(whereRootForMeContentSql, ` and id 
+           IN (SELECT content_id FROM cms_content_visibility_settings WHERE visibility_setting IN (@VisibilityID)) `)
+	}
+	if contentCondition.Name != "" {
+		whereRootForMeContentSql = append(whereRootForMeContentSql, ` and (
+                      match(content_name, description, keywords) against(@Name in boolean mode) `)
+		if len(contentCondition.JoinUserIDList) > 0 {
+			whereRootForMeContentSql = append(whereRootForMeContentSql, ` OR author in (@JoinUser) `)
+		}
+		whereRootForMeContentSql = append(whereRootForMeContentSql, ` ) `)
+
+	}
+	if contentCondition.ContentName != "" {
+		whereRootForMeContentSql = append(whereRootForMeContentSql, ` and content_name like @ContentName  `)
+	}
+	whereNoRootForMeContentSql = append(whereNoRootForMeContentSql, whereRootForMeContentSql...)
+	whereRootForMeContentSql = append(whereRootForMeContentSql, ` and dir_path = @Path ) `)
+	whereNoRootForMeContentSql = append(whereNoRootForMeContentSql, ` and dir_path <> @Path ) `)
+	whereRootForMeContentSqlString = strings.Join(whereRootForMeContentSql, " ")
+	whereNoRootForMeContentSqlString = strings.Join(whereNoRootForMeContentSql, " ")
+
+	sql = append(sql, `select * from 
+           (
+              select cms_folder.parent_id, cms_folder.id,cms_folder.name,cms_folder.dir_path,
+              ifnull(cms_folder_content.content_count,0) as content_count,1 as item_type,
+             `)
+	if contentCondition.Name != "" {
+		sql = append(sql, `case when match(cms_folder.name, cms_folder.description, cms_folder.keywords) 
+                against(@Name in boolean mode)  then 1 else 0 end as has_search_self ,`)
+	}
+	if contentCondition.ContentName != "" {
+		sql = append(sql, `case when cms_folder.name like @ContentName then 1 else 0 end as has_search_self ,`)
+	}
+	if contentCondition.Name == "" && contentCondition.ContentName == "" {
+		sql = append(sql, `1 as has_search_self ,`)
+	}
+	sql = append(sql, `cms_folder.has_descendant from cms_folder_items cms_folder left join 
+          (
+            SELECT folder.id,sum(case when isnull(content.content_name) then 0 else 1 end)  content_count FROM cms_folder_items folder
+            left join 
+            (
+             select * from cms_contents where `+whereNoRootForMeContentSqlString+`
+             ) content 
+             on folder.id=content.parent_folder
+             where  folder.owner_type = @OwnerType and folder.partition = @FolderPartition 
+             and folder.owner = @OrgID and folder.item_type = @FolderItemType  and folder.delete_at = 0
+             group by  folder.id
+          ) cms_folder_content
+          on cms_folder.id=cms_folder_content.id
+          where cms_folder.owner_type = @OwnerType and cms_folder.partition = @FolderPartition 
+          and cms_folder.owner = @OrgID and cms_folder.item_type =@FolderItemType  and cms_folder.delete_at = 0
+          union all
+          select '' as parent_id,'' as  id,'' as name,'' as dir_path,(select count(*) from cms_contents where `+whereRootForMeContentSqlString+
+		`) as content_count,0 as item_type,0 as has_search_self,0 has_descendant
+          ) tree_data
+          order by name `)
+	querySql := strings.Join(sql, "")
+	return querySql
+}
+
+func getAllTreeSql(forMeCondition *ContentCondition, forOtherCondition *ContentCondition) string {
+	var sql []string
+	var whereRootForMeContentSql []string
+	var whereNoRootForMeContentSql []string
+	var whereRootForOtherContentSql []string
+	var whereNoRootForOtherContentSql []string
+	var whereRootForAllContentSqlString string
+	var whereNoRootForAllContentSqlString string
+
+	// for me condition
+	whereRootForMeContentSql = append(whereRootForMeContentSql, ` ( content_type in (1,2,10)
+                     and publish_status in (@PublishStatus) and author =@Author and delete_at=0 `)
+	if len(forMeCondition.VisibilitySettings) > 0 {
+		whereRootForMeContentSql = append(whereRootForMeContentSql, ` and id
+          IN (SELECT content_id FROM cms_content_visibility_settings WHERE visibility_setting IN (@MeVisibilityID)) `)
+	}
+	if forMeCondition.Name != "" {
+		whereRootForMeContentSql = append(whereRootForMeContentSql, ` and (
+                     match(content_name, description, keywords) against(@Name in boolean mode) `)
+		if len(forMeCondition.JoinUserIDList) > 0 {
+			whereRootForMeContentSql = append(whereRootForMeContentSql, ` OR author in (@JoinMeUser) `)
+		}
+		whereRootForMeContentSql = append(whereRootForMeContentSql, ` ) `)
+
+	}
+	if forMeCondition.ContentName != "" {
+		whereRootForMeContentSql = append(whereRootForMeContentSql, ` and content_name like @ContentName  `)
+	}
+	whereNoRootForMeContentSql = append(whereNoRootForMeContentSql, whereRootForMeContentSql...)
+	whereRootForMeContentSql = append(whereRootForMeContentSql, ` and dir_path = @Path ) `)
+	whereNoRootForMeContentSql = append(whereNoRootForMeContentSql, ` and dir_path <> @Path ) `)
+
+	//for other condition
+	whereRootForOtherContentSql = append(whereRootForMeContentSql, ` ( content_type in (1,2,10)
+                     and publish_status in (@PublishStatus) and delete_at=0 `)
+	if len(forOtherCondition.VisibilitySettings) > 0 {
+		whereRootForOtherContentSql = append(whereRootForOtherContentSql, ` and id
+          IN (SELECT content_id FROM cms_content_visibility_settings WHERE visibility_setting IN (@OtherVisibilityID)) `)
+	}
+	if forOtherCondition.Name != "" {
+		whereRootForOtherContentSql = append(whereRootForOtherContentSql, ` and (
+                     match(content_name, description, keywords) against(@Name in boolean mode) `)
+		if len(forOtherCondition.JoinUserIDList) > 0 {
+			whereRootForOtherContentSql = append(whereRootForOtherContentSql, ` OR author in (@JoinOtherUser) `)
+		}
+		whereRootForOtherContentSql = append(whereRootForOtherContentSql, ` ) `)
+
+	}
+	if forOtherCondition.ContentName != "" {
+		whereRootForOtherContentSql = append(whereRootForOtherContentSql, ` and content_name like @ContentName  `)
+	}
+	whereNoRootForOtherContentSql = append(whereNoRootForOtherContentSql, whereRootForOtherContentSql...)
+	whereRootForOtherContentSql = append(whereRootForOtherContentSql, ` and dir_path = @Path ) `)
+	whereNoRootForOtherContentSql = append(whereNoRootForOtherContentSql, ` and dir_path <> @Path ) `)
+
+	//query sql
+	rootForMeContentSqlString := strings.Join(whereRootForMeContentSql, " ")
+	rootForOtherContentSqlString := strings.Join(whereRootForOtherContentSql, " ")
+	noRootForMeContentSqlString := strings.Join(whereNoRootForMeContentSql, " ")
+	noRootForOtherContentSqlString := strings.Join(whereNoRootForOtherContentSql, " ")
+	whereRootForAllContentSqlString = " ( " + rootForMeContentSqlString + " or " + rootForOtherContentSqlString + ")"
+	whereNoRootForAllContentSqlString = " ( " + noRootForMeContentSqlString + " or " + noRootForOtherContentSqlString + ")"
+
+	sql = append(sql, `select * from 
+           (
+              select cms_folder.parent_id, cms_folder.id,cms_folder.name,cms_folder.dir_path,
+              ifnull(cms_folder_content.content_count,0) as content_count,1 as item_type,
+             `)
+	if forMeCondition.Name != "" {
+		sql = append(sql, `case when match(cms_folder.name, cms_folder.description, cms_folder.keywords) 
+                against(@Name in boolean mode)  then 1 else 0 end as has_search_self ,`)
+	}
+	if forMeCondition.ContentName != "" {
+		sql = append(sql, `case when cms_folder.name like @ContentName then 1 else 0 end as has_search_self ,`)
+	}
+	if forMeCondition.Name == "" && forMeCondition.ContentName == "" {
+		sql = append(sql, `1 as has_search_self ,`)
+	}
+	sql = append(sql, `cms_folder.has_descendant from cms_folder_items cms_folder left join 
+          (
+            SELECT folder.id,sum(case when isnull(content.content_name) then 0 else 1 end)  content_count FROM cms_folder_items folder
+            left join 
+            (
+             select * from cms_contents where `+whereNoRootForAllContentSqlString+`
+             ) content 
+             on folder.id=content.parent_folder
+             where  folder.owner_type = @OwnerType and folder.partition = @FolderPartition 
+             and folder.owner = @OrgID and folder.item_type = @FolderItemType  and folder.delete_at = 0
+             group by  folder.id
+          ) cms_folder_content
+          on cms_folder.id=cms_folder_content.id
+          where cms_folder.owner_type = @OwnerType and cms_folder.partition = @FolderPartition 
+          and cms_folder.owner = @OrgID and cms_folder.item_type =@FolderItemType  and cms_folder.delete_at = 0
+          union all
+          select '' as parent_id,'' as  id,'' as name,'' as dir_path,(select count(*) from cms_contents where `+whereRootForAllContentSqlString+
+		`) as content_count,0 as item_type,0 as has_search_self,0 has_descendant
+          ) tree_data
+          order by name `)
+	querySql := strings.Join(sql, "")
+	return querySql
+}
+func (fda *FolderDA) GetAllTree(ctx context.Context, combineCondition *CombineConditions, folderCondition *FolderCondition) (data []*entity.TreeData, err error) {
+	forMeCondition := combineCondition.SourceCondition.(*ContentCondition)
+	forOtherCondition := combineCondition.TargetCondition.(*ContentCondition)
+	sql := getAllTreeSql(forMeCondition, forOtherCondition)
+	params := map[string]interface{}{
+		"PublishStatus":     entity.ContentStatusPublished,
+		"Author":            forMeCondition.Author,
+		"MeVisibilityID":    forMeCondition.VisibilitySettings,
+		"JoinMeUser":        forMeCondition.JoinUserIDList,
+		"Name":              forMeCondition.Name,
+		"ContentName":       forMeCondition.ContentName,
+		"Path":              constant.RootPath,
+		"OwnerType":         entity.OwnerTypeOrganization,
+		"FolderPartition":   entity.FolderPartitionMaterialAndPlans,
+		"OrgID":             folderCondition.Owner,
+		"FolderItemType":    entity.FolderItemTypeFolder,
+		"OtherVisibilityID": forOtherCondition.VisibilitySettings,
+		"JoinOtherUser":     forOtherCondition.JoinUserIDList,
+	}
+	err = fda.s.QueryRawSQL(ctx, &data, sql, params)
+	if err != nil {
+		log.Error(ctx, "exec GetAllTree sql failed",
+			log.Err(err),
+			log.String("sql", sql),
+			log.Any("params1", params))
+		return
+	}
+	return
 }
 
 type FolderOrderBy int

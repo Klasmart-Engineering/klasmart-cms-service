@@ -95,7 +95,8 @@ type IFolderModel interface {
 
 	BatchUpdateFolderItemCount(ctx context.Context, tx *dbo.DBContext, ids []string) error
 	BatchUpdateAncestorEmptyField(ctx context.Context, tx *dbo.DBContext, ids []string) error
-	GetTree(ctx context.Context, req *entity.TreeRequest, operator *entity.Operator) (res *entity.TreeResponse, err error)
+	GetAllTree(ctx context.Context, condition *entity.ContentConditionRequest, user *entity.Operator) (res *entity.TreeResponse, err error)
+	GetPrivateTree(ctx context.Context, condition *entity.ContentConditionRequest, user *entity.Operator) (res *entity.TreeResponse, err error)
 }
 
 type FolderModel struct{}
@@ -2243,7 +2244,153 @@ func parseLink(ctx context.Context, link string) (entity.FolderFileType, string,
 	return fileType, id, nil
 }
 
-func (f *FolderModel) GetTree(ctx context.Context, req *entity.TreeRequest, operator *entity.Operator) (res *entity.TreeResponse, err error) {
+func (f *FolderModel) GetAllTree(ctx context.Context, condition *entity.ContentConditionRequest, user *entity.Operator) (res *entity.TreeResponse, err error) {
+	res = new(entity.TreeResponse)
+	var content = ContentModel{}
+	searchUserIDs := content.getRelatedUserID(ctx, condition.Name, user)
+	err = content.filterRootPath(ctx, condition, entity.OwnerTypeOrganization, user)
+	if err != nil {
+		log.Warn(ctx, "filterRootPath failed", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
+		return
+	}
+	combineCondition, err := content.buildUserContentCondition(ctx, dbo.MustGetDB(ctx), condition, searchUserIDs, user)
+	if err != nil {
+		log.Warn(ctx, "buildUserContentCondition failed", log.Err(err), log.Any("condition", condition), log.Any("searchUserIDs", searchUserIDs), log.String("uid", user.UserID))
+		return
+	}
+
+	foldPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, user, []external.PermissionName{
+		external.CreateFolder289,
+		external.ShowAllFolder295,
+	})
+	if err != nil {
+		log.Error(ctx, "hasFolderPermission failed",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.Any("user", user))
+		return
+	}
+	folderCondition := content.buildFolderConditionWithPermission(ctx, user, condition, searchUserIDs, foldPermission)
+
+	log.Info(ctx, "get all tree", log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
+	data, err := da.GetFolderDA().GetAllTree(ctx, combineCondition.(*da.CombineConditions), folderCondition)
+	if err != nil {
+		log.Error(ctx, "can not get all tree", log.Err(err), log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
+		return
+	}
+	var children []*entity.TreeResponse
+	var childrenCount int
+	res.Name = constant.LibraryLabelHierarchyRootFolder
+	children, childrenCount = ConvertTree(data, "", folderCondition.ShowEmptyFolder.Bool, entity.TreeResponse{})
+	res.ItemCount = childrenCount
+	res.Children = children
+	return
+}
+func (f *FolderModel) GetPrivateTree(ctx context.Context, condition *entity.ContentConditionRequest, user *entity.Operator) (res *entity.TreeResponse, err error) {
+	res = new(entity.TreeResponse)
+	var content = ContentModel{}
+	//构造个人查询条件
+	//construct query condition for private search
+	condition.Author = user.UserID
+	condition.PublishStatus = content.filterInvisiblePublishStatus(ctx, condition.PublishStatus)
+	scope, err := content.listAllScopes(ctx, user)
+	if err != nil {
+		return
+	}
+	if len(scope) == 0 {
+		log.Info(ctx, "no valid scope", log.Strings("scopes", scope), log.Any("user", user))
+		scope = []string{constant.NoSearchItem}
+	}
+	err = content.filterRootPath(ctx, condition, entity.OwnerTypeOrganization, user)
+	if err != nil {
+		return
+	}
+	condition.VisibilitySettings = scope
+	searchUserIDs := content.getRelatedUserID(ctx, condition.Name, user)
+	condition.JoinUserIDList = searchUserIDs
+
+	//生成folder condition
+	folderCondition := content.buildFolderCondition(ctx, condition, searchUserIDs, user)
+	log.Info(ctx, "get private tree", log.Any("contentCondition", condition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
+	data, err := da.GetFolderDA().GetPrivateTree(ctx, content.conditionRequestToCondition(*condition), folderCondition)
+	if err != nil {
+		log.Error(ctx, "can not get private tree", log.Err(err), log.Any("contentCondition", condition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
+		return
+	}
+	var children []*entity.TreeResponse
+	var childrenCount int
+	res.Name = constant.LibraryLabelHierarchyRootFolder
+	children, childrenCount = ConvertTree(data, "", folderCondition.ShowEmptyFolder.Bool, entity.TreeResponse{})
+	res.ItemCount = childrenCount
+	res.Children = children
+	return
+}
+
+func ConvertTree(data []*entity.TreeData, parentID string, hasPermission bool, parentTree entity.TreeResponse) (res []*entity.TreeResponse, childTotal int) {
+	if parentID == "" {
+		for _, tree := range data {
+			if hasPermission {
+				if tree.ParentID == constant.RootPath {
+					level2 := entity.TreeResponse{Name: tree.Name, ID: tree.ID, DirPath: tree.DirPath}
+					result, total := ConvertTree(data, tree.ID, hasPermission, entity.TreeResponse{})
+					if result != nil {
+						level2.Children = append(level2.Children, result...)
+					}
+					level2.ItemCount = tree.ContentCount + total
+					res = append(res, &level2)
+					childTotal += tree.HasSearchSelf + tree.ContentCount + total
+				}
+			} else {
+				if tree.ParentID == constant.RootPath && tree.HasDescendant == constant.HasDescendant {
+					level2 := entity.TreeResponse{Name: tree.Name, ID: tree.ID, DirPath: tree.DirPath}
+					result, total := ConvertTree(data, tree.ID, hasPermission, entity.TreeResponse{})
+					if result != nil {
+						level2.Children = append(level2.Children, result...)
+					}
+					level2.ItemCount = tree.ContentCount + total
+					res = append(res, &level2)
+					childTotal += tree.HasSearchSelf + tree.ContentCount + total
+				}
+			}
+			if tree.ItemType == constant.IsContent {
+				childTotal = childTotal + tree.ContentCount
+			}
+		}
+		return
+	}
+	for _, tree := range data {
+		if hasPermission {
+			if tree.ParentID == parentID {
+				currentLeveTreeL := entity.TreeResponse{}
+				parentTree = entity.TreeResponse{ID: tree.ID, Name: tree.Name, DirPath: tree.DirPath}
+				result, total := ConvertTree(data, tree.ID, hasPermission, parentTree)
+				currentLeveTreeL.Name = tree.Name
+				currentLeveTreeL.ID = tree.ID
+				currentLeveTreeL.DirPath = tree.DirPath
+				currentLeveTreeL.ItemCount = tree.ContentCount + total
+				childTotal += tree.HasSearchSelf + tree.ContentCount + total
+				if result != nil {
+					currentLeveTreeL.Children = append(currentLeveTreeL.Children, result...)
+				}
+				res = append(res, &currentLeveTreeL)
+			}
+		} else {
+			if tree.ParentID == parentID && tree.HasDescendant == constant.HasDescendant {
+				currentLeveTreeL := entity.TreeResponse{}
+				parentTree = entity.TreeResponse{ID: tree.ID, Name: tree.Name, DirPath: tree.DirPath}
+				result, total := ConvertTree(data, tree.ID, hasPermission, parentTree)
+				currentLeveTreeL.Name = tree.Name
+				currentLeveTreeL.ID = tree.ID
+				currentLeveTreeL.DirPath = tree.DirPath
+				currentLeveTreeL.ItemCount = tree.ContentCount + total
+				childTotal += tree.HasSearchSelf + tree.ContentCount + total
+				if result != nil {
+					currentLeveTreeL.Children = append(currentLeveTreeL.Children, result...)
+				}
+				res = append(res, &currentLeveTreeL)
+			}
+		}
+	}
 	return
 }
 

@@ -381,7 +381,7 @@ type SearchFolderCondition struct {
 type TreeRequest struct {
 	Key       string `json:"key" form:"key"`
 	Type      int    `json:"type" form:"type"`
-	OnlyForMe bool   `json:"only_for_me" form:"only_for_me"`
+	OnlyForMe int    `json:"only_for_me" form:"only_for_me"`
 }
 
 type TreeResponse struct {
@@ -390,4 +390,15 @@ type TreeResponse struct {
 	ItemCount int             `json:"item_count"`
 	DirPath   string          `json:"dir_path"`
 	Children  []*TreeResponse `json:"children"`
+}
+
+type TreeData struct {
+	ParentID      string `json:"parent_id"`
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	DirPath       string `json:"dir_path"`
+	ContentCount  int    `json:"content_count"`
+	ItemType      int    `json:"item_type"`
+	HasSearchSelf int    `json:"has_search_self"`
+	HasDescendant int    `json:"has_descendant"`
 }

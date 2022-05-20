@@ -542,15 +542,57 @@ func (s *Server) getTree(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	var request entity.TreeRequest
-	err := c.ShouldBindQuery(&request)
-	if err != nil {
+	bindQueryErr := c.ShouldBindQuery(&request)
+	if bindQueryErr != nil {
 		log.Warn(ctx, "getTree: ShouldBindQuery failed",
-			log.Err(err),
+			log.Err(bindQueryErr),
 			log.Any("request", request))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	result, err := model.GetFolderModel().GetTree(ctx, &request, op)
+	condition := entity.ContentConditionRequest{}
+	if request.OnlyForMe == constant.TreeOnlyForMe {
+		condition.Author = constant.Self
+	}
+	if request.Type == constant.TreeQueryTypeAll {
+		condition.Name = request.Key
+	}
+	if request.Type == constant.TreeQueryTypeName {
+		condition.ContentName = request.Key
+	}
+	//if query is not self, filter conditions
+	if request.OnlyForMe != constant.TreeOnlyForMe {
+		err := model.GetContentFilterModel().FilterPublishContent(ctx, &condition, op)
+		//no available content visibility settings, return nil
+		if err == model.ErrNoAvailableVisibilitySettings {
+			//no available visibility settings
+			c.JSON(http.StatusOK, &entity.TreeResponse{})
+			return
+		}
+		if err != nil {
+			s.defaultErrorHandler(c, err)
+			return
+		}
+	}
+
+	if condition.PublishedQueryMode != entity.PublishedQueryModeOnlyOwner {
+		hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, &condition, op)
+		if err != nil {
+			s.defaultErrorHandler(c, err)
+			return
+		}
+		if !hasPermission {
+			c.JSON(http.StatusForbidden, L(GeneralNoPermission))
+			return
+		}
+	}
+	var result *entity.TreeResponse
+	var err error
+	if request.OnlyForMe == constant.TreeOnlyForMe {
+		result, err = model.GetFolderModel().GetPrivateTree(ctx, &condition, op)
+	} else {
+		result, err = model.GetFolderModel().GetAllTree(ctx, &condition, op)
+	}
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)

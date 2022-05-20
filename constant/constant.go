@@ -164,3 +164,19 @@ const (
 	DBDefaultConnMaxLifetime = 4 * time.Hour
 	DBDefaultSlowThreshold   = 200 * time.Millisecond
 )
+
+const (
+	TreeOnlyForMe     = 0
+	TreeForAll        = 1
+	TreeQueryTypeAll  = 0
+	TreeQueryTypeName = 1
+)
+
+const (
+	LibraryLabelHierarchyRootFolder = "library_label_hierarchy_root_folder"
+	RootPath                        = "/"
+	IsFolder                        = 1
+	IsContent                       = 0
+	HasDescendant                   = 1
+	HasSearchSelf                   = 1
+)
