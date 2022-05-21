@@ -1,9 +1,9 @@
 name: Deploy LoadTest To Amazon ECS
 
 on:
-  push:
-    branches:
-      - byron-loadtest
+  pull_request:
+    branches: [loadtest]
+    types: [closed]
 env:
   AWS_REGION: cn-north-1
   ECR_REPOSITORY: loadtest
