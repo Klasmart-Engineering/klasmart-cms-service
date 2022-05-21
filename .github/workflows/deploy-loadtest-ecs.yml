@@ -70,11 +70,11 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
         BRANCH: ${{ github.ref_name }}
-        IMAGE_TAG: ${{ github.sha::7 }}
+        IMAGE_TAG: ${{ github.sha }}
       run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$BRANCH-${IMAGE_TAG} .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$BRANCH-${IMAGE_TAG}
-        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$BRANCH-${IMAGE_TAG}"
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$BRANCH-${IMAGE_TAG::7} .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$BRANCH-${IMAGE_TAG::7}
+        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$BRANCH-${IMAGE_TAG::7}"
 
     - name: Download task definition
       run: |
