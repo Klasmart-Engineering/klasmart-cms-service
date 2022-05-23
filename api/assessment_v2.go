@@ -290,9 +290,6 @@ func (s *Server) addAssessment(c *gin.Context) {
 
 	log.Debug(ctx, "add assessment jwt: fill args", log.Any("args", args), log.String("token", body.Token))
 
-	// test the case where no action parameter is provided
-	args.Action = ""
-
 	operator := s.getOperator(c)
 	err := model.GetLiveRoomEventBusModel().PubEndClass(ctx, operator, args)
 	switch err {
