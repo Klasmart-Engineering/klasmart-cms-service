@@ -3002,6 +3002,9 @@ func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.D
 	condition1.JoinUserIDList = searchUserIDs
 	condition2.JoinUserIDList = searchUserIDs
 
+	//condition1.UseJoinForVisibilitySettings = true
+	//condition2.UseJoinForVisibilitySettings = true
+
 	if condition.PublishedQueryMode == entity.PublishedQueryModeOnlyOwner {
 		//The user only has the permission to query his own
 		return cm.conditionRequestToCondition(condition1), nil
@@ -3961,6 +3964,8 @@ func (cm *ContentModel) conditionRequestToCondition(c entity.ContentConditionReq
 		OrderBy:        da.NewContentOrderBy(c.OrderBy),
 		Pager:          c.Pager,
 		JoinUserIDList: c.JoinUserIDList,
+
+		UseJoinForVisibilitySettings: c.UseJoinForVisibilitySettings,
 	}
 }
 
