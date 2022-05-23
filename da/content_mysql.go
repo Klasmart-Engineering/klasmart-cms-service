@@ -634,10 +634,12 @@ where cfi.id in (
 		and csf.delete_at = 0
 		 
 	) 
+and cfi.item_type = ?
 and cfi.parent_id = ?
 and cfi.delete_at = 0
 `,
 		[]interface{}{op.OrgID, constant.ShareToAll},
+		entity.FolderItemTypeFolder,
 		condition.ParentID,
 	)
 
@@ -669,7 +671,7 @@ select
 	{{.sbFolderSelect}}
 from cms_folder_items cfi 
 where  
-cfi.delete_at = 0
+cfi.delete_at = 0 and cfi.item_type = 1 
 {{.sbParentID}}
 {{.sbName}}
 {{.sbContentName}}

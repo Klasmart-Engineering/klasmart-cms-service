@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -578,21 +579,18 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 	operator := s.getOperator(c)
 	log.Info(ctx, "getScheduleByID", log.String("scheduleID", id))
 	result, err := model.GetScheduleModel().GetByID(ctx, operator, id)
-	if err == nil {
+	switch err {
+	case nil:
 		c.JSON(http.StatusOK, result)
-		return
-	}
-	if err == constant.ErrRecordNotFound {
+	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(ScheduleMessageEditOverlap))
-		return
-	}
-	if err == constant.ErrForbidden {
+	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
-		return
+	case model.ErrScheduleNoPermissionRedirect:
+		c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermissionRedirect))
+	default:
+		s.defaultErrorHandler(c, err)
 	}
-
-	log.Error(ctx, "get schedule by id error", log.Err(err), log.Any("id", id))
-	s.defaultErrorHandler(c, err)
 }
 
 // @Summary queryScheduleInternal
@@ -1322,6 +1320,8 @@ func (s *Server) getScheduleViewByID(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(ScheduleMessageEditOverlap))
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+	case model.ErrScheduleNoPermissionRedirect:
+		c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermissionRedirect))
 	default:
 		s.defaultErrorHandler(c, err)
 	}
@@ -1432,6 +1432,8 @@ func (s *Server) getScheduleTimeViewList(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+	// Sort for easy comparison, default order [homefun normal review]
+	sort.Strings(requestBody.StudyTypes)
 
 	loc := utils.GetTimeLocationByOffset(requestBody.TimeZoneOffset)
 	log.Debug(ctx, "utils.GetTimeLocationByOffset", log.Any("loc", loc), log.Any("TimeZoneOffset", requestBody.TimeZoneOffset))

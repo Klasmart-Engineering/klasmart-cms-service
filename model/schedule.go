@@ -32,6 +32,7 @@ var (
 	ErrScheduleAlreadyHidden        = errors.New("schedule already hidden")
 	ErrScheduleAlreadyFeedback      = errors.New("students already submitted feedback")
 	ErrScheduleStudyAlreadyProgress = errors.New("students already started")
+	ErrScheduleNoPermissionRedirect = errors.New("no permission redirect")
 )
 
 type IScheduleModel interface {
@@ -1830,6 +1831,15 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 		return nil, constant.ErrRecordNotFound
 	}
 
+	err = s.checkSchedulePermission(ctx, operator, schedule)
+	if err != nil {
+		log.Error(ctx, "checkSchedulePermission error",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("schedule", schedule))
+		return nil, err
+	}
+
 	return s.transformToScheduleDetailsView(ctx, operator, schedule)
 }
 
@@ -2586,6 +2596,15 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 		return nil, constant.ErrRecordNotFound
 	}
 
+	err = s.checkSchedulePermission(ctx, op, schedule)
+	if err != nil {
+		log.Error(ctx, "checkSchedulePermission error",
+			log.Err(err),
+			log.Any("operator", op),
+			log.Any("schedule", schedule))
+		return nil, err
+	}
+
 	return s.transformToScheduleViewDetail(ctx, op, schedule)
 }
 
@@ -2697,6 +2716,13 @@ func (s *scheduleModel) PrepareScheduleTimeViewCondition(ctx context.Context, qu
 	if len(query.ClassTypes) > 0 {
 		condition.ClassTypes = entity.NullStrings{
 			Strings: query.ClassTypes,
+			Valid:   true,
+		}
+	}
+
+	if len(query.StudyTypes) > 0 {
+		condition.StudyTypes = entity.NullStrings{
+			Strings: query.StudyTypes,
 			Valid:   true,
 		}
 	}
@@ -2833,7 +2859,7 @@ func (s *scheduleModel) QueryUnsafe(ctx context.Context, condition *entity.Sched
 }
 
 func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity.ScheduleTimeViewListRequest, op *entity.Operator, loc *time.Location) (int, []*entity.ScheduleTimeView, error) {
-	condition, err := s.PrepareScheduleTimeViewCondition(ctx, &entity.ScheduleTimeViewQuery{
+	scheduleTimeViewQuery := &entity.ScheduleTimeViewQuery{
 		ViewType:       query.ViewType,
 		TimeAt:         query.TimeAt,
 		TimeZoneOffset: query.TimeZoneOffset,
@@ -2844,11 +2870,13 @@ func (s *scheduleModel) QueryScheduleTimeView(ctx context.Context, query *entity
 		ProgramIDs:     query.ProgramIDs,
 		UserIDs:        query.UserIDs,
 		ClassTypes:     query.ClassTypes,
+		StudyTypes:     query.StudyTypes,
 		StartAtGe:      query.StartAtGe,
 		EndAtLe:        query.EndAtLe,
 		Anytime:        query.Anytime,
 		OrderBy:        query.OrderBy,
-	}, op, loc)
+	}
+	condition, err := s.PrepareScheduleTimeViewCondition(ctx, scheduleTimeViewQuery, op, loc)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -4794,6 +4822,89 @@ func (s *scheduleModel) getAssessmentAddWhenCreateSchedulesReq(ctx context.Conte
 	}
 
 	return assessmentAddReq, nil
+}
+
+func (s *scheduleModel) checkSchedulePermission(ctx context.Context, operator *entity.Operator, schedule *entity.Schedule) error {
+	if operator.OrgID != schedule.OrgID {
+		return ErrScheduleNoPermissionRedirect
+	}
+
+	permissionMap, err := GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, operator, []external.PermissionName{
+		external.ScheduleViewOrgCalendar,
+		external.ScheduleViewSchoolCalendar,
+		external.ScheduleViewMyCalendar,
+	})
+	if err == constant.ErrForbidden {
+		return ErrScheduleNoPermissionRedirect
+	}
+	if err != nil {
+		log.Error(ctx, "GetSchedulePermissionModel().HasScheduleOrgPermissions error",
+			log.Err(err),
+			log.Any("operator", operator),
+		)
+		return constant.ErrInternalServer
+	}
+
+	if permissionMap[external.ScheduleViewOrgCalendar] {
+		return nil
+	}
+
+	var scheduleRelations []*entity.ScheduleRelation
+	err = s.scheduleRelationDA.Query(ctx, &da.ScheduleRelationCondition{
+		ScheduleID: sql.NullString{
+			String: schedule.ID,
+			Valid:  true,
+		},
+	}, &scheduleRelations)
+	if err != nil {
+		log.Error(ctx, "s.scheduleRelationDA.Query error",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.String("scheduleID", schedule.ID),
+		)
+		return constant.ErrInternalServer
+	}
+
+	var schoolIDs []string
+	var participants []string
+	for _, v := range scheduleRelations {
+		switch v.RelationType {
+		case entity.ScheduleRelationTypeSchool:
+			schoolIDs = append(schoolIDs, v.RelationID)
+		case entity.ScheduleRelationTypeClassRosterTeacher,
+			entity.ScheduleRelationTypeClassRosterStudent,
+			entity.ScheduleRelationTypeParticipantTeacher,
+			entity.ScheduleRelationTypeParticipantStudent:
+			participants = append(participants, v.RelationID)
+		}
+	}
+
+	if permissionMap[external.ScheduleViewSchoolCalendar] {
+		schoolList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, operator, external.ScheduleViewSchoolCalendar)
+		if err != nil {
+			log.Error(ctx, "GetSchoolServiceProvider.GetByPermission error",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.String("permission", external.ScheduleViewSchoolCalendar.String()),
+			)
+			return constant.ErrInternalServer
+		}
+
+		var hasPermissionSchoolIds []string
+		for _, item := range schoolList {
+			hasPermissionSchoolIds = append(hasPermissionSchoolIds, item.ID)
+		}
+
+		if utils.ExistIntersection(schoolIDs, hasPermissionSchoolIds) {
+			return nil
+		}
+	} else if permissionMap[external.ScheduleViewMyCalendar] {
+		if utils.ContainsString(participants, operator.UserID) {
+			return nil
+		}
+	}
+
+	return ErrScheduleNoPermissionRedirect
 }
 
 // model package interval function

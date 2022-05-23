@@ -47,8 +47,7 @@ var (
 func GetContentDA() IContentDA {
 	_contentOnce.Do(func() {
 		da := &ContentDA{
-			redisDA: GetContentRedis(),
-			mysqlDA: new(ContentMySQLDA),
+			ContentMySQLDA: new(ContentMySQLDA),
 		}
 
 		cache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
@@ -69,66 +68,13 @@ func GetContentDA() IContentDA {
 }
 
 type ContentDA struct {
-	redisDA            IContentRedis
-	mysqlDA            *ContentMySQLDA
+	*ContentMySQLDA
 	contentFolderCache *utils.LazyRefreshCache
-}
-
-func (c ContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co entity.Content) (string, error) {
-	return c.mysqlDA.CreateContent(ctx, tx, co)
-}
-
-func (c ContentDA) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, co entity.Content) error {
-	return c.mysqlDA.UpdateContent(ctx, tx, cid, co)
-}
-
-func (c ContentDA) GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.Content, error) {
-	return c.mysqlDA.GetContentByID(ctx, tx, cid)
-}
-
-func (c ContentDA) SearchContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, condition *ContentVisibilitySettingsCondition) ([]*entity.ContentVisibilitySetting, error) {
-	return c.mysqlDA.SearchContentVisibilitySettings(ctx, tx, condition)
-}
-
-func (c ContentDA) GetContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error) {
-	return c.mysqlDA.GetContentVisibilitySettings(ctx, tx, cid)
-}
-
-func (c ContentDA) BatchCreateContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, scope []string) error {
-	return c.mysqlDA.BatchCreateContentVisibilitySettings(ctx, tx, cid, scope)
-}
-
-func (c ContentDA) BatchDeleteContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, visibilitySettings []string) error {
-	return c.mysqlDA.BatchDeleteContentVisibilitySettings(ctx, tx, cid, visibilitySettings)
-}
-
-func (c ContentDA) BatchUpdateContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, dirPath entity.Path) error {
-	return c.mysqlDA.BatchUpdateContentPath(ctx, tx, cids, dirPath)
-}
-
-func (c ContentDA) GetContentByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.Content, error) {
-	return c.mysqlDA.GetContentByIDList(ctx, tx, cids)
-}
-
-func (c ContentDA) SearchContent(ctx context.Context, tx *dbo.DBContext, condition *ContentCondition) (int, []*entity.Content, error) {
-	return c.mysqlDA.SearchContent(ctx, tx, condition)
-}
-
-func (c ContentDA) SearchContentUnSafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (int, []*entity.Content, error) {
-	return c.mysqlDA.SearchContentUnSafe(ctx, tx, condition)
-}
-
-func (c ContentDA) QueryContent(ctx context.Context, tx *dbo.DBContext, condition *ContentCondition) ([]*entity.Content, error) {
-	return c.mysqlDA.QueryContent(ctx, tx, condition)
-}
-
-func (c ContentDA) SearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 ContentCondition, condition2 *FolderCondition) (int, []*entity.FolderContent, error) {
-	return c.mysqlDA.SearchFolderContent(ctx, tx, condition1, condition2)
 }
 
 func (c ContentDA) SearchFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 *FolderCondition) (int, []*entity.FolderContent, error) {
 	if !config.Get().RedisConfig.OpenCache {
-		return c.mysqlDA.SearchFolderContentUnsafe(ctx, tx, condition1, condition2)
+		return c.ContentMySQLDA.SearchFolderContentUnsafe(ctx, tx, condition1, condition2)
 	}
 
 	request := &contentFolderRequest{
@@ -153,7 +99,7 @@ func (c ContentDA) queryContentsAndFolders(ctx context.Context, condition interf
 		return nil, constant.ErrInvalidArgs
 	}
 
-	total, records, err := c.mysqlDA.SearchFolderContentUnsafe(ctx, dbo.MustGetDB(ctx), request.Condition1, request.Condition2)
+	total, records, err := c.ContentMySQLDA.SearchFolderContentUnsafe(ctx, dbo.MustGetDB(ctx), request.Condition1, request.Condition2)
 	if err != nil {
 		return nil, err
 	}
@@ -161,26 +107,11 @@ func (c ContentDA) queryContentsAndFolders(ctx context.Context, condition interf
 	return &contentFolderResponse{Total: total, Records: records}, nil
 }
 
-func (c ContentDA) CountFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 *FolderCondition) (int, error) {
-	return c.mysqlDA.CountFolderContentUnsafe(ctx, tx, condition1, condition2)
-}
-
-func (c ContentDA) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error {
-	return c.mysqlDA.BatchReplaceContentPath(ctx, tx, cids, oldPath, path)
-}
-
-func (c ContentDA) GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error) {
-	return c.mysqlDA.GetLessonPlansCanSchedule(ctx, op, cond, condOrgContent, programGroups)
-}
-
 func (c ContentDA) CleanCache(ctx context.Context) {
 	err := c.contentFolderCache.Clean(ctx)
 	if err != nil {
 		log.Warn(ctx, "clean content folder cache failed", log.Err(err))
 	}
-}
-func (c ContentDA) SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, op *entity.Operator) (response entity.QuerySharedContentV2Response, err error) {
-	return c.mysqlDA.SearchSharedContentV2(ctx, tx, condition, op)
 }
 
 type contentFolderRequest struct {

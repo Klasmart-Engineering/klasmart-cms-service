@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 	"strings"
 
 	"github.com/KL-Engineering/kidsloop-cache/cache"
@@ -38,7 +39,10 @@ func (n *Category) RelatedIDs() []*cache.RelatedEntity {
 	return nil
 }
 func GetCategoryServiceProvider() CategoryServiceProvider {
-	return &AmsCategoryService{}
+	if config.Get().AMS.UseDeprecatedQuery {
+		return &AmsCategoryService{}
+	}
+	return &AmsCategoryConnectionService{}
 }
 
 type AmsCategoryService struct{}

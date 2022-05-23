@@ -48,6 +48,7 @@ const (
 	ScheduleMessageDeleteOverlap         ResponseLabel = "schedule_msg_delete_overlap"
 	ScheduleMessageOverlap               ResponseLabel = "schedule_msg_overlap"
 	ScheduleMessageNoPermission          ResponseLabel = "schedule_msg_no_permission"
+	ScheduleMsgNoPermissionRedirect      ResponseLabel = "schedule_msg_no_permission_to_be_redirected"
 	ScheduleMessageDeleteMissTime        ResponseLabel = "schedule_msg_delete_minutes"
 	ScheduleMessageEditMissTime          ResponseLabel = "schedule_msg_edit_minutes"
 	ScheduleMessageGoLiveTimeNotUp       ResponseLabel = "schedule_msg_start_minutes"

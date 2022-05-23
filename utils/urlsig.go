@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/KL-Engineering/kidsloop-cms-service/config"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 )
 
 var (
