@@ -82,6 +82,8 @@ type ContentCondition struct {
 
 	JoinUserIDList []string `json:"join_user_id_list"`
 	IncludeDeleted bool
+
+	UseJoinForVisibilitySettings bool `json:"use_join_for_visibility_settings"`
 }
 
 func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
@@ -147,7 +149,12 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if len(s.VisibilitySettings) > 0 {
-		condition := "id IN (SELECT content_id FROM cms_content_visibility_settings WHERE visibility_setting IN (?))"
+		var condition string
+		if s.UseJoinForVisibilitySettings {
+			condition = "visibility_setting IN (?)"
+		} else {
+			condition = "id IN (SELECT content_id FROM cms_content_visibility_settings WHERE visibility_setting IN (?))"
+		}
 		conditions = append(conditions, condition)
 		params = append(params, s.VisibilitySettings)
 	}
@@ -513,11 +520,21 @@ type TotalContentResponse struct {
 }
 
 func (cd *ContentMySQLDA) SearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 ContentCondition, condition2 *FolderCondition) (int, []*entity.FolderContent, error) {
-	return cd.doSearchFolderContent(ctx, tx, &condition1, condition2)
+	return cd.doSearchFolderContent(ctx, tx, &condition1, condition2, condition1.UseJoinForVisibilitySettings)
 }
 
 func (cd *ContentMySQLDA) SearchFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 *FolderCondition) (int, []*entity.FolderContent, error) {
-	return cd.doSearchFolderContent(ctx, tx, condition1, condition2)
+	// try figure out if we should use join for visibility settings
+	// TODO: maybe we need some method like `GetJoinHint` for `dbo.Conditions` interface
+	var useJoinForVisibilitySettings bool
+	combinedCondition, ok := condition1.(*CombineConditions)
+	if ok {
+		contentCondition, ok := combinedCondition.SourceCondition.(*ContentCondition)
+		if ok {
+			useJoinForVisibilitySettings = contentCondition.UseJoinForVisibilitySettings
+		}
+	}
+	return cd.doSearchFolderContent(ctx, tx, condition1, condition2, useJoinForVisibilitySettings)
 }
 
 func (cd *ContentMySQLDA) CountFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 *FolderCondition) (int, error) {
@@ -529,7 +546,9 @@ func (cd *ContentMySQLDA) CountFolderContentUnsafe(ctx context.Context, tx *dbo.
 	var err error
 	//获取数量
 	//get folder total
-	query := cd.countFolderContentSQL(query1, query2)
+	// TODO: this methods is not used currently so joinHint is just set to empty string.
+	// this params should be evaluated by ContentCondition.UseJoinForVisibilitySettings
+	query := cd.countFolderContentSQL(query1, query2, "")
 	err = tx.Raw(query, params1...).Scan(&total).Error
 	if err != nil {
 		log.Error(ctx, "count raw sql failed", log.Err(err),
@@ -552,7 +571,7 @@ func (cd *ContentMySQLDA) appendConditionParamWithOrderAndPage(sql string, order
 	return sql
 }
 
-func (cd *ContentMySQLDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 dbo.Conditions) (int, []*entity.FolderContent, error) {
+func (cd *ContentMySQLDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 dbo.Conditions, useJoinForVisibilitySettings bool) (int, []*entity.FolderContent, error) {
 	query1, params1 := condition1.GetConditions()
 	query2, params2 := condition2.GetConditions()
 
@@ -561,7 +580,11 @@ func (cd *ContentMySQLDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBC
 	var err error
 	//获取数量
 	//get folder total
-	query := cd.countFolderContentSQL(query1, query2)
+	var joinHint string
+	if useJoinForVisibilitySettings {
+		joinHint = "inner join cms_content_visibility_settings on cms_content_visibility_settings.content_id = cms_contents.id"
+	}
+	query := cd.countFolderContentSQL(query1, query2, joinHint)
 	err = cd.s.QueryRawSQLTx(ctx, tx, &total, query, params1...)
 	if err != nil {
 		log.Error(ctx, "count raw sql failed", log.Err(err),
@@ -576,7 +599,7 @@ func (cd *ContentMySQLDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBC
 
 	orderBy := condition1.GetOrderBy()
 	pager := condition1.GetPager()
-	exSql := cd.appendConditionParamWithOrderAndPage(cd.searchFolderContentSQL(ctx, query1, query2), orderBy, pager)
+	exSql := cd.appendConditionParamWithOrderAndPage(cd.searchFolderContentSQL(ctx, query1, query2, joinHint), orderBy, pager)
 	err = cd.s.QueryRawSQLTx(ctx, tx, &folderContents, exSql, params1...)
 	if err != nil {
 		log.Error(ctx, "query raw sql failed", log.Err(err),
@@ -587,7 +610,7 @@ func (cd *ContentMySQLDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBC
 	return total.Total, folderContents, nil
 }
 
-func (cd *ContentMySQLDA) searchFolderContentSQL(ctx context.Context, query1, query2 []string) string {
+func (cd *ContentMySQLDA) searchFolderContentSQL(ctx context.Context, query1, query2 []string, joinHint string) string {
 	rawQuery1 := strings.Join(query1, " and ")
 	rawQuery2 := strings.Join(query2, " and ")
 	sql := fmt.Sprintf(`SELECT 
@@ -595,27 +618,29 @@ func (cd *ContentMySQLDA) searchFolderContentSQL(ctx context.Context, query1, qu
 	FROM cms_folder_items 
 	WHERE  %v
 	UNION ALL SELECT 
-	id, content_type, content_name, 0 AS items_count, description, keywords, author, dir_path, publish_status, thumbnail, data, create_at, update_at
-	FROM cms_contents 
+	distinct cms_contents.id, content_type, content_name, 0 AS items_count, description, keywords, author, dir_path, publish_status, thumbnail, data, create_at, update_at
+	FROM cms_contents
+	`+joinHint+`
 	WHERE %v`, entity.AliasContentTypeFolder, rawQuery2, rawQuery1)
 
 	log.Info(ctx, "search folder content", log.String("sql", sql))
 	return sql
 }
 
-func (cd *ContentMySQLDA) countFolderContentSQL(query1, query2 []string) string {
+func (cd *ContentMySQLDA) countFolderContentSQL(query1, query2 []string, joinHint string) string {
 	rawQuery1 := strings.Join(query1, " and ")
 	rawQuery2 := strings.Join(query2, " and ")
 	return `SELECT COUNT(*) AS total FROM 
 (SELECT 
     name
 FROM
-    cms_folder_items 
+    cms_folder_items
 WHERE ` + rawQuery2 + `
 UNION ALL (SELECT 
-    content_name
+    distinct cms_contents.id
 FROM
     cms_contents
+	` + joinHint + `
 WHERE ` + rawQuery1 + `
 )) AS records;`
 }
