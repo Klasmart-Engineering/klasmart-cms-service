@@ -4898,7 +4898,9 @@ func (s *scheduleModel) checkSchedulePermission(ctx context.Context, operator *e
 		if utils.ExistIntersection(schoolIDs, hasPermissionSchoolIds) {
 			return nil
 		}
-	} else if permissionMap[external.ScheduleViewMyCalendar] {
+	}
+
+	if permissionMap[external.ScheduleViewMyCalendar] {
 		if utils.ContainsString(participants, operator.UserID) {
 			return nil
 		}
