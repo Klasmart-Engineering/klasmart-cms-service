@@ -10,19 +10,11 @@ import (
 	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 )
 
-func NewOnlineStudyAssessmentPage(at *AssessmentTool) IAssessmentMatch {
+func NewOnlineStudyAssessment(at *AssessmentTool, action AssessmentMatchAction) IAssessmentMatch {
 	return &OnlineStudyAssessment{
 		at:     at,
-		action: AssessmentMatchActionPage,
-		base:   NewBaseAssessment(at, AssessmentMatchActionPage),
-	}
-}
-
-func NewOnlineStudyAssessmentDetail(at *AssessmentTool) IAssessmentMatch {
-	return &OnlineStudyAssessment{
-		at:     at,
-		action: AssessmentMatchActionDetail,
-		base:   NewBaseAssessment(at, AssessmentMatchActionDetail),
+		action: action,
+		base:   NewBaseAssessment(at, action),
 	}
 }
 
@@ -108,13 +100,13 @@ func (o *OnlineStudyAssessment) MatchRemainingTime() (map[string]int64, error) {
 }
 
 func (o *OnlineStudyAssessment) MatchOutcomes() (map[string]*v2.AssessmentOutcomeReply, error) {
-	onlineClass := NewOnlineClassAssessmentPage(o.at)
+	onlineClass := NewOnlineClassAssessment(o.at, o.action)
 
 	return onlineClass.MatchOutcomes()
 }
 
 func (o *OnlineStudyAssessment) MatchContents() ([]*v2.AssessmentContentReply, error) {
-	onlineClass := NewOnlineClassAssessmentPage(o.at)
+	onlineClass := NewOnlineClassAssessment(o.at, o.action)
 
 	return onlineClass.MatchContents()
 }

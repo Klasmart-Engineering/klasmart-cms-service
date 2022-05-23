@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"database/sql"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils/errgroup"
 	"strings"
 	"sync"
 
@@ -247,259 +248,77 @@ func (at *AssessmentTool) initAssessmentUserMap() error {
 
 func (at *AssessmentTool) GetProgramMap() (map[string]*entity.IDName, error) {
 	if at.programMap == nil {
-		if err := at.initProgramMap(); err != nil {
+		err := at.AsyncInitExternalData(AssessmentExternalInclude{
+			userServiceInclude: &ExternalUserServiceInclude{
+				Program: true,
+			},
+		})
+		if err != nil {
 			return nil, err
 		}
 	}
 	return at.programMap, nil
 }
-func (at *AssessmentTool) initProgramMap() error {
-	ctx := at.ctx
-	op := at.op
-
-	scheduleMap, err := at.GetScheduleMap()
-	if err != nil {
-		return err
-	}
-
-	programIDs := make([]string, 0)
-	deDupMap := make(map[string]struct{})
-	for _, item := range at.assessments {
-		schedule, ok := scheduleMap[item.ScheduleID]
-		if !ok {
-			log.Warn(ctx, "schedule not found", log.String("scheduleID", item.ScheduleID))
-			continue
-		}
-
-		if _, ok := deDupMap[schedule.ProgramID]; !ok && schedule.ProgramID != "" {
-			programIDs = append(programIDs, schedule.ProgramID)
-			deDupMap[schedule.ProgramID] = struct{}{}
-		}
-	}
-
-	programs, err := external.GetProgramServiceProvider().BatchGet(ctx, op, programIDs)
-	if err != nil {
-		return err
-	}
-
-	result := make(map[string]*entity.IDName)
-	for _, item := range programs {
-		if item == nil || item.ID == "" {
-			log.Warn(ctx, "program id is empty", log.Any("programs", programs))
-			continue
-		}
-		result[item.ID] = &entity.IDName{
-			ID:   item.ID,
-			Name: item.Name,
-		}
-	}
-
-	at.programMap = result
-
-	return nil
-}
 
 func (at *AssessmentTool) GetSubjectMap() (map[string]*entity.IDName, error) {
 	if at.subjectMap == nil {
-		if err := at.initSubjectMap(); err != nil {
+		err := at.AsyncInitExternalData(AssessmentExternalInclude{
+			userServiceInclude: &ExternalUserServiceInclude{
+				Subject: true,
+			},
+		})
+		if err != nil {
 			return nil, err
 		}
 	}
 
 	return at.subjectMap, nil
 }
-func (at *AssessmentTool) initSubjectMap() error {
-	ctx := at.ctx
-	op := at.op
-
-	relationMap, err := at.GetScheduleRelationMap()
-	if err != nil {
-		return err
-	}
-
-	subjectIDs := make([]string, 0)
-	deDupMap := make(map[string]struct{})
-
-	for _, srItems := range relationMap {
-		for _, srItem := range srItems {
-			if srItem.RelationType != entity.ScheduleRelationTypeSubject {
-				continue
-			}
-
-			if _, ok := deDupMap[srItem.RelationID]; ok || srItem.RelationID == "" {
-				continue
-			}
-
-			subjectIDs = append(subjectIDs, srItem.RelationID)
-			deDupMap[srItem.RelationID] = struct{}{}
-		}
-	}
-
-	subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, op, subjectIDs)
-	if err != nil {
-		return err
-	}
-
-	result := make(map[string]*entity.IDName)
-	for _, item := range subjects {
-		if item == nil || item.ID == "" {
-			log.Warn(ctx, "subject is empty", log.Any("subjects", subjects))
-			continue
-		}
-		result[item.ID] = &entity.IDName{
-			ID:   item.ID,
-			Name: item.Name,
-		}
-	}
-
-	at.subjectMap = result
-
-	return nil
-}
 
 func (at *AssessmentTool) GetClassMap() (map[string]*entity.IDName, error) {
 	if at.classMap == nil {
-		if err := at.initClassMap(); err != nil {
+		err := at.AsyncInitExternalData(AssessmentExternalInclude{
+			userServiceInclude: &ExternalUserServiceInclude{
+				Class: true,
+			},
+		})
+		if err != nil {
 			return nil, err
 		}
 	}
 
 	return at.classMap, nil
 }
-func (at *AssessmentTool) initClassMap() error {
-	ctx := at.ctx
-	op := at.op
-
-	relationMap, err := at.GetScheduleRelationMap()
-	if err != nil {
-		return err
-	}
-
-	classIDs := make([]string, 0)
-	deDupMap := make(map[string]struct{})
-
-	for _, srItems := range relationMap {
-		for _, srItem := range srItems {
-			if srItem.RelationType != entity.ScheduleRelationTypeClassRosterClass {
-				continue
-			}
-
-			if _, ok := deDupMap[srItem.RelationID]; ok || srItem.RelationID == "" {
-				continue
-			}
-
-			classIDs = append(classIDs, srItem.RelationID)
-			deDupMap[srItem.RelationID] = struct{}{}
-		}
-	}
-
-	classes, err := external.GetClassServiceProvider().BatchGet(ctx, op, classIDs)
-	if err != nil {
-		return err
-	}
-
-	result := make(map[string]*entity.IDName)
-	for _, item := range classes {
-		if item == nil || item.ID == "" {
-			continue
-		}
-		result[item.ID] = &entity.IDName{
-			ID:   item.ID,
-			Name: item.Name,
-		}
-	}
-
-	at.classMap = result
-
-	return nil
-}
 
 func (at *AssessmentTool) GetTeacherMap() (map[string]*entity.IDName, error) {
 	if at.userMap == nil {
-		if err := at.initTeacherMap(); err != nil {
+		err := at.AsyncInitExternalData(AssessmentExternalInclude{
+			userServiceInclude: &ExternalUserServiceInclude{
+				Teacher: true,
+			},
+		})
+		if err != nil {
 			return nil, err
 		}
 	}
 
 	return at.userMap, nil
 }
-func (at *AssessmentTool) initTeacherMap() error {
-	ctx := at.ctx
-	op := at.op
-
-	assessmentUsers, err := at.GetAssessmentUsers()
-	if err != nil {
-		return err
-	}
-
-	userIDs := make([]string, 0, len(assessmentUsers))
-	deDupMap := make(map[string]struct{})
-
-	for _, auItem := range assessmentUsers {
-		if auItem.UserType != v2.AssessmentUserTypeTeacher {
-			continue
-		}
-		if _, ok := deDupMap[auItem.UserID]; !ok {
-			deDupMap[auItem.UserID] = struct{}{}
-			userIDs = append(userIDs, auItem.UserID)
-		}
-	}
-
-	users, err := external.GetUserServiceProvider().BatchGet(ctx, op, userIDs)
-	if err != nil {
-		return err
-	}
-
-	result := make(map[string]*entity.IDName)
-	for _, item := range users {
-		if !item.Valid {
-			log.Warn(ctx, "user is inValid", log.Any("item", item))
-			continue
-		}
-		result[item.ID] = &entity.IDName{
-			ID:   item.ID,
-			Name: item.Name(),
-		}
-	}
-
-	at.userMap = result
-
-	return nil
-}
 
 func (at *AssessmentTool) GetRoomStudentScoresAndComments() (map[string]*external.RoomInfo, error) {
 	if at.liveRoomMap == nil {
-		if err := at.initRoomStudentScoresAndComments(); err != nil {
+		err := at.AsyncInitExternalData(AssessmentExternalInclude{
+			assessmentServiceInclude: &ExternalAssessmentServiceInclude{
+				StudentScore:   true,
+				TeacherComment: true,
+			},
+		})
+		if err != nil {
 			return nil, err
 		}
 	}
 
 	return at.liveRoomMap, nil
-}
-func (at *AssessmentTool) initRoomStudentScoresAndComments() error {
-	ctx := at.ctx
-	op := at.op
-
-	scheduleMap, err := at.GetScheduleMap()
-	if err != nil {
-		return err
-	}
-
-	scheduleIDs := make([]string, 0, len(at.assessments))
-	for _, item := range scheduleMap {
-		scheduleIDs = append(scheduleIDs, item.ID)
-	}
-
-	roomDataMap, err := external.GetAssessmentServiceProvider().GetScoresWithCommentsByRoomIDs(ctx, op, scheduleIDs)
-	if err != nil {
-		log.Warn(ctx, "external service error",
-			log.Err(err), log.Strings("scheduleIDs", scheduleIDs), log.Any("op", at.op))
-		at.liveRoomMap = make(map[string]*external.RoomInfo)
-	} else {
-		at.liveRoomMap = roomDataMap
-	}
-
-	return nil
 }
 
 func (at *AssessmentTool) GetLessPlanMap() (map[string]*v2.AssessmentContentView, error) {
@@ -1455,4 +1274,271 @@ func (at *AssessmentTool) summaryRoomScores(userScoreMap map[string][]*RoomUserS
 
 	log.Debug(at.ctx, "summary score info", log.Any("contentSummaryTotalScoreMap", contentSummaryTotalScoreMap), log.Any("roomUserSummaryScoreMap", roomUserSummaryScoreMap))
 	return contentSummaryTotalScoreMap, roomUserSummaryScoreMap
+}
+
+type AssessmentExternalInclude struct {
+	userServiceInclude       *ExternalUserServiceInclude
+	assessmentServiceInclude *ExternalAssessmentServiceInclude
+}
+
+type ExternalUserServiceInclude struct {
+	Program bool
+	Subject bool
+	Class   bool
+	Teacher bool
+}
+
+type ExternalAssessmentServiceInclude struct {
+	StudentScore   bool
+	TeacherComment bool
+}
+
+func (at *AssessmentTool) AsyncInitExternalData(include AssessmentExternalInclude) error {
+	ctx := at.ctx
+	op := at.op
+
+	g := new(errgroup.Group)
+
+	if include.userServiceInclude != nil {
+		if include.userServiceInclude.Program {
+			programIDs, err := at.getProgramIDs()
+			if err != nil {
+				return err
+			}
+
+			g.Go(func() error {
+				programMap, err := external.GetProgramServiceProvider().BatchGetNameMap(ctx, op, programIDs)
+				if err != nil {
+					return err
+				}
+
+				result := make(map[string]*entity.IDName)
+				for id, name := range programMap {
+					result[id] = &entity.IDName{
+						ID:   id,
+						Name: name,
+					}
+				}
+
+				at.programMap = result
+
+				return nil
+			})
+		}
+
+		if include.userServiceInclude.Subject {
+			subjectIDs, err := at.getSubjectIDs()
+			if err != nil {
+				return err
+			}
+			g.Go(func() error {
+				subjectMap, err := external.GetSubjectServiceProvider().BatchGetNameMap(ctx, op, subjectIDs)
+				if err != nil {
+					return err
+				}
+
+				result := make(map[string]*entity.IDName)
+				for id, name := range subjectMap {
+					result[id] = &entity.IDName{
+						ID:   id,
+						Name: name,
+					}
+				}
+
+				at.subjectMap = result
+
+				return nil
+			})
+		}
+
+		if include.userServiceInclude.Class {
+			classIDs, err := at.getClassIDs()
+			if err != nil {
+				return err
+			}
+			g.Go(func() error {
+				classMap, err := external.GetClassServiceProvider().BatchGetNameMap(ctx, op, classIDs)
+				if err != nil {
+					return err
+				}
+
+				result := make(map[string]*entity.IDName)
+				for classID, className := range classMap {
+					result[classID] = &entity.IDName{
+						ID:   classID,
+						Name: className,
+					}
+				}
+
+				at.classMap = result
+
+				return nil
+			})
+		}
+
+		if include.userServiceInclude.Teacher {
+			teacherIDs, err := at.getTeacherIDs()
+			if err != nil {
+				return err
+			}
+
+			g.Go(func() error {
+				userMap, err := external.GetUserServiceProvider().BatchGetNameMap(ctx, op, teacherIDs)
+				if err != nil {
+					return err
+				}
+
+				result := make(map[string]*entity.IDName)
+				for userID, name := range userMap {
+					result[userID] = &entity.IDName{
+						ID:   userID,
+						Name: name,
+					}
+				}
+
+				at.userMap = result
+
+				return nil
+			})
+		}
+	}
+
+	if include.assessmentServiceInclude != nil {
+		if include.assessmentServiceInclude.StudentScore || include.assessmentServiceInclude.TeacherComment {
+			scheduleIDs, err := at.getScheduleIDs()
+			if err != nil {
+				return err
+			}
+
+			g.Go(func() error {
+				roomDataMap, err := external.GetAssessmentServiceProvider().Get(ctx, op, scheduleIDs,
+					external.WithAssessmentGetScore(include.assessmentServiceInclude.StudentScore),
+					external.WithAssessmentGetTeacherComment(include.assessmentServiceInclude.TeacherComment))
+				if err != nil {
+					log.Warn(ctx, "external service error",
+						log.Err(err), log.Strings("scheduleIDs", scheduleIDs), log.Any("op", at.op))
+					at.liveRoomMap = make(map[string]*external.RoomInfo)
+				} else {
+					at.liveRoomMap = roomDataMap
+				}
+
+				return nil
+			})
+		}
+	}
+
+	if err := g.Wait(); err != nil {
+		log.Error(ctx, "get assessment basic info error",
+			log.Err(err))
+		return err
+	}
+
+	return nil
+}
+
+func (at *AssessmentTool) getProgramIDs() ([]string, error) {
+	scheduleMap, err := at.GetScheduleMap()
+	if err != nil {
+		return nil, err
+	}
+
+	programIDs := make([]string, 0)
+	deDupMap := make(map[string]struct{})
+	for _, item := range scheduleMap {
+		if _, ok := deDupMap[item.ProgramID]; !ok && item.ProgramID != "" {
+			programIDs = append(programIDs, item.ProgramID)
+			deDupMap[item.ProgramID] = struct{}{}
+		}
+	}
+	return programIDs, nil
+}
+
+func (at *AssessmentTool) getSubjectIDs() ([]string, error) {
+	relationMap, err := at.GetScheduleRelationMap()
+	if err != nil {
+		return nil, err
+	}
+
+	subjectIDs := make([]string, 0)
+	deDupMap := make(map[string]struct{})
+
+	for _, srItems := range relationMap {
+		for _, srItem := range srItems {
+			if srItem.RelationType != entity.ScheduleRelationTypeSubject {
+				continue
+			}
+
+			if _, ok := deDupMap[srItem.RelationID]; ok || srItem.RelationID == "" {
+				continue
+			}
+
+			subjectIDs = append(subjectIDs, srItem.RelationID)
+			deDupMap[srItem.RelationID] = struct{}{}
+		}
+	}
+
+	return subjectIDs, nil
+}
+
+func (at *AssessmentTool) getClassIDs() ([]string, error) {
+	relationMap, err := at.GetScheduleRelationMap()
+	if err != nil {
+		return nil, err
+	}
+
+	classIDs := make([]string, 0)
+	deDupMap := make(map[string]struct{})
+
+	for _, srItems := range relationMap {
+		for _, srItem := range srItems {
+			if srItem.RelationType != entity.ScheduleRelationTypeClassRosterClass {
+				continue
+			}
+
+			if _, ok := deDupMap[srItem.RelationID]; ok || srItem.RelationID == "" {
+				continue
+			}
+
+			classIDs = append(classIDs, srItem.RelationID)
+			deDupMap[srItem.RelationID] = struct{}{}
+		}
+	}
+
+	return classIDs, nil
+}
+
+func (at *AssessmentTool) getScheduleIDs() ([]string, error) {
+	scheduleMap, err := at.GetScheduleMap()
+	if err != nil {
+		return nil, err
+	}
+
+	scheduleIDs := make([]string, 0, len(at.assessments))
+	for _, item := range scheduleMap {
+		scheduleIDs = append(scheduleIDs, item.ID)
+	}
+
+	return scheduleIDs, nil
+}
+
+func (at *AssessmentTool) getTeacherIDs() ([]string, error) {
+	assessmentUsers, err := at.GetAssessmentUsers()
+	if err != nil {
+		return nil, err
+	}
+
+	userIDs := make([]string, 0, len(assessmentUsers))
+	deDupMap := make(map[string]struct{})
+
+	for _, auItem := range assessmentUsers {
+		if auItem.UserType != v2.AssessmentUserTypeTeacher {
+			continue
+		}
+		if _, ok := deDupMap[auItem.UserID]; !ok {
+			deDupMap[auItem.UserID] = struct{}{}
+			userIDs = append(userIDs, auItem.UserID)
+		}
+	}
+
+	return userIDs, nil
 }

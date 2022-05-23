@@ -9,7 +9,7 @@ import (
 	"github.com/KL-Engineering/kidsloop-cms-service/model"
 
 	"github.com/KL-Engineering/kidsloop-cms-service/config"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 
 	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"

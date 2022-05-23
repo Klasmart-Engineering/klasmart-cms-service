@@ -97,3 +97,9 @@ func TestSplit(t *testing.T) {
 	str := "122-1"
 	fmt.Println(strings.SplitN(str, "-", 2))
 }
+
+func TestExistIntersection(t *testing.T) {
+	s1 := []string{"1", "2", "3"}
+	s2 := []string{"12"}
+	fmt.Println(ExistIntersection(s1, s2))
+}

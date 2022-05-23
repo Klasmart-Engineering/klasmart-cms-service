@@ -13,20 +13,19 @@ require (
 	github.com/KL-Engineering/ro v0.3.0
 	github.com/KL-Engineering/tracecontext v0.1.1
 	github.com/aws/aws-sdk-go v1.35.23
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-contrib/pprof v1.3.0
 	github.com/gin-gonic/gin v1.7.7
 	github.com/go-playground/assert/v2 v2.0.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-sql-driver/mysql v1.6.0
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.3.0
 	github.com/hgfischer/go-otp v1.0.0
 	github.com/jinzhu/gorm v1.9.16
 	github.com/newrelic/go-agent v3.15.2+incompatible
 	github.com/stretchr/testify v1.7.0
 	github.com/tencentcloud/tencentcloud-sdk-go v1.0.62
-	github.com/tidwall/gjson v1.6.0
 	github.com/urfave/cli/v2 v2.3.0
 	go.mongodb.org/mongo-driver v1.9.1
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
@@ -69,8 +68,6 @@ require (
 	github.com/segmentio/nsq-go v1.2.5 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/tencentyun/scf-go-lib v0.0.0-20211123032342-f972dcd16ff6 // indirect
-	github.com/tidwall/match v1.0.1 // indirect
-	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/ugorji/go/codec v1.2.2 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect

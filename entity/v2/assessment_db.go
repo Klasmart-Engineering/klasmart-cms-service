@@ -25,6 +25,11 @@ func (Assessment) TableName() string {
 	return constant.TableNameAssessmentV2
 }
 
+// Clone this method can be used in fields where there is no pointer type
+func (a Assessment) Clone() *Assessment {
+	return &a
+}
+
 type AssessmentUser struct {
 	ID             string                     `gorm:"column:id;PRIMARY_KEY"`
 	AssessmentID   string                     `gorm:"assessment_id"`
@@ -46,6 +51,11 @@ type AssessmentUser struct {
 
 func (AssessmentUser) TableName() string {
 	return constant.TableNameAssessmentsUsersV2
+}
+
+// Clone this method can be used in fields where there is no pointer type
+func (au AssessmentUser) Clone() *AssessmentUser {
+	return &au
 }
 
 // AssessmentContent: from ContentLibrary and ScheduleAttachment
