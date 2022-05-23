@@ -40,6 +40,7 @@ var (
 	ErrNotHeadquartersShare     = errors.New("not headquarters share folder")
 	ErrUnknownHeadquarterRegion = errors.New("unknown headquarter region")
 	ErrInvalidArguments         = errors.New("invalid arguments")
+	ErrGeneralNoPermission      = errors.New("general_error_no_permission")
 )
 
 type IFolderModel interface {
@@ -2253,7 +2254,8 @@ func (f *FolderModel) GetAllTree(ctx context.Context, condition *entity.ContentC
 		log.Warn(ctx, "filterRootPath failed", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return
 	}
-	combineCondition, err := content.buildUserContentCondition(ctx, dbo.MustGetDB(ctx), condition, searchUserIDs, user)
+	// get content condition
+	myContentCondition, otherConentCondition, err := content.buildTreeContentCondition(ctx, dbo.MustGetDB(ctx), condition, searchUserIDs, user)
 	if err != nil {
 		log.Warn(ctx, "buildUserContentCondition failed", log.Err(err), log.Any("condition", condition), log.Any("searchUserIDs", searchUserIDs), log.String("uid", user.UserID))
 		return
@@ -2270,12 +2272,17 @@ func (f *FolderModel) GetAllTree(ctx context.Context, condition *entity.ContentC
 			log.Any("user", user))
 		return
 	}
+	//get folder condition
 	folderCondition := content.buildFolderConditionWithPermission(ctx, user, condition, searchUserIDs, foldPermission)
-
-	log.Info(ctx, "get all tree", log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
-	data, err := da.GetFolderDA().GetAllTree(ctx, combineCondition.(*da.CombineConditions), folderCondition)
+	//construct tree condition
+	treeCondition := &da.TreeCondition{
+		MyContentCondition:    myContentCondition,
+		OtherContentCondition: otherConentCondition,
+		FolderCondition:       folderCondition}
+	log.Info(ctx, "get all tree", log.Any("treeCondition", treeCondition), log.String("uid", user.UserID))
+	data, err := da.GetFolderDA().GetAllTree(ctx, treeCondition)
 	if err != nil {
-		log.Error(ctx, "can not get all tree", log.Err(err), log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
+		log.Error(ctx, "can not get all tree", log.Err(err), log.Any("treeCondition", treeCondition), log.String("uid", user.UserID))
 		return
 	}
 	var children []*entity.TreeResponse
@@ -2289,8 +2296,18 @@ func (f *FolderModel) GetAllTree(ctx context.Context, condition *entity.ContentC
 func (f *FolderModel) GetPrivateTree(ctx context.Context, condition *entity.ContentConditionRequest, user *entity.Operator) (res *entity.TreeResponse, err error) {
 	res = new(entity.TreeResponse)
 	var content = ContentModel{}
-	//构造个人查询条件
-	//construct query condition for private search
+	if condition.PublishedQueryMode != entity.PublishedQueryModeOnlyOwner {
+		hasPermission, err := GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, condition, user)
+		if err != nil {
+			return res, err
+		}
+		if !hasPermission {
+			err = ErrGeneralNoPermission
+			return res, err
+		}
+	}
+
+	//get content condition
 	condition.Author = user.UserID
 	condition.PublishStatus = content.filterInvisiblePublishStatus(ctx, condition.PublishStatus)
 	scope, err := content.listAllScopes(ctx, user)
@@ -2309,12 +2326,18 @@ func (f *FolderModel) GetPrivateTree(ctx context.Context, condition *entity.Cont
 	searchUserIDs := content.getRelatedUserID(ctx, condition.Name, user)
 	condition.JoinUserIDList = searchUserIDs
 
-	//生成folder condition
+	//get folder condition
 	folderCondition := content.buildFolderCondition(ctx, condition, searchUserIDs, user)
-	log.Info(ctx, "get private tree", log.Any("contentCondition", condition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
-	data, err := da.GetFolderDA().GetPrivateTree(ctx, content.conditionRequestToCondition(*condition), folderCondition)
+
+	//construct tree condition
+	treeCondition := &da.TreeCondition{
+		MyContentCondition: content.conditionRequestToCondition(*condition),
+		FolderCondition:    folderCondition}
+
+	log.Info(ctx, "get private tree", log.Any("treeCondition", treeCondition), log.String("uid", user.UserID))
+	data, err := da.GetFolderDA().GetPrivateTree(ctx, treeCondition)
 	if err != nil {
-		log.Error(ctx, "can not get private tree", log.Err(err), log.Any("contentCondition", condition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
+		log.Error(ctx, "can not get private tree", log.Err(err), log.Any("treeCondition", treeCondition), log.String("uid", user.UserID))
 		return
 	}
 	var children []*entity.TreeResponse

@@ -47,8 +47,10 @@ type IFolderDA interface {
 	GetSharedContentParentPath(ctx context.Context, tx *dbo.DBContext, orgIDs []string) ([]string, error)
 
 	UpdateEmptyField(ctx context.Context, tx *dbo.DBContext, fIDs []string) error
-	GetPrivateTree(ctx context.Context, contentCondition *ContentCondition, folderCondition *FolderCondition) (data []*entity.TreeData, err error)
-	GetAllTree(ctx context.Context, combineCondition *CombineConditions, folderCondition *FolderCondition) (data []*entity.TreeData, err error)
+	GetPrivateTree(ctx context.Context, treeCondition *TreeCondition) (data []*entity.TreeData, err error)
+	GetAllTree(ctx context.Context, treeCondition *TreeCondition) (data []*entity.TreeData, err error)
+	GetPrivateTreeSql(contentCondition *ContentCondition) string
+	GetAllTreeSql(forMeCondition *ContentCondition, forOtherCondition *ContentCondition) string
 }
 
 type FolderDA struct {
@@ -407,19 +409,26 @@ func (fda *FolderDA) SearchFolderCount(ctx context.Context, tx *dbo.DBContext, c
 
 	return total, nil
 }
-func (fda *FolderDA) GetPrivateTree(ctx context.Context, contentCondition *ContentCondition, folderCondition *FolderCondition) (data []*entity.TreeData, err error) {
-	sql := getPrivateTreeSql(contentCondition)
+
+type TreeCondition struct {
+	MyContentCondition    *ContentCondition
+	OtherContentCondition *ContentCondition
+	FolderCondition       *FolderCondition
+}
+
+func (fda *FolderDA) GetPrivateTree(ctx context.Context, treeCondition *TreeCondition) (data []*entity.TreeData, err error) {
+	sql := fda.GetPrivateTreeSql(treeCondition.MyContentCondition)
 	params := map[string]interface{}{
 		"PublishStatus":   entity.ContentStatusPublished,
-		"Author":          contentCondition.Author,
-		"VisibilityID":    contentCondition.VisibilitySettings,
-		"JoinUser":        contentCondition.JoinUserIDList,
-		"Name":            contentCondition.Name,
-		"ContentName":     contentCondition.ContentName,
+		"Author":          treeCondition.MyContentCondition.Author,
+		"VisibilityID":    treeCondition.MyContentCondition.VisibilitySettings,
+		"JoinUser":        treeCondition.MyContentCondition.JoinUserIDList,
+		"Name":            treeCondition.MyContentCondition.Name,
+		"ContentName":     treeCondition.MyContentCondition.ContentName,
 		"Path":            constant.RootPath,
 		"OwnerType":       entity.OwnerTypeOrganization,
 		"FolderPartition": entity.FolderPartitionMaterialAndPlans,
-		"OrgID":           folderCondition.Owner,
+		"OrgID":           treeCondition.FolderCondition.Owner,
 		"FolderItemType":  entity.FolderItemTypeFolder,
 	}
 	err = fda.s.QueryRawSQL(ctx, &data, sql, params)
@@ -433,7 +442,7 @@ func (fda *FolderDA) GetPrivateTree(ctx context.Context, contentCondition *Conte
 	return
 }
 
-func getPrivateTreeSql(contentCondition *ContentCondition) string {
+func (fda *FolderDA) GetPrivateTreeSql(contentCondition *ContentCondition) string {
 	var sql []string
 	var whereRootForMeContentSql []string
 	var whereNoRootForMeContentSql []string
@@ -502,7 +511,7 @@ func getPrivateTreeSql(contentCondition *ContentCondition) string {
 	return querySql
 }
 
-func getAllTreeSql(forMeCondition *ContentCondition, forOtherCondition *ContentCondition) string {
+func (fda *FolderDA) GetAllTreeSql(forMeCondition *ContentCondition, forOtherCondition *ContentCondition) string {
 	var sql []string
 	var whereRootForMeContentSql []string
 	var whereNoRootForMeContentSql []string
@@ -603,10 +612,10 @@ func getAllTreeSql(forMeCondition *ContentCondition, forOtherCondition *ContentC
 	querySql := strings.Join(sql, "")
 	return querySql
 }
-func (fda *FolderDA) GetAllTree(ctx context.Context, combineCondition *CombineConditions, folderCondition *FolderCondition) (data []*entity.TreeData, err error) {
-	forMeCondition := combineCondition.SourceCondition.(*ContentCondition)
-	forOtherCondition := combineCondition.TargetCondition.(*ContentCondition)
-	sql := getAllTreeSql(forMeCondition, forOtherCondition)
+func (fda *FolderDA) GetAllTree(ctx context.Context, treeCondition *TreeCondition) (data []*entity.TreeData, err error) {
+	forMeCondition := treeCondition.MyContentCondition
+	forOtherCondition := treeCondition.OtherContentCondition
+	sql := fda.GetAllTreeSql(forMeCondition, forOtherCondition)
 	params := map[string]interface{}{
 		"PublishStatus":     entity.ContentStatusPublished,
 		"Author":            forMeCondition.Author,
@@ -617,7 +626,7 @@ func (fda *FolderDA) GetAllTree(ctx context.Context, combineCondition *CombineCo
 		"Path":              constant.RootPath,
 		"OwnerType":         entity.OwnerTypeOrganization,
 		"FolderPartition":   entity.FolderPartitionMaterialAndPlans,
-		"OrgID":             folderCondition.Owner,
+		"OrgID":             treeCondition.FolderCondition.Owner,
 		"FolderItemType":    entity.FolderItemTypeFolder,
 		"OtherVisibilityID": forOtherCondition.VisibilitySettings,
 		"JoinOtherUser":     forOtherCondition.JoinUserIDList,

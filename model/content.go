@@ -3024,6 +3024,61 @@ func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.D
 	return combineCondition, nil
 }
 
+func (cm *ContentModel) buildTreeContentCondition(ctx context.Context, tx *dbo.DBContext,
+	condition *entity.ContentConditionRequest, searchUserIDs []string, user *entity.Operator) (
+	myContentCondition *da.ContentCondition, otherContentCondition *da.ContentCondition, err error) {
+
+	err = cm.convertAuthedOrgIDToParentsPath(ctx, tx, condition)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	condition1 := *condition
+	condition2 := *condition
+
+	//condition1 private
+	condition1.Author = user.UserID
+	condition1.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition1.PublishStatus)
+
+	scope, err := cm.listAllScopes(ctx, user)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(scope) == 0 {
+		log.Info(ctx, "no valid private scope", log.Strings("scopes", scope), log.Any("user", user))
+		scope = []string{constant.NoSearchItem}
+	}
+	condition1.VisibilitySettings = scope
+
+	//condition2 others
+	condition2.PublishStatus = cm.filterPublishedPublishStatus(ctx, condition2.PublishStatus)
+
+	//filter visible
+	if len(condition.ContentType) == 1 && condition.ContentType[0] == entity.ContentTypeAssets {
+		condition2.VisibilitySettings = []string{user.OrgID}
+	}
+
+	//condition2.Scope = scopes
+	condition1.JoinUserIDList = searchUserIDs
+	condition2.JoinUserIDList = searchUserIDs
+
+	if condition.PublishedQueryMode == entity.PublishedQueryModeOnlyOwner {
+		//The user only has the permission to query his own
+		return cm.conditionRequestToCondition(condition1), nil, nil
+	} else if condition.PublishedQueryMode == entity.PublishedQueryModeOnlyOthers {
+		//The user only has the permission to query others
+		return cm.conditionRequestToCondition(condition2), nil, nil
+	} else if condition.PublishedQueryMode == entity.PublishedQueryModeNone {
+		log.Error(ctx, "no valid private scope",
+			log.Err(err),
+			log.Strings("scopes", scope),
+			log.Any("condition", condition),
+			log.Any("user", user))
+		return nil, nil, ErrNoPermissionToQuery
+	}
+	return cm.conditionRequestToCondition(condition1), cm.conditionRequestToCondition(condition2), nil
+}
+
 func (cm *ContentModel) checkPublishContentChildren(ctx context.Context, c *entity.Content, children []*entity.Content) error {
 	//TODO: To implement, check publish scope
 	for i := range children {

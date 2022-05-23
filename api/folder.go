@@ -531,8 +531,8 @@ type FolderItemsResponseWithTotal struct {
 // @Accept json
 // @Produce json
 // @Param key query string true "search content key"
-// @Param type query integer true "0 all,1 name"
-// @Param only_for_me query integer true "0 all,1 only for me"
+// @Param type query integer true "search key type"   Enums(all, name)
+// @Param role query integer true "search role" Enums(me, all)
 // @Success 200 {object} entity.TreeResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -551,17 +551,17 @@ func (s *Server) getTree(c *gin.Context) {
 		return
 	}
 	condition := entity.ContentConditionRequest{}
-	if request.OnlyForMe == constant.TreeOnlyForMe {
+	if request.Role == constant.TreeQueryForMe.String() {
 		condition.Author = constant.Self
 	}
-	if request.Type == constant.TreeQueryTypeAll {
+	if request.Type == constant.TreeQueryTypeAll.String() {
 		condition.Name = request.Key
 	}
-	if request.Type == constant.TreeQueryTypeName {
+	if request.Type == constant.TreeQueryTypeName.String() {
 		condition.ContentName = request.Key
 	}
 	//if query is not self, filter conditions
-	if request.OnlyForMe != constant.TreeOnlyForMe {
+	if request.Role != constant.TreeQueryForMe.String() {
 		err := model.GetContentFilterModel().FilterPublishContent(ctx, &condition, op)
 		//no available content visibility settings, return nil
 		if err == model.ErrNoAvailableVisibilitySettings {
@@ -574,21 +574,9 @@ func (s *Server) getTree(c *gin.Context) {
 			return
 		}
 	}
-
-	if condition.PublishedQueryMode != entity.PublishedQueryModeOnlyOwner {
-		hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, &condition, op)
-		if err != nil {
-			s.defaultErrorHandler(c, err)
-			return
-		}
-		if !hasPermission {
-			c.JSON(http.StatusForbidden, L(GeneralNoPermission))
-			return
-		}
-	}
 	var result *entity.TreeResponse
 	var err error
-	if request.OnlyForMe == constant.TreeOnlyForMe {
+	if request.Role == constant.TreeQueryForMe.String() {
 		result, err = model.GetFolderModel().GetPrivateTree(ctx, &condition, op)
 	} else {
 		result, err = model.GetFolderModel().GetAllTree(ctx, &condition, op)

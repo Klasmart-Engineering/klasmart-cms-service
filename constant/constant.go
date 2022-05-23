@@ -165,12 +165,27 @@ const (
 	DBDefaultSlowThreshold   = 200 * time.Millisecond
 )
 
+type TreeQueryType string
+
+type TreeQueryRole string
+
 const (
-	TreeOnlyForMe     = 0
-	TreeForAll        = 1
-	TreeQueryTypeAll  = 0
-	TreeQueryTypeName = 1
+	TreeQueryTypeAll  TreeQueryType = "all"
+	TreeQueryTypeName TreeQueryType = "name"
 )
+
+const (
+	TreeQueryForMe  TreeQueryRole = "me"
+	TreeQueryForAll TreeQueryRole = "all"
+)
+
+func (t TreeQueryType) String() string {
+	return string(t)
+}
+
+func (t TreeQueryRole) String() string {
+	return string(t)
+}
 
 const (
 	LibraryLabelHierarchyRootFolder = "library_label_hierarchy_root_folder"

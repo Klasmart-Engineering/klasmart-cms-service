@@ -379,9 +379,9 @@ type SearchFolderCondition struct {
 }
 
 type TreeRequest struct {
-	Key       string `json:"key" form:"key"`
-	Type      int    `json:"type" form:"type"`
-	OnlyForMe int    `json:"only_for_me" form:"only_for_me"`
+	Key  string `json:"key" form:"key"`
+	Type string `json:"type" form:"type"`
+	Role string `json:"role" form:"role"`
 }
 
 type TreeResponse struct {
