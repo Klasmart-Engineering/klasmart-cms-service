@@ -3002,8 +3002,8 @@ func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.D
 	condition1.JoinUserIDList = searchUserIDs
 	condition2.JoinUserIDList = searchUserIDs
 
-	//condition1.UseJoinForVisibilitySettings = true
-	//condition2.UseJoinForVisibilitySettings = true
+	condition1.UseJoinForVisibilitySettings = true
+	condition2.UseJoinForVisibilitySettings = true
 
 	if condition.PublishedQueryMode == entity.PublishedQueryModeOnlyOwner {
 		//The user only has the permission to query his own
