@@ -436,6 +436,8 @@ type ContentConditionRequest struct {
 	AgeIDs             []string           `json:"age_ids"`
 	GradeIDs           []string           `json:"grade_ids"`
 	LessonPlanName     string             `json:"lesson_plan_name"`
+
+	UseJoinForVisibilitySettings bool `json:"-"`
 }
 type OrganizationOrSchool struct {
 	ID    string
