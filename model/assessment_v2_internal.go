@@ -354,7 +354,8 @@ func (a *assessmentInternalModel) updateAssessmentUsersWhenLiveCallback(ctx cont
 	// Waiting for live support, this part of the logic will be removed
 	if action == "" {
 		for _, item := range oldAssessmentUsers {
-			if item.StatusBySystem == v2.AssessmentUserSystemStatusCompleted {
+			if item.StatusBySystem == v2.AssessmentUserSystemStatusCompleted ||
+				item.StatusBySystem == v2.AssessmentUserSystemStatusResubmitted {
 				continue
 			}
 
@@ -403,8 +404,8 @@ func (a *assessmentInternalModel) updateAssessmentUsersWhenLiveCallback(ctx cont
 			case v2.AssessmentUserSystemStatusDone:
 				newItem.StatusBySystem = v2.AssessmentUserSystemStatusResubmitted
 				newItem.ResubmittedAt = now
-			case v2.AssessmentUserSystemStatusResubmitted:
-				newItem.ResubmittedAt = now
+			default:
+				continue
 			}
 
 			if assessmentStatus == v2.AssessmentStatusNotStarted || assessmentStatus == v2.AssessmentStatusStarted {
