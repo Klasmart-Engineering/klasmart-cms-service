@@ -87,31 +87,31 @@ jobs:
           ECR_AWS_ACCESS_KEY_ID: ${{ secrets.ECR_AWS_ACCESS_KEY_ID }}
           ECR_AWS_SECRET_ACCESS_KEY: ${{ secrets.ECR_AWS_SECRET_ACCESS_KEY }}
 
-  # deploy-ci:
-  #   needs: [build-container]
-  #   strategy:
-  #     matrix:
-  #       include:
-  #         - environment: landingzone
-  #           url: https://hub.landing-zone.kidsloop.live
-  #           region: uk
-  #   environment:
-  #     url: ${{ matrix.url }}
-  #     name: ${{ matrix.environment }}
-  #   name: deploy
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     region: ${{ matrix.region }}
-  #     environment: ${{ matrix.environment }}
-  #   steps:
-  #     - name: Deploy to ${{ matrix.environment }}
-  #       uses: KL-Engineering/github-action-workflows/.github/actions/argocd-override-image-parameter@v3.2.0
-  #       with:
-  #         environment: ${{ env.environment }}
-  #         region: ${{ env.region }}
-  #         argocd_app: "${{ env.region }}-${{ env.environment }}-${{ env.argocd_app_component }}"
-  #         argocd_app_chart_tag_path: ${{ env.argocd_app_chart_tag_path }}
-  #         argocd_app_chart_tag_value: ${{ needs.build-container.outputs.container_image }}
-  #         TOOLS_KUBECONFIG_CONTENT_B64: ${{ secrets.TOOLS_KUBECONFIG_CONTENT_B64 }}
-  #         ARGOCD_AUTH_USERNAME: ${{ secrets.ARGOCD_AUTH_USERNAME }}
-  #         ARGOCD_AUTH_PASSWORD: ${{ secrets.ARGOCD_AUTH_PASSWORD }}
+  deploy-ci:
+    needs: [build-container]
+    strategy:
+      matrix:
+        include:
+          - environment: landingzone
+            url: https://hub.landing-zone.kidsloop.live
+            region: uk
+    environment:
+      url: ${{ matrix.url }}
+      name: ${{ matrix.environment }}
+    name: deploy
+    runs-on: ubuntu-latest
+    env:
+      region: ${{ matrix.region }}
+      environment: ${{ matrix.environment }}
+    steps:
+      - name: Deploy to ${{ matrix.environment }}
+        uses: KL-Engineering/github-action-workflows/.github/actions/argocd-override-image-parameter@v3.2.0
+        with:
+          environment: ${{ env.environment }}
+          region: ${{ env.region }}
+          argocd_app: "${{ env.region }}-${{ env.environment }}-${{ env.argocd_app_component }}"
+          argocd_app_chart_tag_path: ${{ env.argocd_app_chart_tag_path }}
+          argocd_app_chart_tag_value: ${{ needs.build-container.outputs.container_image }}
+          TOOLS_KUBECONFIG_CONTENT_B64: ${{ secrets.TOOLS_KUBECONFIG_CONTENT_B64 }}
+          ARGOCD_AUTH_USERNAME: ${{ secrets.ARGOCD_AUTH_USERNAME }}
+          ARGOCD_AUTH_PASSWORD: ${{ secrets.ARGOCD_AUTH_PASSWORD }}
