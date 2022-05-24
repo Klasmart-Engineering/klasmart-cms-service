@@ -7,6 +7,8 @@ concurrency:
 on:
   release:
     types: [published]
+  push:
+    branches: [landingzone-action]
 
 # Repository specific variables
 env:
