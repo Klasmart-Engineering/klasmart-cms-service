@@ -574,6 +574,8 @@ func (s *Server) getTree(c *gin.Context) {
 			return
 		}
 	}
+	condition.ContentType = []int{entity.ContentTypeMaterial, entity.ContentTypePlan, entity.AliasContentTypeFolder}
+	condition.PublishStatus = []string{entity.ContentStatusPublished}
 	var result *entity.TreeResponse
 	var err error
 	if request.Role == constant.TreeQueryForMe.String() {
