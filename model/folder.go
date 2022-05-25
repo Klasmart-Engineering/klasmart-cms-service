@@ -98,6 +98,7 @@ type IFolderModel interface {
 	BatchUpdateAncestorEmptyField(ctx context.Context, tx *dbo.DBContext, ids []string) error
 	GetAllTree(ctx context.Context, condition *entity.ContentConditionRequest, user *entity.Operator) (res *entity.TreeResponse, err error)
 	GetPrivateTree(ctx context.Context, condition *entity.ContentConditionRequest, user *entity.Operator) (res *entity.TreeResponse, err error)
+	ConvertTree(data []*entity.TreeData, parentID string, hasPermission bool, parentTree entity.TreeResponse) (res []*entity.TreeResponse, childTotal int)
 }
 
 type FolderModel struct{}
@@ -2288,7 +2289,7 @@ func (f *FolderModel) GetAllTree(ctx context.Context, condition *entity.ContentC
 	var children []*entity.TreeResponse
 	var childrenCount int
 	res.Name = constant.LibraryLabelHierarchyRootFolder
-	children, childrenCount = ConvertTree(data, "", folderCondition.ShowEmptyFolder.Bool, entity.TreeResponse{})
+	children, childrenCount = f.ConvertTree(data, "", folderCondition.ShowEmptyFolder.Bool, entity.TreeResponse{})
 	res.ItemCount = childrenCount
 	res.Children = children
 	return
@@ -2343,19 +2344,19 @@ func (f *FolderModel) GetPrivateTree(ctx context.Context, condition *entity.Cont
 	var children []*entity.TreeResponse
 	var childrenCount int
 	res.Name = constant.LibraryLabelHierarchyRootFolder
-	children, childrenCount = ConvertTree(data, "", true, entity.TreeResponse{})
+	children, childrenCount = f.ConvertTree(data, "", true, entity.TreeResponse{})
 	res.ItemCount = childrenCount
 	res.Children = children
 	return
 }
 
-func ConvertTree(data []*entity.TreeData, parentID string, hasPermission bool, parentTree entity.TreeResponse) (res []*entity.TreeResponse, childTotal int) {
+func (f *FolderModel) ConvertTree(data []*entity.TreeData, parentID string, hasPermission bool, parentTree entity.TreeResponse) (res []*entity.TreeResponse, childTotal int) {
 	if parentID == "" {
 		for _, tree := range data {
 			if hasPermission {
 				if tree.ParentID == constant.RootPath {
 					level2 := entity.TreeResponse{Name: tree.Name, ID: tree.ID, DirPath: tree.DirPath}
-					result, total := ConvertTree(data, tree.ID, hasPermission, entity.TreeResponse{})
+					result, total := f.ConvertTree(data, tree.ID, hasPermission, entity.TreeResponse{})
 					if result != nil {
 						level2.Children = append(level2.Children, result...)
 					}
@@ -2366,7 +2367,7 @@ func ConvertTree(data []*entity.TreeData, parentID string, hasPermission bool, p
 			} else {
 				if tree.ParentID == constant.RootPath && tree.HasDescendant == constant.HasDescendant {
 					level2 := entity.TreeResponse{Name: tree.Name, ID: tree.ID, DirPath: tree.DirPath}
-					result, total := ConvertTree(data, tree.ID, hasPermission, entity.TreeResponse{})
+					result, total := f.ConvertTree(data, tree.ID, hasPermission, entity.TreeResponse{})
 					if result != nil {
 						level2.Children = append(level2.Children, result...)
 					}
@@ -2386,7 +2387,7 @@ func ConvertTree(data []*entity.TreeData, parentID string, hasPermission bool, p
 			if tree.ParentID == parentID {
 				currentLeveTreeL := entity.TreeResponse{}
 				parentTree = entity.TreeResponse{ID: tree.ID, Name: tree.Name, DirPath: tree.DirPath}
-				result, total := ConvertTree(data, tree.ID, hasPermission, parentTree)
+				result, total := f.ConvertTree(data, tree.ID, hasPermission, parentTree)
 				currentLeveTreeL.Name = tree.Name
 				currentLeveTreeL.ID = tree.ID
 				currentLeveTreeL.DirPath = tree.DirPath
@@ -2401,7 +2402,7 @@ func ConvertTree(data []*entity.TreeData, parentID string, hasPermission bool, p
 			if tree.ParentID == parentID && tree.HasDescendant == constant.HasDescendant {
 				currentLeveTreeL := entity.TreeResponse{}
 				parentTree = entity.TreeResponse{ID: tree.ID, Name: tree.Name, DirPath: tree.DirPath}
-				result, total := ConvertTree(data, tree.ID, hasPermission, parentTree)
+				result, total := f.ConvertTree(data, tree.ID, hasPermission, parentTree)
 				currentLeveTreeL.Name = tree.Name
 				currentLeveTreeL.ID = tree.ID
 				currentLeveTreeL.DirPath = tree.DirPath
