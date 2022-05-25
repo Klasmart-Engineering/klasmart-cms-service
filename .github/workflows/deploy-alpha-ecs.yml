@@ -4,10 +4,7 @@ on:
   push:
     branches:
       - hotfix/*
-  pull_request:
-    branches: [main]
-    types: [closed]
-
+      - main
 env:
   GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
   H5P_PRIVATE_KEY: ${{ secrets.H5P_PRIVATE_KEY }}
