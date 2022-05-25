@@ -1,8 +1,8 @@
 name: container builds
 
 concurrency:
-  group: buildDeployContainers
-  cancel-in-progress: false
+  group: LandingZoneDeployment
+  cancel-in-progress: true
 
 on:
   release:
@@ -28,7 +28,7 @@ jobs:
     name: Build and Push Container
     runs-on: ubuntu-latest
     outputs:
-      container_image: ${{steps.build-push.outputs.image_tags}}
+      container_image: ${{steps.build-push.outputs.image_version}}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -93,7 +93,7 @@ jobs:
       matrix:
         include:
           - environment: landingzone
-            url: https://hub.landing-zone.kidsloop.live
+            url: https://cms.landing-zone.kidsloop.live/v1/version
             region: uk
     environment:
       url: ${{ matrix.url }}
