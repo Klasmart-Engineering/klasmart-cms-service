@@ -530,9 +530,9 @@ type FolderItemsResponseWithTotal struct {
 // @Description get tree
 // @Accept json
 // @Produce json
-// @Param key query string true "search content key"
-// @Param type query integer true "search key type"   Enums(all, name)
-// @Param role query integer true "search role" Enums(me, all)
+// @Param key query string false "search content key"
+// @Param type query string true "search key type"   Enums(all, name)
+// @Param role query string true "search role" Enums(me, all)
 // @Success 200 {object} entity.TreeResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse

@@ -39,7 +39,7 @@ func TestMain(m *testing.M) {
 	config.LoadRedisEnvConfig(ctx)
 	da.InitRedis(ctx)
 
-	config.LoadAMSConfig(ctx)
+	//config.LoadAMSConfig(ctx)
 
 	initCache(ctx)
 	initDataSource(ctx)
