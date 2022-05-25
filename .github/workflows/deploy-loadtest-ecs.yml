@@ -1,9 +1,9 @@
 name: Deploy LoadTest To Amazon ECS
 
 on:
-  pull_request:
-    branches: [loadtest]
-    types: [closed]
+  push:
+    branches:
+      - loadtest
 env:
   AWS_REGION: cn-north-1
   ECR_REPOSITORY: loadtest
@@ -46,7 +46,7 @@ jobs:
 
     - name: Build
       run: |
-        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main -a -tags netgo -ldflags "-X github.com/KL-Engineering/kidsloop-cms-service/constant.GitHash=$(git rev-list -1 HEAD) -X github.com/KL-Engineering/kidsloop-cms-service/constant.BuildTimestamp=$(date +%s) -X github.com/KL-Engineering/kidsloop-cms-service/constant.LatestMigrate=$(ls schema/migrate | tail -1)"
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main -ldflags "-X github.com/KL-Engineering/kidsloop-cms-service/constant.GitHash=$(git rev-list -1 HEAD) -X github.com/KL-Engineering/kidsloop-cms-service/constant.BuildTimestamp=$(date +%s) -X github.com/KL-Engineering/kidsloop-cms-service/constant.LatestMigrate=$(ls schema/migrate | tail -1)"
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
