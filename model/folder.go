@@ -2343,7 +2343,7 @@ func (f *FolderModel) GetPrivateTree(ctx context.Context, condition *entity.Cont
 	var children []*entity.TreeResponse
 	var childrenCount int
 	res.Name = constant.LibraryLabelHierarchyRootFolder
-	children, childrenCount = ConvertTree(data, "", folderCondition.ShowEmptyFolder.Bool, entity.TreeResponse{})
+	children, childrenCount = ConvertTree(data, "", true, entity.TreeResponse{})
 	res.ItemCount = childrenCount
 	res.Children = children
 	return

@@ -458,7 +458,7 @@ func (fda *FolderDA) GetPrivateTreeSql(contentCondition *ContentCondition) strin
 		whereRootForMeContentSql = append(whereRootForMeContentSql, ` and (
                       match(content_name, description, keywords) against(@Name in boolean mode) `)
 		if len(contentCondition.JoinUserIDList) > 0 {
-			whereRootForMeContentSql = append(whereRootForMeContentSql, ` OR author in (@JoinUser) `)
+			whereRootForMeContentSql = append(whereRootForMeContentSql, ` OR author in @JoinUser `)
 		}
 		whereRootForMeContentSql = append(whereRootForMeContentSql, ` ) `)
 
