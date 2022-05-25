@@ -11,7 +11,7 @@ import (
 
 	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/tracecontext"
-	newrelic "github.com/newrelic/go-agent"
+	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
 type GraphQLError []struct {
@@ -114,10 +114,8 @@ const defaultHttpTimeout = time.Minute
 
 func NewClient(endpoint string, options ...OptionClient) *GraphGLClient {
 	c := &GraphGLClient{
-		endpoint: endpoint,
-		// New Relic will look for txn in the request context if txn is nil,
-		// and using default transport if original transport is nil. So args: (nil, nil) is ok
-		httpClient:  &http.Client{Transport: newrelic.NewRoundTripper(nil, debugTransport{})},
+		endpoint:    endpoint,
+		httpClient:  &http.Client{Transport: newrelic.NewRoundTripper(debugTransport{})},
 		httpTimeout: defaultHttpTimeout,
 	}
 	for i := range options {

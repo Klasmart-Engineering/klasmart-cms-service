@@ -16,8 +16,8 @@ import (
 	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
-	newrelic "github.com/newrelic/go-agent"
-	"github.com/newrelic/go-agent/_integrations/nrgin/v1"
+	"github.com/newrelic/go-agent/v3/integrations/nrgin"
+	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
 func ExtractSession(c *gin.Context) (string, error) {
@@ -247,10 +247,12 @@ func (s Server) contextStopwatch() gin.HandlerFunc {
 
 func (s Server) getNewRelicMiddleware() gin.HandlerFunc {
 	nrCfg := &config.Get().NewRelic
-	cfg := newrelic.NewConfig(nrCfg.NewRelicAppName, nrCfg.NewRelicLicenseKey)
-	cfg.Labels = nrCfg.NewRelicLabels
-	cfg.DistributedTracer.Enabled = nrCfg.NewRelicDistributedTracingEnabled
-	nrApp, err := newrelic.NewApplication(cfg)
+	nrApp, err := newrelic.NewApplication(
+		newrelic.ConfigAppName(nrCfg.NewRelicAppName),
+		newrelic.ConfigLicense(nrCfg.NewRelicLicenseKey),
+		newrelic.ConfigDistributedTracerEnabled(nrCfg.NewRelicDistributedTracingEnabled),
+		func(c *newrelic.Config) { c.Labels = nrCfg.NewRelicLabels }, // newrelic doesn't supply labels helper func
+	)
 	if err != nil {
 		log.Panic(context.Background(), "failed to init new relic app", log.Any("new_relic_config", nrCfg))
 	}
