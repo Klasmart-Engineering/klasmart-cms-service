@@ -452,7 +452,7 @@ func (fda *FolderDA) GetPrivateTreeSql(contentCondition *ContentCondition) strin
                       and publish_status in (@PublishStatus) and author =@Author and delete_at=0 `)
 	if len(contentCondition.VisibilitySettings) > 0 {
 		whereRootForMeContentSql = append(whereRootForMeContentSql, ` and id 
-           IN (SELECT content_id FROM cms_content_visibility_settings WHERE visibility_setting IN (@VisibilityID)) `)
+           IN (SELECT content_id FROM cms_content_visibility_settings WHERE visibility_setting IN @VisibilityID) `)
 	}
 	if contentCondition.Name != "" {
 		whereRootForMeContentSql = append(whereRootForMeContentSql, ` and (
@@ -525,13 +525,13 @@ func (fda *FolderDA) GetAllTreeSql(forMeCondition *ContentCondition, forOtherCon
                      and publish_status in (@PublishStatus) and author =@Author and delete_at=0 `)
 	if len(forMeCondition.VisibilitySettings) > 0 {
 		whereRootForMeContentSql = append(whereRootForMeContentSql, ` and id
-          IN (SELECT content_id FROM cms_content_visibility_settings WHERE visibility_setting IN (@MeVisibilityID)) `)
+          IN (SELECT content_id FROM cms_content_visibility_settings WHERE visibility_setting IN @MeVisibilityID) `)
 	}
 	if forMeCondition.Name != "" {
 		whereRootForMeContentSql = append(whereRootForMeContentSql, ` and (
                      match(content_name, description, keywords) against(@Name in boolean mode) `)
 		if len(forMeCondition.JoinUserIDList) > 0 {
-			whereRootForMeContentSql = append(whereRootForMeContentSql, ` OR author in (@JoinMeUser) `)
+			whereRootForMeContentSql = append(whereRootForMeContentSql, ` OR author in @JoinMeUser `)
 		}
 		whereRootForMeContentSql = append(whereRootForMeContentSql, ` ) `)
 
@@ -548,13 +548,13 @@ func (fda *FolderDA) GetAllTreeSql(forMeCondition *ContentCondition, forOtherCon
                      and publish_status in (@PublishStatus) and delete_at=0 `)
 	if len(forOtherCondition.VisibilitySettings) > 0 {
 		whereRootForOtherContentSql = append(whereRootForOtherContentSql, ` and id
-          IN (SELECT content_id FROM cms_content_visibility_settings WHERE visibility_setting IN (@OtherVisibilityID)) `)
+          IN (SELECT content_id FROM cms_content_visibility_settings WHERE visibility_setting IN @OtherVisibilityID) `)
 	}
 	if forOtherCondition.Name != "" {
 		whereRootForOtherContentSql = append(whereRootForOtherContentSql, ` and (
                      match(content_name, description, keywords) against(@Name in boolean mode) `)
 		if len(forOtherCondition.JoinUserIDList) > 0 {
-			whereRootForOtherContentSql = append(whereRootForOtherContentSql, ` OR author in (@JoinOtherUser) `)
+			whereRootForOtherContentSql = append(whereRootForOtherContentSql, ` OR author in @JoinOtherUser `)
 		}
 		whereRootForOtherContentSql = append(whereRootForOtherContentSql, ` ) `)
 
