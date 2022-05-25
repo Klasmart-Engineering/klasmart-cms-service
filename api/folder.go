@@ -531,8 +531,8 @@ type FolderItemsResponseWithTotal struct {
 // @Accept json
 // @Produce json
 // @Param key query string true "search content key"
-// @Param type query integer true "0 all,1 name"
-// @Param only_for_me query integer true "0 all,1 only for me"
+// @Param type query integer true "search key type"   Enums(all, name)
+// @Param role query integer true "search role" Enums(me, all)
 // @Success 200 {object} entity.TreeResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -542,15 +542,45 @@ func (s *Server) getTree(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	var request entity.TreeRequest
-	err := c.ShouldBindQuery(&request)
-	if err != nil {
+	bindQueryErr := c.ShouldBindQuery(&request)
+	if bindQueryErr != nil {
 		log.Warn(ctx, "getTree: ShouldBindQuery failed",
-			log.Err(err),
+			log.Err(bindQueryErr),
 			log.Any("request", request))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	result, err := model.GetFolderModel().GetTree(ctx, &request, op)
+	condition := entity.ContentConditionRequest{}
+	if request.Role == constant.TreeQueryForMe.String() {
+		condition.Author = constant.Self
+	}
+	if request.Type == constant.TreeQueryTypeAll.String() {
+		condition.Name = request.Key
+	}
+	if request.Type == constant.TreeQueryTypeName.String() {
+		condition.ContentName = request.Key
+	}
+	//if query is not self, filter conditions
+	if request.Role != constant.TreeQueryForMe.String() {
+		err := model.GetContentFilterModel().FilterPublishContent(ctx, &condition, op)
+		//no available content visibility settings, return nil
+		if err == model.ErrNoAvailableVisibilitySettings {
+			//no available visibility settings
+			c.JSON(http.StatusOK, &entity.TreeResponse{})
+			return
+		}
+		if err != nil {
+			s.defaultErrorHandler(c, err)
+			return
+		}
+	}
+	var result *entity.TreeResponse
+	var err error
+	if request.Role == constant.TreeQueryForMe.String() {
+		result, err = model.GetFolderModel().GetPrivateTree(ctx, &condition, op)
+	} else {
+		result, err = model.GetFolderModel().GetAllTree(ctx, &condition, op)
+	}
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)

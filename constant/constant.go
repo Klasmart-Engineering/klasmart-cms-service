@@ -164,3 +164,34 @@ const (
 	DBDefaultConnMaxLifetime = 4 * time.Hour
 	DBDefaultSlowThreshold   = 200 * time.Millisecond
 )
+
+type TreeQueryType string
+
+type TreeQueryRole string
+
+const (
+	TreeQueryTypeAll  TreeQueryType = "all"
+	TreeQueryTypeName TreeQueryType = "name"
+)
+
+const (
+	TreeQueryForMe  TreeQueryRole = "me"
+	TreeQueryForAll TreeQueryRole = "all"
+)
+
+func (t TreeQueryType) String() string {
+	return string(t)
+}
+
+func (t TreeQueryRole) String() string {
+	return string(t)
+}
+
+const (
+	LibraryLabelHierarchyRootFolder = "library_label_hierarchy_root_folder"
+	RootPath                        = "/"
+	IsFolder                        = 1
+	IsContent                       = 0
+	HasDescendant                   = 1
+	HasSearchSelf                   = 1
+)
