@@ -5,15 +5,14 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  push:
-    branches: [landingzone-action]
+  release:
+    types: [published]
 
 # Repository specific variables
 env:
   ecr_repository: kidsloop-cms-backend
   argocd_app_chart_tag_path: cmsBackend.tag
   argocd_app_component: cms-backend
-
   GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
   H5P_PRIVATE_KEY: ${{ secrets.H5P_PRIVATE_KEY }}
   H5P_PUBLIC_KEY: ${{ secrets.H5P_PUBLIC_KEY }}
