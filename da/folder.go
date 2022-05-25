@@ -544,7 +544,7 @@ func (fda *FolderDA) GetAllTreeSql(forMeCondition *ContentCondition, forOtherCon
 	whereNoRootForMeContentSql = append(whereNoRootForMeContentSql, ` and dir_path <> @Path ) `)
 
 	//for other condition
-	whereRootForOtherContentSql = append(whereRootForMeContentSql, ` ( content_type in (1,2,10)
+	whereRootForOtherContentSql = append(whereRootForOtherContentSql, ` ( content_type in (1,2,10)
                      and publish_status in (@PublishStatus) and delete_at=0 `)
 	if len(forOtherCondition.VisibilitySettings) > 0 {
 		whereRootForOtherContentSql = append(whereRootForOtherContentSql, ` and id
