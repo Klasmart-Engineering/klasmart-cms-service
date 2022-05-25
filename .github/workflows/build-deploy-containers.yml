@@ -1,11 +1,18 @@
-name: Deploy Alpha To Amazon ECS
+name: container builds
+
+concurrency:
+  group: LandingZoneDeployment
+  cancel-in-progress: true
 
 on:
-  push:
-    branches:
-      - hotfix/*
-      - main
+  release:
+    types: [published]
+
+# Repository specific variables
 env:
+  ecr_repository: kidsloop-cms-backend
+  argocd_app_chart_tag_path: cmsBackend.tag
+  argocd_app_component: cms-backend
   GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
   H5P_PRIVATE_KEY: ${{ secrets.H5P_PRIVATE_KEY }}
   H5P_PUBLIC_KEY: ${{ secrets.H5P_PUBLIC_KEY }}
@@ -14,9 +21,11 @@ env:
   LIVE_TOKEN_PRIVATE_KEY: ${{ secrets.LIVE_TOKEN_PRIVATE_KEY }}
 
 jobs:
-  build-to-ecr:
-    name: Build And Deploy ECS
+  build-container:
+    name: Build and Push Container
     runs-on: ubuntu-latest
+    outputs:
+      container_image: ${{steps.build-push.outputs.image_version}}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -61,25 +70,45 @@ jobs:
           echo "$LIVE_TOKEN_PRIVATE_KEY" | base64 -d > deploy/live_token_private_key.pem
 
       - name: Build and Push Container
-        uses: ./.github/actions/docker-build-and-push
+        id: build-push
+        uses: KL-Engineering/github-action-workflows/.github/actions/docker-build-push@v3.2.0
         with:
-          environment: ${{ needs.generate-version.outputs.tag }}
-          region: global
-          ecr_repository: kidsloop-cms-backend
-          dockerfile_dir: deploy
-          dockerfile_name: Dockerfile
-          dockerfile_context: .
-          ecr_aws_region: eu-west-2
-          ecr_registry: 942095822719.dkr.ecr.eu-west-2.amazonaws.com
+          image_name: ${{ env.ecr_repository }}
+          dockerfile: deploy/Dockerfile
+          docker_build_context: deploy
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            type=ref,event=branch,suffix=-{{sha}}
+            type=ref,event=pr,suffix=-{{sha}}
+            type=ref,event=tag
           ECR_AWS_ACCESS_KEY_ID: ${{ secrets.ECR_AWS_ACCESS_KEY_ID }}
           ECR_AWS_SECRET_ACCESS_KEY: ${{ secrets.ECR_AWS_SECRET_ACCESS_KEY }}
 
-  deploy-alpha-dev-test:
-    needs: build-to-ecr
-    uses: ./.github/workflows/deploy-alpha-dev-call.yml
-    with:
-      ecs_aws_service: kidsloop-alpha-cms
-      desired_ocitag: alpha-dev-latest
-    secrets:
-      AWS_ACCESS_KEY_ID_ALPHA_DEV: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
-      AWS_SECRET_ACCESS_KEY_ALPHA_DEV: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
+  deploy-ci:
+    needs: [build-container]
+    strategy:
+      matrix:
+        include:
+          - environment: landingzone
+            url: https://cms.landing-zone.kidsloop.live/v1/version
+            region: uk
+    environment:
+      url: ${{ matrix.url }}
+      name: ${{ matrix.environment }}
+    name: deploy
+    runs-on: ubuntu-latest
+    env:
+      region: ${{ matrix.region }}
+      environment: ${{ matrix.environment }}
+    steps:
+      - name: Deploy to ${{ matrix.environment }}
+        uses: KL-Engineering/github-action-workflows/.github/actions/argocd-override-image-parameter@v3.2.0
+        with:
+          environment: ${{ env.environment }}
+          region: ${{ env.region }}
+          argocd_app: "${{ env.region }}-${{ env.environment }}-${{ env.argocd_app_component }}"
+          argocd_app_chart_tag_path: ${{ env.argocd_app_chart_tag_path }}
+          argocd_app_chart_tag_value: ${{ needs.build-container.outputs.container_image }}
+          TOOLS_KUBECONFIG_CONTENT_B64: ${{ secrets.TOOLS_KUBECONFIG_CONTENT_B64 }}
+          ARGOCD_AUTH_USERNAME: ${{ secrets.ARGOCD_AUTH_USERNAME }}
+          ARGOCD_AUTH_PASSWORD: ${{ secrets.ARGOCD_AUTH_PASSWORD }}
