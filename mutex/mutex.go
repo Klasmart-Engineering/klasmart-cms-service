@@ -3,6 +3,7 @@ package mutex
 import (
 	"context"
 	"fmt"
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"sync"
 	"time"
 
@@ -15,6 +16,29 @@ const (
 	defaultLockTimeout = time.Minute * 3
 )
 
+// lockerDecorator adds trace between call lock and unlock
+// user should guarantee that lock and unlock are called in pair to end the trace context
+type lockerDecorator struct {
+	inner locker.LockDriver
+	ctx   context.Context
+	seg   *newrelic.Segment
+}
+
+func (l *lockerDecorator) Lock() {
+	txn := newrelic.FromContext(l.ctx)
+	if txn != nil {
+		l.seg = txn.StartSegment("distributed_lock")
+	}
+	l.inner.Lock()
+}
+
+func (l *lockerDecorator) Unlock() {
+	if l.seg != nil {
+		l.seg.End()
+	}
+	l.inner.Unlock()
+}
+
 func NewLock(ctx context.Context, key string, params ...interface{}) (sync.Locker, error) {
 	lockKey := key
 	for i := range params {
@@ -25,7 +49,7 @@ func NewLock(ctx context.Context, key string, params ...interface{}) (sync.Locke
 		return &sync.Mutex{}, nil
 	}
 
-	return locker.NewDistributedLock(locker.DistributedLockConfig{
+	inner, err := locker.NewDistributedLock(locker.DistributedLockConfig{
 		Driver:  "redis",
 		Key:     lockKey,
 		Timeout: defaultLockTimeout,
@@ -36,4 +60,5 @@ func NewLock(ctx context.Context, key string, params ...interface{}) (sync.Locke
 			Password: config.Get().RedisConfig.Password,
 		},
 	})
+	return &lockerDecorator{inner: inner, ctx: ctx}, err
 }
