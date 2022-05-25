@@ -33,7 +33,7 @@ func TestGetTree(t *testing.T) {
 	op := &entity.Operator{UserID: "afdfc0d9-ada9-4e66-b225-20f956d1a399", OrgID: "6300b3c5-8936-497e-ba1f-d67164b59c65"}
 	var request entity.TreeRequest
 	request.Key = "123"
-	request.Role = "me"
+	request.Role = "all"
 	request.Type = "all"
 	condition := entity.ContentConditionRequest{}
 	if request.Role == constant.TreeQueryForMe.String() {
