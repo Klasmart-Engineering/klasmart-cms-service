@@ -229,14 +229,32 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 		}
 	}
 
-	result, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
-		result, err := s.addSchedule(ctx, tx, op, scheduleList, allRelations, scheduleReviews)
+	// insert into `schedules_relations` table
+	_, err = s.scheduleRelationDA.InsertInBatchesTx(ctx, dbo.MustGetDB(ctx), allRelations, constant.ScheduleInsertBatchSize)
+	if err != nil {
+		log.Error(ctx, "s.scheduleRelationDA.InsertInBatchesTx error",
+			log.Err(err),
+			log.Any("scheduleRelations", allRelations))
+		return nil, err
+	}
+
+	if len(scheduleReviews) > 0 {
+		_, err = s.scheduleReviewDA.InsertInBatchesTx(ctx, dbo.MustGetDB(ctx), scheduleReviews, constant.ScheduleInsertBatchSize)
 		if err != nil {
-			log.Error(ctx, "add schedule: error",
+			log.Error(ctx, "s.scheduleReviewDA.InsertInBatchesTx error",
 				log.Err(err),
-				log.Any("scheduleList", scheduleList),
-				log.Any("allRelations", allRelations),
-			)
+				log.Any("scheduleReviews", scheduleReviews))
+			return nil, err
+		}
+	}
+
+	result, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		// insert into `schedules` table
+		result, err := s.scheduleDA.InsertInBatchesTx(ctx, tx, scheduleList, constant.ScheduleInsertBatchSize)
+		if err != nil {
+			log.Error(ctx, "s.scheduleDA.InsertInBatchesTx error",
+				log.Err(err),
+				log.Any("scheduleList", scheduleList))
 			return nil, err
 		}
 
