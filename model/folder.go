@@ -2287,8 +2287,14 @@ func (f *FolderModel) GetAllTree(ctx context.Context, condition *entity.ContentC
 	}
 	var children []*entity.TreeResponse
 	var childrenCount int
+	var searchKey bool
 	res.Name = constant.LibraryLabelHierarchyRootFolder
-	children, childrenCount = f.convertTree(data, "", folderCondition.ShowEmptyFolder.Bool, entity.TreeResponse{})
+	if condition.Name == "" && condition.ContentName == "" {
+		searchKey = false
+	} else {
+		searchKey = true
+	}
+	children, childrenCount = f.convertTree(data, searchKey, "", folderCondition.ShowEmptyFolder.Bool, entity.TreeResponse{})
 	res.ItemCount = childrenCount
 	res.Children = children
 	return
@@ -2342,37 +2348,58 @@ func (f *FolderModel) GetPrivateTree(ctx context.Context, condition *entity.Cont
 	}
 	var children []*entity.TreeResponse
 	var childrenCount int
+	var searchKey bool
 	res.Name = constant.LibraryLabelHierarchyRootFolder
-	children, childrenCount = f.convertTree(data, "", true, entity.TreeResponse{})
+	if condition.Name == "" && condition.ContentName == "" {
+		searchKey = false
+	} else {
+		searchKey = true
+	}
+	children, childrenCount = f.convertTree(data, searchKey, "", true, entity.TreeResponse{})
 	res.ItemCount = childrenCount
 	res.Children = children
 	return
 }
 
-func (f *FolderModel) convertTree(data []*entity.TreeData, parentID string, hasPermission bool, parentTree entity.TreeResponse) (res []*entity.TreeResponse, childTotal int) {
+func (f *FolderModel) convertTree(data []*entity.TreeData, searchKey bool, parentID string, hasPermission bool, parentTree entity.TreeResponse) (res []*entity.TreeResponse, childTotal int) {
 	if parentID == "" {
 		for _, tree := range data {
 			if hasPermission {
 				if tree.ParentID == constant.RootPath {
 					level2 := entity.TreeResponse{Name: tree.Name, ID: tree.ID, DirPath: tree.DirPath}
-					result, total := f.convertTree(data, tree.ID, hasPermission, entity.TreeResponse{})
+					result, total := f.convertTree(data, searchKey, tree.ID, hasPermission, entity.TreeResponse{})
 					if result != nil {
 						level2.Children = append(level2.Children, result...)
 					}
 					level2.ItemCount = tree.ContentCount + total
-					res = append(res, &level2)
-					childTotal += tree.HasSearchSelf + tree.ContentCount + total
+					if searchKey {
+						if level2.ItemCount > 0 || tree.HasSearchSelf > 0 {
+							res = append(res, &level2)
+							childTotal += tree.HasSearchSelf + level2.ItemCount
+						}
+					} else {
+						res = append(res, &level2)
+						childTotal += tree.HasSearchSelf + level2.ItemCount
+					}
+
 				}
 			} else {
 				if tree.ParentID == constant.RootPath && tree.HasDescendant == constant.HasDescendant {
 					level2 := entity.TreeResponse{Name: tree.Name, ID: tree.ID, DirPath: tree.DirPath}
-					result, total := f.convertTree(data, tree.ID, hasPermission, entity.TreeResponse{})
+					result, total := f.convertTree(data, searchKey, tree.ID, hasPermission, entity.TreeResponse{})
 					if result != nil {
 						level2.Children = append(level2.Children, result...)
 					}
 					level2.ItemCount = tree.ContentCount + total
-					res = append(res, &level2)
-					childTotal += tree.HasSearchSelf + tree.ContentCount + total
+					if searchKey {
+						if level2.ItemCount > 0 || tree.HasSearchSelf > 0 {
+							res = append(res, &level2)
+							childTotal += tree.HasSearchSelf + level2.ItemCount
+						}
+					} else {
+						res = append(res, &level2)
+						childTotal += tree.HasSearchSelf + level2.ItemCount
+					}
 				}
 			}
 			if tree.ItemType == constant.IsContent {
@@ -2384,33 +2411,41 @@ func (f *FolderModel) convertTree(data []*entity.TreeData, parentID string, hasP
 	for _, tree := range data {
 		if hasPermission {
 			if tree.ParentID == parentID {
-				currentLeveTreeL := entity.TreeResponse{}
+				currentLeveTreeL := entity.TreeResponse{Name: tree.Name, ID: tree.ID, DirPath: tree.DirPath}
 				parentTree = entity.TreeResponse{ID: tree.ID, Name: tree.Name, DirPath: tree.DirPath}
-				result, total := f.convertTree(data, tree.ID, hasPermission, parentTree)
-				currentLeveTreeL.Name = tree.Name
-				currentLeveTreeL.ID = tree.ID
-				currentLeveTreeL.DirPath = tree.DirPath
-				currentLeveTreeL.ItemCount = tree.ContentCount + total
-				childTotal += tree.HasSearchSelf + tree.ContentCount + total
+				result, total := f.convertTree(data, searchKey, tree.ID, hasPermission, parentTree)
 				if result != nil {
 					currentLeveTreeL.Children = append(currentLeveTreeL.Children, result...)
 				}
-				res = append(res, &currentLeveTreeL)
+				currentLeveTreeL.ItemCount = tree.ContentCount + total
+				if searchKey {
+					if currentLeveTreeL.ItemCount > 0 || tree.HasSearchSelf > 0 {
+						res = append(res, &currentLeveTreeL)
+						childTotal += tree.HasSearchSelf + currentLeveTreeL.ItemCount
+					}
+				} else {
+					res = append(res, &currentLeveTreeL)
+					childTotal += tree.HasSearchSelf + currentLeveTreeL.ItemCount
+				}
 			}
 		} else {
 			if tree.ParentID == parentID && tree.HasDescendant == constant.HasDescendant {
-				currentLeveTreeL := entity.TreeResponse{}
+				currentLeveTreeL := entity.TreeResponse{Name: tree.Name, ID: tree.ID, DirPath: tree.DirPath}
 				parentTree = entity.TreeResponse{ID: tree.ID, Name: tree.Name, DirPath: tree.DirPath}
-				result, total := f.convertTree(data, tree.ID, hasPermission, parentTree)
-				currentLeveTreeL.Name = tree.Name
-				currentLeveTreeL.ID = tree.ID
-				currentLeveTreeL.DirPath = tree.DirPath
-				currentLeveTreeL.ItemCount = tree.ContentCount + total
-				childTotal += tree.HasSearchSelf + tree.ContentCount + total
+				result, total := f.convertTree(data, searchKey, tree.ID, hasPermission, parentTree)
 				if result != nil {
 					currentLeveTreeL.Children = append(currentLeveTreeL.Children, result...)
 				}
-				res = append(res, &currentLeveTreeL)
+				currentLeveTreeL.ItemCount = tree.ContentCount + total
+				if searchKey {
+					if currentLeveTreeL.ItemCount > 0 || tree.HasSearchSelf > 0 {
+						res = append(res, &currentLeveTreeL)
+						childTotal += tree.HasSearchSelf + currentLeveTreeL.ItemCount
+					}
+				} else {
+					res = append(res, &currentLeveTreeL)
+					childTotal += tree.HasSearchSelf + currentLeveTreeL.ItemCount
+				}
 			}
 		}
 	}
