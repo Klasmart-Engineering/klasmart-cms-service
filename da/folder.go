@@ -49,8 +49,6 @@ type IFolderDA interface {
 	UpdateEmptyField(ctx context.Context, tx *dbo.DBContext, fIDs []string) error
 	GetPrivateTree(ctx context.Context, treeCondition *TreeCondition) (data []*entity.TreeData, err error)
 	GetAllTree(ctx context.Context, treeCondition *TreeCondition) (data []*entity.TreeData, err error)
-	GetPrivateTreeSql(contentCondition *ContentCondition) string
-	GetAllTreeSql(forMeCondition *ContentCondition, forOtherCondition *ContentCondition) string
 }
 
 type FolderDA struct {
@@ -417,7 +415,7 @@ type TreeCondition struct {
 }
 
 func (fda *FolderDA) GetPrivateTree(ctx context.Context, treeCondition *TreeCondition) (data []*entity.TreeData, err error) {
-	sql := fda.GetPrivateTreeSql(treeCondition.MyContentCondition)
+	sql := fda.getPrivateTreeSql(treeCondition.MyContentCondition)
 	params := map[string]interface{}{
 		"PublishStatus":   entity.ContentStatusPublished,
 		"Author":          treeCondition.MyContentCondition.Author,
@@ -442,7 +440,7 @@ func (fda *FolderDA) GetPrivateTree(ctx context.Context, treeCondition *TreeCond
 	return
 }
 
-func (fda *FolderDA) GetPrivateTreeSql(contentCondition *ContentCondition) string {
+func (fda *FolderDA) getPrivateTreeSql(contentCondition *ContentCondition) string {
 	var sql []string
 	var whereRootForMeContentSql []string
 	var whereNoRootForMeContentSql []string
@@ -511,7 +509,7 @@ func (fda *FolderDA) GetPrivateTreeSql(contentCondition *ContentCondition) strin
 	return querySql
 }
 
-func (fda *FolderDA) GetAllTreeSql(forMeCondition *ContentCondition, forOtherCondition *ContentCondition) string {
+func (fda *FolderDA) getAllTreeSql(forMeCondition *ContentCondition, forOtherCondition *ContentCondition) string {
 	var sql []string
 	var whereRootForMeContentSql []string
 	var whereNoRootForMeContentSql []string
@@ -615,7 +613,7 @@ func (fda *FolderDA) GetAllTreeSql(forMeCondition *ContentCondition, forOtherCon
 func (fda *FolderDA) GetAllTree(ctx context.Context, treeCondition *TreeCondition) (data []*entity.TreeData, err error) {
 	forMeCondition := treeCondition.MyContentCondition
 	forOtherCondition := treeCondition.OtherContentCondition
-	sql := fda.GetAllTreeSql(forMeCondition, forOtherCondition)
+	sql := fda.getAllTreeSql(forMeCondition, forOtherCondition)
 	params := map[string]interface{}{
 		"PublishStatus":     entity.ContentStatusPublished,
 		"Author":            forMeCondition.Author,
