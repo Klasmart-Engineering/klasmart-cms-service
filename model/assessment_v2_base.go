@@ -48,7 +48,7 @@ type BaseAssessment struct {
 }
 
 func (o *BaseAssessment) MatchAnyOneAttempted() (bool, error) {
-	roomDataMap, err := o.at.GetRoomStudentScoresAndComments()
+	roomDataMap, err := o.at.GetExternalAssessmentServiceData()
 	if err != nil {
 		return false, err
 	}

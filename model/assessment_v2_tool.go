@@ -53,11 +53,13 @@ type AssessmentGetOne struct {
 	outcomeMapFromContent      map[string]*entity.Outcome // key: outcomeID
 	latestContentsFromSchedule []*v2.AssessmentContentView
 	lockedContentsFromSchedule []*v2.AssessmentContentView
-	contentMapFromAssessment   map[string]*v2.AssessmentContent     // key:contentID
-	contentMapFromLiveRoom     map[string]*RoomContentTree          // key: contentID
-	commentResultMap           map[string]string                    // userID
-	outcomeMapFromAssessment   map[string]*v2.AssessmentUserOutcome // key: AssessmentUserID+AssessmentContentID+OutcomeID
-	outcomesFromSchedule       []*entity.Outcome
+	contentMapFromAssessment   map[string]*v2.AssessmentContent // key:contentID
+	contentMapFromLiveRoom     map[string]*RoomContentTree      // key: contentID
+	// key:userID if the data comes from external assessment service
+	// key:assessment_user_id if the data comes from reviewerFeedback
+	commentResultMap         map[string]string
+	outcomeMapFromAssessment map[string]*v2.AssessmentUserOutcome // key: AssessmentUserID+AssessmentContentID+OutcomeID
+	outcomesFromSchedule     []*entity.Outcome
 
 	scheduleReviewMap            map[string]*entity.ScheduleReview      // key:StudentID
 	contentMapFromScheduleReview map[string]*entity.ContentInfoInternal // key:contentID
@@ -305,12 +307,12 @@ func (at *AssessmentTool) GetTeacherMap() (map[string]*entity.IDName, error) {
 	return at.userMap, nil
 }
 
-func (at *AssessmentTool) GetRoomStudentScoresAndComments() (map[string]*external.RoomInfo, error) {
+func (at *AssessmentTool) GetExternalAssessmentServiceData() (map[string]*external.RoomInfo, error) {
 	if at.liveRoomMap == nil {
 		err := at.AsyncInitExternalData(AssessmentExternalInclude{
 			assessmentServiceInclude: &ExternalAssessmentServiceInclude{
 				StudentScore:   true,
-				TeacherComment: true,
+				TeacherComment: false,
 			},
 		})
 		if err != nil {
@@ -981,7 +983,7 @@ func (at *AssessmentTool) initFirstGetRoomData() error {
 	ctx := at.ctx
 	//op := adc.op
 
-	roomDataMap, err := at.GetRoomStudentScoresAndComments()
+	roomDataMap, err := at.GetExternalAssessmentServiceData()
 	if err != nil {
 		return err
 	}
@@ -1022,30 +1024,41 @@ func (at *AssessmentTool) initFirstGetCommentResultMap() error {
 
 	result := make(map[string]string)
 
-	studentRoomInfoMap, err := at.GetRoomStudentScoresAndComments()
+	reviewerFeedbackMap, err := at.GetReviewerFeedbackMap()
 	if err != nil {
 		return err
 	}
 
-	studentRoomInfo, ok := studentRoomInfoMap[at.first.ScheduleID]
-	if !ok {
-		log.Warn(ctx, "not found student room info from studentRoomInfoMap", log.Any("assessment", at.first), log.Any("studentRoomInfoMap", studentRoomInfoMap))
-		return nil
-	}
-
-	for _, item := range studentRoomInfo.TeacherCommentsByStudent {
-		if item.User == nil {
-			log.Warn(ctx, "get user comment error,user is empty", log.Any("studentRoomInfo", studentRoomInfo))
-			continue
+	if len(reviewerFeedbackMap) > 0 {
+		for _, item := range reviewerFeedbackMap {
+			result[item.AssessmentUserID] = item.ReviewerComment
+		}
+	} else {
+		studentRoomInfoMap, err := at.GetExternalAssessmentServiceData()
+		if err != nil {
+			return err
 		}
 
-		if len(item.TeacherComments) <= 0 {
-			continue
+		studentRoomInfo, ok := studentRoomInfoMap[at.first.ScheduleID]
+		if !ok {
+			log.Warn(ctx, "not found student room info from studentRoomInfoMap", log.Any("assessment", at.first), log.Any("studentRoomInfoMap", studentRoomInfoMap))
+			return nil
 		}
 
-		latestComment := item.TeacherComments[len(item.TeacherComments)-1]
+		for _, item := range studentRoomInfo.TeacherCommentsByStudent {
+			if item.User == nil {
+				log.Warn(ctx, "get user comment error,user is empty", log.Any("studentRoomInfo", studentRoomInfo))
+				continue
+			}
 
-		result[item.User.UserID] = latestComment.Comment
+			if len(item.TeacherComments) <= 0 {
+				continue
+			}
+
+			latestComment := item.TeacherComments[len(item.TeacherComments)-1]
+
+			result[item.User.UserID] = latestComment.Comment
+		}
 	}
 
 	at.commentResultMap = result

@@ -59,7 +59,7 @@ func (o *ReviewStudyAssessment) MatchCompleteRate() (map[string]float64, error) 
 		}
 	}
 
-	roomDataMap, err := o.at.GetRoomStudentScoresAndComments()
+	roomDataMap, err := o.at.GetExternalAssessmentServiceData()
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiff
 		return nil, err
 	}
 
-	roomDataMap, err := o.at.GetRoomStudentScoresAndComments()
+	roomDataMap, err := o.at.GetExternalAssessmentServiceData()
 	if err != nil {
 		return nil, err
 	}
@@ -176,8 +176,10 @@ func (o *ReviewStudyAssessment) MatchDiffContentStudents() ([]*v2.AssessmentDiff
 			Results:         make([]*v2.DiffContentStudentResultReply, 0),
 		}
 
-		if comment, ok := commentResultMap[userItem.UserID]; ok {
+		if comment, ok := commentResultMap[userItem.ID]; ok {
 			replyItem.ReviewerComment = comment
+		} else {
+			replyItem.ReviewerComment = commentResultMap[userItem.UserID]
 		}
 
 		if studentReviewItem, ok := studentReviewMap[userItem.UserID]; ok {
