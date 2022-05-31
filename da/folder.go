@@ -444,8 +444,6 @@ func (fda *FolderDA) getPrivateTreeSql(contentCondition *ContentCondition) strin
 	var sql []string
 	var whereRootForMeContentSql []string
 	var whereNoRootForMeContentSql []string
-	var whereRootForMeContentSqlString string
-	var whereNoRootForMeContentSqlString string
 	whereRootForMeContentSql = append(whereRootForMeContentSql, `( content_type in (1,2,10)
                       and publish_status in (@PublishStatus) and author =@Author and delete_at=0 `)
 	if len(contentCondition.VisibilitySettings) > 0 {
@@ -467,8 +465,8 @@ func (fda *FolderDA) getPrivateTreeSql(contentCondition *ContentCondition) strin
 	whereNoRootForMeContentSql = append(whereNoRootForMeContentSql, whereRootForMeContentSql...)
 	whereRootForMeContentSql = append(whereRootForMeContentSql, ` and dir_path = @Path ) `)
 	whereNoRootForMeContentSql = append(whereNoRootForMeContentSql, ` and dir_path <> @Path ) `)
-	whereRootForMeContentSqlString = strings.Join(whereRootForMeContentSql, " ")
-	whereNoRootForMeContentSqlString = strings.Join(whereNoRootForMeContentSql, " ")
+	whereRootForMeContentSqlString := strings.Join(whereRootForMeContentSql, " ")
+	whereNoRootForMeContentSqlString := strings.Join(whereNoRootForMeContentSql, " ")
 
 	sql = append(sql, `select * from 
            (
@@ -490,7 +488,8 @@ func (fda *FolderDA) getPrivateTreeSql(contentCondition *ContentCondition) strin
             SELECT folder.id,sum(case when isnull(content.content_name) then 0 else 1 end)  content_count FROM cms_folder_items folder
             left join 
             (
-             select * from cms_contents where `+whereNoRootForMeContentSqlString+`
+             select content_name,parent_folder from cms_contents where `+whereNoRootForMeContentSqlString+`
+             union all select content_name,parent_folder from cms_contents where 1!=1
              ) content 
              on folder.id=content.parent_folder
              where  folder.owner_type = @OwnerType and folder.partition = @FolderPartition 
@@ -501,8 +500,15 @@ func (fda *FolderDA) getPrivateTreeSql(contentCondition *ContentCondition) strin
           where cms_folder.owner_type = @OwnerType and cms_folder.partition = @FolderPartition 
           and cms_folder.owner = @OrgID and cms_folder.item_type =@FolderItemType  and cms_folder.delete_at = 0
           union all
-          select '' as parent_id,'' as  id,'' as name,'' as dir_path,(select count(*) from cms_contents where `+whereRootForMeContentSqlString+
-		`) as content_count,0 as item_type,0 as has_search_self,0 has_descendant
+          select '' as parent_id,'' as  id,'' as name,'' as dir_path,
+            (
+              select count(*) from 
+               (
+                select id from cms_contents where `+whereRootForMeContentSqlString+`
+                   union all 
+                select id from cms_contents where 1!=1
+               ) contents
+            ) as content_count,0 as item_type,0 as has_search_self,0 has_descendant
           ) tree_data
           order by name `)
 	querySql := strings.Join(sql, "")
@@ -515,8 +521,6 @@ func (fda *FolderDA) getAllTreeSql(forMeCondition *ContentCondition, forOtherCon
 	var whereNoRootForMeContentSql []string
 	var whereRootForOtherContentSql []string
 	var whereNoRootForOtherContentSql []string
-	var whereRootForAllContentSqlString string
-	var whereNoRootForAllContentSqlString string
 
 	// for me condition
 	whereRootForMeContentSql = append(whereRootForMeContentSql, ` ( content_type in (1,2,10)
@@ -569,8 +573,6 @@ func (fda *FolderDA) getAllTreeSql(forMeCondition *ContentCondition, forOtherCon
 	rootForOtherContentSqlString := strings.Join(whereRootForOtherContentSql, " ")
 	noRootForMeContentSqlString := strings.Join(whereNoRootForMeContentSql, " ")
 	noRootForOtherContentSqlString := strings.Join(whereNoRootForOtherContentSql, " ")
-	whereRootForAllContentSqlString = " ( " + rootForMeContentSqlString + " or " + rootForOtherContentSqlString + ")"
-	whereNoRootForAllContentSqlString = " ( " + noRootForMeContentSqlString + " or " + noRootForOtherContentSqlString + ")"
 
 	sql = append(sql, `select * from 
            (
@@ -592,7 +594,9 @@ func (fda *FolderDA) getAllTreeSql(forMeCondition *ContentCondition, forOtherCon
             SELECT folder.id,sum(case when isnull(content.content_name) then 0 else 1 end)  content_count FROM cms_folder_items folder
             left join 
             (
-             select * from cms_contents where `+whereNoRootForAllContentSqlString+`
+             select content_name,parent_folder from cms_contents where `+noRootForMeContentSqlString+`
+             union 
+             select content_name,parent_folder from cms_contents where `+noRootForOtherContentSqlString+`
              ) content 
              on folder.id=content.parent_folder
              where  folder.owner_type = @OwnerType and folder.partition = @FolderPartition 
@@ -603,8 +607,15 @@ func (fda *FolderDA) getAllTreeSql(forMeCondition *ContentCondition, forOtherCon
           where cms_folder.owner_type = @OwnerType and cms_folder.partition = @FolderPartition 
           and cms_folder.owner = @OrgID and cms_folder.item_type =@FolderItemType  and cms_folder.delete_at = 0
           union all
-          select '' as parent_id,'' as  id,'' as name,'' as dir_path,(select count(*) from cms_contents where `+whereRootForAllContentSqlString+
-		`) as content_count,0 as item_type,0 as has_search_self,0 has_descendant
+          select '' as parent_id,'' as  id,'' as name,'' as dir_path,
+            ( 
+             select count(*) from 
+             (
+                select id  from cms_contents where `+rootForMeContentSqlString+`
+                union  
+                select id  from cms_contents where `+rootForOtherContentSqlString+`
+             ) contents
+            ) as content_count,0 as item_type,0 as has_search_self,0 has_descendant
           ) tree_data
           order by name `)
 	querySql := strings.Join(sql, "")
