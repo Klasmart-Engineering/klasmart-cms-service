@@ -842,11 +842,13 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		}
 		existItem.UpdateAt = now
 
-		if reviewerFeedbackItem, ok := reviewerFeedbackMap[existItem.ID]; ok && reviewerFeedbackItem.ReviewerComment != item.ReviewerComment {
-			reviewerFeedbackItem.ReviewerComment = item.ReviewerComment
-			reviewerFeedbackItem.ReviewerID = op.UserID
-			reviewerFeedbackItem.UpdateAt = now
-			waitUpdatedReviewerFeedbacks = append(waitUpdatedReviewerFeedbacks, reviewerFeedbackItem)
+		if reviewerFeedbackItem, ok := reviewerFeedbackMap[existItem.ID]; ok {
+			if reviewerFeedbackItem.ReviewerComment != item.ReviewerComment {
+				reviewerFeedbackItem.ReviewerComment = item.ReviewerComment
+				reviewerFeedbackItem.ReviewerID = op.UserID
+				reviewerFeedbackItem.UpdateAt = now
+				waitUpdatedReviewerFeedbacks = append(waitUpdatedReviewerFeedbacks, reviewerFeedbackItem)
+			}
 		} else if item.ReviewerComment != "" {
 			reviewerFeedbackItem := &v2.AssessmentReviewerFeedback{
 				ID:                utils.NewID(),
