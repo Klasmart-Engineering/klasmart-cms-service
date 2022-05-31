@@ -813,6 +813,14 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		return err
 	}
 
+	reviewerFeedbackMap, err := at.GetReviewerFeedbackMap()
+	if err != nil {
+		return err
+	}
+
+	waitAddReviewerFeedbacks := make([]*v2.AssessmentReviewerFeedback, 0)
+	waitUpdatedReviewerFeedbacks := make([]*v2.AssessmentReviewerFeedback, 0)
+
 	waitUpdatedUsers := make([]*v2.AssessmentUser, 0)
 	for _, item := range req.Students {
 		existItem, ok := userIDAndUserTypeMap[at.GetKey([]string{item.StudentID, v2.AssessmentUserTypeStudent.String()})]
@@ -833,23 +841,37 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			}
 		}
 		existItem.UpdateAt = now
+
+		if reviewerFeedbackItem, ok := reviewerFeedbackMap[existItem.ID]; ok && reviewerFeedbackItem.ReviewerComment != item.ReviewerComment {
+			reviewerFeedbackItem.ReviewerComment = item.ReviewerComment
+			reviewerFeedbackItem.ReviewerID = op.UserID
+			reviewerFeedbackItem.UpdateAt = now
+			waitUpdatedReviewerFeedbacks = append(waitUpdatedReviewerFeedbacks, reviewerFeedbackItem)
+		} else if item.ReviewerComment != "" {
+			reviewerFeedbackItem := &v2.AssessmentReviewerFeedback{
+				ID:                utils.NewID(),
+				AssessmentUserID:  existItem.ID,
+				ReviewerID:        op.UserID,
+				StudentFeedbackID: "",
+				AssessScore:       0,
+				ReviewerComment:   item.ReviewerComment,
+				CreateAt:          now,
+				UpdateAt:          0,
+				DeleteAt:          0,
+			}
+			waitAddReviewerFeedbacks = append(waitAddReviewerFeedbacks, reviewerFeedbackItem)
+		}
 		waitUpdatedUsers = append(waitUpdatedUsers, existItem)
 	}
 
-	roomDataMap, err := at.GetRoomStudentScoresAndComments()
+	roomDataMap, err := at.GetExternalAssessmentServiceData()
 	if err != nil {
 		return err
 	}
 	roomData, hasScore := roomDataMap[waitUpdatedAssessment.ScheduleID]
-	//userRoomData := make(map[string]*external.H5PUserContentScore)
 	canSetScoreContentMap := make(map[string]map[string]*AllowEditScoreContent)
-	studentCommentMap := make(map[string]string)
 	if hasScore {
 		canSetScoreContentMap, err = GetAssessmentExternalService().AllowEditScoreContent(ctx, roomData.ScoresByUser)
-		if err != nil {
-			return err
-		}
-		studentCommentMap, err = GetAssessmentExternalService().StudentCommentMap(ctx, roomData.TeacherCommentsByStudent)
 		if err != nil {
 			return err
 		}
@@ -857,14 +879,15 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 
 	if waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeReviewStudy {
 		return a.updateReviewStudyAssessment(ctx, op, updateReviewStudyAssessmentInput{
-			status:                status,
-			req:                   req,
-			waitUpdatedAssessment: waitUpdatedAssessment,
-			waitUpdatedUsers:      waitUpdatedUsers,
-			userIDAndUserTypeMap:  userIDAndUserTypeMap,
-			at:                    at,
-			canSetScoreContentMap: canSetScoreContentMap,
-			studentCommentMap:     studentCommentMap,
+			status:                      status,
+			req:                         req,
+			waitUpdatedAssessment:       waitUpdatedAssessment,
+			waitUpdatedUsers:            waitUpdatedUsers,
+			userIDAndUserTypeMap:        userIDAndUserTypeMap,
+			at:                          at,
+			canSetScoreContentMap:       canSetScoreContentMap,
+			waitAddReviewerFeedbacks:    waitAddReviewerFeedbacks,
+			waitUpdateReviewerFeedbacks: waitUpdatedReviewerFeedbacks,
 		})
 	}
 
@@ -911,6 +934,7 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 				}
 				waitAddContentItem.ReviewerComment = item.ReviewerComment
 				waitAddContentItem.Status = item.Status
+				waitAddContentItem.CreateAt = now
 			}
 		}
 	}
@@ -979,7 +1003,6 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 
 	// user comment,score, outcomes
 	newScores := make([]*external.H5PSetScoreRequest, 0)
-	newComments := make([]*external.H5PAddRoomCommentRequest, 0)
 
 	contentReqMap := make(map[string]*v2.AssessmentUpdateContentReq)
 	for _, item := range req.Contents {
@@ -1041,30 +1064,13 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 				}
 			}
 		}
-
-		if stuComment, ok := studentCommentMap[stuItem.StudentID]; ok && stuComment != stuItem.ReviewerComment {
-			newComment := external.H5PAddRoomCommentRequest{
-				RoomID:    waitUpdatedAssessment.ScheduleID,
-				StudentID: stuItem.StudentID,
-				Comment:   stuItem.ReviewerComment,
-			}
-			newComments = append(newComments, &newComment)
-		} else if stuItem.ReviewerComment != "" {
-			newComment := external.H5PAddRoomCommentRequest{
-				RoomID:    waitUpdatedAssessment.ScheduleID,
-				StudentID: stuItem.StudentID,
-				Comment:   stuItem.ReviewerComment,
-			}
-			newComments = append(newComments, &newComment)
-		}
 	}
 
 	// update student comment
-	err = a.updateStudentCommentAndScore(ctx, op, &updateStudentCommentAndScoreInput{
+	err = a.updateStudentScore(ctx, op, &updateStudentCommentAndScoreInput{
 		assessmentType: waitUpdatedAssessment.AssessmentType,
 		scheduleID:     waitUpdatedAssessment.ScheduleID,
 		newScores:      newScores,
-		newComments:    newComments,
 		at:             at,
 	})
 	if err != nil {
@@ -1117,6 +1123,18 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 			}
 		}
 
+		if len(waitAddReviewerFeedbacks) > 0 {
+			if _, err := assessmentV2.GetAssessmentUserResultDA().InsertTx(ctx, tx, waitAddReviewerFeedbacks); err != nil {
+				return err
+			}
+		}
+
+		if len(waitUpdatedReviewerFeedbacks) > 0 {
+			if _, err := assessmentV2.GetAssessmentUserResultDA().UpdateTx(ctx, tx, waitUpdatedReviewerFeedbacks); err != nil {
+				return err
+			}
+		}
+
 		return nil
 	})
 
@@ -1131,21 +1149,14 @@ type updateStudentCommentAndScoreInput struct {
 	assessmentType v2.AssessmentType
 	scheduleID     string
 	newScores      []*external.H5PSetScoreRequest
-	newComments    []*external.H5PAddRoomCommentRequest
 	at             *AssessmentTool
 }
 
-func (a *assessmentModelV2) updateStudentCommentAndScore(ctx context.Context, op *entity.Operator, input *updateStudentCommentAndScoreInput) error {
+func (a *assessmentModelV2) updateStudentScore(ctx context.Context, op *entity.Operator, input *updateStudentCommentAndScoreInput) error {
 	match, _ := GetAssessmentMatch(input.assessmentType, input.at, AssessmentMatchActionDetail)
 	isAnyoneAttempted, _ := match.MatchAnyOneAttempted()
 	if !isAnyoneAttempted {
 		return nil
-	}
-	if len(input.newComments) > 0 {
-		if _, err := external.GetH5PRoomCommentServiceProvider().BatchAdd(ctx, op, input.newComments); err != nil {
-			log.Warn(ctx, "set student comment error", log.Err(err), log.Any("newComments", input.newComments))
-			return err
-		}
 	}
 
 	// update student score
@@ -1160,14 +1171,15 @@ func (a *assessmentModelV2) updateStudentCommentAndScore(ctx context.Context, op
 }
 
 type updateReviewStudyAssessmentInput struct {
-	status                v2.AssessmentStatus
-	req                   *v2.AssessmentUpdateReq
-	waitUpdatedAssessment *v2.Assessment
-	waitUpdatedUsers      []*v2.AssessmentUser
-	userIDAndUserTypeMap  map[string]*v2.AssessmentUser
-	at                    *AssessmentTool
-	canSetScoreContentMap map[string]map[string]*AllowEditScoreContent
-	studentCommentMap     map[string]string
+	status                      v2.AssessmentStatus
+	req                         *v2.AssessmentUpdateReq
+	waitUpdatedAssessment       *v2.Assessment
+	waitUpdatedUsers            []*v2.AssessmentUser
+	userIDAndUserTypeMap        map[string]*v2.AssessmentUser
+	at                          *AssessmentTool
+	canSetScoreContentMap       map[string]map[string]*AllowEditScoreContent
+	waitAddReviewerFeedbacks    []*v2.AssessmentReviewerFeedback
+	waitUpdateReviewerFeedbacks []*v2.AssessmentReviewerFeedback
 }
 
 func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op *entity.Operator, input updateReviewStudyAssessmentInput) error {
@@ -1188,7 +1200,6 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 
 	// user comment,score
 	newScores := make([]*external.H5PSetScoreRequest, 0)
-	newComments := make([]*external.H5PAddRoomCommentRequest, 0)
 
 	contentReqMap := make(map[string]*v2.AssessmentUpdateContentReq)
 	for _, item := range input.req.Contents {
@@ -1224,30 +1235,13 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 				}
 			}
 		}
-
-		if stuComment, ok := input.studentCommentMap[stuItem.StudentID]; ok && stuComment != stuItem.ReviewerComment {
-			newComment := external.H5PAddRoomCommentRequest{
-				RoomID:    input.waitUpdatedAssessment.ScheduleID,
-				StudentID: stuItem.StudentID,
-				Comment:   stuItem.ReviewerComment,
-			}
-			newComments = append(newComments, &newComment)
-		} else if stuItem.ReviewerComment != "" {
-			newComment := external.H5PAddRoomCommentRequest{
-				RoomID:    input.waitUpdatedAssessment.ScheduleID,
-				StudentID: stuItem.StudentID,
-				Comment:   stuItem.ReviewerComment,
-			}
-			newComments = append(newComments, &newComment)
-		}
 	}
 
 	// update student comment
-	err = a.updateStudentCommentAndScore(ctx, op, &updateStudentCommentAndScoreInput{
+	err = a.updateStudentScore(ctx, op, &updateStudentCommentAndScoreInput{
 		assessmentType: v2.AssessmentTypeReviewStudy,
 		scheduleID:     input.waitUpdatedAssessment.ScheduleID,
 		newScores:      newScores,
-		newComments:    newComments,
 		at:             input.at,
 	})
 	if err != nil {
@@ -1268,6 +1262,18 @@ func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op 
 
 		if len(input.waitUpdatedUsers) > 0 {
 			if _, err := assessmentV2.GetAssessmentUserDA().UpdateTx(ctx, tx, input.waitUpdatedUsers); err != nil {
+				return err
+			}
+		}
+
+		if len(input.waitAddReviewerFeedbacks) > 0 {
+			if _, err := assessmentV2.GetAssessmentUserResultDA().InsertTx(ctx, tx, input.waitAddReviewerFeedbacks); err != nil {
+				return err
+			}
+		}
+
+		if len(input.waitUpdateReviewerFeedbacks) > 0 {
+			if _, err := assessmentV2.GetAssessmentUserResultDA().UpdateTx(ctx, tx, input.waitUpdateReviewerFeedbacks); err != nil {
 				return err
 			}
 		}

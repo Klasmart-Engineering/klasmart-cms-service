@@ -59,7 +59,7 @@ func (o *OnlineStudyAssessment) MatchCompleteRate() (map[string]float64, error) 
 		}
 	}
 
-	roomDataMap, err := o.at.GetRoomStudentScoresAndComments()
+	roomDataMap, err := o.at.GetExternalAssessmentServiceData()
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,12 @@ func (o *OnlineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 			ProcessStatus: item.StatusBySystem,
 			Results:       nil,
 		}
-		studentReply.ReviewerComment = commentResultMap[item.UserID]
+
+		if comment, ok := commentResultMap[item.ID]; ok {
+			studentReply.ReviewerComment = comment
+		} else {
+			studentReply.ReviewerComment = commentResultMap[item.UserID]
+		}
 
 		for _, content := range contentsReply {
 			resultReply := &v2.AssessmentStudentResultReply{

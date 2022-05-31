@@ -15,7 +15,6 @@ import (
 
 type AssessmentServiceProvider interface {
 	Get(ctx context.Context, operator *entity.Operator, roomIDs []string, options ...AssessmentServiceOption) (map[string]*RoomInfo, error)
-	SetScoreAndComment(ctx context.Context, operator *entity.Operator, scores []*SetScoreAndComment) error
 }
 
 type AssessmentServiceOption func(option *AssessmentServiceGetOption)
@@ -139,82 +138,6 @@ type SetScore struct {
 	ContentID    string
 	SubContentID string
 	Score        float64
-}
-
-func (s *AssessmentService) SetScoreAndComment(ctx context.Context, operator *entity.Operator, scores []*SetScoreAndComment) error {
-	mutation := `
-mutation {
-	{{range $i, $e := .}}
-	c{{$i}}: setComment(
-		comment: """{{$e.Comment}}"""
-		student_id: "{{$e.StudentID}}"
-		room_id: "{{$e.RoomID}}"
-	) {
-		student {
-			user_id
-		}
-	}
-	{{range $i2, $e2 := $e.Scores}}
-	s{{$i2}}: setScore(
-		room_id: "{{$e.RoomID}}"
-		student_id: "{{$e.StudentID}}"
-		content_id: "{{$e2.ContentID}}"
-		subcontent_id: "{{$e2.SubContentID}}"
-		score: {{$e2.Score}}
-	) {
-		student {
-			user_id
-		}
-		content {
-			content_id
-		}
-	}
-	{{end}}
-	{{end}}
-}`
-
-	temp, err := template.New("").Parse(mutation)
-	if err != nil {
-		log.Error(ctx, "init template failed", log.Err(err))
-		return err
-	}
-
-	buffer := new(bytes.Buffer)
-	err = temp.Execute(buffer, scores)
-	if err != nil {
-		log.Error(ctx, "execute template failed", log.Err(err), log.Any("scores", scores))
-		return err
-	}
-
-	_request := chlorine.NewRequest(buffer.String(), chlorine.ReqToken(operator.Token))
-
-	data := map[string]interface{}{}
-	response := &chlorine.Response{
-		Data: &data,
-	}
-
-	_, err = GetH5PClient().Run(ctx, _request, response)
-	if err != nil {
-		log.Error(ctx, "set room scores failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.String("query", buffer.String()),
-			log.Any("requests", scores))
-		return err
-	}
-
-	if len(response.Errors) > 0 {
-		log.Error(ctx, "set room scores failed",
-			log.Err(response.Errors),
-			log.Any("operator", operator),
-			log.String("query", buffer.String()),
-			log.Any("requests", scores))
-		return response.Errors
-	}
-
-	log.Debug(ctx, "set room score success", log.Any("requests", scores))
-
-	return nil
 }
 
 func (s *AssessmentService) GetScoresByRoomIDs(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string][]*H5PUserScores, error) {
@@ -363,11 +286,6 @@ fragment scoresByUser on Room {
 
 	return scores, nil
 }
-
-//
-//type ScoresByContent struct {
-//	Content *H5PContent `json:"content"`
-//}
 
 type RoomInfo struct {
 	ScoresByUser             []*H5PUserScores               `json:"scoresByUser"`

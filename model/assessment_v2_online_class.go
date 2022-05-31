@@ -336,7 +336,12 @@ func (o *OnlineClassAssessment) MatchStudents(contentsReply []*v2.AssessmentCont
 			ProcessStatus: item.StatusBySystem,
 			Results:       nil,
 		}
-		studentReply.ReviewerComment = commentResultMap[item.UserID]
+
+		if comment, ok := commentResultMap[item.ID]; ok {
+			studentReply.ReviewerComment = comment
+		} else {
+			studentReply.ReviewerComment = commentResultMap[item.UserID]
+		}
 
 		for _, content := range contentsReply {
 			resultReply := &v2.AssessmentStudentResultReply{
