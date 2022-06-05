@@ -203,12 +203,11 @@ func (m *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	}
 
 	for _, item := range res.Items {
+		item.StudentName = nameMap[item.StudentID]
 		if _, ok := studentOutcomeMap[item.StudentID]; !ok {
-			//item.NotAchievedCount = len(outcomeIDMap)
 			continue
 		}
 		item.Attend = true
-		item.StudentName = nameMap[item.StudentID]
 		for _, outcomes := range studentOutcomeMap[item.StudentID] {
 			statusMap := m.mapOutcomeStatus(ctx, outcomes)
 			switch {
