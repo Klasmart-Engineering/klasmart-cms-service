@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 	"sync"
 	"time"
 
@@ -108,6 +109,14 @@ func (m *reportModel) GetLearnerUsageOverview(ctx context.Context, op *entity.Op
 	return
 }
 
+func (m *reportModel) mapOutcomeStatus(ctx context.Context, status []string) map[string]bool {
+	result := make(map[string]bool)
+	for _, s := range status {
+		result[s] = true
+	}
+	return result
+}
+
 // region assessment
 
 func (m *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsAchievementReportRequest) (res *entity.StudentsAchievementReportResponse, err error) {
@@ -153,9 +162,9 @@ func (m *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 		}
 	}
 
-	students, err := m.getStudentsInClass(ctx, operator, req.ClassID)
+	studentsOutcomes, err := da.GetReportDA().GetStudentOutcome(ctx, operator, req)
 	if err != nil {
-		log.Error(ctx, "list students report: get students",
+		log.Error(ctx, "get student outcome",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("req", req),
@@ -163,46 +172,57 @@ func (m *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 		return nil, err
 	}
 
-	items, err := da.GetReportDA().GetStudentOutcomeCount(ctx, operator, req)
-	if err != nil {
-		return
-	}
-	mRes := map[string]*entity.StudentAchievementReportItem{}
-	for _, item := range items {
-		if _, ok := mRes[item.StudentID]; !ok {
-			mRes[item.StudentID] = &entity.StudentAchievementReportItem{}
+	studentOutcomeMap := make(map[string]map[string][]string)
+	//outcomeIDMap := make(map[string]bool)
+	var studentIDs []string
+	for _, so := range studentsOutcomes {
+		//outcomeIDMap[so.OutcomeID] = true
+		if _, ok := studentOutcomeMap[so.StudentID]; !ok {
+			studentOutcomeMap[so.StudentID] = make(map[string][]string)
+			item := &entity.StudentAchievementReportItem{
+				StudentID: so.StudentID,
+				Attend:    false,
+			}
+			res.Items = append(res.Items, item)
+			studentIDs = append(studentIDs, so.StudentID)
 		}
+		if so.StatusByUser == string(v2.AssessmentUserStatusParticipate) {
+			studentOutcomeMap[so.StudentID][so.OutcomeID] = append(studentOutcomeMap[so.StudentID][so.OutcomeID], so.Status)
+		}
+	}
 
-		switch {
-		case item.CountOfNotAchieved == item.CountOfAll:
-			mRes[item.StudentID].NotAchievedCount++
-		case item.CountOfNotCovered == item.CountOfAll:
-			mRes[item.StudentID].NotAttemptedCount++
-		default:
-			mRes[item.StudentID].AchievedCount++
-		}
+	nameMap, err := external.GetUserServiceProvider().BatchGetNameMap(ctx, operator, studentIDs)
+	if err != nil {
+		log.Error(ctx, "get student name",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("req", req),
+			log.Any("ids", studentIDs),
+		)
+		return nil, err
 	}
-	for _, student := range students {
-		item := &entity.StudentAchievementReportItem{
-			StudentID:         student.ID,
-			StudentName:       student.Name(),
-			Attend:            false,
-			AchievedCount:     0,
-			NotAchievedCount:  0,
-			NotAttemptedCount: 0,
+
+	for _, item := range res.Items {
+		if _, ok := studentOutcomeMap[item.StudentID]; !ok {
+			//item.NotAchievedCount = len(outcomeIDMap)
+			continue
 		}
-		if _, ok := mRes[student.ID]; ok {
-			item.NotAchievedCount = mRes[student.ID].NotAchievedCount
-			item.AchievedCount = mRes[student.ID].AchievedCount
-			item.NotAttemptedCount = mRes[student.ID].NotAttemptedCount
-			if item.AchievedCount+item.NotAchievedCount > 0 {
-				item.Attend = true
+		item.Attend = true
+		item.StudentName = nameMap[item.StudentID]
+		for _, outcomes := range studentOutcomeMap[item.StudentID] {
+			statusMap := m.mapOutcomeStatus(ctx, outcomes)
+			switch {
+			case statusMap[string(v2.AssessmentUserOutcomeStatusAchieved)]:
+				item.AchievedCount++
+			case statusMap[string(v2.AssessmentUserOutcomeStatusNotAchieved)]:
+				item.NotAchievedCount++
+			case statusMap[string(v2.AssessmentUserOutcomeStatusNotCovered)]:
+				item.NotAttemptedCount++
+			default:
+				item.StatusUnknown++
 			}
 		}
-
-		res.Items = append(res.Items, item)
 	}
-
 	return
 }
 
