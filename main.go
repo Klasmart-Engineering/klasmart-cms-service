@@ -85,8 +85,6 @@ func initLogger() {
 func main() {
 	ctx := context.Background()
 
-	initLogger()
-
 	log.Info(ctx, "start kidsloop2 api service")
 	defer func() {
 		if err := recover(); err != nil {
@@ -103,6 +101,8 @@ func main() {
 
 	// read config
 	config.LoadEnvConfig()
+	// previous log used the default logger, here we replace it with env configured params
+	initLogger()
 
 	log.Debug(ctx, "load config successfully", log.Any("config", config.Get()))
 
