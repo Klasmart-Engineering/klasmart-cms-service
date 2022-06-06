@@ -62,8 +62,8 @@ func GetContentDA() IContentDA {
 
 		sharedCache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
 			RedisKeyPrefix:  RedisKeyPrefixContentSharedV2,
-			Expiration:      constant.ContentFolderQueryCacheExpiration,
-			RefreshDuration: constant.ContentFolderQueryCacheRefreshDuration,
+			Expiration:      constant.SharedContentQueryCacheExpiration,
+			RefreshDuration: constant.SharedContentQueryCacheRefreshDuration,
 			RawQuery:        da.querySharedContents})
 		if err != nil {
 			log.Panic(context.Background(), "create shared content cache failed", log.Err(err))
