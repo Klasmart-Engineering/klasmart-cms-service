@@ -61,13 +61,13 @@ func TestListStudentsReport(t *testing.T) {
 	op := &entity.Operator{
 		UserID: "afdfc0d9-ada9-4e66-b225-20f956d1a399",
 		OrgID:  "60c064cc-bbd8-4724-b3f6-b886dce4774f",
-		Token:  "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1NDQzNzczNCwiaXNzIjoia2lkc2xvb3AifQ.fFaQ6laXgJ9U_7_K7CA1R_qmZ5oCeN5jkdQubKU4u8mGZxXgDIX1KfZ9NlGkN0Fkup5gRvmvIwFkTAKav5mh6a46suiZhFD0HVqh90Lg2SlrywPRhT4X5qTWMVw68Q1DJdWLQXQ-mScuPzB_Pde1fN5wOrp4D0m_Z1nx2TM05oU3LhNVN11mk-Mq-3HRFwk6-gIDs2qY0qdv0VZUmBHnUCrSanyGPaqOSEYLw06Vzn40JVTNU_6b3cNPZ1h6UNfA4ZahaS9Ow5hfhEGtfVCBylnyd0h23jK_qHpCR7E_WVSAC9C80AGVhB9vH6wOLckW4N8VzSsmNXdHC0-UVzqnhg",
+		Token:  "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmZGZjMGQ5LWFkYTktNGU2Ni1iMjI1LTIwZjk1NmQxYTM5OSIsImVtYWlsIjoib3JnMTExOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1NDUwODc5OCwiaXNzIjoia2lkc2xvb3AifQ.YlD42bGh9KQsRjIWoJkcRKrPpo0FuRmPtpJrC6FYfrX_SVmjc1xNgx1Ig_ZoTii-D3GhL_ZDD4BcEtqDTz34IwV-8FbnHjfMEITzkdW4BEr9pYalaB3MhGg3psK8kUVvd0kdgi3NSOCTj_XCVU4IRDgwbVB7eMdxk3IdXwHJJkyv5B7t-HQGcQlkeI8oHaWUa2yn7itg1lXcp0a2_k2j149Ipui7d-RThPkQODVpXwaXd_jCQi6muE6CXequDm1an-r2qfV9tNAMAlLEWuXrCfO-xJciiEnfOqs6ndeNjNpFbbGBbQe1fkA7-anHsrLXoqW436y7rOyEHIj3x8bnAw",
 	}
 	request := entity.ListStudentsAchievementReportRequest{
-		TeacherID:    "7f0cfdd6-95c4-497a-a9c2-5422c67cb0fb",
-		ClassID:      "46499f7d-c9aa-4368-9613-18c5ab0f3746",
-		LessonPlanID: "628da79e552ba3b9994c9200",
-		Status:       entity.ReportOutcomeStatusOptionAll,
+		TeacherID:    "afdfc0d9-ada9-4e66-b225-20f956d1a399",
+		ClassID:      "4de15c85-70e1-4a34-9ae7-ed0916b238bf",
+		LessonPlanID: "61f24073ac8f3f618f22da23",
+		Status:       entity.ReportOutcomeStatusOptionNotAttempted,
 		SortBy:       "desc",
 	}
 	response, err := GetReportModel().ListStudentsReport(ctx, dbo.MustGetDB(ctx), op, request)
