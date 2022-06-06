@@ -9,7 +9,6 @@ import (
 	"github.com/KL-Engineering/chlorine"
 	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/kidsloop-cache/cache"
-	"github.com/KL-Engineering/kidsloop-cms-service/config"
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	"github.com/KL-Engineering/kidsloop-cms-service/utils"
@@ -55,16 +54,18 @@ var (
 
 func GetSchoolServiceProvider() SchoolServiceProvider {
 	_amsSchoolOnce.Do(func() {
-		if config.Get().AMS.UseDeprecatedQuery {
-			_amsSchoolService = &AmsSchoolService{
-				BaseCacheKey: kl2cache.KeyByStrings{
-					"kl2cache",
-					"AmsSchoolService",
-				},
-			}
-		} else {
-			_amsSchoolService = &AmsSchoolConnectionService{}
-		}
+		// comment just for load test
+		//if config.Get().AMS.UseDeprecatedQuery {
+		//	_amsSchoolService = &AmsSchoolService{
+		//		BaseCacheKey: kl2cache.KeyByStrings{
+		//			"kl2cache",
+		//			"AmsSchoolService",
+		//		},
+		//	}
+		//} else {
+		//	_amsSchoolService = &AmsSchoolConnectionService{}
+		//}
+		_amsSchoolService = &AmsSchoolConnectionService{}
 	})
 
 	return _amsSchoolService

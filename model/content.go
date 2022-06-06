@@ -3894,7 +3894,7 @@ func (c *ContentModel) getVisibilitySettingsType(ctx context.Context, visibility
 			}
 		}
 	}
-	log.Info(ctx, "visibility settings check result",
+	log.Debug(ctx, "visibility settings check result",
 		log.Strings("visibilitySettings", visibilitySettings),
 		log.Bool("containsOrg", containsOrg),
 		log.Bool("containsOtherSchools", containsOtherSchools),

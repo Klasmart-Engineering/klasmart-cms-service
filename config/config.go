@@ -51,9 +51,14 @@ type Config struct {
 	User                  UserConfig            `json:"user" yaml:"user"`
 	Report                ReportConfig          `json:"report" yaml:"report"`
 	NewRelic              NewRelicConfig        `json:"new_relic" yaml:"new_relic"`
+	Log                   LogConfig             `json:"log_config" yaml:"log_config"`
 }
 
 var config = &Config{}
+
+type LogConfig struct {
+	Level log.LogLevel `json:"level"`
+}
 
 type CORSConfig struct {
 	AllowOrigins      []string `json:"allow_origins"`
@@ -224,6 +229,7 @@ func LoadEnvConfig() {
 	loadUserConfig(ctx)
 	loadReportConfig(ctx)
 	loadNewRelicConfig(ctx)
+	loadLogConfig(ctx)
 }
 
 func loadShowInternalErrorTypeConfig(ctx context.Context) {
@@ -596,6 +602,13 @@ func loadNewRelicConfig(ctx context.Context) {
 		key := strings.TrimSpace(kv[0])
 		val := strings.TrimSpace(kv[1])
 		nr.NewRelicLabels[key] = val
+	}
+}
+
+func loadLogConfig(ctx context.Context) {
+	config.Log.Level = log.LogLevel(os.Getenv("LOG_LEVEL"))
+	if config.Log.Level == "" {
+		config.Log.Level = constant.DefaultLogLevel
 	}
 }
 

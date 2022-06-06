@@ -756,6 +756,7 @@ func (s *Server) convertQueryContentResult(ctx context.Context, cdr *entity.Cont
 // @Failure 403 {object} BadRequestResponse
 // @Router /contents_folders [get]
 func (s *Server) queryFolderContent(c *gin.Context) {
+	utils.InsertCacheIntoGinCtx(c)
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := s.queryContentCondition(c, op)

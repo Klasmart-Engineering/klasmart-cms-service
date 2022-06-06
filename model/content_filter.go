@@ -3,12 +3,11 @@ package model
 import (
 	"context"
 	"errors"
-	"sync"
-
 	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	"github.com/KL-Engineering/kidsloop-cms-service/external"
 	"github.com/KL-Engineering/kidsloop-cms-service/utils"
+	"sync"
 )
 
 var (
@@ -187,7 +186,11 @@ func (cf *ContentFilterModel) filterVisibilitySettings(ctx context.Context, quer
 }
 
 func (cf *ContentFilterModel) QueryUserSchools(ctx context.Context, user *entity.Operator) (*contentFilterUserSchoolInfo, error) {
-	//todo: complete it
+	var ret *contentFilterUserSchoolInfo
+	if exists := utils.MaybeGetFromCtx(ctx, user.UserID, &ret); exists {
+		return ret, nil
+	}
+
 	schools, err := external.GetSchoolServiceProvider().GetByOrganizationID(ctx, user, user.OrgID)
 	if err != nil {
 		log.Error(ctx, "GetByOrganizationID failed",
@@ -202,6 +205,7 @@ func (cf *ContentFilterModel) QueryUserSchools(ctx context.Context, user *entity
 			log.Any("user", user))
 		return nil, err
 	}
+
 	schoolInfo := &contentFilterUserSchoolInfo{
 		MySchool:  make([]string, len(mySchools)),
 		AllSchool: make([]string, len(schools)),
@@ -212,6 +216,9 @@ func (cf *ContentFilterModel) QueryUserSchools(ctx context.Context, user *entity
 	for i := range mySchools {
 		schoolInfo.MySchool[i] = mySchools[i].ID
 	}
+
+	// store into ctx cache
+	utils.MaybeCacheIntoCtx(ctx, user.UserID, schoolInfo)
 
 	return schoolInfo, nil
 }
