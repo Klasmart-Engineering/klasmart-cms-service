@@ -36,7 +36,7 @@ type IContentDA interface {
 	GetLessonPlansCanSchedule(ctx context.Context, op *entity.Operator, cond *entity.ContentConditionRequest, condOrgContent dbo.Conditions, programGroups []*entity.ProgramGroup) (total int, lps []*entity.LessonPlanForSchedule, err error)
 
 	CleanCache(ctx context.Context)
-	SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, op *entity.Operator) (response entity.QuerySharedContentV2Response, err error)
+	SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, op *entity.Operator) (*entity.QuerySharedContentV2Response, error)
 }
 
 var (
@@ -50,7 +50,7 @@ func GetContentDA() IContentDA {
 			ContentMySQLDA: new(ContentMySQLDA),
 		}
 
-		cache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
+		folderCache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
 			RedisKeyPrefix:  RedisKeyPrefixContentFolderQuery,
 			Expiration:      constant.ContentFolderQueryCacheExpiration,
 			RefreshDuration: constant.ContentFolderQueryCacheRefreshDuration,
@@ -58,8 +58,17 @@ func GetContentDA() IContentDA {
 		if err != nil {
 			log.Panic(context.Background(), "create content and folder cache failed", log.Err(err))
 		}
+		da.contentFolderCache = folderCache
 
-		da.contentFolderCache = cache
+		sharedCache, err := utils.NewLazyRefreshCache(&utils.LazyRefreshCacheOption{
+			RedisKeyPrefix:  RedisKeyPrefixContentSharedV2,
+			Expiration:      constant.SharedContentQueryCacheExpiration,
+			RefreshDuration: constant.SharedContentQueryCacheRefreshDuration,
+			RawQuery:        da.querySharedContents})
+		if err != nil {
+			log.Panic(context.Background(), "create shared content cache failed", log.Err(err))
+		}
+		da.sharedContentCache = sharedCache
 
 		contentDA = da
 	})
@@ -70,6 +79,7 @@ func GetContentDA() IContentDA {
 type ContentDA struct {
 	*ContentMySQLDA
 	contentFolderCache *utils.LazyRefreshCache
+	sharedContentCache *utils.LazyRefreshCache
 }
 
 func (c ContentDA) SearchFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 *FolderCondition) (int, []*entity.FolderContent, error) {
@@ -104,6 +114,46 @@ func (c ContentDA) queryContentsAndFolders(ctx context.Context, condition interf
 	}
 
 	return &contentFolderResponse{Total: total, Records: records}, nil
+}
+
+type sharedContentQueryCondition struct {
+	Condition *entity.ContentConditionRequest
+	Operator  *entity.Operator
+}
+
+func (c ContentDA) SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, op *entity.Operator) (*entity.QuerySharedContentV2Response, error) {
+	if !config.Get().RedisConfig.OpenCache {
+		return c.ContentMySQLDA.SearchSharedContentV2(ctx, tx, condition, op)
+	}
+
+	request := &sharedContentQueryCondition{
+		Condition: condition,
+		Operator:  op,
+	}
+
+	response := &entity.QuerySharedContentV2Response{Items: []*entity.QuerySharedContentV2Item{}}
+
+	err := c.sharedContentCache.Get(ctx, request, response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+func (c ContentDA) querySharedContents(ctx context.Context, condition interface{}) (interface{}, error) {
+	request, ok := condition.(*sharedContentQueryCondition)
+	if !ok {
+		log.Error(ctx, "invalid request", log.Any("condition", condition))
+		return nil, constant.ErrInvalidArgs
+	}
+
+	response, err := c.ContentMySQLDA.SearchSharedContentV2(ctx, dbo.MustGetDB(ctx), request.Condition, request.Operator)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
 }
 
 func (c ContentDA) CleanCache(ctx context.Context) {
