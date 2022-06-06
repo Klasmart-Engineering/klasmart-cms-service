@@ -195,3 +195,7 @@ const (
 	HasDescendant                   = 1
 	HasSearchSelf                   = 1
 )
+
+const (
+	DefaultLogLevel = "debug"
+)

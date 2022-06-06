@@ -37,13 +37,7 @@ func pageQuery[ResType ConnectionResponse](ctx context.Context, operator *entity
 				log.Any("operator", operator))
 			return err
 		}
-
-		log.Debug(ctx, "query: fetch success",
-			log.Any("response", res),
-			log.Any("filter", filter),
-			log.Any("pageInfo", pageInfo),
-			log.String("query", qString),
-			log.Any("operator", operator))
+		log.Debug(ctx, "query: fetch success")
 
 		connections := res.Data[string(filter.ConnectionName())]
 		pageInfo = connections.GetPageInfo()

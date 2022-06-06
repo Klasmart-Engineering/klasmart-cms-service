@@ -73,7 +73,7 @@ func initLogger() {
 		}
 
 		return
-	}))
+	}), log.WithLogLevel(config.Get().Log.Level))
 	log.ReplaceGlobals(logger)
 }
 

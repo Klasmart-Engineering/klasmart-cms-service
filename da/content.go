@@ -82,9 +82,8 @@ func (c ContentDA) SearchFolderContentUnsafe(ctx context.Context, tx *dbo.DBCont
 		Condition2: condition2,
 	}
 
-	response := &contentFolderResponse{Records: []*entity.FolderContent{}}
-
-	err := c.contentFolderCache.Get(ctx, request, response)
+	resp, err := c.queryContentsAndFolders(ctx, request)
+	response := resp.(*contentFolderResponse)
 	if err != nil {
 		return 0, nil, err
 	}
