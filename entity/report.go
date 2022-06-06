@@ -29,15 +29,25 @@ type StudentAchievementReportItem struct {
 	AchievedCount     int    `json:"achieved_count"`
 	NotAchievedCount  int    `json:"not_achieved_count"`
 	NotAttemptedCount int    `json:"not_attempted_count"`
+	StatusUnknown     int    `json:"status_unknown,omitempty"`
 }
-type StudentOutcomeCountItem struct {
-	StudentID          string `json:"student_id" gorm:"column:student_id" `
-	OutcomeID          string `json:"outcome_id" gorm:"column:outcome_id" `
-	CountOfUnknown     int    `json:"count_of_unknown" gorm:"column:count_of_unknown" `
-	CountOfAchieved    int    `json:"count_of_achieved" gorm:"column:count_of_achieved" `
-	CountOfNotAchieved int    `json:"count_of_not_achieved" gorm:"column:count_of_not_achieved" `
-	CountOfNotCovered  int    `json:"count_of_not_covered" gorm:"column:count_of_not_covered" `
-	CountOfAll         int    `json:"count_of_all" gorm:"column:count_of_all" `
+
+//type StudentOutcomeCountItem struct {
+//	StudentID          string `json:"student_id" gorm:"column:student_id" `
+//	OutcomeID          string `json:"outcome_id" gorm:"column:outcome_id" `
+//	CountOfUnknown     int    `json:"count_of_unknown" gorm:"column:count_of_unknown" `
+//	CountOfAchieved    int    `json:"count_of_achieved" gorm:"column:count_of_achieved" `
+//	CountOfNotAchieved int    `json:"count_of_not_achieved" gorm:"column:count_of_not_achieved" `
+//	CountOfNotCovered  int    `json:"count_of_not_covered" gorm:"column:count_of_not_covered" `
+//	CountOfAll         int    `json:"count_of_all" gorm:"column:count_of_all" `
+//}
+//
+type StudentOutcome struct {
+	StudentID    string `json:"student_id" gorm:"column:student_id"`
+	AssessmentID string `json:"assessment_id" gorm:"assessment_id"`
+	StatusByUser string `json:"status_by_user" gorm:"status_by_user"`
+	OutcomeID    string `json:"outcome_id" gorm:"column:outcome_id"`
+	Status       string `json:"status" gorm:"status"`
 }
 
 type StudentAchievementReportResponse struct {
