@@ -197,5 +197,5 @@ const (
 )
 
 const (
-	DefaultLogLevel = "debug"
+	DefaultLogLevel = "info"
 )
