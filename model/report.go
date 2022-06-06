@@ -204,7 +204,7 @@ func (m *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 
 	for _, item := range res.Items {
 		item.StudentName = nameMap[item.StudentID]
-		if _, ok := studentOutcomeMap[item.StudentID]; !ok {
+		if len(studentOutcomeMap[item.StudentID]) == 0 {
 			continue
 		}
 		item.Attend = true
