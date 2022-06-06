@@ -1,0 +1,2 @@
+-- add index for cms_folder_items table
+alter table cms_folder_items add index `folder_delete_at_item_type_partition_owner_type_owner_name` (`delete_at`,`item_type`,`partition`,`owner_type`,`owner`,`name`);
