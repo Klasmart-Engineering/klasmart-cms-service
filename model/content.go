@@ -137,7 +137,7 @@ type IContentModel interface {
 
 	//For authed content
 	SearchSharedContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
-	SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (response entity.QuerySharedContentV2Response, err error)
+	SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (*entity.QuerySharedContentV2Response, error)
 
 	CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (ContentData, error)
 	ConvertContentObj(ctx context.Context, tx *dbo.DBContext, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error)
@@ -1209,10 +1209,11 @@ func (cm *ContentModel) SearchSharedContent(ctx context.Context, tx *dbo.DBConte
 
 	return response.Total, response.Contents, nil
 }
-func (cm *ContentModel) SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, op *entity.Operator) (response entity.QuerySharedContentV2Response, err error) {
-	response, err = da.GetContentDA().SearchSharedContentV2(ctx, tx, condition, op)
+
+func (cm *ContentModel) SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, op *entity.Operator) (*entity.QuerySharedContentV2Response, error) {
+	response, err := da.GetContentDA().SearchSharedContentV2(ctx, tx, condition, op)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// fill author name
@@ -1221,18 +1222,21 @@ func (cm *ContentModel) SearchSharedContentV2(ctx context.Context, tx *dbo.DBCon
 		userIDs = append(userIDs, item.Author)
 	}
 	if len(userIDs) <= 0 {
-		return
+		return response, nil
 	}
+
 	users, err := external.GetUserServiceProvider().BatchGetNameMap(ctx, op, userIDs)
 	if err != nil {
-		return
+		return nil, err
 	}
+
 	for _, item := range response.Items {
 		if name, ok := users[item.Author]; ok {
 			item.AuthorName = name
 		}
 	}
-	return
+
+	return response, nil
 }
 
 func (cm *ContentModel) searchSharedContent(ctx context.Context, condition interface{}) (interface{}, error) {

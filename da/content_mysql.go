@@ -620,8 +620,8 @@ WHERE ` + rawQuery1 + `
 )) AS records;`
 }
 
-func (cd *ContentMySQLDA) SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, op *entity.Operator) (response entity.QuerySharedContentV2Response, err error) {
-	response.Items = []*entity.QuerySharedContentV2Item{}
+func (cd *ContentMySQLDA) SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, op *entity.Operator) (*entity.QuerySharedContentV2Response, error) {
+
 	sbFolderID := NewSqlBuilder(ctx, `
 select id from cms_folder_items cfi 
 where cfi.id in (
@@ -766,7 +766,11 @@ from cms_contents cc
 	sb = sb.Replace(ctx, "sbContent", sbContent)
 	sql, args, err := sb.Build(ctx)
 	if err != nil {
-		return
+		return nil, err
+	}
+
+	response := &entity.QuerySharedContentV2Response{
+		Items: []*entity.QuerySharedContentV2Item{},
 	}
 
 	response.Total, err = cd.PageRawSQL(ctx, &response.Items, NewContentOrderBy(condition.OrderBy).ToSQL(), sql, dbo.Pager{
@@ -774,7 +778,8 @@ from cms_contents cc
 		PageSize: int(condition.Pager.PageSize),
 	}, args...)
 	if err != nil {
-		return
+		return nil, err
 	}
-	return
+
+	return response, nil
 }
