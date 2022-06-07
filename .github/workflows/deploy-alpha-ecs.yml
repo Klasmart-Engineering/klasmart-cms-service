@@ -55,12 +55,12 @@ jobs:
           ECR_AWS_ACCESS_KEY_ID: ${{ secrets.ECR_AWS_ACCESS_KEY_ID }}
           ECR_AWS_SECRET_ACCESS_KEY: ${{ secrets.ECR_AWS_SECRET_ACCESS_KEY }}
 
-  # deploy-alpha-dev-test:
-  #   needs: build-to-ecr
-  #   uses: KL-Engineering/kidsloop-action-center/.github/workflows/deploy-alpha-dev-call.yml@main
-  #   with:
-  #     ecs_aws_service: kidsloop-alpha-cms
-  #     desired_ocitag: alpha-dev-latest
-  #   secrets:
-  #     AWS_ACCESS_KEY_ID_ALPHA_DEV: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
-  #     AWS_SECRET_ACCESS_KEY_ALPHA_DEV: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
+  deploy-alpha-dev-test:
+    needs: build-to-ecr
+    uses: KL-Engineering/kidsloop-action-center/.github/workflows/deploy-alpha-dev-call.yml@main
+    with:
+      ecs_aws_service: kidsloop-alpha-cms
+      desired_ocitag: alpha-dev-latest
+    secrets:
+      AWS_ACCESS_KEY_ID_ALPHA_DEV: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
+      AWS_SECRET_ACCESS_KEY_ALPHA_DEV: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
