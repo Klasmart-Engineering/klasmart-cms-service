@@ -6,41 +6,27 @@ on:
       - hotfix/*
       - main
 env:
-  GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
   H5P_PRIVATE_KEY: ${{ secrets.H5P_PRIVATE_KEY }}
   H5P_PUBLIC_KEY: ${{ secrets.H5P_PUBLIC_KEY }}
   JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
   AMS_ASSESSMENT_JWT_PUBLIC_KEY: ${{ secrets.AMS_ASSESSMENT_JWT_PUBLIC_KEY }}
   LIVE_TOKEN_PRIVATE_KEY: ${{ secrets.LIVE_TOKEN_PRIVATE_KEY }}
 
+  SERVER_PRIVATE_KEY: ${{ secrets.SERVER_PRIVATE_KEY }}
+  SERVER_USER: ${{ secrets.SERVER_USER }}
+  SERVER_IP: ${{ secrets.SERVER_IP }}
+  SERVER_PORT: ${{secrets.SERVER_PORT}}
+  SERVER_DESTINATION: ${{secrets.SERVER_DESTINATION}}
+
 jobs:
   build-to-ecr:
     name: Build And Deploy ECS
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Build and Push Container
+        uses: KL-Engineering/kidsloop-action-center/.github/actions/gocache@main
         with:
-          persist-credentials: false
-
-      - name: Set up Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: 1.18
-
-      - name: Cache Go Modules
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Configure git credentials
-        run: |
-          git config --global url.https://$GIT_TOKEN@github.com/.insteadOf https://github.com/
+          GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
 
       - name: Build
         run: |
@@ -61,7 +47,7 @@ jobs:
           echo "$LIVE_TOKEN_PRIVATE_KEY" | base64 -d > deploy/live_token_private_key.pem
 
       - name: Build and Push Container
-        uses: ./.github/actions/docker-build-and-push
+        uses: KL-Engineering/kidsloop-action-center/.github/actions/docker-build-and-push@main
         with:
           environment: ${{ needs.generate-version.outputs.tag }}
           region: global
@@ -76,7 +62,7 @@ jobs:
 
   deploy-alpha-dev-test:
     needs: build-to-ecr
-    uses: ./.github/workflows/deploy-alpha-dev-call.yml
+    uses: KL-Engineering/kidsloop-action-center/.github/workflows/deploy-alpha-dev-call.yml@main
     with:
       ecs_aws_service: kidsloop-alpha-cms
       desired_ocitag: alpha-dev-latest
