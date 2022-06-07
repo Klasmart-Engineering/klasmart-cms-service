@@ -33,14 +33,16 @@ type CombineConditions struct {
 func (s *CombineConditions) GetConditions() ([]string, []interface{}) {
 	sourceWhereRaw, sourceParams := s.SourceCondition.GetConditions()
 	targetWhereRaw, targetParams := s.TargetCondition.GetConditions()
+	where := ""
 	if len(sourceWhereRaw) < 1 || len(targetWhereRaw) < 1 {
 		return s.SourceCondition.GetConditions()
 	}
 
 	sourceWhere := "(" + strings.Join(sourceWhereRaw, " and ") + ")"
 	targetWhere := "(" + strings.Join(targetWhereRaw, " and ") + ")"
+	where = sourceWhere + " OR " + targetWhere
 	params := append(sourceParams, targetParams...)
-	return []string{sourceWhere, targetWhere}, params
+	return []string{where}, params
 }
 
 func (s *CombineConditions) GetPager() *dbo.Pager {
@@ -589,40 +591,36 @@ func (cd *ContentMySQLDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBC
 }
 
 func (cd *ContentMySQLDA) searchFolderContentSQL(ctx context.Context, query1, query2 []string) string {
+	rawQuery1 := strings.Join(query1, " and ")
 	rawQuery2 := strings.Join(query2, " and ")
-	return fmt.Sprintf(`SELECT 
+	sql := fmt.Sprintf(`SELECT
 	id, %v as content_type, name AS content_name, items_count, description AS description, keywords as keywords, creator as author, dir_path, 'published' as publish_status, thumbnail, '' as data, create_at, update_at 
 	FROM cms_folder_items 
 	WHERE  %v
-	UNION SELECT 
+	UNION ALL SELECT
 	id, content_type, content_name, 0 AS items_count, description, keywords, author, dir_path, publish_status, thumbnail, data, create_at, update_at
 	FROM cms_contents 
-	WHERE %v
-	UNION SELECT 
-	id, content_type, content_name, 0 AS items_count, description, keywords, author, dir_path, publish_status, thumbnail, data, create_at, update_at
-	FROM cms_contents 
-	WHERE %v`, entity.AliasContentTypeFolder, rawQuery2, query1[0], query1[1])
+	WHERE %v`, entity.AliasContentTypeFolder, rawQuery2, rawQuery1)
+
+	log.Info(ctx, "search folder content", log.String("sql", sql))
+	return sql
 }
 
 func (cd *ContentMySQLDA) countFolderContentSQL(query1, query2 []string) string {
+	rawQuery1 := strings.Join(query1, " and ")
 	rawQuery2 := strings.Join(query2, " and ")
 	return `SELECT COUNT(*) AS total FROM 
-(SELECT 
-    name
-FROM
-    cms_folder_items 
-WHERE ` + rawQuery2 + `
-UNION (SELECT 
-    id
-FROM
-    cms_contents
-WHERE ` + query1[0] + `)
-UNION (SELECT 
-    id
-FROM
-    cms_contents
-WHERE ` + query1[1] + `)
-) AS records;`
+			(SELECT 
+				name
+			FROM
+				cms_folder_items 
+			WHERE ` + rawQuery2 + `
+			UNION ALL (SELECT 
+				content_name
+			FROM
+				cms_contents
+			WHERE ` + rawQuery1 + `
+			)) AS records;`
 }
 
 func (cd *ContentMySQLDA) SearchSharedContentV2(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, op *entity.Operator) (*entity.QuerySharedContentV2Response, error) {
