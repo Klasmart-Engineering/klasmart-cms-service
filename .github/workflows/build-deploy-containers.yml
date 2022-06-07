@@ -13,7 +13,6 @@ env:
   ecr_repository: kidsloop-cms-backend
   argocd_app_chart_tag_path: cmsBackend.tag
   argocd_app_component: cms-backend
-  GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
   H5P_PRIVATE_KEY: ${{ secrets.H5P_PRIVATE_KEY }}
   H5P_PUBLIC_KEY: ${{ secrets.H5P_PUBLIC_KEY }}
   JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
@@ -27,29 +26,10 @@ jobs:
     outputs:
       container_image: ${{steps.build-push.outputs.image_version}}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Build and Push Container
+        uses: KL-Engineering/kidsloop-action-center/.github/actions/gocache@main
         with:
-          persist-credentials: false
-
-      - name: Set up Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: 1.18
-
-      - name: Cache Go Modules
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Configure git credentials
-        run: |
-          git config --global url.https://$GIT_TOKEN@github.com/.insteadOf https://github.com/
+          GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
 
       - name: Build
         run: |
