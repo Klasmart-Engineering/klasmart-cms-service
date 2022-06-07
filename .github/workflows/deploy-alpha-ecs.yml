@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Build and Push Container
-        uses: KL-Engineering/kidsloop-action-center/.github/workflows/go-cache.yml@main
+        uses: KL-Engineering/kidsloop-action-center/.github/actions/gocache@main
         with:
           GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
 
