@@ -5,8 +5,8 @@ on:
     branches:
       - hotfix/*
       - main
+      - mr-actions
 env:
-  GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
   H5P_PRIVATE_KEY: ${{ secrets.H5P_PRIVATE_KEY }}
   H5P_PUBLIC_KEY: ${{ secrets.H5P_PUBLIC_KEY }}
   JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
@@ -18,29 +18,10 @@ jobs:
     name: Build And Deploy ECS
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Build and Push Container
+        uses: KL-Engineering/kidsloop-action-center/.github/workflows/go-cache.yml@main
         with:
-          persist-credentials: false
-
-      - name: Set up Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: 1.18
-
-      - name: Cache Go Modules
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Configure git credentials
-        run: |
-          git config --global url.https://$GIT_TOKEN@github.com/.insteadOf https://github.com/
+          GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
 
       - name: Build
         run: |
@@ -61,7 +42,7 @@ jobs:
           echo "$LIVE_TOKEN_PRIVATE_KEY" | base64 -d > deploy/live_token_private_key.pem
 
       - name: Build and Push Container
-        uses: ./.github/actions/docker-build-and-push
+        uses: KL-Engineering/kidsloop-action-center/.github/actions/docker-build-and-push@main
         with:
           environment: ${{ needs.generate-version.outputs.tag }}
           region: global
@@ -74,12 +55,12 @@ jobs:
           ECR_AWS_ACCESS_KEY_ID: ${{ secrets.ECR_AWS_ACCESS_KEY_ID }}
           ECR_AWS_SECRET_ACCESS_KEY: ${{ secrets.ECR_AWS_SECRET_ACCESS_KEY }}
 
-  deploy-alpha-dev-test:
-    needs: build-to-ecr
-    uses: ./.github/workflows/deploy-alpha-dev-call.yml
-    with:
-      ecs_aws_service: kidsloop-alpha-cms
-      desired_ocitag: alpha-dev-latest
-    secrets:
-      AWS_ACCESS_KEY_ID_ALPHA_DEV: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
-      AWS_SECRET_ACCESS_KEY_ALPHA_DEV: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
+  # deploy-alpha-dev-test:
+  #   needs: build-to-ecr
+  #   uses: KL-Engineering/kidsloop-action-center/.github/workflows/deploy-alpha-dev-call.yml@main
+  #   with:
+  #     ecs_aws_service: kidsloop-alpha-cms
+  #     desired_ocitag: alpha-dev-latest
+  #   secrets:
+  #     AWS_ACCESS_KEY_ID_ALPHA_DEV: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
+  #     AWS_SECRET_ACCESS_KEY_ALPHA_DEV: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
