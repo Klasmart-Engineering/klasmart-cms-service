@@ -41,6 +41,8 @@ type IOutcomeModel interface {
 	SearchPending(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (*SearchOutcomeResponse, error)
 	SearchPublished(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (*SearchPublishedOutcomeResponse, error)
 	Export(ctx context.Context, operator *entity.Operator, condition *entity.OutcomeCondition) (*entity.ExportOutcomeResponse, error)
+	VerifyImportData(ctx context.Context, operator *entity.Operator, importData *entity.VerifyImportOutcomeRequest) (*entity.VerifyImportOutcomeResponse, error)
+	Import(ctx context.Context, operator *entity.Operator) error
 
 	Lock(ctx context.Context, operator *entity.Operator, outcomeID string) (string, error)
 	HasLocked(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (bool, error)
@@ -1083,6 +1085,80 @@ func (o OutcomeModel) Export(ctx context.Context, operator *entity.Operator, con
 		TotalCount: total,
 		Data:       exportOutcomeViewList,
 	}, nil
+}
+
+func (o OutcomeModel) Import(ctx context.Context, operator *entity.Operator) error {
+	// var outcomes []*entity.Outcome
+
+	// authorName, err := o.getAuthorNameByID(ctx, operator, operator.UserID)
+	// if err != nil {
+	// 	log.Error(ctx, "o.getAuthorNameByID failed",
+	// 		log.Any("operator", operator))
+	// 	return err
+	// }
+
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindOutcome, operator.OrgID)
+	if err != nil {
+		log.Error(ctx, "mutex.NewLock failed",
+			log.Err(err),
+			log.Any("op", operator))
+		return err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		// outcome.ID = utils.NewID()
+		// outcome.AncestorID = outcome.ID
+		// outcome.AuthorID = operator.UserID
+		// outcome.OrganizationID = operator.OrgID
+		// outcome.PublishStatus = entity.OutcomeStatusDraft
+		// exists, err := ocm.IsShortcodeExists(ctx, operator, tx, outcome.AncestorID, outcome.Shortcode)
+		// if err != nil {
+		// 	log.Error(ctx, "Create: IsShortcodeExistInDBWithOtherAncestor failed",
+		// 		log.Err(err),
+		// 		log.Any("op", operator),
+		// 		log.Any("outcome", outcome))
+		// 	return err
+		// }
+		// if exists {
+		// 	return constant.ErrConflict
+		// }
+		// err = GetOutcomeSetModel().BindByOutcome(ctx, operator, tx, outcome)
+		// if err != nil {
+		// 	log.Error(ctx, "Create: BindByOutcome failed",
+		// 		log.String("op", operator.UserID),
+		// 		log.Any("outcome", outcome))
+		// 	return err
+		// }
+		// err = da.GetOutcomeDA().CreateOutcome(ctx, operator, tx, outcome)
+		// if err != nil {
+		// 	log.Error(ctx, "Create: CreateOutcome failed",
+		// 		log.String("op", operator.UserID),
+		// 		log.Any("outcome", outcome))
+		// 	return err
+		// }
+
+		// outcomeRelations := ocm.CollectRelation(outcome)
+		// _, err = da.GetOutcomeRelationDA().InsertInBatchesTx(ctx, tx, outcomeRelations, len(outcomeRelations))
+		// if err != nil {
+		// 	log.Error(ctx, "Create: InsertInBatchesTx failed",
+		// 		log.Any("op", operator),
+		// 		log.Any("outcome", outcome),
+		// 		log.Any("outcomeRelations", outcomeRelations))
+		// 	return err
+		// }
+
+		return nil
+	})
+	// o.RemoveShortcode(ctx, operator, outcome.Shortcode)
+	// if err != nil {
+	// 	return err
+	// }
+	return nil
+}
+
+func (o OutcomeModel) VerifyImportData(ctx context.Context, operator *entity.Operator, importData *entity.VerifyImportOutcomeRequest) (*entity.VerifyImportOutcomeResponse, error) {
+	return nil, nil
 }
 
 func (ocm OutcomeModel) Approve(ctx context.Context, operator *entity.Operator, outcomeID string) error {

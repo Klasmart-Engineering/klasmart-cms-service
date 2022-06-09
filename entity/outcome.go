@@ -138,3 +138,55 @@ type ExportOutcomeView struct {
 	UpdatedAt      int64    `json:"updated_at"`
 	ScoreThreshold float32  `json:"score_threshold"`
 }
+
+type VerifyImportOutcomeRequest struct {
+	Data []*ImportOutcomeView `json:"data" binding:"gt=0,max=200"`
+}
+
+type VerifyImportOutcomeResponse struct {
+	CreateData []*VerifyImportOutcomeView `json:"create_data"`
+	UpdateData []*VerifyImportOutcomeView `json:"update_data"`
+}
+
+type VerifyImportOutcomeView struct {
+	OutcomeName    string                      `json:"outcome_name" binding:"required"`
+	Shortcode      VerifyImportOutcomeResult   `json:"shortcode"`
+	Assumed        bool                        `json:"assumed"`
+	Description    string                      `json:"description"`
+	Keywords       []string                    `json:"keywords"`
+	Program        []string                    `json:"program" binding:"gt=0"`
+	Subject        []string                    `json:"subject" binding:"gt=0"`
+	Category       []string                    `json:"category" binding:"gt=0"`
+	Subcategory    []string                    `json:"subcategory"`
+	Age            []string                    `json:"age"`
+	Grade          []string                    `json:"grade"`
+	Sets           []VerifyImportOutcomeResult `json:"sets"`
+	Milestones     []VerifyImportOutcomeResult `json:"milestones"`
+	ScoreThreshold float32                     `json:"score_threshold"`
+}
+
+type VerifyImportOutcomeResult struct {
+	Value string `json:"value"`
+	Error string `json:"error,omitempty"`
+}
+
+type ImportOutcomeRequest struct {
+	Data []*ImportOutcomeView `json:"data" binding:"gt=0,max=200"`
+}
+
+type ImportOutcomeView struct {
+	OutcomeName    string   `json:"outcome_name" binding:"required"`
+	Shortcode      string   `json:"shortcode"`
+	Assumed        bool     `json:"assumed"`
+	Description    string   `json:"description"`
+	Keywords       []string `json:"keywords"`
+	Program        []string `json:"program" binding:"gt=0"`
+	Subject        []string `json:"subject" binding:"gt=0"`
+	Category       []string `json:"category" binding:"gt=0"`
+	Subcategory    []string `json:"subcategory"`
+	Age            []string `json:"age"`
+	Grade          []string `json:"grade"`
+	Sets           []string `json:"sets"`
+	Milestones     []string `json:"milestones"`
+	ScoreThreshold float32  `json:"score_threshold"`
+}
