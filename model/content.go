@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"sync"
@@ -165,7 +166,83 @@ type IContentModel interface {
 	GetContentsSubContentsMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*entity.ContentInfoInternal, error)
 	GetLatestContentIDMapByIDListInternal(ctx context.Context, tx *dbo.DBContext, cids []string) (map[string]string, error)
 
+	GetSTMLessonPlans(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.LessonPlan, error)
+
 	CleanCache(ctx context.Context)
+}
+
+func (cm *ContentModel) GetSTMLessonPlans(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.LessonPlan, error) {
+	results, err := da.GetContentDA().GetContentByIDList(ctx, tx, cids)
+	if err != nil {
+		log.Error(ctx, "get content by ids", log.Err(err), log.Strings("ids", cids))
+		return nil, err
+	}
+
+	var materialIDs []string
+	lessonPlans := make([]*entity.LessonPlan, len(results))
+	for i, r := range results {
+		if r.ContentType != entity.ContentTypePlan {
+			log.Error(ctx, "content is not lesson_plan", log.Any("content", r))
+			return nil, constant.ErrInvalidArgs
+		}
+		var lp entity.LessonPlan
+		lp.ID = r.ID
+		lp.Name = r.Name
+		lp.Thumbnail = r.Thumbnail
+		lp.Description = r.Description
+
+		ld := new(LessonData)
+		err = json.Unmarshal([]byte(r.Data), ld)
+		if err != nil {
+			log.Error(ctx, "unmarshal material", log.Err(err), log.Any("lesson_plan", r))
+			return nil, err
+		}
+		var materials []*entity.Material
+
+		for {
+			var material entity.Material
+			material.ID = ld.MaterialId
+			materials = append(materials, &material)
+			materialIDs = append(materialIDs, ld.MaterialId)
+			if len(ld.NextNode) == 0 {
+				break
+			}
+
+			ld = ld.NextNode[0]
+		}
+
+		lp.Materials = materials
+		lessonPlans[i] = &lp
+	}
+
+	materialIDs = utils.SliceDeduplicationExcludeEmpty(materialIDs)
+	lessonMaterials, err := da.GetContentDA().GetContentByIDList(ctx, tx, materialIDs)
+	if err != nil {
+		log.Error(ctx, "get materials", log.Err(err), log.Strings("material_ids", materialIDs))
+		return nil, err
+	}
+	materialMap := make(map[string]*entity.Material, len(lessonMaterials))
+	for _, m := range lessonMaterials {
+		var material entity.Material
+		material.ID = m.ID
+		material.Name = m.Name
+		material.Thumbnail = m.Thumbnail
+		material.Description = m.Description
+		material.Data = m.Data
+		materialMap[m.ID] = &material
+	}
+
+	for _, p := range lessonPlans {
+		for _, m := range p.Materials {
+			if v, ok := materialMap[m.ID]; ok {
+				m.Name = v.Name
+				m.Thumbnail = v.Thumbnail
+				m.Description = v.Description
+				m.Data = v.Data
+			}
+		}
+	}
+	return lessonPlans, nil
 }
 
 func (cm *ContentModel) GetSpecifiedLessonPlan(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, planID string, materialIDs []string, withAP bool) (*entity.ContentInfoWithDetails, error) {

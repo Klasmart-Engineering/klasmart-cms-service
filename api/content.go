@@ -963,6 +963,37 @@ func (s *Server) queryContentInternal(c *gin.Context) {
 	}
 }
 
+// @Summary getSTMLessonPlan
+// @ID getSTMLessonPlan
+// @Description get stm lesson_plan
+// @Produce json
+// @Param ids body entity.IDSlice true "stm lesson_plan"
+// @Tags content
+// @Success 200 {object} []*entity.LessonPlan
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Router /internal/stm_contents [get]
+func (s *Server) getSTMLessonPlan(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	var data []string
+	err := c.ShouldBindJSON(&data)
+	if err != nil {
+		log.Warn(ctx, "internal query", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	result, err := model.GetContentModel().GetSTMLessonPlans(ctx, dbo.MustGetDB(ctx), data)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	default:
+		s.defaultErrorHandler(c, err)
+	}
+}
+
 func parseAuthor(c *gin.Context, u *entity.Operator) string {
 	author := c.Query("author")
 	if author == constant.Self {

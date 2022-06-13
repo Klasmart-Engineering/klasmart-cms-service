@@ -34,6 +34,7 @@ func TestMain(m *testing.M) {
 	}
 
 	config.LoadDBEnvConfig(ctx)
+	config.LoadSTMConfig(ctx)
 	da.InitMySQL(ctx)
 
 	config.LoadRedisEnvConfig(ctx)

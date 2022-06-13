@@ -135,6 +135,25 @@ func (Server) mustLoginWithoutOrgID(c *gin.Context) {
 	c.Set(operatorKey, op)
 }
 
+func (Server) mustSTM(c *gin.Context) {
+	ctx := c.Request.Context()
+	token, err := ExtractSession(c)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
+		return
+	}
+
+	var claims jwt.StandardClaims
+	_, err = jwt.ParseWithClaims(token, &claims, func(*jwt.Token) (interface{}, error) {
+		return config.Get().STMInternal.PublicKey, nil
+	})
+	if err != nil {
+		log.Info(ctx, "grant internal privilege", log.String("token", token), log.Err(err))
+		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
+		return
+	}
+	log.Info(ctx, "grant internal privilege", log.Any("claims", claims))
+}
 func (Server) getOperator(c *gin.Context) *entity.Operator {
 	op, exist := c.Get(operatorKey)
 	if exist {
