@@ -967,12 +967,12 @@ func (s *Server) queryContentInternal(c *gin.Context) {
 // @ID getSTMLessonPlan
 // @Description get stm lesson_plan
 // @Produce json
-// @Param ids body entity.IDSlice true "stm lesson_plan"
 // @Tags content
-// @Success 200 {object} []*entity.LessonPlan
+// @Param ids body []string true "stm lesson_plan"
+// @Success 200 {array} entity.LessonPlan
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /internal/stm_contents [get]
+// @Router /internal/stm/contents [get]
 func (s *Server) getSTMLessonPlan(c *gin.Context) {
 	ctx := c.Request.Context()
 
