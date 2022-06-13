@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 	"strings"
 	"sync"
 
@@ -54,18 +55,16 @@ var (
 
 func GetSchoolServiceProvider() SchoolServiceProvider {
 	_amsSchoolOnce.Do(func() {
-		// comment just for load test
-		//if config.Get().AMS.UseDeprecatedQuery {
-		//	_amsSchoolService = &AmsSchoolService{
-		//		BaseCacheKey: kl2cache.KeyByStrings{
-		//			"kl2cache",
-		//			"AmsSchoolService",
-		//		},
-		//	}
-		//} else {
-		//	_amsSchoolService = &AmsSchoolConnectionService{}
-		//}
-		_amsSchoolService = &AmsSchoolConnectionService{}
+		if config.Get().AMS.UseDeprecatedQuery {
+			_amsSchoolService = &AmsSchoolService{
+				BaseCacheKey: kl2cache.KeyByStrings{
+					"kl2cache",
+					"AmsSchoolService",
+				},
+			}
+		} else {
+			_amsSchoolService = &AmsSchoolConnectionService{}
+		}
 	})
 
 	return _amsSchoolService
