@@ -5,6 +5,8 @@ on:
     branches:
       - hotfix/*
       - main
+  workflow_dispatch:
+
 env:
   H5P_PRIVATE_KEY: ${{ secrets.H5P_PRIVATE_KEY }}
   H5P_PUBLIC_KEY: ${{ secrets.H5P_PUBLIC_KEY }}
