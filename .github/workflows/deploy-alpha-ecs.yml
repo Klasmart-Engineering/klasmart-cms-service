@@ -11,6 +11,7 @@ env:
   JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
   AMS_ASSESSMENT_JWT_PUBLIC_KEY: ${{ secrets.AMS_ASSESSMENT_JWT_PUBLIC_KEY }}
   LIVE_TOKEN_PRIVATE_KEY: ${{ secrets.LIVE_TOKEN_PRIVATE_KEY }}
+  STM_INTERNAL_PUBLIC_KEY: ${{ secrets.STM_INTERNAL_PUBLIC_KEY }}
 
   SERVER_PRIVATE_KEY: ${{ secrets.SERVER_PRIVATE_KEY }}
   SERVER_USER: ${{ secrets.SERVER_USER }}
@@ -39,12 +40,14 @@ jobs:
           JWT_PUBLIC_KEY: ${{ env.JWT_PUBLIC_KEY }}
           AMS_ASSESSMENT_JWT_PUBLIC_KEY: ${{ env.AMS_ASSESSMENT_JWT_PUBLIC_KEY }}
           LIVE_TOKEN_PRIVATE_KEY: ${{ env.LIVE_TOKEN_PRIVATE_KEY }}
+          STM_INTERNAL_PUBLIC_KEY: ${{ env.STM_INTERNAL_PUBLIC_KEY }}
         run: |
           echo "$H5P_PRIVATE_KEY" | base64 -d > deploy/h5p_private_key.pem
           echo "$H5P_PUBLIC_KEY" | base64 -d > deploy/h5p_public_key.pem
           echo "$JWT_PUBLIC_KEY" | base64 -d > deploy/jwt_public_key.pem
           echo "$AMS_ASSESSMENT_JWT_PUBLIC_KEY" | base64 -d > deploy/ams_assessment_jwt_public_key.pem
           echo "$LIVE_TOKEN_PRIVATE_KEY" | base64 -d > deploy/live_token_private_key.pem
+          echo "$STM_INTERNAL_PUBLIC_KEY" | base64 -d > deploy/stm_internal_public_key.pem
 
       - name: Build and Push Container
         uses: KL-Engineering/kidsloop-action-center/.github/actions/docker-build-and-push@main
