@@ -111,18 +111,16 @@ func TestGetSTMLessonPlans(t *testing.T) {
 	op := entity.Operator{
 		Token: stmToken,
 	}
-	IDs := entity.IDSlice{
-		IDs: []string{
-			"628da79e552ba3b9994c9200",
-			"6257868a9456ed3fc792b775",
-			"624419aace8e2cbaa66ca0f8",
-		},
+	IDs := []string{
+		"628da79e552ba3b9994c9200",
+		"6257868a9456ed3fc792b775",
+		"624419aace8e2cbaa66ca0f8",
 	}
 	data, err := json.Marshal(IDs)
 	if err != nil {
 		t.Fatal(err)
 	}
-	url := "/v1/internal/stm_contents"
+	url := "/v1/internal/stm/contents"
 	res := DoHttpWithOperator(http.MethodGet, &op, url, string(data))
 	fmt.Println(res)
 }

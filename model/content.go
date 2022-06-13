@@ -221,7 +221,7 @@ func (cm *ContentModel) GetSTMLessonPlans(ctx context.Context, tx *dbo.DBContext
 		log.Error(ctx, "get materials", log.Err(err), log.Strings("material_ids", materialIDs))
 		return nil, err
 	}
-	materialMap := make(map[string]*entity.Material)
+	materialMap := make(map[string]*entity.Material, len(lessonMaterials))
 	for _, m := range lessonMaterials {
 		var material entity.Material
 		material.ID = m.ID

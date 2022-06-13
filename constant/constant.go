@@ -152,7 +152,7 @@ const (
 )
 
 const (
-	ResponseHeaderKeyInternalErrorType = "X-Internal-Error-Type"
+	ResponseHeaderKeyInternalErrorType = "X-STMInternal-Error-Type"
 )
 
 const (

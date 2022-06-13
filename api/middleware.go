@@ -135,7 +135,7 @@ func (Server) mustLoginWithoutOrgID(c *gin.Context) {
 	c.Set(operatorKey, op)
 }
 
-func (Server) mustInternal(c *gin.Context) {
+func (Server) mustSTM(c *gin.Context) {
 	ctx := c.Request.Context()
 	token, err := ExtractSession(c)
 	if err != nil {
@@ -145,7 +145,7 @@ func (Server) mustInternal(c *gin.Context) {
 
 	var claims jwt.StandardClaims
 	_, err = jwt.ParseWithClaims(token, &claims, func(*jwt.Token) (interface{}, error) {
-		return config.Get().Internal.PublicKey, nil
+		return config.Get().STMInternal.PublicKey, nil
 	})
 	if err != nil {
 		log.Info(ctx, "grant internal privilege", log.String("token", token), log.Err(err))

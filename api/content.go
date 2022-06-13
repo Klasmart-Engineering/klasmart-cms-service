@@ -976,14 +976,14 @@ func (s *Server) queryContentInternal(c *gin.Context) {
 func (s *Server) getSTMLessonPlan(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	var data entity.IDSlice
+	var data []string
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		log.Warn(ctx, "internal query", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	result, err := model.GetContentModel().GetSTMLessonPlans(ctx, dbo.MustGetDB(ctx), data.IDs)
+	result, err := model.GetContentModel().GetSTMLessonPlans(ctx, dbo.MustGetDB(ctx), data)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
