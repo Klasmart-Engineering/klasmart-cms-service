@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -101,5 +102,27 @@ func TestSharedTooMany(t *testing.T) {
 	op := initOperator("a44da070-1907-46c4-bc4c-f26ced889439", "14494c07-0d4f-5141-9db2-15799993f448", "pj.williams@calmid.com", "LakersRBest2021")
 	url := "/v1/folders/share?org_id=a44da070-1907-46c4-bc4c-f26ced889439"
 	res := DoHttpWithOperator(http.MethodPut, op, url, string(data))
+	fmt.Println(res)
+}
+
+var stmToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJraWRzbG9vcC1jbXMiLCJleHAiOjE2NTUxMzEwMTksImlhdCI6MTY1NTA0NDYxOSwiaXNzIjoic3RtLWxhbWJkYSIsInN1YiI6ImF1dGhvcml6YXRpb24ifQ.v-ankxI_ebj8z-96FKllwGRxekX1kJl2HEjITGRGAcNa6qzdWUbdwAZlHNDxsO3B__MaJC0NXCZOgQSrdmr8uogveFf27QPhJUq0NPXCB4ITAN1qONmEhRS38CamLWM2mlS0BgrIdc-k14uHRM0wQK-AYIuULX6FluKzpw722L2r7gH1Rvy_G38o8goDVkQpty8YtsmaszPS5JKzKLl-7YAteF-nRlauWtnFKcT9VDhzzEpsuhzK740b9eliNU_MbDWiE3uLI7SxX898_zb5eT0OZ7Xa_Ilfr-ba4JT7PCCdJlflaSzf6aD99snRDe90Wh7wVsWj2nHPC8n6KJ1e8j_PED1bqlW_rzfWWQUHNXtRpr6XDWG3ZWuXw2B8FGnXrGoi3y0e_U28-d8DVinC-pxYKpNBNAHKKzO8bM5AslGWW5hxu0s0kwZOzNxu8Vpu5D357LmAhCmJNG3KuaRGwRBUM4DSnOwG-D9U3s-qiJTfdFBe0FmH2bq1UZPeV6VT"
+
+func TestGetSTMLessonPlans(t *testing.T) {
+	op := entity.Operator{
+		Token: stmToken,
+	}
+	IDs := entity.IDSlice{
+		IDs: []string{
+			"628da79e552ba3b9994c9200",
+			"6257868a9456ed3fc792b775",
+			"624419aace8e2cbaa66ca0f8",
+		},
+	}
+	data, err := json.Marshal(IDs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	url := "/v1/internal/stm_contents"
+	res := DoHttpWithOperator(http.MethodGet, &op, url, string(data))
 	fmt.Println(res)
 }

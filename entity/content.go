@@ -77,6 +77,10 @@ const (
 	ContentTypeAssets   = 3
 )
 
+type IDSlice struct {
+	IDs []string `json:"ids"`
+}
+
 type ContentPropertyType int
 
 type FileType int
