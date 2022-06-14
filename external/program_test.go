@@ -3,8 +3,11 @@ package external
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
 func TestAmsProgramService_BatchGet(t *testing.T) {
@@ -46,4 +49,16 @@ func TestAmsProgramService_GetByOrganization(t *testing.T) {
 		return
 	}
 	fmt.Println("lens:", len(programs1) == len(programs2))
+}
+
+func TestQueryProgramText(t *testing.T) {
+	ctx := context.Background()
+	_ids := []string{"123"}
+	sb := new(strings.Builder)
+	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$program_id_", ": ID!", len(_ids)))
+	for index := range _ids {
+		fmt.Fprintf(sb, "q%d: program(id: $program_id_%d) {id name status system}\n", index, index)
+	}
+	sb.WriteString("}")
+	t.Log(sb.String())
 }
