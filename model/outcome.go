@@ -1096,6 +1096,15 @@ func (o OutcomeModel) Export(ctx context.Context, operator *entity.Operator, con
 }
 
 func (o OutcomeModel) Import(ctx context.Context, operator *entity.Operator, importData *entity.ImportOutcomeRequest) (*entity.VerifyImportOutcomeResponse, error) {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeLock, operator.OrgID)
+	if err != nil {
+		log.Error(ctx, "mutex.NewLock error",
+			log.Err(err))
+		return nil, err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+
 	result := &entity.VerifyImportOutcomeResponse{
 		CreateData: make([]*entity.VerifyImportOutcomeView, len(importData.CreateData)),
 		UpdateData: make([]*entity.VerifyImportOutcomeView, len(importData.UpdateData)),
