@@ -139,3 +139,109 @@ func TestExportOutcomes(t *testing.T) {
 	}
 	t.Log(result.TotalCount)
 }
+
+func TestVerifyImportData(t *testing.T) {
+	ctx := context.TODO()
+	importData := &entity.VerifyImportOutcomeRequest{
+		Data: []*entity.ImportOutcomeView{
+			{
+				OutcomeName:    "test",
+				Shortcode:      "test",
+				Assumed:        true,
+				Description:    "test",
+				Keywords:       []string{"test"},
+				Program:        []string{"test"},
+				Subject:        []string{"test"},
+				Category:       []string{"test"},
+				Subcategory:    []string{"test"},
+				Age:            []string{"test"},
+				Grade:          []string{"test"},
+				Sets:           []string{"test"},
+				Milestones:     []string{"test"},
+				ScoreThreshold: 0,
+			},
+			{
+				OutcomeName:    "test",
+				Shortcode:      "0001F",
+				Assumed:        true,
+				Description:    "test",
+				Keywords:       []string{"test"},
+				Program:        []string{"test"},
+				Subject:        []string{"test"},
+				Category:       []string{"test"},
+				Subcategory:    []string{"test"},
+				Age:            []string{"test"},
+				Grade:          []string{"test"},
+				Sets:           []string{"test"},
+				Milestones:     []string{},
+				ScoreThreshold: 0,
+			},
+		},
+	}
+	result, err := GetOutcomeModel().VerifyImportData(ctx, &entity.Operator{OrgID: "6300b3c5-8936-497e-ba1f-d67164b59c65"}, importData)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(result.ExistError)
+	for _, v := range result.CreateData {
+		t.Log(v)
+	}
+	t.Log("update data")
+	for _, v := range result.UpdateData {
+		t.Log(v)
+	}
+}
+
+func TestImportData(t *testing.T) {
+	ctx := context.TODO()
+	importData := &entity.ImportOutcomeRequest{
+		CreateData: []*entity.ImportOutcomeView{
+			{
+				OutcomeName:    "test",
+				Shortcode:      "ZZ123",
+				Assumed:        true,
+				Description:    "test",
+				Keywords:       []string{"test"},
+				Program:        []string{"test"},
+				Subject:        []string{"test"},
+				Category:       []string{"test"},
+				Subcategory:    []string{"test"},
+				Age:            []string{"test"},
+				Grade:          []string{"test"},
+				Sets:           []string{"test"},
+				Milestones:     []string{"test"},
+				ScoreThreshold: 0,
+			},
+		},
+		UpdateData: []*entity.ImportOutcomeView{
+			{
+				OutcomeName:    "test",
+				Shortcode:      "00002",
+				Assumed:        true,
+				Description:    "test",
+				Keywords:       []string{"test"},
+				Program:        []string{"test"},
+				Subject:        []string{"test"},
+				Category:       []string{"test"},
+				Subcategory:    []string{"test"},
+				Age:            []string{"test"},
+				Grade:          []string{"test"},
+				Sets:           []string{"test"},
+				Milestones:     []string{},
+				ScoreThreshold: 0,
+			},
+		},
+	}
+	result, err := GetOutcomeModel().Import(ctx, &entity.Operator{OrgID: "6300b3c5-8936-497e-ba1f-d67164b59c65"}, importData)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(result.ExistError)
+	for _, v := range result.CreateData {
+		t.Log(v)
+	}
+	t.Log("update data")
+	for _, v := range result.UpdateData {
+		t.Log(v)
+	}
+}

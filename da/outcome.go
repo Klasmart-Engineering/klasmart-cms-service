@@ -19,6 +19,7 @@ type IOutcomeDA interface {
 	CreateOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) error
 	UpdateOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) error
 	DeleteOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) error
+	BatchLockOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ids []string) error
 
 	GetOutcomeByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Outcome, error)
 	GetOutcomeBySourceID(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, sourceID string) (*entity.Outcome, error)
@@ -433,6 +434,24 @@ func (o *outcomeDA) DeleteOutcome(ctx context.Context, op *entity.Operator, tx *
 		log.Error(ctx, "DeleteOutcome: UpdateTx failed", log.Err(err), log.Any("outcome", outcome))
 	}
 	return
+}
+
+func (o *outcomeDA) BatchLockOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ids []string) (err error) {
+	tx.ResetCondition()
+
+	err = tx.Table(entity.OutcomeTable).
+		Where("id in (?)", ids).
+		Updates(map[string]interface{}{
+			"locked_by": op.UserID,
+		}).Error
+	if err != nil {
+		log.Error(ctx, "BatchLockOutcome error",
+			log.Err(err),
+			log.Strings("ids", ids))
+		return err
+	}
+
+	return nil
 }
 
 func (o *outcomeDA) GetOutcomeByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Outcome, error) {

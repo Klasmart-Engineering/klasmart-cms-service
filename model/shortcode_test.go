@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
 
@@ -14,7 +15,7 @@ func TestShortcodeValidate(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !shortcode5Validate.MatchString(value) {
+		if !entity.Shortcode5Validate.MatchString(value) {
 			t.Fatal(value)
 		}
 	}
@@ -23,7 +24,7 @@ func TestShortcodeValidate(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !shortcode3Validate.MatchString(value) {
+		if !entity.Shortcode3Validate.MatchString(value) {
 			t.Fatal(value)
 		}
 	}

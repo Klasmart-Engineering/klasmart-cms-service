@@ -1,6 +1,15 @@
 package entity
 
-import "github.com/KL-Engineering/kidsloop-cms-service/constant"
+import (
+	"context"
+	"errors"
+	"regexp"
+	"strings"
+
+	"github.com/KL-Engineering/common-log/log"
+	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils"
+)
 
 const (
 	OutcomeTable = "learning_outcomes"
@@ -17,6 +26,9 @@ const (
 const (
 	JoinComma = ","
 )
+
+var Shortcode3Validate = regexp.MustCompile(`^[A-Z0-9]{3}$`)
+var Shortcode5Validate = regexp.MustCompile(`^[A-Z0-9]{5}$`)
 
 type OutcomeStatus string
 
@@ -146,6 +158,7 @@ type VerifyImportOutcomeRequest struct {
 type VerifyImportOutcomeResponse struct {
 	CreateData []*VerifyImportOutcomeView `json:"create_data"`
 	UpdateData []*VerifyImportOutcomeView `json:"update_data"`
+	ExistError bool                       `json:"exist_error"`
 }
 
 type VerifyImportOutcomeView struct {
@@ -171,7 +184,8 @@ type VerifyImportOutcomeResult struct {
 }
 
 type ImportOutcomeRequest struct {
-	Data []*ImportOutcomeView `json:"data" binding:"gt=0,max=200"`
+	CreateData []*ImportOutcomeView `json:"create_data"`
+	UpdateData []*ImportOutcomeView `json:"update_data"`
 }
 
 type ImportOutcomeView struct {
@@ -189,4 +203,90 @@ type ImportOutcomeView struct {
 	Sets           []string `json:"sets"`
 	Milestones     []string `json:"milestones"`
 	ScoreThreshold float32  `json:"score_threshold"`
+}
+
+func (v ImportOutcomeView) ConvertToPendingOutcome(ctx context.Context, op *Operator) (*Outcome, error) {
+	shortcodeNum, err := utils.BHexToNum(ctx, v.Shortcode)
+	if err != nil {
+		log.Error(ctx, "utils.BHexToNum error",
+			log.Err(err),
+			log.String("shortcode", v.Shortcode))
+		return nil, errors.New("shortcode is invalid")
+	}
+
+	outcome := &Outcome{
+		ID:             utils.NewID(),
+		Name:           v.OutcomeName,
+		Assumed:        v.Assumed,
+		Description:    v.Description,
+		Shortcode:      v.Shortcode,
+		ShortcodeNum:   shortcodeNum,
+		OrganizationID: op.OrgID,
+		AuthorID:       op.UserID,
+		PublishStatus:  OutcomeStatusPending,
+		PublishScope:   op.OrgID,
+	}
+
+	// TODO if assumed is true, then scoreThreshold is 0
+	outcome.ScoreThreshold = v.ScoreThreshold
+
+	programIDs := utils.SliceDeduplicationExcludeEmpty(v.Program)
+	subjectIDs := utils.SliceDeduplicationExcludeEmpty(v.Subject)
+	categoryIDs := utils.SliceDeduplicationExcludeEmpty(v.Category)
+	subCategoryIDs := utils.SliceDeduplicationExcludeEmpty(v.Subcategory)
+	gradeIDs := utils.SliceDeduplicationExcludeEmpty(v.Grade)
+	ageIDs := utils.SliceDeduplicationExcludeEmpty(v.Age)
+
+	outcome.Keywords = strings.Join(v.Keywords, JoinComma)
+	outcome.Programs = programIDs
+	outcome.Subjects = subjectIDs
+	outcome.Categories = categoryIDs
+	outcome.Subcategories = subCategoryIDs
+	outcome.Grades = gradeIDs
+	outcome.Ages = ageIDs
+
+	outcome.Sets = make([]*Set, len(v.Sets))
+	for i := range v.Sets {
+		set := &Set{
+			ID: v.Sets[i],
+		}
+		outcome.Sets[i] = set
+	}
+
+	return outcome, nil
+}
+
+func (v ImportOutcomeView) ConvertToVerifyView(ctx context.Context) *VerifyImportOutcomeView {
+	verifyView := &VerifyImportOutcomeView{
+		OutcomeName: v.OutcomeName,
+		Shortcode: VerifyImportOutcomeResult{
+			Value: v.Shortcode,
+		},
+		Assumed:        v.Assumed,
+		Description:    v.Description,
+		Keywords:       v.Keywords,
+		Program:        v.Program,
+		Subject:        v.Subject,
+		Category:       v.Category,
+		Subcategory:    v.Subcategory,
+		Age:            v.Age,
+		Grade:          v.Grade,
+		ScoreThreshold: v.ScoreThreshold,
+	}
+
+	verifyView.Milestones = make([]VerifyImportOutcomeResult, len(v.Milestones))
+	for i := range v.Milestones {
+		verifyView.Milestones[i] = VerifyImportOutcomeResult{
+			Value: v.Milestones[i],
+		}
+	}
+
+	verifyView.Sets = make([]VerifyImportOutcomeResult, len(v.Sets))
+	for i := range v.Sets {
+		verifyView.Sets[i] = VerifyImportOutcomeResult{
+			Value: v.Sets[i],
+		}
+	}
+
+	return verifyView
 }

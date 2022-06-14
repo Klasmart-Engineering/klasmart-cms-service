@@ -1035,8 +1035,8 @@ func (s *Server) verifyImportOutcomes(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
-	if !permissionMap[external.CreateLearningOutcome] ||
-		!permissionMap[external.EditPublishedLearningOutcome] {
+	if !(permissionMap[external.CreateLearningOutcome] &&
+		permissionMap[external.EditPublishedLearningOutcome]) {
 		log.Warn(ctx, "verifyImportOutcomes: HasOrganizationPermissions failed",
 			log.Any("op", op),
 			log.Any("permissionMap", permissionMap))
@@ -1044,15 +1044,15 @@ func (s *Server) verifyImportOutcomes(c *gin.Context) {
 		return
 	}
 
-	// err = model.GetOutcomeModel().Import(ctx, op)
-	// switch err {
-	// case model.ErrBadRequest:
-	// 	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	// case nil:
-	// 	c.JSON(http.StatusOK, "ok")
-	// default:
-	// 	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-	// }
+	result, err := model.GetOutcomeModel().VerifyImportData(ctx, op, &req)
+	switch err {
+	case model.ErrBadRequest:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
 }
 
 // @ID importLearningOutcomes
@@ -1062,7 +1062,7 @@ func (s *Server) verifyImportOutcomes(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param outcome body entity.ImportOutcomeRequest true "import outcome data"
-// @Success 200 {string} string "ok"
+// @Success 200 {object} entity.VerifyImportOutcomeResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
@@ -1101,12 +1101,12 @@ func (s *Server) importOutcomes(c *gin.Context) {
 		return
 	}
 
-	err = model.GetOutcomeModel().Import(ctx, op)
+	result, err := model.GetOutcomeModel().Import(ctx, op, &req)
 	switch err {
 	case model.ErrBadRequest:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
-		c.JSON(http.StatusOK, "ok")
+		c.JSON(http.StatusOK, result)
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}

@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"errors"
-	"regexp"
 
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 
@@ -23,9 +22,6 @@ type ErrValidFailed struct {
 func (e *ErrValidFailed) Error() string {
 	return e.Msg
 }
-
-var shortcode3Validate = regexp.MustCompile(`^[A-Z0-9]{3}$`)
-var shortcode5Validate = regexp.MustCompile(`^[A-Z0-9]{5}$`)
 
 type OutcomeCreateView struct {
 	OutcomeID      string                  `json:"outcome_id"`
@@ -97,7 +93,7 @@ func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator)
 		return nil, &ErrValidFailed{Msg: "program and subject is required"}
 	}
 
-	if !shortcode3Validate.MatchString(req.Shortcode) && !shortcode5Validate.MatchString(req.Shortcode) {
+	if !entity.Shortcode3Validate.MatchString(req.Shortcode) && !entity.Shortcode5Validate.MatchString(req.Shortcode) {
 		log.Warn(ctx, "ToOutcome: program and subject is required", log.Any("op", op), log.Any("req", req))
 		return nil, &ErrValidFailed{Msg: "shortcode mismatch"}
 	}

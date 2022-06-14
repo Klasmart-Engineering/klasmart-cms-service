@@ -56,8 +56,8 @@ func (c *SetCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if c.Names.Valid {
-		wheres = append(wheres, fmt.Sprintf("name in (%s)", c.IDs.SQLPlaceHolder()))
-		params = append(params, c.Names.ToInterfaceSlice()...)
+		wheres = append(wheres, "name in (?)")
+		params = append(params, c.Names.Strings)
 	}
 
 	if c.OrganizationID.Valid {
@@ -103,6 +103,7 @@ func (c *SetCondition) GetOrderBy() string {
 type OutcomeSetCondition struct {
 	OutcomeIDs dbo.NullStrings
 	SetIDs     dbo.NullStrings
+	SetNames   dbo.NullStrings
 
 	IncludeDeleted bool
 	OrderBy        SetOrderBy `json:"order_by"`
@@ -119,6 +120,11 @@ func (c *OutcomeSetCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if c.SetIDs.Valid {
+		wheres = append(wheres, fmt.Sprintf("set_id in (%s)", c.SetIDs.SQLPlaceHolder()))
+		params = append(params, c.SetIDs.ToInterfaceSlice()...)
+	}
+
+	if c.SetNames.Valid {
 		wheres = append(wheres, fmt.Sprintf("set_id in (%s)", c.SetIDs.SQLPlaceHolder()))
 		params = append(params, c.SetIDs.ToInterfaceSlice()...)
 	}
