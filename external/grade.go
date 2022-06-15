@@ -84,7 +84,7 @@ func (s AmsGradeService) QueryByIDs(ctx context.Context, ids []string, options .
 
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$grade_id_", ": ID!", len(_ids)))
 	for index := range _ids {
-		fmt.Fprintf(sb, "q%d: grade(id: $grade_id_%d) {id name status system}\n", index, index)
+		fmt.Fprintf(sb, "q%d: gradeNode(id: $grade_id_%d) {id name status system}\n", index, index)
 	}
 	sb.WriteString("}")
 

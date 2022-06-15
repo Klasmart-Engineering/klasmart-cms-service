@@ -3,8 +3,9 @@ package external
 import (
 	"context"
 	"fmt"
-	"github.com/KL-Engineering/kidsloop-cms-service/config"
 	"strings"
+
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 
 	"github.com/KL-Engineering/kidsloop-cache/cache"
 
@@ -84,7 +85,7 @@ func (s AmsCategoryService) QueryByIDs(ctx context.Context, ids []string, option
 
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$category_id_", ": ID!", len(_ids)))
 	for index := range _ids {
-		fmt.Fprintf(sb, "q%d: category(id: $category_id_%d) {id name status system}\n", index, index)
+		fmt.Fprintf(sb, "q%d: categoryNode(id: $category_id_%d) {id name status system}\n", index, index)
 	}
 	sb.WriteString("}")
 
@@ -323,7 +324,7 @@ func (s AmsCategoryService) GetBySubjects(ctx context.Context, operator *entity.
 
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$subject_id_", ": ID!", len(_ids)))
 	for index := range _ids {
-		fmt.Fprintf(sb, "q%d: subject(id: $subject_id_%d) {categories {id name status system}}\n", index, index)
+		fmt.Fprintf(sb, "q%d: subjectNode(id: $subject_id_%d) {categories {id name status system}}\n", index, index)
 	}
 	sb.WriteString("}")
 
