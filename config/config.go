@@ -52,6 +52,11 @@ type Config struct {
 	Report                ReportConfig          `json:"report" yaml:"report"`
 	NewRelic              NewRelicConfig        `json:"new_relic" yaml:"new_relic"`
 	Log                   LogConfig             `json:"log_config" yaml:"log_config"`
+	STMInternal           STMInternalConfig     `json:"stm_internal_config" yaml:"stm_internal_config"`
+}
+
+type STMInternalConfig struct {
+	PublicKey interface{} `json:"public_key" yaml:"public_key"`
 }
 
 var config = &Config{}
@@ -209,6 +214,20 @@ func assertGetEnv(key string) string {
 	return value
 }
 
+func LoadSTMConfig(ctx context.Context) {
+	publicKeyPath := os.Getenv("stm_public_key_path")
+	content, err := ioutil.ReadFile(publicKeyPath)
+	if err != nil {
+		log.Panic(ctx, "read internal public key file", log.Err(err), log.String("publicKeyPath", publicKeyPath))
+	}
+
+	key, err := jwt.ParseRSAPublicKeyFromPEM(content)
+	if err != nil {
+		log.Panic(ctx, "parse internal public key", log.Err(err))
+	}
+	config.STMInternal.PublicKey = key
+}
+
 func LoadEnvConfig() {
 	ctx := context.TODO()
 	config = new(Config)
@@ -230,6 +249,7 @@ func LoadEnvConfig() {
 	loadReportConfig(ctx)
 	loadNewRelicConfig(ctx)
 	loadLogConfig(ctx)
+	LoadSTMConfig(ctx)
 }
 
 func loadShowInternalErrorTypeConfig(ctx context.Context) {

@@ -84,14 +84,13 @@ func (s AmsProgramService) QueryByIDs(ctx context.Context, ids []string, options
 
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$program_id_", ": ID!", len(_ids)))
 	for index := range _ids {
-		fmt.Fprintf(sb, "q%d: program(id: $program_id_%d) {id name status system}\n", index, index)
+		fmt.Fprintf(sb, "q%d: programNode(id: $program_id_%d) {id name status system}\n", index, index)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
 	for index, id := range _ids {
 		request.Var(fmt.Sprintf("program_id_%d", index), id)
-
 	}
 
 	data := map[string]*Program{}

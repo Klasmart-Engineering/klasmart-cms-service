@@ -333,6 +333,7 @@ func (s Server) registeRoute() {
 		internal.GET("/schedules/:id/relation_ids", s.mustLoginWithoutOrgID, s.queryScheduleRelationIDsInternal)
 		internal.POST("/schedules/update_review_status", s.mustDataService, s.updateScheduleReviewStatus)
 		internal.GET("/schedule_counts", s.getScheduleAttendance)
+		internal.GET("/stm/contents", s.mustSTM, s.getSTMLessonPlan)
 	}
 }
 
