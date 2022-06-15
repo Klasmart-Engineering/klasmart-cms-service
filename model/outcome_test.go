@@ -145,6 +145,7 @@ func TestVerifyImportData(t *testing.T) {
 	importData := &entity.VerifyImportOutcomeRequest{
 		Data: []*entity.ImportOutcomeView{
 			{
+				RowNumber:      12,
 				OutcomeName:    "test",
 				Shortcode:      "test",
 				Assumed:        true,
@@ -157,10 +158,10 @@ func TestVerifyImportData(t *testing.T) {
 				Age:            []string{"test"},
 				Grade:          []string{"test"},
 				Sets:           []string{"test"},
-				Milestones:     []string{"test"},
 				ScoreThreshold: 0,
 			},
 			{
+				RowNumber:      3,
 				OutcomeName:    "test",
 				Shortcode:      "0001F",
 				Assumed:        true,
@@ -173,7 +174,6 @@ func TestVerifyImportData(t *testing.T) {
 				Age:            []string{"test"},
 				Grade:          []string{"test"},
 				Sets:           []string{"test"},
-				Milestones:     []string{},
 				ScoreThreshold: 0,
 			},
 		},
@@ -197,6 +197,7 @@ func TestImportData(t *testing.T) {
 	importData := &entity.ImportOutcomeRequest{
 		CreateData: []*entity.ImportOutcomeView{
 			{
+				RowNumber:      3,
 				OutcomeName:    "test",
 				Shortcode:      "ZZ123",
 				Assumed:        true,
@@ -209,7 +210,6 @@ func TestImportData(t *testing.T) {
 				Age:            []string{"test"},
 				Grade:          []string{"test"},
 				Sets:           []string{"test"},
-				Milestones:     []string{"test"},
 				ScoreThreshold: 0,
 			},
 		},
@@ -227,7 +227,6 @@ func TestImportData(t *testing.T) {
 				Age:            []string{"test"},
 				Grade:          []string{"test"},
 				Sets:           []string{"test"},
-				Milestones:     []string{},
 				ScoreThreshold: 0,
 			},
 		},

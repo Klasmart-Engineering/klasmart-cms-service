@@ -30,6 +30,7 @@ var (
 	ErrImportOutcomeDuplicateShortcode     = errors.New("duplicate shortcode")
 	ErrImportOutcomeNotExistShortcode      = errors.New("not exist shortcode")
 	ErrImportOutcomeInvalidShortcode       = errors.New("invalid shortcode")
+	ErrImportOutcomeRepeatShortcode        = errors.New("repeat shortcode")
 )
 
 type IOutcomeModel interface {
@@ -1110,13 +1111,25 @@ func (o OutcomeModel) Import(ctx context.Context, operator *entity.Operator, imp
 		UpdateData: make([]*entity.VerifyImportOutcomeView, len(importData.UpdateData)),
 	}
 	var shortcodeList []string
+	repeatShortcode := make(map[string]bool)
+	m := make(map[string]bool)
 	for i, v := range importData.CreateData {
 		shortcodeList = append(shortcodeList, v.Shortcode)
 		result.CreateData[i] = v.ConvertToVerifyView(ctx)
+		if _, ok := m[v.Shortcode]; ok {
+			repeatShortcode[v.Shortcode] = true
+		} else {
+			m[v.Shortcode] = true
+		}
 	}
 	for i, v := range importData.UpdateData {
 		shortcodeList = append(shortcodeList, v.Shortcode)
 		result.UpdateData[i] = v.ConvertToVerifyView(ctx)
+		if _, ok := m[v.Shortcode]; ok {
+			repeatShortcode[v.Shortcode] = true
+		} else {
+			m[v.Shortcode] = true
+		}
 	}
 
 	var existOutcomes []*entity.Outcome
@@ -1160,7 +1173,6 @@ func (o OutcomeModel) Import(ctx context.Context, operator *entity.Operator, imp
 	insertOutcomes := make([]*entity.Outcome, 0, len(importData.CreateData)+len(importData.UpdateData))
 	var insertOutcomeRelations []*entity.OutcomeRelation
 	var insertOutcomeSets []*entity.OutcomeSet
-	var insertOutcomeMilestones []*entity.MilestoneOutcome
 	currentTime := time.Now().Unix()
 	for i, v := range importData.CreateData {
 		outcome, err := v.ConvertToPendingOutcome(ctx, operator)
@@ -1174,8 +1186,13 @@ func (o OutcomeModel) Import(ctx context.Context, operator *entity.Operator, imp
 		outcome.AuthorName = operatorName
 		outcome.CreateAt = currentTime
 		outcome.UpdateAt = currentTime
+		if _, ok := repeatShortcode[v.Shortcode]; ok {
+			result.CreateData[i].Shortcode.Errors = append(result.CreateData[i].Shortcode.Errors, ErrImportOutcomeRepeatShortcode.Error())
+			result.ExistError = true
+		}
+
 		if _, ok := existOutcomeMap[v.Shortcode]; ok {
-			result.CreateData[i].Shortcode.Error = ErrImportOutcomeDuplicateShortcode.Error()
+			result.CreateData[i].Shortcode.Errors = append(result.CreateData[i].Shortcode.Errors, ErrImportOutcomeDuplicateShortcode.Error())
 			result.ExistError = true
 		} else {
 			insertOutcomes = append(insertOutcomes, outcome)
@@ -1186,14 +1203,6 @@ func (o OutcomeModel) Import(ctx context.Context, operator *entity.Operator, imp
 					SetID:     set.ID,
 					CreateAt:  currentTime,
 					UpdateAt:  currentTime,
-				})
-			}
-			for _, milestoneID := range v.Milestones {
-				insertOutcomeMilestones = append(insertOutcomeMilestones, &entity.MilestoneOutcome{
-					MilestoneID:     milestoneID,
-					OutcomeAncestor: outcome.AncestorID,
-					CreateAt:        currentTime,
-					UpdateAt:        currentTime,
 				})
 			}
 		}
@@ -1208,6 +1217,12 @@ func (o OutcomeModel) Import(ctx context.Context, operator *entity.Operator, imp
 				log.Any("createData", v))
 			return nil, err
 		}
+
+		if _, ok := repeatShortcode[v.Shortcode]; ok {
+			result.UpdateData[i].Shortcode.Errors = append(result.CreateData[i].Shortcode.Errors, ErrImportOutcomeRepeatShortcode.Error())
+			result.ExistError = true
+		}
+
 		if preEditOutcome, ok := existOutcomeMap[v.Shortcode]; ok {
 			outcome.AncestorID = preEditOutcome.AncestorID
 			outcome.AuthorName = operatorName
@@ -1215,7 +1230,7 @@ func (o OutcomeModel) Import(ctx context.Context, operator *entity.Operator, imp
 			outcome.UpdateAt = currentTime
 			if preEditOutcome.PublishStatus != entity.OutcomeStatusPublished ||
 				preEditOutcome.HasLocked() {
-				result.UpdateData[i].Shortcode.Error = ErrImportOutcomeNotAllowEdit.Error()
+				result.UpdateData[i].Shortcode.Errors = append(result.UpdateData[i].Shortcode.Errors, ErrImportOutcomeNotAllowEdit.Error())
 				result.ExistError = true
 			} else {
 				updateOutcomeIDs[i] = preEditOutcome.ID
@@ -1229,18 +1244,10 @@ func (o OutcomeModel) Import(ctx context.Context, operator *entity.Operator, imp
 						UpdateAt:  currentTime,
 					})
 				}
-				for _, milestoneID := range v.Milestones {
-					insertOutcomeMilestones = append(insertOutcomeMilestones, &entity.MilestoneOutcome{
-						MilestoneID:     milestoneID,
-						OutcomeAncestor: outcome.AncestorID,
-						CreateAt:        currentTime,
-						UpdateAt:        currentTime,
-					})
-				}
 			}
 		} else {
 			log.Debug(ctx, "outcome not found", log.Any("import data", v))
-			result.UpdateData[i].Shortcode.Error = ErrImportOutcomeNotAllowEdit.Error()
+			result.UpdateData[i].Shortcode.Errors = append(result.UpdateData[i].Shortcode.Errors, ErrImportOutcomeNotAllowEdit.Error())
 			result.ExistError = true
 		}
 	}
@@ -1282,14 +1289,6 @@ func (o OutcomeModel) Import(ctx context.Context, operator *entity.Operator, imp
 			return err
 		}
 
-		_, err = o.milestoneOutcomeDA.InsertInBatchesTx(ctx, tx, insertOutcomeMilestones, constant.OutcomeMilestoneInsertBatchSize)
-		if err != nil {
-			log.Error(ctx, "o.milestoneOutcomeDA.InsertInBatchesTx error",
-				log.Err(err),
-				log.Any("insertOutcomeMilestones", insertOutcomeMilestones))
-			return err
-		}
-
 		return nil
 	})
 
@@ -1298,7 +1297,6 @@ func (o OutcomeModel) Import(ctx context.Context, operator *entity.Operator, imp
 
 func (o OutcomeModel) VerifyImportData(ctx context.Context, operator *entity.Operator, importData *entity.VerifyImportOutcomeRequest) (*entity.VerifyImportOutcomeResponse, error) {
 	var shortcodeList []string
-	var milestoneNameList []string
 	var outcomeSetNameList []string
 	for _, v := range importData.Data {
 		if v.Shortcode != "" {
@@ -1314,8 +1312,17 @@ func (o OutcomeModel) VerifyImportData(ctx context.Context, operator *entity.Ope
 			v.Shortcode = shortcode
 		}
 
-		milestoneNameList = append(milestoneNameList, v.Milestones...)
 		outcomeSetNameList = append(outcomeSetNameList, v.Sets...)
+	}
+
+	repeatShortcode := make(map[string]bool)
+	m := make(map[string]bool)
+	for _, v := range shortcodeList {
+		if _, ok := m[v]; ok {
+			repeatShortcode[v] = true
+		} else {
+			m[v] = true
+		}
 	}
 
 	outcomeShortcodeMap := make(map[string]*entity.Outcome)
@@ -1349,38 +1356,6 @@ func (o OutcomeModel) VerifyImportData(ctx context.Context, operator *entity.Ope
 
 		for _, v := range existOutcomes {
 			outcomeShortcodeMap[v.Shortcode] = v
-		}
-	}
-
-	milestoneNameMap := make(map[string]*entity.Milestone)
-	milestoneNameErrMap := make(map[string]error)
-	if len(milestoneNameList) > 0 {
-		var milestones []*entity.Milestone
-		// TODO milestone publish status?
-		milestoneDaCondition := &da.MilestoneCondition{
-			OrganizationID: sql.NullString{
-				String: operator.OrgID,
-				Valid:  true,
-			},
-			Names: dbo.NullStrings{
-				Strings: milestoneNameList,
-				Valid:   true,
-			},
-		}
-		err := o.milestoneDA.Query(ctx, milestoneDaCondition, &milestones)
-		if err != nil {
-			log.Error(ctx, "o.milestoneDA.Query error",
-				log.Err(err),
-				log.Any("milestoneDaCondition", milestoneDaCondition))
-			return nil, err
-		}
-		for _, v := range milestones {
-			if _, ok := milestoneNameMap[v.Name]; ok {
-				log.Debug(ctx, "duplicate milestone name",
-					log.String("milestoneName", v.Name))
-				milestoneNameErrMap[v.Name] = ErrImportOutcomeDuplicateMilestoneName
-			}
-			milestoneNameMap[v.Name] = v
 		}
 	}
 
@@ -1420,41 +1395,11 @@ func (o OutcomeModel) VerifyImportData(ctx context.Context, operator *entity.Ope
 	}
 
 	for _, v := range importData.Data {
-		verifyImportOutcomeView := &entity.VerifyImportOutcomeView{
-			OutcomeName:    v.OutcomeName,
-			Assumed:        v.Assumed,
-			Description:    v.Description,
-			Keywords:       v.Keywords,
-			Program:        v.Program,
-			Subject:        v.Subject,
-			Category:       v.Category,
-			Subcategory:    v.Subcategory,
-			Age:            v.Age,
-			Grade:          v.Grade,
-			ScoreThreshold: v.ScoreThreshold,
-		}
-
-		// verify milestone
-		for _, milestoneName := range v.Milestones {
-			if milestone, ok := milestoneNameMap[milestoneName]; ok {
-				if err, ok := milestoneNameErrMap[milestoneName]; ok {
-					verifyImportOutcomeView.Milestones = append(verifyImportOutcomeView.Milestones, entity.VerifyImportOutcomeResult{
-						Value: milestoneName,
-						Error: err.Error(),
-					})
-					result.ExistError = true
-				} else {
-					verifyImportOutcomeView.Milestones = append(verifyImportOutcomeView.Milestones, entity.VerifyImportOutcomeResult{
-						Value: milestone.ID,
-					})
-				}
-			} else {
-				verifyImportOutcomeView.Milestones = append(verifyImportOutcomeView.Milestones, entity.VerifyImportOutcomeResult{
-					Value: milestoneName,
-					Error: ErrImportOutcomeNotExistMilestoneName.Error(),
-				})
-				result.ExistError = true
-			}
+		verifyImportOutcomeView := v.ConvertToVerifyView(ctx)
+		// verify shortcode repeat
+		if _, ok := repeatShortcode[v.Shortcode]; ok {
+			verifyImportOutcomeView.Shortcode.Errors = append(verifyImportOutcomeView.Shortcode.Errors, ErrImportOutcomeRepeatShortcode.Error())
+			result.ExistError = true
 		}
 
 		// verify set
@@ -1485,28 +1430,14 @@ func (o OutcomeModel) VerifyImportData(ctx context.Context, operator *entity.Ope
 			// verify allow edit
 			if outcome.HasLocked() ||
 				outcome.PublishStatus != entity.OutcomeStatusPublished {
-				verifyImportOutcomeView.Shortcode = entity.VerifyImportOutcomeResult{
-					Value: v.Shortcode,
-					Error: ErrImportOutcomeNotAllowEdit.Error(),
-				}
+				verifyImportOutcomeView.Shortcode.Errors = append(verifyImportOutcomeView.Shortcode.Errors, ErrImportOutcomeNotAllowEdit.Error())
 				result.ExistError = true
-			} else {
-				verifyImportOutcomeView.Shortcode = entity.VerifyImportOutcomeResult{
-					Value: v.Shortcode,
-				}
 			}
 			result.UpdateData = append(result.UpdateData, verifyImportOutcomeView)
 		} else {
 			if !entity.Shortcode3Validate.MatchString(v.Shortcode) && !entity.Shortcode5Validate.MatchString(v.Shortcode) {
-				verifyImportOutcomeView.Shortcode = entity.VerifyImportOutcomeResult{
-					Value: v.Shortcode,
-					Error: ErrImportOutcomeInvalidShortcode.Error(),
-				}
+				verifyImportOutcomeView.Shortcode.Errors = append(verifyImportOutcomeView.Shortcode.Errors, ErrImportOutcomeInvalidShortcode.Error())
 				result.ExistError = true
-			} else {
-				verifyImportOutcomeView.Shortcode = entity.VerifyImportOutcomeResult{
-					Value: v.Shortcode,
-				}
 			}
 			result.CreateData = append(result.CreateData, verifyImportOutcomeView)
 		}
