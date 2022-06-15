@@ -84,7 +84,7 @@ func (s AmsSubCategoryService) QueryByIDs(ctx context.Context, ids []string, opt
 
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$subcategory_id_", ": ID!", len(_ids)))
 	for index := range _ids {
-		fmt.Fprintf(sb, "q%d: subcategory(id: $subcategory_id_%d) {id name status system}\n", index, index)
+		fmt.Fprintf(sb, "q%d: subcategoryNode(id: $subcategory_id_%d) {id name status system}\n", index, index)
 	}
 	sb.WriteString("}")
 

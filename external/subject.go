@@ -59,7 +59,7 @@ func (s AmsSubjectService) QueryByIDs(ctx context.Context, ids []string, options
 	sb := new(strings.Builder)
 	fmt.Fprintf(sb, "query (%s) {", utils.StringCountRange(ctx, "$subject_id_", ": ID!", len(_ids)))
 	for index := range _ids {
-		fmt.Fprintf(sb, "q%d: subject(id: $subject_id_%d) {id name status system}\n", index, index)
+		fmt.Fprintf(sb, "q%d: subjectNode(id: $subject_id_%d) {id name status system}\n", index, index)
 	}
 	sb.WriteString("}")
 
