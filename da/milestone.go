@@ -274,6 +274,7 @@ type MilestoneCondition struct {
 	SourceIDs   dbo.NullStrings
 	Description sql.NullString
 	Name        sql.NullString
+	Names       dbo.NullStrings
 	Shortcode   sql.NullString
 	Shortcodes  dbo.NullStrings
 	SearchKey   sql.NullString
@@ -304,6 +305,11 @@ func (c *MilestoneCondition) GetConditions() ([]string, []interface{}) {
 	if c.Name.Valid {
 		wheres = append(wheres, "match(name) against(? in boolean mode)")
 		params = append(params, strings.TrimSpace(c.Name.String))
+	}
+
+	if c.Names.Valid {
+		wheres = append(wheres, "name in (?)")
+		params = append(params, c.Names.Strings)
 	}
 
 	if c.Shortcode.Valid {

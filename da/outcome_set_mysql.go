@@ -56,8 +56,8 @@ func (c *SetCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if c.Names.Valid {
-		wheres = append(wheres, fmt.Sprintf("name in (%s)", c.IDs.SQLPlaceHolder()))
-		params = append(params, c.Names.ToInterfaceSlice()...)
+		wheres = append(wheres, "name in (?)")
+		params = append(params, c.Names.Strings)
 	}
 
 	if c.OrganizationID.Valid {

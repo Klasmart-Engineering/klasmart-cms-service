@@ -997,3 +997,117 @@ func (s *Server) exportOutcomes(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
+
+// @ID verifyImportLearningOutcomes
+// @Summary verify import learning outcome data
+// @Tags learning_outcomes
+// @Description verify import learning outcome data
+// @Accept json
+// @Produce json
+// @Param outcome body entity.VerifyImportOutcomeRequest true "verify import outcome data"
+// @Success 200 {object} entity.VerifyImportOutcomeResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /learning_outcomes/verify_import [post]
+// verify import learning outcomes data
+func (s *Server) verifyImportOutcomes(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var req entity.VerifyImportOutcomeRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		log.Warn(ctx, "verifyImportOutcomes error",
+			log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	permissionMap, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
+		external.CreateLearningOutcome,
+		external.EditPublishedLearningOutcome,
+	})
+	if err != nil {
+		log.Error(ctx, "external.GetPermissionServiceProvider().HasOrganizationPermissions error",
+			log.Any("op", op),
+			log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !(permissionMap[external.CreateLearningOutcome] &&
+		permissionMap[external.EditPublishedLearningOutcome]) {
+		log.Warn(ctx, "verifyImportOutcomes: HasOrganizationPermissions failed",
+			log.Any("op", op),
+			log.Any("permissionMap", permissionMap))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
+
+	result, err := model.GetOutcomeModel().VerifyImportData(ctx, op, &req)
+	switch err {
+	case model.ErrBadRequest:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @ID importLearningOutcomes
+// @Summary import learning outcome
+// @Tags learning_outcomes
+// @Description import learning outcome
+// @Accept json
+// @Produce json
+// @Param outcome body entity.ImportOutcomeRequest true "import outcome data"
+// @Success 200 {object} entity.VerifyImportOutcomeResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /learning_outcomes/import [post]
+// import learning outcomes
+func (s *Server) importOutcomes(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var req entity.ImportOutcomeRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		log.Warn(ctx, "exportOutcomes error",
+			log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	permissionMap, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
+		external.CreateLearningOutcome,
+		external.EditPublishedLearningOutcome,
+	})
+	if err != nil {
+		log.Error(ctx, "external.GetPermissionServiceProvider().HasOrganizationPermissions error",
+			log.Any("op", op),
+			log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !permissionMap[external.CreateLearningOutcome] ||
+		!permissionMap[external.EditPublishedLearningOutcome] {
+		log.Warn(ctx, "importOutcomes: HasOrganizationPermissions failed",
+			log.Any("op", op),
+			log.Any("permissionMap", permissionMap))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
+
+	result, err := model.GetOutcomeModel().Import(ctx, op, &req)
+	switch err {
+	case model.ErrBadRequest:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}

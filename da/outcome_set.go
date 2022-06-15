@@ -9,6 +9,7 @@ import (
 )
 
 type IOutcomeSetDA interface {
+	dbo.DataAccesser
 	CreateSet(ctx context.Context, tx *dbo.DBContext, outcomeSet *entity.Set) error
 	UpdateOutcomeSet(ctx context.Context, tx *dbo.DBContext, outcomeSet *entity.Set) error
 	SearchSet(ctx context.Context, tx *dbo.DBContext, condition *SetCondition) (int, []*entity.Set, error)
