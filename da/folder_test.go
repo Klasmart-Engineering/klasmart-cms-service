@@ -53,35 +53,6 @@ func TestUpdateItemCountQuery(t *testing.T) {
 
 }
 
-//func TestSearchFolderContent(t *testing.T) {
-//	total, folderContent, err := GetContentDA().SearchFolderContentUnsafe(context.Background(), dbo.MustGetDB(context.Background()), CombineConditions{
-//		SourceCondition: &ContentCondition{Name: "test",
-//			OrderBy: ContentOrderByCreatedAtDesc,
-//			Pager: utils.Pager{
-//				PageIndex: 0,
-//				PageSize:  10,
-//			},
-//		},
-//		TargetCondition: &ContentCondition{Name: "test2",
-//			OrderBy: ContentOrderByCreatedAtDesc,
-//			Pager: utils.Pager{
-//				PageIndex: 0,
-//				PageSize:  10,
-//			},
-//		},
-//	}, FolderCondition{
-//		Name: "plans and materials",
-//	})
-//	if err != nil {
-//		t.Error(err)
-//		return
-//	}
-//	t.Log(total)
-//	for i := range folderContent {
-//		t.Logf("%#v\n", folderContent[i])
-//	}
-//}
-
 func TestBatchUpdatePath(t *testing.T) {
 	fids := []string{
 		"5fc9edc9bfbf99d0a0eb2435",
