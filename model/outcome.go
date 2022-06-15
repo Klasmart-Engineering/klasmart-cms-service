@@ -1138,7 +1138,7 @@ func (o OutcomeModel) Import(ctx context.Context, operator *entity.Operator, imp
 			Valid: true,
 		},
 	}
-	err := o.outcomeDA.Query(ctx, outcomeDaCondition, &existOutcomes)
+	err = o.outcomeDA.Query(ctx, outcomeDaCondition, &existOutcomes)
 	if err != nil {
 		log.Error(ctx, "o.outcomeDA.Query error",
 			log.Err(err),
