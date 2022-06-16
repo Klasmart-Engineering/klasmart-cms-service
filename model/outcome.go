@@ -21,16 +21,14 @@ import (
 )
 
 var (
-	ErrOutcomeInvalidData                  = errors.New("invalid outcome data")
-	ErrImportOutcomeNotAllowEdit           = errors.New("not allow edit")
-	ErrImportOutcomeDuplicateMilestoneName = errors.New("duplicate milestone name")
-	ErrImportOutcomeDuplicateSetName       = errors.New("duplicate set name")
-	ErrImportOutcomeNotExistMilestoneName  = errors.New("not exist milestone name")
-	ErrImportOutcomeNotExistSetName        = errors.New("not exist set name")
-	ErrImportOutcomeDuplicateShortcode     = errors.New("duplicate shortcode")
-	ErrImportOutcomeNotExistShortcode      = errors.New("not exist shortcode")
-	ErrImportOutcomeInvalidShortcode       = errors.New("invalid shortcode")
-	ErrImportOutcomeRepeatShortcode        = errors.New("repeat shortcode")
+	ErrOutcomeInvalidData              = errors.New("invalid outcome data")
+	ErrImportOutcomeNotAllowEdit       = errors.New("assessment_lo_bulk_upload_shortcode_locked")
+	ErrImportOutcomeDuplicateSetName   = errors.New("assessment_lo_bulk_upload_duplicated_name")
+	ErrImportOutcomeNotExistSetName    = errors.New("assessment_lo_bulk_upload_invalid_name")
+	ErrImportOutcomeDuplicateShortcode = errors.New("assessment_lo_bulk_upload_shortcode_exists")
+	ErrImportOutcomeNotExistShortcode  = errors.New("assessment_lo_bulk_upload_shortcode_not_exists")
+	ErrImportOutcomeInvalidShortcode   = errors.New("assessment_lo_bulk_upload_shortcode_locked")
+	ErrImportOutcomeRepeatShortcode    = errors.New("assessment_lo_bulk_upload_duplicate_shortcode")
 )
 
 type IOutcomeModel interface {
