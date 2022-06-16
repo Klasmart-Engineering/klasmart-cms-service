@@ -131,6 +131,7 @@ type ExportOutcomeResponse struct {
 }
 
 type ExportOutcomeView struct {
+	RowNumber      int      `json:"row_number"`
 	OutcomeID      string   `json:"outcome_id"`
 	OutcomeName    string   `json:"outcome_name"`
 	Shortcode      string   `json:"shortcode"`
@@ -162,8 +163,9 @@ type VerifyImportOutcomeResponse struct {
 }
 
 type VerifyImportOutcomeView struct {
+	RowNumber      int                         `json:"row_number"`
 	OutcomeName    string                      `json:"outcome_name" binding:"required"`
-	Shortcode      VerifyImportOutcomeResult   `json:"shortcode"`
+	Shortcode      VerifyImportOutcomeResults  `json:"shortcode"`
 	Assumed        bool                        `json:"assumed"`
 	Description    string                      `json:"description"`
 	Keywords       []string                    `json:"keywords"`
@@ -174,7 +176,6 @@ type VerifyImportOutcomeView struct {
 	Age            []string                    `json:"age"`
 	Grade          []string                    `json:"grade"`
 	Sets           []VerifyImportOutcomeResult `json:"sets"`
-	Milestones     []VerifyImportOutcomeResult `json:"milestones"`
 	ScoreThreshold float32                     `json:"score_threshold"`
 }
 
@@ -183,12 +184,18 @@ type VerifyImportOutcomeResult struct {
 	Error string `json:"error,omitempty"`
 }
 
+type VerifyImportOutcomeResults struct {
+	Value  string   `json:"value"`
+	Errors []string `json:"errors,omitempty"`
+}
+
 type ImportOutcomeRequest struct {
 	CreateData []*ImportOutcomeView `json:"create_data"`
 	UpdateData []*ImportOutcomeView `json:"update_data"`
 }
 
 type ImportOutcomeView struct {
+	RowNumber      int      `json:"row_number" binding:"required"`
 	OutcomeName    string   `json:"outcome_name" binding:"required"`
 	Shortcode      string   `json:"shortcode"`
 	Assumed        bool     `json:"assumed"`
@@ -201,7 +208,6 @@ type ImportOutcomeView struct {
 	Age            []string `json:"age"`
 	Grade          []string `json:"grade"`
 	Sets           []string `json:"sets"`
-	Milestones     []string `json:"milestones"`
 	ScoreThreshold float32  `json:"score_threshold"`
 }
 
@@ -258,8 +264,9 @@ func (v ImportOutcomeView) ConvertToPendingOutcome(ctx context.Context, op *Oper
 
 func (v ImportOutcomeView) ConvertToVerifyView(ctx context.Context) *VerifyImportOutcomeView {
 	verifyView := &VerifyImportOutcomeView{
+		RowNumber:   v.RowNumber,
 		OutcomeName: v.OutcomeName,
-		Shortcode: VerifyImportOutcomeResult{
+		Shortcode: VerifyImportOutcomeResults{
 			Value: v.Shortcode,
 		},
 		Assumed:        v.Assumed,
@@ -272,13 +279,6 @@ func (v ImportOutcomeView) ConvertToVerifyView(ctx context.Context) *VerifyImpor
 		Age:            v.Age,
 		Grade:          v.Grade,
 		ScoreThreshold: v.ScoreThreshold,
-	}
-
-	verifyView.Milestones = make([]VerifyImportOutcomeResult, len(v.Milestones))
-	for i := range v.Milestones {
-		verifyView.Milestones[i] = VerifyImportOutcomeResult{
-			Value: v.Milestones[i],
-		}
 	}
 
 	verifyView.Sets = make([]VerifyImportOutcomeResult, len(v.Sets))
