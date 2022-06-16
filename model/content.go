@@ -228,7 +228,7 @@ func (cm *ContentModel) GetSTMLessonPlans(ctx context.Context, tx *dbo.DBContext
 		material.Name = m.Name
 		material.Thumbnail = m.Thumbnail
 		material.Description = m.Description
-		material.Data = m.Data
+		material.Data = strings.Replace(m.Data, "assets-", "assets/", -1)
 		materialMap[m.ID] = &material
 	}
 
