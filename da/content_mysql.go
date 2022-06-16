@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/dbo"
@@ -33,14 +34,13 @@ type CombineConditions struct {
 func (s *CombineConditions) GetConditions() ([]string, []interface{}) {
 	sourceWhereRaw, sourceParams := s.SourceCondition.GetConditions()
 	targetWhereRaw, targetParams := s.TargetCondition.GetConditions()
-	where := ""
 	if len(sourceWhereRaw) < 1 || len(targetWhereRaw) < 1 {
 		return s.SourceCondition.GetConditions()
 	}
 
 	sourceWhere := "(" + strings.Join(sourceWhereRaw, " and ") + ")"
 	targetWhere := "(" + strings.Join(targetWhereRaw, " and ") + ")"
-	where = sourceWhere + " OR " + targetWhere
+	where := fmt.Sprintf("%s OR %s", sourceWhere, targetWhere)
 	params := append(sourceParams, targetParams...)
 	return []string{where}, params
 }
@@ -516,7 +516,15 @@ type TotalContentResponse struct {
 }
 
 func (cd *ContentMySQLDA) SearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 ContentCondition, condition2 *FolderCondition) (int, []*entity.FolderContent, error) {
-	return cd.doSearchFolderContent(ctx, tx, &condition1, condition2)
+	return cd.doSearchFolderContentV2(ctx, tx, condition2, &condition1)
+}
+
+func (cd *ContentMySQLDA) SearchFolderContentWithCombinedConditions(ctx context.Context, tx *dbo.DBContext,
+	combined *CombineConditions, folderCondition *FolderCondition) (int, []*entity.FolderContent, error) {
+
+	source := combined.SourceCondition
+	target := combined.TargetCondition
+	return cd.doSearchFolderContentV2(ctx, tx, folderCondition, source, target)
 }
 
 func (cd *ContentMySQLDA) SearchFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 *FolderCondition) (int, []*entity.FolderContent, error) {
@@ -785,4 +793,153 @@ from cms_contents cc
 	}
 
 	return response, nil
+}
+
+// content folder V2
+var (
+	_searchFolderCountTemplate  = `(SELECT id FROM cms_folder_items WHERE %s)`
+	_searchContentCountTemplate = `(SELECT id FROM cms_contents WHERE %s)`
+	_searchFolderDataTemplate   = `
+SELECT
+	id,
+	%d as content_type,
+	name as content_name,
+	items_count,
+	description,
+	keywords,
+	creator as author,
+	dir_path,
+	'published' as publish_status,
+	thumbnail,
+	'' as data,
+	create_at,
+	update_at
+FROM
+	cms_folder_items
+WHERE
+	%s
+`
+	_searchContentDataTemplate = `
+SELECT
+	id,
+	content_type,
+	content_name,
+	0 as items_count,
+	description,
+	keywords,
+	author,
+	dir_path,
+	publish_status,
+	thumbnail,
+	data,
+	create_at,
+	update_at
+FROM
+	cms_contents
+WHERE
+	%s
+`
+)
+
+// step1. build folders query
+// step2. build contents query, which contains multiple sub query
+func (cd *ContentMySQLDA) buildFolderContentSQLFromCondition(ctx context.Context, counting bool,
+	folderItemsCond dbo.Conditions, contentsCond ...dbo.Conditions) (sql string, params []any) {
+
+	folderItemsQuery, folderItemsParams := folderItemsCond.GetConditions()
+	folderItemsConditionSql := strings.Join(folderItemsQuery, " and ")
+	if folderItemsConditionSql == "" {
+		folderItemsConditionSql = "1=1"
+	}
+
+	var folderItemsSql string
+	var folderTemplate, contentTemplate string
+	if counting {
+		folderTemplate = _searchFolderCountTemplate
+		contentTemplate = _searchContentCountTemplate
+		folderItemsSql = fmt.Sprintf(folderTemplate, folderItemsConditionSql)
+	} else {
+		folderTemplate = _searchFolderDataTemplate
+		contentTemplate = _searchContentDataTemplate
+		folderItemsSql = fmt.Sprintf(folderTemplate, entity.AliasContentTypeFolder, folderItemsConditionSql)
+	}
+
+	var contentsSqlList []string
+	var contentsParams []any
+	for _, cc := range contentsCond {
+		query, param := cc.GetConditions()
+		conditionSql := strings.Join(query, " and ")
+		if conditionSql == "" {
+			conditionSql = "1=1"
+		}
+		sql := fmt.Sprintf(contentTemplate, conditionSql)
+		contentsSqlList = append(contentsSqlList, sql)
+		contentsParams = append(contentsParams, param...)
+	}
+
+	contentsSql := strings.Join(contentsSqlList, "\nUNION\n")
+	sql = folderItemsSql
+	if contentsSql != "" {
+		sql = sql + "\nUNION\n" + contentsSql
+	}
+	if counting {
+		sql = "SELECT count(*) as total FROM (\n" + sql + "\n) as record"
+	}
+
+	params = append(params, folderItemsParams...)
+	params = append(params, contentsParams...)
+	return
+}
+
+func (cd *ContentMySQLDA) doSearchFolderContentV2(ctx context.Context, tx *dbo.DBContext,
+	folderItemsCond *FolderCondition, contentsCond ...dbo.Conditions) (int, []*entity.FolderContent, error) {
+
+	var total TotalContentResponse
+	var err error
+
+	countQuery, countParams := cd.buildFolderContentSQLFromCondition(ctx, true, folderItemsCond, contentsCond...)
+	dataQuery, dataParams := cd.buildFolderContentSQLFromCondition(ctx, false, folderItemsCond, contentsCond...)
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	var countError, dataError error
+
+	//get count
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				countError = fmt.Errorf("%v", r)
+			}
+			wg.Done()
+		}()
+		countError = cd.s.QueryRawSQLTx(ctx, tx, &total, countQuery, countParams...)
+	}()
+
+	//get data
+	orderBy := folderItemsCond.GetOrderBy()
+	pager := folderItemsCond.GetPager()
+	folderContents := make([]*entity.FolderContent, pager.PageSize)
+	pagedDataQuery := cd.appendConditionParamWithOrderAndPage(dataQuery, orderBy, pager)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				dataError = fmt.Errorf("%v", r)
+			}
+			wg.Done()
+		}()
+		dataError = cd.s.QueryRawSQLTx(ctx, tx, &folderContents, pagedDataQuery, dataParams...)
+	}()
+
+	wg.Wait()
+	if countError != nil {
+		log.Error(ctx, "count raw sql failed", log.Err(countError),
+			log.String("countQuery", countQuery), log.Any("countParams", countParams))
+		return 0, nil, countError
+	}
+	if dataError != nil {
+		log.Error(ctx, "dataQuery raw sql failed", log.Err(dataError),
+			log.String("dataQuery", countQuery), log.Any("dataParams", dataParams))
+		return 0, nil, err
+	}
+	return total.Total, folderContents, nil
 }

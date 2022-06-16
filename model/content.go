@@ -118,7 +118,6 @@ type IContentModel interface {
 
 	CountUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, error)
 	SearchUserPrivateFolderContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error)
-	SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error)
 	SearchUserFolderContentSlim(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error)
 	SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
@@ -2576,7 +2575,7 @@ func (cm *ContentModel) SearchUserFolderContentSlim(ctx context.Context, tx *dbo
 	folderCondition := cm.buildFolderConditionWithPermission(ctx, user, condition, searchUserIDs, foldPermission)
 
 	log.Info(ctx, "search folder content", log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
-	count, objs, err := da.GetContentDA().SearchFolderContentUnsafe(ctx, tx, combineCondition, folderCondition)
+	count, objs, err := da.GetContentDA().SearchFolderContentWithCombinedConditions(ctx, tx, combineCondition, folderCondition)
 	if err != nil {
 		log.Error(ctx, "can't read folder content", log.Err(err), log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
 		return 0, nil, ErrReadContentFailed
@@ -2586,39 +2585,6 @@ func (cm *ContentModel) SearchUserFolderContentSlim(ctx context.Context, tx *dbo
 	return count, ret, nil
 }
 
-func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error) {
-	searchUserIDs := cm.getRelatedUserID(ctx, condition.Name, user)
-	err := cm.filterRootPath(ctx, condition, entity.OwnerTypeOrganization, user)
-	if err != nil {
-		log.Warn(ctx, "filterRootPath failed", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
-		return 0, nil, err
-	}
-	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, searchUserIDs, user)
-	if err != nil {
-		log.Warn(ctx, "buildUserContentCondition failed", log.Err(err), log.Any("condition", condition), log.Any("searchUserIDs", searchUserIDs), log.String("uid", user.UserID))
-		return 0, nil, err
-	}
-	folderCondition := cm.buildFolderCondition(ctx, condition, searchUserIDs, user)
-	if len(condition.PublishStatus) == 1 && condition.PublishStatus[0] == entity.ContentStatusPublished {
-		err = cm.buildFolderConditionWithShowAll(ctx, user, folderCondition)
-		if err != nil {
-			log.Warn(ctx, "SearchUserFolderContent append show all failed",
-				log.Any("op", user),
-				log.Any("condition", condition))
-			return 0, nil, err
-		}
-	}
-
-	log.Info(ctx, "search folder content", log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
-	count, objs, err := da.GetContentDA().SearchFolderContentUnsafe(ctx, tx, combineCondition, folderCondition)
-	if err != nil {
-		log.Error(ctx, "can't read folder content", log.Err(err), log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
-		return 0, nil, ErrReadContentFailed
-	}
-	ret := cm.convertFolderContent(ctx, objs, user)
-	cm.fillFolderContent(ctx, ret, user)
-	return count, ret, nil
-}
 func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	//where, params := combineCondition.GetConditions()
 	//logger.WithContext(ctx).WithField("subject", "content").Infof("Combine condition: %#v, params: %#v", where, params)
@@ -3047,7 +3013,7 @@ func (cm *ContentModel) filterPublishedPublishStatus(ctx context.Context, status
 	return newStatus
 }
 
-func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, searchUserIDs []string, user *entity.Operator) (dbo.Conditions, error) {
+func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, searchUserIDs []string, user *entity.Operator) (*da.CombineConditions, error) {
 
 	err := cm.convertAuthedOrgIDToParentsPath(ctx, tx, condition)
 	if err != nil {
@@ -3082,21 +3048,6 @@ func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.D
 	//condition2.Scope = scopes
 	condition1.JoinUserIDList = searchUserIDs
 	condition2.JoinUserIDList = searchUserIDs
-
-	if condition.PublishedQueryMode == entity.PublishedQueryModeOnlyOwner {
-		//The user only has the permission to query his own
-		return cm.conditionRequestToCondition(condition1), nil
-	} else if condition.PublishedQueryMode == entity.PublishedQueryModeOnlyOthers {
-		//The user only has the permission to query others
-		return cm.conditionRequestToCondition(condition2), nil
-	} else if condition.PublishedQueryMode == entity.PublishedQueryModeNone {
-		log.Error(ctx, "no valid private scope",
-			log.Err(err),
-			log.Strings("scopes", scope),
-			log.Any("condition", condition),
-			log.Any("user", user))
-		return nil, ErrNoPermissionToQuery
-	}
 
 	combineCondition := &da.CombineConditions{
 		SourceCondition: cm.conditionRequestToCondition(condition1),
@@ -3648,6 +3599,8 @@ func (cm *ContentModel) buildFolderConditionWithPermission(ctx context.Context, 
 		//Editors:      searchUserIDs,
 		Partition: partition,
 		Disable:   disableFolder,
+		OrderBy:   da.NewFolderOrderBy(condition.OrderBy),
+		Pager:     condition.Pager,
 	}
 	if len(condition.PublishStatus) == 1 && condition.PublishStatus[0] == entity.ContentStatusPublished {
 		folderCondition.ShowEmptyFolder = entity.NullBool{Bool: perm[external.ShowAllFolder295], Valid: true}
@@ -3683,6 +3636,8 @@ func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition *ent
 		//Editors:      searchUserIDs,
 		Partition: partition,
 		Disable:   disableFolder,
+		OrderBy:   da.NewFolderOrderBy(condition.OrderBy),
+		Pager:     condition.Pager,
 	}
 	return folderCondition
 }

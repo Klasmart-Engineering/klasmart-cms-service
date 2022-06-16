@@ -102,7 +102,7 @@ func TestContentModel_SearchUserFolderContent(t *testing.T) {
 		Pager:         utils.GetPager("1", "20"),
 	}
 
-	GetContentModel().SearchUserFolderContent(ctx, tx, &condition, &op)
+	GetContentModel().SearchUserFolderContentSlim(ctx, tx, &condition, &op)
 }
 
 func init2Operator(orgID string, authTo string, authCode string) *entity.Operator {
