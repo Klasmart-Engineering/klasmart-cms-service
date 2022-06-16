@@ -131,7 +131,6 @@ type ExportOutcomeResponse struct {
 }
 
 type ExportOutcomeView struct {
-	RowNumber      int      `json:"row_number"`
 	OutcomeID      string   `json:"outcome_id"`
 	OutcomeName    string   `json:"outcome_name"`
 	Shortcode      string   `json:"shortcode"`
