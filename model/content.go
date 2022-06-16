@@ -3522,6 +3522,8 @@ func (cm *ContentModel) buildFolderConditionWithPermission(ctx context.Context, 
 		//Editors:      searchUserIDs,
 		Partition: partition,
 		Disable:   disableFolder,
+		OrderBy:   da.NewFolderOrderBy(condition.OrderBy),
+		Pager:     condition.Pager,
 	}
 	if len(condition.PublishStatus) == 1 && condition.PublishStatus[0] == entity.ContentStatusPublished {
 		folderCondition.ShowEmptyFolder = entity.NullBool{Bool: perm[external.ShowAllFolder295], Valid: true}
@@ -3557,6 +3559,8 @@ func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition *ent
 		//Editors:      searchUserIDs,
 		Partition: partition,
 		Disable:   disableFolder,
+		OrderBy:   da.NewFolderOrderBy(condition.OrderBy),
+		Pager:     condition.Pager,
 	}
 	return folderCondition
 }

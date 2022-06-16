@@ -40,8 +40,9 @@ func (s *CombineConditions) GetConditions() ([]string, []interface{}) {
 
 	sourceWhere := "(" + strings.Join(sourceWhereRaw, " and ") + ")"
 	targetWhere := "(" + strings.Join(targetWhereRaw, " and ") + ")"
+	where := fmt.Sprintf("%s OR %s", sourceWhere, targetWhere)
 	params := append(sourceParams, targetParams...)
-	return []string{sourceWhere, targetWhere}, params
+	return []string{where}, params
 }
 
 func (s *CombineConditions) GetPager() *dbo.Pager {
