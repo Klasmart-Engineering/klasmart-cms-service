@@ -1401,24 +1401,16 @@ func (o OutcomeModel) VerifyImportData(ctx context.Context, operator *entity.Ope
 		}
 
 		// verify set
-		for _, setName := range v.Sets {
+		for i, setName := range v.Sets {
 			if set, ok := setNameMap[setName]; ok {
 				if err, ok := setNameErrMap[setName]; ok {
-					verifyImportOutcomeView.Sets = append(verifyImportOutcomeView.Sets, entity.VerifyImportOutcomeResult{
-						Value: setName,
-						Error: err.Error(),
-					})
+					verifyImportOutcomeView.Sets[i].Error = err.Error()
 					result.ExistError = true
 				} else {
-					verifyImportOutcomeView.Sets = append(verifyImportOutcomeView.Sets, entity.VerifyImportOutcomeResult{
-						Value: set.ID,
-					})
+					verifyImportOutcomeView.Sets[i].Value = set.ID
 				}
 			} else {
-				verifyImportOutcomeView.Sets = append(verifyImportOutcomeView.Sets, entity.VerifyImportOutcomeResult{
-					Value: setName,
-					Error: ErrImportOutcomeNotExistSetName.Error(),
-				})
+				verifyImportOutcomeView.Sets[i].Error = ErrImportOutcomeNotExistSetName.Error()
 				result.ExistError = true
 			}
 		}
