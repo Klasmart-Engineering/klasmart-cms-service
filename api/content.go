@@ -972,7 +972,7 @@ func (s *Server) queryContentInternal(c *gin.Context) {
 // @Success 200 {array} entity.LessonPlan
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /internal/stm/contents [get]
+// @Router /internal/stm/contents [post]
 func (s *Server) getSTMLessonPlan(c *gin.Context) {
 	ctx := c.Request.Context()
 
