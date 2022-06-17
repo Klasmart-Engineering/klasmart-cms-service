@@ -1223,6 +1223,7 @@ func (o OutcomeModel) Import(ctx context.Context, operator *entity.Operator, imp
 
 		if preEditOutcome, ok := existOutcomeMap[v.Shortcode]; ok {
 			outcome.AncestorID = preEditOutcome.AncestorID
+			outcome.SourceID = preEditOutcome.ID
 			outcome.AuthorName = operatorName
 			outcome.CreateAt = preEditOutcome.CreateAt
 			outcome.UpdateAt = currentTime
