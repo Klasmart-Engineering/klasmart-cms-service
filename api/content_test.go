@@ -121,6 +121,6 @@ func TestGetSTMLessonPlans(t *testing.T) {
 		t.Fatal(err)
 	}
 	url := "/v1/internal/stm/contents"
-	res := DoHttpWithOperator(http.MethodGet, &op, url, string(data))
+	res := DoHttpWithOperator(http.MethodPost, &op, url, string(data))
 	fmt.Println(res)
 }
