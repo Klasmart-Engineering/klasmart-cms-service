@@ -2314,8 +2314,22 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 	condition.JoinUserIDList = searchUserIDs
 	//cm.addUserCondition(ctx, &condition, user)
 
+	foldPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, user, []external.PermissionName{
+		external.CreateFolder289,
+		external.ShowAllFolder295,
+	})
+	if err != nil {
+		log.Error(ctx, "hasFolderPermission failed",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.Any("user", user))
+		return 0, nil, err
+	}
+
 	//生成folder condition
-	folderCondition := cm.buildFolderCondition(ctx, condition, searchUserIDs, user)
+	//folderCondition := cm.buildFolderCondition(ctx, condition, searchUserIDs, user)
+
+	folderCondition := cm.buildFolderConditionWithPermission(ctx, user, condition, searchUserIDs, foldPermission)
 
 	log.Info(ctx, "search folder content", log.Any("condition", condition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
 	count, objs, err := da.GetContentDA().SearchFolderContent(ctx, tx, *cm.conditionRequestToCondition(*condition), folderCondition)
