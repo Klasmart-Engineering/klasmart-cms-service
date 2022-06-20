@@ -42,6 +42,7 @@ const (
 
 	//Folder
 	FolderDeleteNoEmptyFolder ResponseLabel = "library_error_delete_folder"
+	FolderNameEmpty           ResponseLabel = "library_error_folder_name_empty"
 
 	// schedule
 	ScheduleMessageEditOverlap           ResponseLabel = "schedule_msg_edit_overlap"
