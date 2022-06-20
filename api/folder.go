@@ -34,6 +34,10 @@ func (s *Server) createFolder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+	if folderName := strings.TrimSpace(data.Name); folderName == "" {
+		c.JSON(http.StatusBadRequest, L(FolderNameEmpty))
+		return
+	}
 
 	//check permission
 	hasPermission, err := model.GetFolderPermissionModel().CheckFolderOperatorPermission(ctx, op)
