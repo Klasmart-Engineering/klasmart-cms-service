@@ -18,6 +18,68 @@
 - [flyway](https://flywaydb.org/) 
 - [gin-swagger](https://github.com/swaggo/gin-swagger)
 
+## Environment variable
+
+---
+
+| Env Var                               | Description                                              |
+|---------------------------------------|----------------------------------------------------------|
+| storage_protocol                      | storage protocol                                         |
+| storage_bucket                        | storage bucket                                           |
+| storage_region                        | storage region                                           |
+| storage_endpoint                      | storage endpoint                                         |
+| storage_download_mode                 | storage download mode native/cloudfront                  |
+| storage_sig_mode                      | true/false                                               |
+| storage_accelerate                    | true/false                                               |
+| cdn_path                              | cdn path                                                 |
+| cdn_key_id                            | cdn key id                                               |
+| cdn_private_key_path                  | cdn private key path                                     |
+| -                                     |                                                          |
+| connection_string                     | mysql connection string                                  |
+| max_open_conns                        | mysql max open connect                                   |
+| max_idle_conns                        | mysql max idle connect                                   |
+| conn_max_life_time                    | mysql connect max life time                              |
+| conn_max_idle_time                    | mysql connect max idle time                              |
+| slow_threshold                        | mysql slow threshold                                     |
+| -                                     |                                                          |
+| open_cache                            | whether to enable caching                                |
+| redis_host                            | redis host                                               |
+| redis_port                            | redis port                                               |
+| redis_password                        | redis password                                           |
+| -                                     |                                                          |
+| schedule_review_type_enabled          | whether to enable the review type schedule               |
+| max_repeat_year                       | The maximum age limit for repeatedly creating a schedule |
+| cache_expiration                      | cache expiration                                         |
+| -                                     |                                                          |
+| h5p_private_key_path                  | h5p private key path                                     |
+| -                                     |                                                          |
+| live_token_private_key_path           | live token private key path                              |
+| live_assets_url_prefix                | live assets url prefix                                   |
+| -                                     |                                                          |
+| ams_endpoint                          | ams endpoint                                             |
+| jwt_public_key_path                   | jwt public key path                                      |
+| user_service_api_key                  | user service api key                                     |
+| -                                     |                                                          |
+| h5p_endpoint                          | assessment service endpoint                              |
+| -                                     |                                                          |
+| data_service_endpoint                 | data service endpoint                                    |
+| data_service_api_key                  | data service api key                                     |
+| data_service_public_key               | data service public key                                  |
+| -                                     |                                                          |
+| cors_domain_list                      | cors domain list                                         |
+| cors_allow_file_protocol              | cors allow file protocol                                 |
+|                                       |                                                          |
+| user_cache_expiration                 | set user cache expiration                                |
+| user_permission_cache_expiration      | set user permission cache expiration                     |
+| -                                     |                                                          |
+| NEW_RELIC_APP_NAME                    | newRelic app name                                        |
+| NEW_RELIC_LICENSE_KEY                 | newRelic license key                                     |
+| NEW_RELIC_DISTRIBUTED_TRACING_ENABLED | newRelic distributed tracing enabled                     |
+| NEW_RELIC_LABELS                      | newRelic labels                                          |
+|                                       |                                                          |
+| LOG_LEVEL                             | set log level                                            |
+
+
 ## Development Specification
 
 ---
@@ -96,3 +158,5 @@ git commit -m "feat(NKL-1 CNCD-2 TEST-12345): add new api xxxxxx"
 - [Postman](https://www.postman.com/)  for testing API requests
 - [gin-swagger](https://github.com/swaggo/gin-swagger) for generating api documentation
 - [flyway](https://flywaydb.org/) for database Migration Tool
+
+
