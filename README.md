@@ -4,6 +4,16 @@
 - Before starting, you can visit the [alpha](https://hub.alpha.kidsloop.net/) to experience.
 - Visit the [API documentation](https://api.alpha.kidsloop.net/user/) to view the interface provided by the cms service
 
+## Preparation
+
+---
+- Golang Installation  `go v1.18`
+- configure git `.gitconfig`
+```text
+[url "ssh://git@github.com/"]
+        insteadOf = https://github.com/
+```
+
 ## Development Flow
 
 ---
