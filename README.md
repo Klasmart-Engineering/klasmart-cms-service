@@ -19,6 +19,8 @@
 - [gin-swagger](https://github.com/swaggo/gin-swagger)
 
 ## Development Specification
+
+---
 - git commit specification [refer to this specification](https://www.conventionalcommits.org/en/v1.0.0/)
 ```text
 ^(feat|fix|docs|refactor|test|ci|chore)\(\w+\-\d+(\s\w+\-\d+)*?\):\s.+$
