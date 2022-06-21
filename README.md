@@ -53,6 +53,8 @@ git commit -m "feat(NKL-1 CNCD-2 TEST-12345): add new api xxxxxx"
     git push
   ```
 - After deploying to the alpha environment, interface with the front-end for joint debugging and testing
+  - [Front-end address](https://auth.alpha.kidsloop.net/)
+  - [backend address](https://cms.alpha.kidsloop.net/v1/ping)
 
 ## Project structure
 
