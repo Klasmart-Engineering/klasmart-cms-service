@@ -178,8 +178,6 @@ const (
 type AssessmentStatus string
 
 const (
-	// home fun study
-	AssessmentStatusNotApplicable AssessmentStatus = "NA"
 	// when create schedule
 	// For the schedule whose data preparation is completed, the assessment status is not start, otherwise it is sleep
 	AssessmentStatusPending    AssessmentStatus = "Pending"

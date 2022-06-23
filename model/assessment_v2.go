@@ -71,10 +71,8 @@ func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *
 		return nil, err
 	}
 
-	condition.AssessmentType = sql.NullString{
-		String: req.AssessmentType.String(),
-		Valid:  true,
-	}
+	condition.AssessmentTypes.Strings = strings.Split(req.AssessmentType.String(), ",")
+	condition.AssessmentTypes.Valid = len(condition.AssessmentTypes.Strings) > 0
 
 	condition.Status.Strings = strings.Split(req.Status, ",")
 	condition.Status.Valid = len(condition.Status.Strings) > 0

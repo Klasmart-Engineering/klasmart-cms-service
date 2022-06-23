@@ -4210,6 +4210,7 @@ func (cm *ContentModel) GetLatestContentIDMapByIDListInternal(ctx context.Contex
 	if len(cids) < 1 {
 		return nil, nil
 	}
+	cids = utils.SliceDeduplicationExcludeEmpty(cids)
 	resp := make(map[string]string)
 	data, err := da.GetContentDA().QueryContent(ctx, tx, &da.ContentCondition{
 		IncludeDeleted: true,

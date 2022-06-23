@@ -3,10 +3,6 @@ package model
 import (
 	"context"
 	"database/sql"
-	"github.com/KL-Engineering/kidsloop-cms-service/utils/errgroup"
-	"strings"
-	"sync"
-
 	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/dbo"
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
@@ -16,12 +12,13 @@ import (
 	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 	"github.com/KL-Engineering/kidsloop-cms-service/external"
 	"github.com/KL-Engineering/kidsloop-cms-service/utils"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils/errgroup"
+	"strings"
 )
 
 type AssessmentTool struct {
-	ctx  context.Context
-	op   *entity.Operator
-	once sync.Once
+	ctx context.Context
+	op  *entity.Operator
 
 	assessments []*v2.Assessment
 	first       *v2.Assessment
@@ -78,26 +75,10 @@ func NewAssessmentTool(ctx context.Context, op *entity.Operator, assessments []*
 	return &AssessmentTool{
 		ctx:         ctx,
 		op:          op,
-		once:        sync.Once{},
 		assessments: assessments,
 		first:       assessments[0],
 	}, nil
 }
-
-//type ToolModel func() error
-
-//func (at *AssessmentTool) InitAssessment(toolkit []ToolModel) error {
-//	var err error
-//	at.once.Do(func() {
-//		for _, tool := range toolkit {
-//			if err = tool(); err != nil {
-//				return
-//			}
-//		}
-//	})
-//
-//	return err
-//}
 
 func (at *AssessmentTool) GetAssessmentMap() (map[string]*v2.Assessment, error) {
 	if at.assessmentMap == nil {
@@ -343,6 +324,9 @@ func (at *AssessmentTool) initLessPlanMap() error {
 	lockedLessPlanIDs := make([]string, 0)
 	notLockedLessPlanIDs := make([]string, 0)
 	for _, item := range scheduleMap {
+		if item.ClassType == entity.ScheduleClassTypeHomework && (item.IsHomeFun || item.IsReview) {
+			continue
+		}
 		if item.IsLockedLessonPlan() {
 			lockedLessPlanIDs = append(lockedLessPlanIDs, item.LiveLessonPlan.LessonPlanID)
 		} else {
@@ -1018,6 +1002,7 @@ func (at *AssessmentTool) FirstGetCommentResultMap() (map[string]string, error) 
 
 	return at.commentResultMap, nil
 }
+
 func (at *AssessmentTool) initFirstGetCommentResultMap() error {
 	ctx := at.ctx
 	//op := at.op
@@ -1302,8 +1287,9 @@ type ExternalUserServiceInclude struct {
 }
 
 type ExternalAssessmentServiceInclude struct {
-	StudentScore   bool
-	TeacherComment bool
+	StudentScore            bool
+	TeacherComment          bool
+	CalculateCompletionRate bool
 }
 
 func (at *AssessmentTool) AsyncInitExternalData(include AssessmentExternalInclude) error {

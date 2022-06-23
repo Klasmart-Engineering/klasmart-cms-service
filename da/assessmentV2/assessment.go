@@ -247,12 +247,13 @@ type StudentIDsAndStatus struct {
 	Status    sql.NullString
 }
 type AssessmentCondition struct {
-	OrgID          sql.NullString
-	ScheduleID     sql.NullString
-	ScheduleIDs    entity.NullStrings
-	Status         entity.NullStrings
-	AssessmentType sql.NullString
-	TeacherIDs     entity.NullStrings
+	OrgID           sql.NullString
+	ScheduleID      sql.NullString
+	ScheduleIDs     entity.NullStrings
+	Status          entity.NullStrings
+	AssessmentType  sql.NullString
+	AssessmentTypes entity.NullStrings
+	TeacherIDs      entity.NullStrings
 
 	UpdateAtGe   sql.NullInt64
 	UpdateAtLe   sql.NullInt64
@@ -293,6 +294,11 @@ func (c AssessmentCondition) GetConditions() ([]string, []interface{}) {
 	if c.AssessmentType.Valid {
 		wheres = append(wheres, "assessment_type = ?")
 		params = append(params, c.AssessmentType.String)
+	}
+
+	if c.AssessmentTypes.Valid {
+		wheres = append(wheres, "assessment_type in (?)")
+		params = append(params, c.AssessmentTypes.Strings)
 	}
 
 	if c.TeacherIDs.Valid {
