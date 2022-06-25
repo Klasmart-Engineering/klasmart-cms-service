@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
 
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
@@ -9,13 +10,16 @@ import (
 )
 
 type IAssessmentMatch interface {
+	MatchCompleteRate() map[string]float64
+	MatchTeacherName() map[string][]*entity.IDName
+
 	MatchSchedule() (map[string]*entity.Schedule, error)
-	MatchTeacher() (map[string][]*entity.IDName, error)
+
 	MatchLessPlan() (map[string]*v2.AssessmentContentView, error)
 	MatchProgram() (map[string]*entity.IDName, error)
 	MatchSubject() (map[string][]*entity.IDName, error)
 	MatchClass() (map[string]*entity.IDName, error)
-	MatchCompleteRate() (map[string]float64, error)
+
 	MatchRemainingTime() (map[string]int64, error)
 	MatchAnyOneAttempted() (bool, error)
 
@@ -25,6 +29,12 @@ type IAssessmentMatch interface {
 	MatchDiffContentStudents() ([]*v2.AssessmentDiffContentStudentsReply, error)
 
 	Update(req *v2.AssessmentUpdateReq) error
+}
+
+type IAssessmentProcessor interface {
+	ProcessCompleteRate(ctx context.Context, assessmentUsers []*v2.AssessmentUser, roomData *external.RoomInfo, stuReviewMap map[string]*entity.ScheduleReview, reviewerFeedbackMap map[string]*v2.AssessmentReviewerFeedback) float64
+	ProcessTeacherName(assUserItem *v2.AssessmentUser, teacherMap map[string]*entity.IDName) (*entity.IDName, bool)
+	ProcessTeacherID(assUserItem *v2.AssessmentUser) (string, bool)
 }
 
 type AssessmentMatchAction int

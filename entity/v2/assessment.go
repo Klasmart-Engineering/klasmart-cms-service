@@ -71,7 +71,7 @@ type AssessmentQueryReply struct {
 	CompleteRate float64        `json:"complete_rate"`
 
 	// OnlineStudy
-	RemainingTime int64 `json:"remaining_time"`
+	//RemainingTime int64 `json:"remaining_time"`
 }
 
 type AssessmentAddWhenCreateSchedulesReq struct {

@@ -37,17 +37,7 @@ type AssessmentListInit struct {
 	reviewerFeedbackMap  map[string]*v2.AssessmentReviewerFeedback    // assessmentUserID
 	liveRoomMap          map[string]*external.RoomInfo                // roomID
 	scheduleStuReviewMap map[string]map[string]*entity.ScheduleReview // key:ScheduleID,StudentID
-	//assessmentUserMap   map[string][]*v2.AssessmentUser       // assessmentID
-
-	//classMap            map[string]*entity.IDName             // classID
-
-	//liveRoomMap         map[string]*external.RoomInfo         // roomID
-	//lessPlanMap         map[string]*v2.AssessmentContentView  // lessPlanID
-	//
-	//
-	//assessmentUsers []*v2.AssessmentUser
-	//
-	//scheduleStuReviewMap map[string]map[string]*entity.ScheduleReview // key:ScheduleID,StudentID
+	assessmentUserMap    map[string][]*v2.AssessmentUser              // assessmentID
 }
 
 func NewAssessmentListInit(ctx context.Context, op *entity.Operator, assessments []*v2.Assessment) (*AssessmentListInit, error) {
@@ -62,7 +52,7 @@ func NewAssessmentListInit(ctx context.Context, op *entity.Operator, assessments
 	}, nil
 }
 
-// first level node
+// level 1
 func (at *AssessmentListInit) initAssessmentMap() error {
 	at.assessmentMap = make(map[string]*v2.Assessment, len(at.assessments))
 	for _, item := range at.assessments {
@@ -72,7 +62,7 @@ func (at *AssessmentListInit) initAssessmentMap() error {
 	return nil
 }
 
-// second level node
+//  level 2
 
 func (at *AssessmentListInit) initScheduleMap() error {
 	ctx := at.ctx
@@ -140,10 +130,18 @@ func (at *AssessmentListInit) initScheduleRelationMap() error {
 func (at *AssessmentListInit) initScheduleReviewMap() error {
 	ctx := at.ctx
 	op := at.op
+	result := make(map[string]map[string]*entity.ScheduleReview)
 
 	scheduleIDs := make([]string, 0, len(at.assessments))
 	for _, item := range at.assessments {
+		if item.AssessmentType != v2.AssessmentTypeReviewStudy {
+			continue
+		}
 		scheduleIDs = append(scheduleIDs, item.ScheduleID)
+	}
+	if len(scheduleIDs) <= 0 {
+		at.scheduleStuReviewMap = result
+		return nil
 	}
 
 	scheduleReviewMap, err := GetScheduleModel().GetSuccessScheduleReview(ctx, op, scheduleIDs)
@@ -151,7 +149,6 @@ func (at *AssessmentListInit) initScheduleReviewMap() error {
 		return err
 	}
 
-	result := make(map[string]map[string]*entity.ScheduleReview)
 	for scheduleID, studentReviews := range scheduleReviewMap {
 		result[scheduleID] = make(map[string]*entity.ScheduleReview)
 		for _, reviewItem := range studentReviews {
@@ -192,7 +189,7 @@ func (at *AssessmentListInit) initAssessmentUsers() error {
 	return nil
 }
 
-// third level node
+// level 3
 
 func (at *AssessmentListInit) initLessPlanMap() error {
 	ctx := at.ctx
@@ -216,22 +213,32 @@ func (at *AssessmentListInit) initLessPlanMap() error {
 		}
 	}
 
-	latestLassPlanIDMap, err := GetContentModel().GetLatestContentIDMapByIDListInternal(ctx, dbo.MustGetDB(ctx), notLockedLessPlanIDs)
-	if err != nil {
-		return err
+	var err error
+	var latestLassPlanIDMap = make(map[string]string)
+
+	if len(notLockedLessPlanIDs) >= 0 {
+		latestLassPlanIDMap, err = GetContentModel().GetLatestContentIDMapByIDListInternal(ctx, dbo.MustGetDB(ctx), notLockedLessPlanIDs)
+		if err != nil {
+			return err
+		}
+
+		for _, latestID := range latestLassPlanIDMap {
+			lockedLessPlanIDs = append(lockedLessPlanIDs, latestID)
+		}
 	}
 
-	for _, latestID := range latestLassPlanIDMap {
-		lockedLessPlanIDs = append(lockedLessPlanIDs, latestID)
-	}
 	lessPlanIDs := utils.SliceDeduplicationExcludeEmpty(lockedLessPlanIDs)
+	result := make(map[string]*v2.AssessmentContentView, len(lessPlanIDs))
+	if len(lessPlanIDs) <= 0 {
+		at.lessPlanMap = result
+		return nil
+	}
 	lessPlans, err := GetContentModel().GetContentByIDListInternal(ctx, dbo.MustGetDB(ctx), lessPlanIDs)
 	if err != nil {
 		log.Error(ctx, "get content by ids error", log.Err(err), log.Strings("lessPlanIDs", lessPlanIDs))
 		return err
 	}
 
-	result := make(map[string]*v2.AssessmentContentView, len(lessPlans))
 	for _, item := range lessPlans {
 		lessPlanItem := &v2.AssessmentContentView{
 			ID:          item.ID,
@@ -450,6 +457,11 @@ func (at *AssessmentListInit) initReviewerFeedbackMap() error {
 		}
 	}
 
+	if len(assessmentUserIDs) <= 0 {
+		at.reviewerFeedbackMap = make(map[string]*v2.AssessmentReviewerFeedback)
+		return nil
+	}
+
 	condition := &assessmentV2.AssessmentUserResultCondition{
 		AssessmentUserIDs: entity.NullStrings{
 			Strings: assessmentUserIDs,
@@ -463,7 +475,8 @@ func (at *AssessmentListInit) initReviewerFeedbackMap() error {
 		return err
 	}
 
-	result := make(map[string]*v2.AssessmentReviewerFeedback)
+	result := make(map[string]*v2.AssessmentReviewerFeedback, len(feedbacks))
+
 	for _, item := range feedbacks {
 		result[item.AssessmentUserID] = item
 	}
@@ -480,15 +493,19 @@ func (at *AssessmentListInit) initLiveRoomStudentsScore() error {
 	scheduleIDs := make([]string, 0, len(at.assessments))
 	for _, item := range at.assessments {
 		if item.AssessmentType == v2.AssessmentTypeOnlineStudy ||
-			item.AssessmentType == v2.AssessmentTypeOnlineClass ||
 			item.AssessmentType == v2.AssessmentTypeReviewStudy {
 			scheduleIDs = append(scheduleIDs, item.ScheduleID)
 		}
 	}
 
+	if len(scheduleIDs) <= 0 {
+		at.liveRoomMap = make(map[string]*external.RoomInfo)
+		return nil
+	}
+
 	roomDataMap, err := external.GetAssessmentServiceProvider().Get(ctx, op,
 		scheduleIDs,
-		external.WithAssessmentGetShortScore(true))
+		external.WithAssessmentGetScore(true))
 	if err != nil {
 		log.Warn(ctx, "external service error",
 			log.Err(err), log.Strings("scheduleIDs", scheduleIDs), log.Any("op", at.op))
@@ -496,6 +513,26 @@ func (at *AssessmentListInit) initLiveRoomStudentsScore() error {
 	} else {
 		at.liveRoomMap = roomDataMap
 	}
+
+	return nil
+}
+
+func (at *AssessmentListInit) initAssessmentUserMap() error {
+	ctx := at.ctx
+
+	result := make(map[string][]*v2.AssessmentUser, len(at.assessments))
+
+	assessmentUsers := at.assessmentUsers
+	if assessmentUsers == nil {
+		log.Error(ctx, "assessmentUsers data not init when get AssessmentUserMap")
+		return ErrorPreambleDataNotInitialized
+	}
+
+	for _, item := range assessmentUsers {
+		result[item.AssessmentID] = append(result[item.AssessmentID], item)
+	}
+
+	at.assessmentUserMap = result
 
 	return nil
 }
@@ -613,6 +650,14 @@ func (at *AssessmentListInit) AsyncInitData() error {
 		return nil
 	})
 
+	gThird.Go(func() error {
+		if err := at.initAssessmentUserMap(); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err := gThird.Wait(); err != nil {
 		log.Error(ctx, "get assessment third level info error",
 			log.Err(err))
@@ -622,91 +667,190 @@ func (at *AssessmentListInit) AsyncInitData() error {
 	return nil
 }
 
-//func ConvertAssessmentPageReply2(ctx context.Context, op *entity.Operator, assessments []*v2.Assessment) ([]*v2.AssessmentQueryReply, error) {
-//	listInit, err := NewAssessmentListInit(ctx, op, assessments)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	if err = listInit.AsyncInitData(); err != nil {
-//		return nil, err
-//	}
-//
-//	assessmentUserMap := make(map[string][]*v2.AssessmentUser, len(listInit.assessments))
-//
-//	for _, item := range listInit.assessmentUsers {
-//		assessmentUserMap[item.AssessmentID] = append(assessmentUserMap[item.AssessmentID], item)
-//	}
-//
-//	result := make([]*v2.AssessmentQueryReply, len(assessments))
-//
-//	for i, item := range assessments {
-//		replyItem := &v2.AssessmentQueryReply{
-//			ID:             item.ID,
-//			AssessmentType: item.AssessmentType,
-//			Title:          item.Title,
-//			ClassEndAt:     item.ClassEndAt,
-//			CompleteAt:     item.CompleteAt,
-//			Status:         item.Status,
-//		}
-//		result[i] = replyItem
-//
-//		if assUserItems, ok := assessmentUserMap[item.ID]; ok {
-//			for _, assUserItem := range assUserItems {
-//				if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
-//					continue
-//				}
-//
-//				resultItem := &entity.IDName{
-//					ID:   assUserItem.UserID,
-//					Name: "",
-//				}
-//
-//				if userItem, ok := userMap[assUserItem.UserID]; ok && userItem != nil {
-//					resultItem.Name = userItem.Name
-//				}
-//				result[item.ID] = append(result[item.ID], resultItem)
-//			}
-//		}
-//
-//		schedule, ok := scheduleMap[item.ScheduleID]
-//		if !ok {
-//			continue
-//		}
-//		if lessPlanItem, ok := lessPlanMap[item.ID]; ok {
-//			replyItem.LessonPlan = &entity.IDName{
-//				ID:   lessPlanItem.ID,
-//				Name: lessPlanItem.Name,
-//			}
-//		}
-//
-//		replyItem.Program = programMap[item.ID]
-//		replyItem.Subjects = subjectMap[item.ID]
-//		replyItem.DueAt = schedule.DueAt
-//		replyItem.ClassInfo = classMap[item.ID]
-//		replyItem.RemainingTime = remainingMap[item.ID]
-//		replyItem.CompleteRate = completeRateMap[item.ID]
-//	}
-//
-//	return result, nil
-//}
+func (at *AssessmentListInit) MatchProgram() map[string]*entity.IDName {
+	scheduleMap := at.scheduleMap
+	programMap := at.programMap
 
-func GetAssessmentMatch2(assessmentType v2.AssessmentType, at *AssessmentTool, action AssessmentMatchAction) IAssessmentMatch {
-	var match IAssessmentMatch
-	switch assessmentType {
-	case v2.AssessmentTypeOnlineClass:
-		match = NewOnlineClassAssessment(at, action)
-	case v2.AssessmentTypeOfflineClass:
-		match = NewOfflineClassAssessment(at, action)
-	case v2.AssessmentTypeOnlineStudy:
-		match = NewOnlineStudyAssessment(at, action)
-	case v2.AssessmentTypeReviewStudy:
-		match = NewReviewStudyAssessment(at, action)
-	case v2.AssessmentTypeOfflineStudy:
-		match = NewOfflineStudyAssessment(at, action)
-	default:
-		match = NewEmptyAssessment()
+	result := make(map[string]*entity.IDName, len(at.assessments))
+	for _, item := range at.assessments {
+		if schedule, ok := scheduleMap[item.ScheduleID]; ok {
+			result[item.ID] = programMap[schedule.ProgramID]
+		}
 	}
 
-	return match
+	return result
 }
+
+func (at *AssessmentListInit) MatchSubject() map[string][]*entity.IDName {
+	relationMap := at.scheduleRelationMap
+
+	subjectMap := at.subjectMap
+
+	result := make(map[string][]*entity.IDName, len(at.assessments))
+	for _, item := range at.assessments {
+		if srItems, ok := relationMap[item.ScheduleID]; ok {
+			for _, srItem := range srItems {
+				if srItem.RelationType != entity.ScheduleRelationTypeSubject {
+					continue
+				}
+				if subItem, ok := subjectMap[srItem.RelationID]; ok && subItem != nil {
+					result[item.ID] = append(result[item.ID], subItem)
+				}
+			}
+		}
+	}
+
+	return result
+}
+
+func (at *AssessmentListInit) MatchClass() map[string]*entity.IDName {
+	relationMap := at.scheduleRelationMap
+	classMap := at.classMap
+
+	result := make(map[string]*entity.IDName, len(at.assessments))
+	for _, item := range at.assessments {
+		if srItems, ok := relationMap[item.ScheduleID]; ok {
+			for _, srItem := range srItems {
+				if srItem.RelationType == entity.ScheduleRelationTypeClassRosterClass {
+					result[item.ID] = classMap[srItem.RelationID]
+					break
+				}
+			}
+		}
+	}
+
+	return result
+}
+
+func ConvertAssessmentPageReply2(ctx context.Context, op *entity.Operator, assessments []*v2.Assessment) ([]*v2.AssessmentQueryReply, error) {
+	listInit, err := NewAssessmentListInit(ctx, op, assessments)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = listInit.AsyncInitData(); err != nil {
+		return nil, err
+	}
+
+	processorMap := make(map[v2.AssessmentType]IAssessmentProcessor)
+	processorMap[v2.AssessmentTypeOnlineClass] = NewOnlineClassAssessment()
+	processorMap[v2.AssessmentTypeOfflineClass] = NewOnlineClassAssessment()
+	processorMap[v2.AssessmentTypeOnlineStudy] = NewOnlineStudyAssessment()
+	processorMap[v2.AssessmentTypeReviewStudy] = NewReviewStudyAssessment()
+	processorMap[v2.AssessmentTypeOfflineStudy] = NewOfflineStudyAssessment()
+
+	scheduleMap := listInit.scheduleMap
+	lessPlanMap := listInit.lessPlanMap
+	programMap := listInit.MatchProgram()
+	subjectMap := listInit.MatchSubject()
+	classMap := listInit.MatchClass()
+
+	// complete rate
+	completeRateMap := listInit.MatchCompleteRate(processorMap)
+
+	// teacherName
+	teacherNameMap := listInit.MatchTeacherName(processorMap)
+
+	result := make([]*v2.AssessmentQueryReply, len(assessments))
+
+	for i, item := range assessments {
+		replyItem := &v2.AssessmentQueryReply{
+			ID:             item.ID,
+			AssessmentType: item.AssessmentType,
+			Title:          item.Title,
+			ClassEndAt:     item.ClassEndAt,
+			CompleteAt:     item.CompleteAt,
+			Status:         item.Status,
+		}
+		result[i] = replyItem
+
+		replyItem.Teachers = teacherNameMap[item.ID]
+
+		schedule, ok := scheduleMap[item.ScheduleID]
+		if !ok {
+			continue
+		}
+
+		if lessPlanItem, ok := lessPlanMap[schedule.LessonPlanID]; ok {
+			replyItem.LessonPlan = &entity.IDName{
+				ID:   lessPlanItem.ID,
+				Name: lessPlanItem.Name,
+			}
+		}
+
+		replyItem.Program = programMap[item.ID]
+		replyItem.Subjects = subjectMap[item.ID]
+		replyItem.DueAt = schedule.DueAt
+		replyItem.ClassInfo = classMap[item.ID]
+		replyItem.CompleteRate = completeRateMap[item.ID]
+	}
+
+	return result, nil
+}
+
+func (at *AssessmentListInit) MatchTeacherName(processorMap map[v2.AssessmentType]IAssessmentProcessor) map[string][]*entity.IDName {
+	assessmentUserMap := at.assessmentUserMap
+	teacherMap := at.teacherMap
+
+	result := make(map[string][]*entity.IDName, len(at.assessmentMap))
+	for _, item := range at.assessmentMap {
+		processor := processorMap[item.AssessmentType]
+
+		if assUserItems, ok := assessmentUserMap[item.ID]; ok {
+			for _, assUserItem := range assUserItems {
+				if resultItem, ok := processor.ProcessTeacherName(assUserItem, teacherMap); ok {
+					result[item.ID] = append(result[item.ID], resultItem)
+				}
+			}
+		}
+	}
+
+	return result
+}
+
+func (at *AssessmentListInit) MatchCompleteRate(processorMap map[v2.AssessmentType]IAssessmentProcessor) map[string]float64 {
+	ctx := at.ctx
+
+	assessmentUserMap := at.assessmentUserMap
+	roomDataMap := at.liveRoomMap
+	scheduleReviewMap := at.scheduleStuReviewMap
+	reviewerFeedbackMap := at.reviewerFeedbackMap
+
+	result := make(map[string]float64)
+
+	for _, item := range at.assessmentMap {
+		assessmentUsers := assessmentUserMap[item.ID]
+		if roomData, ok := roomDataMap[item.ScheduleID]; ok {
+			processor := processorMap[item.AssessmentType]
+
+			var stuReviewMap map[string]*entity.ScheduleReview
+			if scheduleReviewMap != nil {
+				stuReviewMap = scheduleReviewMap[item.ScheduleID]
+			}
+			rate := processor.ProcessCompleteRate(ctx, assessmentUsers, roomData, stuReviewMap, reviewerFeedbackMap)
+			result[item.ID] = rate
+		}
+	}
+
+	return result
+}
+
+//func GetAssessmentMatch2(assessmentType v2.AssessmentType, at *AssessmentTool, action AssessmentMatchAction) IAssessmentMatch {
+//	var match IAssessmentMatch
+//	switch assessmentType {
+//	case v2.AssessmentTypeOnlineClass:
+//		match = NewOnlineClassAssessment(at, action)
+//	case v2.AssessmentTypeOfflineClass:
+//		match = NewOfflineClassAssessment(at, action)
+//	case v2.AssessmentTypeOnlineStudy:
+//		match = NewOnlineStudyAssessment(at, action)
+//	case v2.AssessmentTypeReviewStudy:
+//		match = NewReviewStudyAssessment(at, action)
+//	case v2.AssessmentTypeOfflineStudy:
+//		match = NewOfflineStudyAssessment(at, action)
+//	default:
+//		match = NewEmptyAssessment()
+//	}
+//
+//	return match
+//}

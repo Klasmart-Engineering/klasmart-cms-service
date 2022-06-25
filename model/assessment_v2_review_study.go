@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/KL-Engineering/common-log/log"
@@ -10,45 +11,57 @@ import (
 	"github.com/KL-Engineering/kidsloop-cms-service/external"
 )
 
-func NewReviewStudyAssessment(at *AssessmentTool, action AssessmentMatchAction) IAssessmentMatch {
-	return &ReviewStudyAssessment{
-		at:     at,
-		action: action,
-		base:   NewBaseAssessment(at, action),
+func NewReviewStudyAssessment() IAssessmentProcessor {
+	return &ReviewStudyAssessment{}
+}
+
+type ReviewStudyAssessment struct{}
+
+func (o *ReviewStudyAssessment) ProcessCompleteRate(ctx context.Context, assessmentUsers []*v2.AssessmentUser,
+	roomData *external.RoomInfo, stuReviewMap map[string]*entity.ScheduleReview, reviewerFeedbackMap map[string]*v2.AssessmentReviewerFeedback) float64 {
+
+	studentCount := 0
+	for _, userItem := range assessmentUsers {
+		if userItem.UserType == v2.AssessmentUserTypeStudent {
+			studentCount++
+		}
 	}
-}
 
-type ReviewStudyAssessment struct {
-	EmptyAssessment
-
-	base   BaseAssessment
-	at     *AssessmentTool
-	action AssessmentMatchAction
-}
-
-func (o *ReviewStudyAssessment) MatchAnyOneAttempted() (bool, error) {
-	return o.base.MatchAnyOneAttempted()
-}
-
-func (o *ReviewStudyAssessment) MatchSchedule() (map[string]*entity.Schedule, error) {
-	return o.base.MatchSchedule()
-}
-
-func (o *ReviewStudyAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
-	return o.base.MatchTeacher()
-}
-
-func (o *ReviewStudyAssessment) MatchClass() (map[string]*entity.IDName, error) {
-	return o.base.MatchClass()
-}
-
-func (o *ReviewStudyAssessment) MatchCompleteRate() (map[string]float64, error) {
-	ctx := o.at.ctx
-
-	assessmentUserMap, err := o.at.GetAssessmentUserMap()
-	if err != nil {
-		return nil, err
+	var contentTotalCount int
+	for _, stuContentItem := range stuReviewMap {
+		if stuContentItem.LiveLessonPlan == nil {
+			log.Warn(ctx, "student content is empty", log.Any("stuContentItem", stuContentItem))
+			continue
+		}
+		contentTotalCount += len(stuContentItem.LiveLessonPlan.LessonMaterials)
 	}
+
+	return GetAssessmentExternalService().calcRoomCompleteRateWhenUseDiffContent(ctx, roomData.ScoresByUser, contentTotalCount)
+}
+
+func (o *ReviewStudyAssessment) ProcessTeacherName(assUserItem *v2.AssessmentUser, teacherMap map[string]*entity.IDName) (*entity.IDName, bool) {
+	if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
+		return nil, false
+	}
+
+	resultItem := &entity.IDName{
+		ID:   assUserItem.UserID,
+		Name: "",
+	}
+
+	if userItem, ok := teacherMap[assUserItem.UserID]; ok && userItem != nil {
+		resultItem.Name = userItem.Name
+	}
+
+	return resultItem, true
+}
+
+// old
+
+func (o *ReviewStudyAssessment) MatchCompleteRate() map[string]float64 {
+	ctx := o.ali.ctx
+
+	assessmentUserMap := o.ali.assessmentUserMap
 
 	studentCount := make(map[string]int)
 	for key, users := range assessmentUserMap {
@@ -59,19 +72,13 @@ func (o *ReviewStudyAssessment) MatchCompleteRate() (map[string]float64, error) 
 		}
 	}
 
-	roomDataMap, err := o.at.GetExternalAssessmentServiceData()
-	if err != nil {
-		return nil, err
-	}
+	roomDataMap := o.ali.liveRoomMap
 
 	// scheduleID,studentID
-	scheduleReviewMap, err := o.at.BatchGetScheduleReviewMap()
-	if err != nil {
-		return nil, err
-	}
+	scheduleReviewMap := o.ali.scheduleStuReviewMap
 
 	result := make(map[string]float64)
-	for _, item := range o.at.assessments {
+	for _, item := range o.assessmentMap {
 		studentReviewContentMap, ok := scheduleReviewMap[item.ScheduleID]
 		if !ok {
 			log.Warn(ctx, "not found student content in schedule", log.Any("schedule", item))
@@ -95,7 +102,23 @@ func (o *ReviewStudyAssessment) MatchCompleteRate() (map[string]float64, error) 
 		result[item.ID] = GetAssessmentExternalService().calcRoomCompleteRateWhenUseDiffContent(ctx, roomData.ScoresByUser, contentTotalCount)
 	}
 
-	return result, nil
+	return result
+}
+
+func (o *ReviewStudyAssessment) MatchAnyOneAttempted() (bool, error) {
+	return o.base.MatchAnyOneAttempted()
+}
+
+func (o *ReviewStudyAssessment) MatchSchedule() (map[string]*entity.Schedule, error) {
+	return o.base.MatchSchedule()
+}
+
+func (o *ReviewStudyAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
+	return o.base.MatchTeacher()
+}
+
+func (o *ReviewStudyAssessment) MatchClass() (map[string]*entity.IDName, error) {
+	return o.base.MatchClass()
 }
 
 func (o *ReviewStudyAssessment) MatchRemainingTime() (map[string]int64, error) {

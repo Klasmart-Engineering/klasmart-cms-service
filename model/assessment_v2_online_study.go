@@ -1,80 +1,57 @@
 package model
 
 import (
-	"time"
-
+	"context"
 	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/kidsloop-cms-service/config"
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
+	"time"
 )
 
-func NewOnlineStudyAssessment(at *AssessmentTool, action AssessmentMatchAction) IAssessmentMatch {
-	return &OnlineStudyAssessment{
-		at:     at,
-		action: action,
-		base:   NewBaseAssessment(at, action),
-	}
+func NewOnlineStudyAssessment() IAssessmentProcessor {
+	return &OnlineStudyAssessment{}
 }
 
 type OnlineStudyAssessment struct {
-	EmptyAssessment
-
-	base   BaseAssessment
-	at     *AssessmentTool
-	action AssessmentMatchAction
 }
 
-func (o *OnlineStudyAssessment) MatchSchedule() (map[string]*entity.Schedule, error) {
-	return o.base.MatchSchedule()
-}
-
-func (o *OnlineStudyAssessment) MatchLessPlan() (map[string]*v2.AssessmentContentView, error) {
-	return o.base.MatchLessPlan()
-}
-
-func (o *OnlineStudyAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
-	return o.base.MatchTeacher()
-}
-
-func (o *OnlineStudyAssessment) MatchClass() (map[string]*entity.IDName, error) {
-	return o.base.MatchClass()
-}
-
-func (o *OnlineStudyAssessment) MatchCompleteRate() (map[string]float64, error) {
-	ctx := o.at.ctx
-
-	assessmentUserMap, err := o.at.GetAssessmentUserMap()
-	if err != nil {
-		return nil, err
-	}
-
-	studentCount := make(map[string]int)
-	for key, users := range assessmentUserMap {
-		for _, userItem := range users {
-			if userItem.UserType == v2.AssessmentUserTypeStudent {
-				studentCount[key]++
-			}
+func (o *OnlineStudyAssessment) ProcessCompleteRate(ctx context.Context, assessmentUsers []*v2.AssessmentUser,
+	roomData *external.RoomInfo, stuReviewMap map[string]*entity.ScheduleReview, reviewerFeedbackMap map[string]*v2.AssessmentReviewerFeedback) float64 {
+	studentCount := 0
+	for _, userItem := range assessmentUsers {
+		if userItem.UserType == v2.AssessmentUserTypeStudent {
+			studentCount++
 		}
 	}
 
-	roomDataMap, err := o.at.GetExternalAssessmentServiceData()
-	if err != nil {
-		return nil, err
-	}
+	rate := GetAssessmentExternalService().calcRoomCompleteRateWhenUseSomeContent(ctx, roomData.ScoresByUser, studentCount)
 
-	result := make(map[string]float64)
-	for _, item := range o.at.assessments {
-		if roomData, ok := roomDataMap[item.ScheduleID]; ok {
-			result[item.ID] = GetAssessmentExternalService().calcRoomCompleteRateWhenUseSomeContent(ctx, roomData.ScoresByUser, studentCount[item.ID])
-		}
-	}
-
-	return result, nil
+	return rate
 }
 
-func (o *OnlineStudyAssessment) MatchRemainingTime() (map[string]int64, error) {
+func (o *OnlineStudyAssessment) ProcessTeacherName(assUserItem *v2.AssessmentUser, teacherMap map[string]*entity.IDName) (*entity.IDName, bool) {
+	if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
+		return nil, false
+	}
+
+	resultItem := &entity.IDName{
+		ID:   assUserItem.UserID,
+		Name: "",
+	}
+
+	if userItem, ok := teacherMap[assUserItem.UserID]; ok && userItem != nil {
+		resultItem.Name = userItem.Name
+	}
+
+	return resultItem, true
+}
+
+// old
+
+func (o *OnlineStudyAssessment) MatchRemainingTime(schedule *entity.Schedule) (map[string]int64, error) {
 	scheduleMap, err := o.at.GetScheduleMap()
 	if err != nil {
 		return nil, err
@@ -97,6 +74,50 @@ func (o *OnlineStudyAssessment) MatchRemainingTime() (map[string]int64, error) {
 	}
 
 	return result, nil
+}
+
+func (o *OnlineStudyAssessment) MatchTeacherName() map[string][]*entity.IDName {
+	assessmentUserMap := o.ali.assessmentUserMap
+	teacherMap := o.ali.teacherMap
+
+	result := make(map[string][]*entity.IDName, len(o.assessmentMap))
+	for _, item := range o.assessmentMap {
+		if assUserItems, ok := assessmentUserMap[item.ID]; ok {
+			for _, assUserItem := range assUserItems {
+				if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
+					continue
+				}
+
+				resultItem := &entity.IDName{
+					ID:   assUserItem.UserID,
+					Name: "",
+				}
+
+				if userItem, ok := teacherMap[assUserItem.UserID]; ok && userItem != nil {
+					resultItem.Name = userItem.Name
+				}
+				result[item.ID] = append(result[item.ID], resultItem)
+			}
+		}
+	}
+
+	return result
+}
+
+func (o *OnlineStudyAssessment) MatchSchedule() (map[string]*entity.Schedule, error) {
+	return o.base.MatchSchedule()
+}
+
+func (o *OnlineStudyAssessment) MatchLessPlan() (map[string]*v2.AssessmentContentView, error) {
+	return o.base.MatchLessPlan()
+}
+
+//func (o *OnlineStudyAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
+//	return o.base.MatchTeacher()
+//}
+
+func (o *OnlineStudyAssessment) MatchClass() (map[string]*entity.IDName, error) {
+	return o.base.MatchClass()
 }
 
 func (o *OnlineStudyAssessment) MatchOutcomes() (map[string]*v2.AssessmentOutcomeReply, error) {

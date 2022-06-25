@@ -1,28 +1,43 @@
 package model
 
 import (
+	"context"
 	"fmt"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
 
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 )
 
-func NewOfflineClassAssessment(at *AssessmentTool, action AssessmentMatchAction) IAssessmentMatch {
-	return &OfflineClassAssessment{
-		at:     at,
-		action: action,
-		base:   NewBaseAssessment(at, action),
+func NewOfflineClassAssessment() IAssessmentProcessor {
+	return &OfflineClassAssessment{}
+}
+
+type OfflineClassAssessment struct{}
+
+func (o *OfflineClassAssessment) ProcessCompleteRate(ctx context.Context, assessmentUsers []*v2.AssessmentUser, roomData *external.RoomInfo, stuReviewMap map[string]*entity.ScheduleReview, reviewerFeedbackMap map[string]*v2.AssessmentReviewerFeedback) float64 {
+	return 0
+}
+
+func (o *OfflineClassAssessment) ProcessTeacherName(assUserItem *v2.AssessmentUser, teacherMap map[string]*entity.IDName) (*entity.IDName, bool) {
+	if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
+		return nil, false
 	}
+
+	resultItem := &entity.IDName{
+		ID:   assUserItem.UserID,
+		Name: "",
+	}
+
+	if userItem, ok := teacherMap[assUserItem.UserID]; ok && userItem != nil {
+		resultItem.Name = userItem.Name
+	}
+
+	return resultItem, true
 }
 
-type OfflineClassAssessment struct {
-	EmptyAssessment
-
-	base   BaseAssessment
-	at     *AssessmentTool
-	action AssessmentMatchAction
-}
+// old
 
 func (o *OfflineClassAssessment) MatchSchedule() (map[string]*entity.Schedule, error) {
 	return o.base.MatchSchedule()

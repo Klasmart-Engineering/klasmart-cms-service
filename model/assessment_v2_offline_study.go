@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"database/sql"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
 	"time"
 
 	"github.com/KL-Engineering/common-log/log"
@@ -14,46 +15,67 @@ import (
 	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 )
 
-func NewOfflineStudyAssessment(at *AssessmentTool, action AssessmentMatchAction) IAssessmentMatch {
-	return &OfflineStudyAssessment{
-		at:     at,
-		action: action,
-		base:   NewBaseAssessment(at, action),
-	}
+func NewOfflineStudyAssessment() IAssessmentProcessor {
+	return &OfflineStudyAssessment{}
 }
 
 type OfflineStudyAssessment struct {
-	EmptyAssessment
-
-	base   BaseAssessment
-	at     *AssessmentTool
-	action AssessmentMatchAction
+	//EmptyAssessment
+	//
+	//assessmentMap map[string]*v2.Assessment
+	ali *AssessmentListInit
 }
 
-func (o *OfflineStudyAssessment) MatchSchedule() (map[string]*entity.Schedule, error) {
-	return o.base.MatchSchedule()
-}
+func (o *OfflineStudyAssessment) ProcessCompleteRate(ctx context.Context, assessmentUsers []*v2.AssessmentUser,
+	roomData *external.RoomInfo, stuReviewMap map[string]*entity.ScheduleReview, reviewerFeedbackMap map[string]*v2.AssessmentReviewerFeedback) float64 {
 
-func (o *OfflineStudyAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
-	return o.base.MatchTeacher()
-}
+	studentCount := 0
+	studentCompleteCount := 0
+	for _, userItem := range assessmentUsers {
+		if userItem.UserType == v2.AssessmentUserTypeStudent {
+			studentCount++
 
-func (o *OfflineStudyAssessment) MatchClass() (map[string]*entity.IDName, error) {
-	return o.base.MatchClass()
-}
-
-func (o *OfflineStudyAssessment) MatchCompleteRate() (map[string]float64, error) {
-	ctx := o.at.ctx
-
-	assessmentUserMap, err := o.at.GetAssessmentUserMap()
-	if err != nil {
-		return nil, err
+			if _, ok := reviewerFeedbackMap[userItem.ID]; ok {
+				studentCompleteCount++
+			}
+		}
 	}
 
-	reviewerFeedbackMap, err := o.at.GetReviewerFeedbackMap()
-	if err != nil {
-		return nil, err
+	if studentCount == 0 || studentCompleteCount == 0 {
+		return 0
+	} else if studentCompleteCount > studentCount {
+		log.Warn(ctx, "Completion rate result greater than 1",
+			log.Any("assessmentUsers", assessmentUsers),
+			log.Any("reviewerFeedbackMap", reviewerFeedbackMap))
+		return 1
+	} else {
+		return float64(studentCompleteCount) / float64(studentCount)
 	}
+}
+
+func (o *OfflineStudyAssessment) ProcessTeacherName(assUserItem *v2.AssessmentUser, teacherMap map[string]*entity.IDName) (*entity.IDName, bool) {
+	if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
+		return nil, false
+	}
+
+	resultItem := &entity.IDName{
+		ID:   assUserItem.UserID,
+		Name: "",
+	}
+
+	if userItem, ok := teacherMap[assUserItem.UserID]; ok && userItem != nil {
+		resultItem.Name = userItem.Name
+	}
+
+	return resultItem, true
+}
+
+func (o *OfflineStudyAssessment) MatchCompleteRate() map[string]float64 {
+	ctx := o.ali.ctx
+
+	assessmentUserMap := o.ali.assessmentUserMap
+
+	reviewerFeedbackMap := o.ali.reviewerFeedbackMap
 
 	studentCount := make(map[string]int)
 	studentCompleteCount := make(map[string]int)
@@ -70,7 +92,7 @@ func (o *OfflineStudyAssessment) MatchCompleteRate() (map[string]float64, error)
 	}
 
 	result := make(map[string]float64)
-	for _, item := range o.at.assessments {
+	for _, item := range o.assessmentMap {
 		stuTotal := studentCount[item.ID]
 		stuComplete := studentCompleteCount[item.ID]
 		if stuTotal == 0 || stuComplete == 0 {
@@ -86,7 +108,49 @@ func (o *OfflineStudyAssessment) MatchCompleteRate() (map[string]float64, error)
 		}
 	}
 
-	return result, nil
+	return result
+}
+
+// old
+
+func (o *OfflineStudyAssessment) MatchTeacherName() map[string][]*entity.IDName {
+	assessmentUserMap := o.ali.assessmentUserMap
+	teacherMap := o.ali.teacherMap
+
+	result := make(map[string][]*entity.IDName, len(o.assessmentMap))
+	for _, item := range o.assessmentMap {
+		if assUserItems, ok := assessmentUserMap[item.ID]; ok {
+			for _, assUserItem := range assUserItems {
+				if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
+					continue
+				}
+
+				resultItem := &entity.IDName{
+					ID:   assUserItem.UserID,
+					Name: "",
+				}
+
+				if userItem, ok := teacherMap[assUserItem.UserID]; ok && userItem != nil {
+					resultItem.Name = userItem.Name
+				}
+				result[item.ID] = append(result[item.ID], resultItem)
+			}
+		}
+	}
+
+	return result
+}
+
+func (o *OfflineStudyAssessment) MatchSchedule() (map[string]*entity.Schedule, error) {
+	return o.base.MatchSchedule()
+}
+
+func (o *OfflineStudyAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
+	return o.base.MatchTeacher()
+}
+
+func (o *OfflineStudyAssessment) MatchClass() (map[string]*entity.IDName, error) {
+	return o.base.MatchClass()
 }
 
 func (o *OfflineStudyAssessment) MatchRemainingTime() (map[string]int64, error) {
