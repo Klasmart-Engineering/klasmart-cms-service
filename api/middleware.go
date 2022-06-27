@@ -145,7 +145,7 @@ func (Server) mustSTM(c *gin.Context) {
 
 	var claims jwt.StandardClaims
 	_, err = jwt.ParseWithClaims(token, &claims, func(*jwt.Token) (interface{}, error) {
-		if config.Get().STMInternal.PublicKey == "" {
+		if config.Get().STMInternal.PublicKey == nil {
 			return nil, constant.ErrPublicKeyIsEmpty
 		}
 		return config.Get().STMInternal.PublicKey, nil
