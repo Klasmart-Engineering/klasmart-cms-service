@@ -223,7 +223,7 @@ func LoadSTMConfig(ctx context.Context) {
 
 	key, err := jwt.ParseRSAPublicKeyFromPEM(content)
 	if err != nil {
-		log.Panic(ctx, "parse internal public key", log.Err(err))
+		log.Warn(ctx, "parse internal public key", log.Err(err))
 	}
 	config.STMInternal.PublicKey = key
 }

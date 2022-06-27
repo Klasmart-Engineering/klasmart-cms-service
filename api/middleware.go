@@ -148,7 +148,10 @@ func (Server) mustSTM(c *gin.Context) {
 		return config.Get().STMInternal.PublicKey, nil
 	})
 	if err != nil {
-		log.Info(ctx, "grant internal privilege", log.String("token", token), log.Err(err))
+		log.Info(ctx, "grant internal privilege",
+			log.Any("public_key", config.Get().STMInternal.PublicKey),
+			log.String("token", token),
+			log.Err(err))
 		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
 		return
 	}
