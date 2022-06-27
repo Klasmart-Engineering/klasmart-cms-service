@@ -145,13 +145,13 @@ func (Server) mustSTM(c *gin.Context) {
 
 	var claims jwt.StandardClaims
 	_, err = jwt.ParseWithClaims(token, &claims, func(*jwt.Token) (interface{}, error) {
+		if config.Get().STMInternal.PublicKey == "" {
+			return nil, constant.ErrPublicKeyIsEmpty
+		}
 		return config.Get().STMInternal.PublicKey, nil
 	})
 	if err != nil {
-		log.Info(ctx, "grant internal privilege",
-			log.Any("public_key", config.Get().STMInternal.PublicKey),
-			log.String("token", token),
-			log.Err(err))
+		log.Info(ctx, "grant internal privilege", log.String("token", token), log.Err(err))
 		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
 		return
 	}

@@ -51,6 +51,7 @@ var (
 	ErrGraphQLUnsupported = errors.New("unsupported graphql marshal type")
 	ErrGraphQLUnMatch     = errors.New("graphql marshal match failed")
 	ErrGraphQLHttpNotOK   = errors.New("graphql status code is not ok")
+	ErrPublicKeyIsEmpty   = errors.New("public_key is empty")
 )
 
 const (
