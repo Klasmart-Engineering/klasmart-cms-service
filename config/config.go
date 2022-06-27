@@ -218,7 +218,7 @@ func LoadSTMConfig(ctx context.Context) {
 	publicKeyPath := os.Getenv("stm_public_key_path")
 	content, err := ioutil.ReadFile(publicKeyPath)
 	if err != nil {
-		log.Panic(ctx, "read internal public key file", log.Err(err), log.String("publicKeyPath", publicKeyPath))
+		log.Warn(ctx, "read internal public key file", log.Err(err), log.String("publicKeyPath", publicKeyPath))
 	}
 
 	key, err := jwt.ParseRSAPublicKeyFromPEM(content)
