@@ -24,6 +24,7 @@ type AssessmentListInit struct {
 	op            *entity.Operator
 	assessments   []*v2.Assessment
 	assessmentMap map[string]*v2.Assessment // assessmentID
+	listInitMap   map[assessmentInitLevel][]assessmentInitFunc
 
 	scheduleMap         map[string]*entity.Schedule           // scheduleID
 	scheduleRelationMap map[string][]*entity.ScheduleRelation // scheduleID
@@ -45,15 +46,63 @@ func NewAssessmentListInit(ctx context.Context, op *entity.Operator, assessments
 		return nil, constant.ErrRecordNotFound
 	}
 
-	return &AssessmentListInit{
+	at := &AssessmentListInit{
 		ctx:         ctx,
 		op:          op,
 		assessments: assessments,
-	}, nil
+	}
+
+	if err := at.initAssessmentMap(); err != nil {
+		return nil, err
+	}
+
+	return at, nil
 }
 
-// level 1
+func NewAssessmentListInitWithConfig(ctx context.Context, op *entity.Operator, assessments []*v2.Assessment) (*AssessmentListInit, error) {
+	if len(assessments) <= 0 {
+		return nil, constant.ErrRecordNotFound
+	}
+	at := &AssessmentListInit{
+		ctx:         ctx,
+		op:          op,
+		assessments: assessments,
+	}
+
+	if err := at.initAssessmentMap(); err != nil {
+		return nil, err
+	}
+
+	at.ConfigAssessmentListInitMap()
+
+	return at, nil
+}
+
+func (at *AssessmentListInit) ConfigAssessmentListInitMap() {
+	data := make(map[assessmentInitLevel][]assessmentInitFunc)
+	data[assessmentInitLevel1] = append(data[assessmentInitLevel1],
+		at.initScheduleMap,
+		at.initScheduleRelationMap,
+		at.initScheduleReviewMap,
+		at.initAssessmentUsers,
+		at.initLiveRoomStudentsScore)
+
+	data[assessmentInitLevel2] = append(data[assessmentInitLevel2],
+		at.initLessPlanMap,
+		at.initTeacherMap,
+		at.initProgramMap,
+		at.initSubjectMap,
+		at.initClassMap,
+		at.initReviewerFeedbackMap,
+		at.initAssessmentUserMap)
+	at.listInitMap = data
+}
+
 func (at *AssessmentListInit) initAssessmentMap() error {
+	if at.assessmentMap != nil {
+		return nil
+	}
+
 	at.assessmentMap = make(map[string]*v2.Assessment, len(at.assessments))
 	for _, item := range at.assessments {
 		at.assessmentMap[item.ID] = item
@@ -62,9 +111,13 @@ func (at *AssessmentListInit) initAssessmentMap() error {
 	return nil
 }
 
-//  level 2
+//  level 1
 
 func (at *AssessmentListInit) initScheduleMap() error {
+	if at.scheduleMap != nil {
+		return nil
+	}
+
 	ctx := at.ctx
 	scheduleIDs := make([]string, len(at.assessments))
 	for i, item := range at.assessments {
@@ -92,6 +145,10 @@ func (at *AssessmentListInit) initScheduleMap() error {
 }
 
 func (at *AssessmentListInit) initScheduleRelationMap() error {
+	if at.scheduleRelationMap != nil {
+		return nil
+	}
+
 	ctx := at.ctx
 	op := at.op
 
@@ -128,6 +185,10 @@ func (at *AssessmentListInit) initScheduleRelationMap() error {
 }
 
 func (at *AssessmentListInit) initScheduleReviewMap() error {
+	if at.scheduleStuReviewMap != nil {
+		return nil
+	}
+
 	ctx := at.ctx
 	op := at.op
 	result := make(map[string]map[string]*entity.ScheduleReview)
@@ -166,6 +227,10 @@ func (at *AssessmentListInit) initScheduleReviewMap() error {
 }
 
 func (at *AssessmentListInit) initAssessmentUsers() error {
+	if at.assessmentUsers != nil {
+		return nil
+	}
+
 	ctx := at.ctx
 
 	assessmentIDs := make([]string, len(at.assessments))
@@ -189,16 +254,54 @@ func (at *AssessmentListInit) initAssessmentUsers() error {
 	return nil
 }
 
-// level 3
+func (at *AssessmentListInit) initLiveRoomStudentsScore() error {
+	if at.liveRoomMap != nil {
+		return nil
+	}
+
+	ctx := at.ctx
+	op := at.op
+
+	scheduleIDs := make([]string, 0, len(at.assessments))
+	for _, item := range at.assessments {
+		if item.AssessmentType == v2.AssessmentTypeOnlineStudy ||
+			item.AssessmentType == v2.AssessmentTypeReviewStudy {
+			scheduleIDs = append(scheduleIDs, item.ScheduleID)
+		}
+	}
+
+	if len(scheduleIDs) <= 0 {
+		at.liveRoomMap = make(map[string]*external.RoomInfo)
+		return nil
+	}
+
+	roomDataMap, err := external.GetAssessmentServiceProvider().Get(ctx, op,
+		scheduleIDs,
+		external.WithAssessmentGetScore(true))
+	if err != nil {
+		log.Warn(ctx, "external service error",
+			log.Err(err), log.Strings("scheduleIDs", scheduleIDs), log.Any("op", at.op))
+		at.liveRoomMap = make(map[string]*external.RoomInfo)
+	} else {
+		at.liveRoomMap = roomDataMap
+	}
+
+	return nil
+}
+
+// level 2
 
 func (at *AssessmentListInit) initLessPlanMap() error {
+	if at.lessPlanMap != nil {
+		return nil
+	}
+
 	ctx := at.ctx
 
-	scheduleMap := at.scheduleMap
-	if scheduleMap == nil {
-		log.Error(ctx, "scheduleMap data not init when get lessPlan")
-		return ErrorPreambleDataNotInitialized
+	if err := at.initScheduleMap(); err != nil {
+		return err
 	}
+	scheduleMap := at.scheduleMap
 
 	lockedLessPlanIDs := make([]string, 0)
 	notLockedLessPlanIDs := make([]string, 0)
@@ -266,14 +369,17 @@ func (at *AssessmentListInit) initLessPlanMap() error {
 }
 
 func (at *AssessmentListInit) initTeacherMap() error {
+	if at.teacherMap != nil {
+		return nil
+	}
+
 	ctx := at.ctx
 	op := at.op
 
-	assessmentUsers := at.assessmentUsers
-	if assessmentUsers == nil {
-		log.Error(ctx, "assessmentUsers not init when getTeacherIDs")
-		return ErrorPreambleDataNotInitialized
+	if err := at.initAssessmentUsers(); err != nil {
+		return err
 	}
+	assessmentUsers := at.assessmentUsers
 
 	teacherIDs := make([]string, 0)
 	deDupMap := make(map[string]struct{})
@@ -307,14 +413,17 @@ func (at *AssessmentListInit) initTeacherMap() error {
 }
 
 func (at *AssessmentListInit) initProgramMap() error {
+	if at.programMap != nil {
+		return nil
+	}
+
 	ctx := at.ctx
 	op := at.op
 
-	scheduleMap := at.scheduleMap
-	if scheduleMap == nil {
-		log.Error(ctx, "scheduleMap data not init when get lessPlan")
-		return ErrorPreambleDataNotInitialized
+	if err := at.initScheduleMap(); err != nil {
+		return err
 	}
+	scheduleMap := at.scheduleMap
 
 	programIDs := make([]string, 0)
 	deDupMap := make(map[string]struct{})
@@ -344,14 +453,17 @@ func (at *AssessmentListInit) initProgramMap() error {
 }
 
 func (at *AssessmentListInit) initSubjectMap() error {
+	if at.subjectMap != nil {
+		return nil
+	}
+
 	ctx := at.ctx
 	op := at.op
 
-	relationMap := at.scheduleRelationMap
-	if relationMap == nil {
-		log.Error(ctx, "scheduleRelationMap data not init when get SubjectMap")
-		return ErrorPreambleDataNotInitialized
+	if err := at.initScheduleRelationMap(); err != nil {
+		return err
 	}
+	relationMap := at.scheduleRelationMap
 
 	subjectIDs := make([]string, 0)
 	deDupMap := make(map[string]struct{})
@@ -390,14 +502,17 @@ func (at *AssessmentListInit) initSubjectMap() error {
 }
 
 func (at *AssessmentListInit) initClassMap() error {
+	if at.classMap != nil {
+		return nil
+	}
+
 	ctx := at.ctx
 	op := at.op
 
-	relationMap := at.scheduleRelationMap
-	if relationMap == nil {
-		log.Error(ctx, "scheduleRelationMap data not init when get ClassMap")
-		return ErrorPreambleDataNotInitialized
+	if err := at.initScheduleRelationMap(); err != nil {
+		return err
 	}
+	relationMap := at.scheduleRelationMap
 
 	classIDs := make([]string, 0)
 	deDupMap := make(map[string]struct{})
@@ -436,19 +551,21 @@ func (at *AssessmentListInit) initClassMap() error {
 }
 
 func (at *AssessmentListInit) initReviewerFeedbackMap() error {
+	if at.reviewerFeedbackMap != nil {
+		return nil
+	}
+
 	ctx := at.ctx
 
+	if err := at.initAssessmentMap(); err != nil {
+		return err
+	}
 	assessmentMap := at.assessmentMap
-	if assessmentMap == nil {
-		log.Error(ctx, "assessmentMap data not init when get ReviewerFeedbackMap")
-		return ErrorPreambleDataNotInitialized
-	}
 
-	assessmentUsers := at.assessmentUsers
-	if assessmentUsers == nil {
-		log.Error(ctx, "assessmentUsers data not init when get ReviewerFeedbackMap")
-		return ErrorPreambleDataNotInitialized
+	if err := at.initAssessmentUsers(); err != nil {
+		return err
 	}
+	assessmentUsers := at.assessmentUsers
 
 	assessmentUserIDs := make([]string, len(assessmentUsers))
 	for i, item := range assessmentUsers {
@@ -486,47 +603,17 @@ func (at *AssessmentListInit) initReviewerFeedbackMap() error {
 	return nil
 }
 
-func (at *AssessmentListInit) initLiveRoomStudentsScore() error {
-	ctx := at.ctx
-	op := at.op
-
-	scheduleIDs := make([]string, 0, len(at.assessments))
-	for _, item := range at.assessments {
-		if item.AssessmentType == v2.AssessmentTypeOnlineStudy ||
-			item.AssessmentType == v2.AssessmentTypeReviewStudy {
-			scheduleIDs = append(scheduleIDs, item.ScheduleID)
-		}
-	}
-
-	if len(scheduleIDs) <= 0 {
-		at.liveRoomMap = make(map[string]*external.RoomInfo)
+func (at *AssessmentListInit) initAssessmentUserMap() error {
+	if at.assessmentUserMap != nil {
 		return nil
 	}
 
-	roomDataMap, err := external.GetAssessmentServiceProvider().Get(ctx, op,
-		scheduleIDs,
-		external.WithAssessmentGetScore(true))
-	if err != nil {
-		log.Warn(ctx, "external service error",
-			log.Err(err), log.Strings("scheduleIDs", scheduleIDs), log.Any("op", at.op))
-		at.liveRoomMap = make(map[string]*external.RoomInfo)
-	} else {
-		at.liveRoomMap = roomDataMap
-	}
-
-	return nil
-}
-
-func (at *AssessmentListInit) initAssessmentUserMap() error {
-	ctx := at.ctx
-
 	result := make(map[string][]*v2.AssessmentUser, len(at.assessments))
 
-	assessmentUsers := at.assessmentUsers
-	if assessmentUsers == nil {
-		log.Error(ctx, "assessmentUsers data not init when get AssessmentUserMap")
-		return ErrorPreambleDataNotInitialized
+	if err := at.initAssessmentUsers(); err != nil {
+		return err
 	}
+	assessmentUsers := at.assessmentUsers
 
 	for _, item := range assessmentUsers {
 		result[item.AssessmentID] = append(result[item.AssessmentID], item)
@@ -543,125 +630,18 @@ func (at *AssessmentListInit) initAssessmentUserMap() error {
 
 func (at *AssessmentListInit) AsyncInitData() error {
 	ctx := at.ctx
-	//op := at.op
 
-	// first
-	if err := at.initAssessmentMap(); err != nil {
-		return err
-	}
-
-	gSecond := new(errgroup.Group)
-
-	// second async schedule, schedule_relation, assessment_user
-	gSecond.Go(func() error {
-		if err := at.initScheduleMap(); err != nil {
-			return err
+	for _, levelFuncs := range at.listInitMap {
+		g := new(errgroup.Group)
+		for _, levelFunc := range levelFuncs {
+			g.Go(levelFunc)
 		}
 
-		return nil
-	})
-
-	gSecond.Go(func() error {
-		if err := at.initScheduleRelationMap(); err != nil {
+		if err := g.Wait(); err != nil {
+			log.Error(ctx, "get assessment level info error",
+				log.Err(err))
 			return err
 		}
-
-		return nil
-	})
-
-	gSecond.Go(func() error {
-		if err := at.initScheduleReviewMap(); err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	gSecond.Go(func() error {
-		if err := at.initAssessmentUsers(); err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	if err := gSecond.Wait(); err != nil {
-		log.Error(ctx, "get assessment second level info error",
-			log.Err(err))
-		return err
-	}
-
-	// third async lessPlan,teacher,program,subject,class,reviewer_feedback,live
-	gThird := new(errgroup.Group)
-
-	gThird.Go(func() error {
-		if err := at.initLessPlanMap(); err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	gThird.Go(func() error {
-		if err := at.initTeacherMap(); err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	gThird.Go(func() error {
-		if err := at.initProgramMap(); err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	gThird.Go(func() error {
-		if err := at.initSubjectMap(); err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	gThird.Go(func() error {
-		if err := at.initClassMap(); err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	gThird.Go(func() error {
-		if err := at.initReviewerFeedbackMap(); err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	gThird.Go(func() error {
-		if err := at.initLiveRoomStudentsScore(); err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	gThird.Go(func() error {
-		if err := at.initAssessmentUserMap(); err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	if err := gThird.Wait(); err != nil {
-		log.Error(ctx, "get assessment third level info error",
-			log.Err(err))
-		return err
 	}
 
 	return nil
@@ -723,7 +703,7 @@ func (at *AssessmentListInit) MatchClass() map[string]*entity.IDName {
 }
 
 func ConvertAssessmentPageReply(ctx context.Context, op *entity.Operator, assessments []*v2.Assessment) ([]*v2.AssessmentQueryReply, error) {
-	listInit, err := NewAssessmentListInit(ctx, op, assessments)
+	listInit, err := NewAssessmentListInitWithConfig(ctx, op, assessments)
 	if err != nil {
 		return nil, err
 	}
