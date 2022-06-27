@@ -722,7 +722,7 @@ func (at *AssessmentListInit) MatchClass() map[string]*entity.IDName {
 	return result
 }
 
-func ConvertAssessmentPageReply2(ctx context.Context, op *entity.Operator, assessments []*v2.Assessment) ([]*v2.AssessmentQueryReply, error) {
+func ConvertAssessmentPageReply(ctx context.Context, op *entity.Operator, assessments []*v2.Assessment) ([]*v2.AssessmentQueryReply, error) {
 	listInit, err := NewAssessmentListInit(ctx, op, assessments)
 	if err != nil {
 		return nil, err

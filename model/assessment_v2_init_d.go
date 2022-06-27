@@ -7,6 +7,7 @@ import (
 	"github.com/KL-Engineering/dbo"
 	"github.com/KL-Engineering/kidsloop-cms-service/config"
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
+	"github.com/KL-Engineering/kidsloop-cms-service/da"
 	"github.com/KL-Engineering/kidsloop-cms-service/da/assessmentV2"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
@@ -28,13 +29,13 @@ const (
 	assessmentInitLevel4
 )
 
-type AssessmentDetailInit struct {
+type AssessmentInit struct {
 	ctx           context.Context
 	op            *entity.Operator
 	assessment    *v2.Assessment
 	detailInitMap map[assessmentInitLevel][]assessmentInitFunc
 
-	lai *AssessmentListInit
+	//lai *AssessmentListInit
 
 	schedule          *entity.Schedule           // scheduleID
 	scheduleRelations []*entity.ScheduleRelation // scheduleID
@@ -47,7 +48,7 @@ type AssessmentDetailInit struct {
 	class                *entity.IDName                            // classID
 	reviewerFeedbackMap  map[string]*v2.AssessmentReviewerFeedback // assessmentUserID
 	liveRoom             *external.RoomInfo                        // roomID
-	scheduleStuReviewMap map[string]*entity.ScheduleReview         // key:ScheduleID,StudentID
+	scheduleStuReviewMap map[string]*entity.ScheduleReview         // key:StudentID
 
 	outcomeMapFromContent map[string]*entity.Outcome // key: outcomeID
 	contentsFromSchedule  []*v2.AssessmentContentView
@@ -69,30 +70,44 @@ type AssessmentDetailInit struct {
 	assessmentUserIDTypeMap map[string]*v2.AssessmentUser // key: userID+userType
 }
 
-func NewAssessmentDetailInit(ctx context.Context, op *entity.Operator, assessment *v2.Assessment) (*AssessmentDetailInit, error) {
+func NewAssessmentInit(ctx context.Context, op *entity.Operator, assessment *v2.Assessment) (*AssessmentInit, error) {
 	if assessment == nil {
 		return nil, constant.ErrRecordNotFound
 	}
 
-	lai, err := NewAssessmentListInit(ctx, op, []*v2.Assessment{assessment})
-	if err != nil {
-		return nil, err
-	}
-
-	at := &AssessmentDetailInit{
+	at := &AssessmentInit{
 		ctx:           ctx,
 		op:            op,
 		assessment:    assessment,
-		lai:           lai,
 		detailInitMap: make(map[assessmentInitLevel][]assessmentInitFunc),
 	}
 
-	at.ConfigAssessmentInitMap()
+	return at, nil
+}
+func NewAssessmentInitWithDetail(ctx context.Context, op *entity.Operator, assessment *v2.Assessment) (*AssessmentInit, error) {
+	if assessment == nil {
+		return nil, constant.ErrRecordNotFound
+	}
+
+	//lai, err := NewAssessmentListInit(ctx, op, []*v2.Assessment{assessment})
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	at := &AssessmentInit{
+		ctx:        ctx,
+		op:         op,
+		assessment: assessment,
+		//lai:           lai,
+		detailInitMap: make(map[assessmentInitLevel][]assessmentInitFunc),
+	}
+
+	at.ConfigAssessmentDetailInitMap()
 
 	return at, nil
 }
 
-func (at *AssessmentDetailInit) ConfigAssessmentInitMap() {
+func (at *AssessmentInit) ConfigAssessmentDetailInitMap() {
 	data := make(map[assessmentInitLevel][]assessmentInitFunc)
 	data[assessmentInitLevel1] = append(data[assessmentInitLevel1],
 		at.initSchedule,
@@ -124,57 +139,141 @@ func (at *AssessmentDetailInit) ConfigAssessmentInitMap() {
 }
 
 // Level 1
+func (at *AssessmentInit) GetSchedule() (*entity.Schedule, error) {
 
-func (at *AssessmentDetailInit) initSchedule() error {
-	if err := at.lai.initScheduleMap(); err != nil {
+	return at.schedule, nil
+}
+func (at *AssessmentInit) initSchedule() error {
+	if at.schedule != nil {
+		return nil
+	}
+
+	ctx := at.ctx
+	schedules, err := GetScheduleModel().QueryUnsafe(ctx, &entity.ScheduleQueryCondition{
+		IDs: entity.NullStrings{
+			Strings: []string{at.assessment.ScheduleID},
+			Valid:   true,
+		},
+	})
+	if err != nil {
+		log.Error(ctx, "get schedule info error", log.Err(err), log.Any("assessment", at.assessment))
 		return err
 	}
 
-	at.schedule = at.lai.scheduleMap[at.assessment.ScheduleID]
+	if len(schedules) <= 0 {
+		return constant.ErrRecordNotFound
+	}
+
+	at.schedule = schedules[0]
 
 	return nil
 }
 
-func (at *AssessmentDetailInit) initScheduleRelation() error {
-	if err := at.lai.initScheduleRelationMap(); err != nil {
-		return err
+func (at *AssessmentInit) initScheduleRelation() error {
+	if at.scheduleRelations != nil {
+		return nil
 	}
 
-	at.scheduleRelations = at.lai.scheduleRelationMap[at.assessment.ScheduleID]
-
-	return nil
-}
-
-func (at *AssessmentDetailInit) initScheduleReviewMap() error {
-
-	if err := at.lai.initScheduleReviewMap(); err != nil {
-		return err
-	}
-
-	at.scheduleStuReviewMap = at.lai.scheduleStuReviewMap[at.assessment.ScheduleID]
-
-	return nil
-}
-
-func (at *AssessmentDetailInit) initAssessmentUsers() error {
-	if err := at.lai.initAssessmentUsers(); err != nil {
-		return err
-	}
-	at.assessmentUsers = at.lai.assessmentUsers
-
-	return nil
-}
-
-func (at *AssessmentDetailInit) GetKey(value []string) string {
-	return strings.Join(value, "_")
-}
-
-func (at *AssessmentDetailInit) initLiveRoom() error {
 	ctx := at.ctx
 	op := at.op
 
-	if at.assessment.AssessmentType == v2.AssessmentTypeOfflineClass ||
-		at.assessment.AssessmentType == v2.AssessmentTypeOfflineStudy {
+	scheduleRelations, err := GetScheduleRelationModel().Query(ctx, op, &da.ScheduleRelationCondition{
+		ScheduleIDs: entity.NullStrings{
+			Strings: []string{at.assessment.ScheduleID},
+			Valid:   true,
+		},
+		RelationTypes: entity.NullStrings{
+			Strings: []string{
+				entity.ScheduleRelationTypeSubject.String(),
+				entity.ScheduleRelationTypeClassRosterClass.String(),
+			},
+			Valid: true,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	at.scheduleRelations = scheduleRelations
+
+	return nil
+}
+
+func (at *AssessmentInit) initScheduleReviewMap() error {
+	if at.scheduleStuReviewMap != nil {
+		return nil
+	}
+
+	at.scheduleStuReviewMap = make(map[string]*entity.ScheduleReview)
+	if at.assessment.AssessmentType != v2.AssessmentTypeReviewStudy {
+		return nil
+	}
+
+	ctx := at.ctx
+	op := at.op
+
+	scheduleID := at.assessment.ScheduleID
+
+	scheduleReviewMap, err := GetScheduleModel().GetSuccessScheduleReview(ctx, op, []string{scheduleID})
+	if err != nil {
+		return err
+	}
+
+	studentReviews, ok := scheduleReviewMap[scheduleID]
+	if !ok {
+		log.Warn(ctx, "schedule review data invalid", log.Any("assessment", at.assessment))
+		return nil
+	}
+
+	for _, reviewItem := range studentReviews {
+		if reviewItem.LiveLessonPlan == nil {
+			log.Warn(ctx, "student review content is empty", log.Any("studentReviewContent", reviewItem))
+			continue
+		}
+		at.scheduleStuReviewMap[reviewItem.StudentID] = reviewItem
+	}
+
+	return nil
+}
+
+func (at *AssessmentInit) initAssessmentUsers() error {
+	if at.assessmentUsers != nil {
+		return nil
+	}
+
+	ctx := at.ctx
+
+	var result []*v2.AssessmentUser
+	err := assessmentV2.GetAssessmentUserDA().Query(ctx, &assessmentV2.AssessmentUserCondition{
+		AssessmentIDs: entity.NullStrings{
+			Strings: []string{at.assessment.ID},
+			Valid:   true,
+		},
+	}, &result)
+	if err != nil {
+		return err
+	}
+
+	at.assessmentUsers = result
+
+	return nil
+}
+
+func GetAssessmentKey(value []string) string {
+	return strings.Join(value, "_")
+}
+
+func (at *AssessmentInit) initLiveRoom() error {
+	if at.liveRoom != nil {
+		return nil
+	}
+
+	ctx := at.ctx
+	op := at.op
+
+	if at.assessment.AssessmentType != v2.AssessmentTypeOnlineClass ||
+		at.assessment.AssessmentType != v2.AssessmentTypeOnlineStudy ||
+		at.assessment.AssessmentType != v2.AssessmentTypeReviewStudy {
 		at.liveRoom = &external.RoomInfo{}
 		return nil
 	}
@@ -197,44 +296,114 @@ func (at *AssessmentDetailInit) initLiveRoom() error {
 }
 
 // Level 2
-func (at *AssessmentDetailInit) initProgram() error {
-	if err := at.lai.initProgramMap(); err != nil {
+func (at *AssessmentInit) initProgram() error {
+	if at.program != nil {
+		return nil
+	}
+
+	if err := at.initSchedule(); err != nil {
+		return err
+	}
+	ctx := at.ctx
+	op := at.op
+
+	programID := at.schedule.ProgramID
+
+	programMap, err := external.GetProgramServiceProvider().BatchGetNameMap(ctx, op, []string{programID})
+	if err != nil {
 		return err
 	}
 
-	for _, item := range at.lai.programMap {
-		at.program = item
-		break
+	at.program = &entity.IDName{
+		ID:   programID,
+		Name: programMap[programID],
 	}
 
 	return nil
 }
 
-func (at *AssessmentDetailInit) initSubject() error {
-	if err := at.lai.initSubjectMap(); err != nil {
+func (at *AssessmentInit) initSubject() error {
+	if at.subjects != nil {
+		return nil
+	}
+
+	ctx := at.ctx
+	op := at.op
+
+	if err := at.initScheduleRelation(); err != nil {
 		return err
 	}
-	for _, item := range at.lai.subjectMap {
-		at.subjects = append(at.subjects, item)
+
+	relations := at.scheduleRelations
+	subjectIDs := make([]string, 0)
+	deDupMap := make(map[string]struct{})
+
+	for _, srItem := range relations {
+		if srItem.RelationType != entity.ScheduleRelationTypeSubject {
+			continue
+		}
+
+		if _, ok := deDupMap[srItem.RelationID]; ok || srItem.RelationID == "" {
+			continue
+		}
+
+		subjectIDs = append(subjectIDs, srItem.RelationID)
+		deDupMap[srItem.RelationID] = struct{}{}
+	}
+
+	subjectMap, err := external.GetSubjectServiceProvider().BatchGetNameMap(ctx, op, subjectIDs)
+	if err != nil {
+		return err
+	}
+
+	at.subjects = make([]*entity.IDName, 0, len(subjectMap))
+	for id, name := range subjectMap {
+		at.subjects = append(at.subjects, &entity.IDName{
+			ID:   id,
+			Name: name,
+		})
 	}
 
 	return nil
 }
 
-func (at *AssessmentDetailInit) initClass() error {
-	if err := at.lai.initClassMap(); err != nil {
+func (at *AssessmentInit) initClass() error {
+	if at.class != nil {
+		return nil
+	}
+
+	ctx := at.ctx
+	op := at.op
+
+	if err := at.initScheduleRelation(); err != nil {
 		return err
 	}
 
-	for _, item := range at.lai.classMap {
-		at.class = item
-		break
+	var classID string
+	for _, srItem := range at.scheduleRelations {
+		if srItem.RelationType == entity.ScheduleRelationTypeClassRosterClass {
+			classID = srItem.RelationID
+			break
+		}
 	}
+
+	at.class = &entity.IDName{}
+	if classID == "" {
+		return nil
+	}
+
+	classMap, err := external.GetClassServiceProvider().BatchGetNameMap(ctx, op, []string{classID})
+	if err != nil {
+		return err
+	}
+
+	at.class.ID = classID
+	at.class.Name = classMap[classID]
 
 	return nil
 }
 
-func (at *AssessmentDetailInit) IsNeedConvertLatestContent() (bool, error) {
+func (at *AssessmentInit) IsNeedConvertLatestContent() (bool, error) {
 	ctx := at.ctx
 
 	schedule := at.schedule
@@ -248,14 +417,12 @@ func (at *AssessmentDetailInit) IsNeedConvertLatestContent() (bool, error) {
 	return false, nil
 }
 
-func (at *AssessmentDetailInit) initAssessmentUserWithIDTypeMap() error {
-	//ctx := at.ctx
-
+func (at *AssessmentInit) initAssessmentUserWithIDTypeMap() error {
 	assessmentUsers := at.assessmentUsers
 
 	result := make(map[string]*v2.AssessmentUser, len(assessmentUsers))
 	for _, item := range assessmentUsers {
-		result[at.GetKey([]string{item.UserID, item.UserType.String()})] = item
+		result[GetAssessmentKey([]string{item.UserID, item.UserType.String()})] = item
 	}
 
 	at.assessmentUserIDTypeMap = result
@@ -263,7 +430,7 @@ func (at *AssessmentDetailInit) initAssessmentUserWithIDTypeMap() error {
 	return nil
 }
 
-func (at *AssessmentDetailInit) getLatestContentsFromSchedule(schedule *entity.Schedule) ([]*v2.AssessmentContentView, error) {
+func (at *AssessmentInit) getLatestContentsFromSchedule(schedule *entity.Schedule) ([]*v2.AssessmentContentView, error) {
 	ctx := at.ctx
 	op := at.op
 
@@ -336,7 +503,7 @@ func (at *AssessmentDetailInit) getLatestContentsFromSchedule(schedule *entity.S
 
 	return result, nil
 }
-func (at *AssessmentDetailInit) convertContentOutcome(contents []*v2.AssessmentContentView) error {
+func (at *AssessmentInit) convertContentOutcome(contents []*v2.AssessmentContentView) error {
 	ctx := at.ctx
 	op := at.op
 
@@ -395,7 +562,7 @@ func (at *AssessmentDetailInit) convertContentOutcome(contents []*v2.AssessmentC
 
 	return nil
 }
-func (at *AssessmentDetailInit) getLockedContentsFromSchedule(schedule *entity.Schedule) ([]*v2.AssessmentContentView, error) {
+func (at *AssessmentInit) getLockedContentsFromSchedule(schedule *entity.Schedule) ([]*v2.AssessmentContentView, error) {
 	result, err := at.getLockedContentBySchedule(schedule)
 	if err != nil {
 		return nil, err
@@ -408,7 +575,7 @@ func (at *AssessmentDetailInit) getLockedContentsFromSchedule(schedule *entity.S
 
 	return result, nil
 }
-func (at *AssessmentDetailInit) getLockedContentBySchedule(schedule *entity.Schedule) ([]*v2.AssessmentContentView, error) {
+func (at *AssessmentInit) getLockedContentBySchedule(schedule *entity.Schedule) ([]*v2.AssessmentContentView, error) {
 	ctx := at.ctx
 
 	if !schedule.IsLockedLessonPlan() {
@@ -489,7 +656,7 @@ func (at *AssessmentDetailInit) getLockedContentBySchedule(schedule *entity.Sche
 
 	return result, nil
 }
-func (at *AssessmentDetailInit) initContentsFromSchedule() error {
+func (at *AssessmentInit) initContentsFromSchedule() error {
 	at.contentsFromSchedule = make([]*v2.AssessmentContentView, 0)
 
 	if at.assessment.AssessmentType != v2.AssessmentTypeOnlineClass ||
@@ -519,8 +686,16 @@ func (at *AssessmentDetailInit) initContentsFromSchedule() error {
 	return nil
 }
 
-func (at *AssessmentDetailInit) initAssessmentContentMap() error {
+func (at *AssessmentInit) initAssessmentContentMap() error {
 	ctx := at.ctx
+
+	if at.assessment.AssessmentType != v2.AssessmentTypeOnlineClass ||
+		at.assessment.AssessmentType != v2.AssessmentTypeOfflineClass ||
+		at.assessment.AssessmentType != v2.AssessmentTypeOnlineStudy {
+
+		at.contentMapFromAssessment = make(map[string]*v2.AssessmentContent)
+		return nil
+	}
 
 	var assessmentContents []*v2.AssessmentContent
 	err := assessmentV2.GetAssessmentContentDA().Query(ctx, &assessmentV2.AssessmentUserCondition{
@@ -565,19 +740,57 @@ func (at *AssessmentDetailInit) initAssessmentContentMap() error {
 	return nil
 }
 
-func (at *AssessmentDetailInit) initReviewerFeedbackMap() error {
-	if err := at.lai.initReviewerFeedbackMap(); err != nil {
+func (at *AssessmentInit) initReviewerFeedbackMap() error {
+	if at.reviewerFeedbackMap != nil {
+		return nil
+	}
+
+	ctx := at.ctx
+
+	if err := at.initAssessmentUsers(); err != nil {
 		return err
 	}
 
-	at.reviewerFeedbackMap = at.lai.reviewerFeedbackMap
+	assessmentUserIDs := make([]string, len(at.assessmentUsers))
+	for i, item := range at.assessmentUsers {
+		assessmentUserIDs[i] = item.ID
+	}
+
+	if len(assessmentUserIDs) <= 0 {
+		at.reviewerFeedbackMap = make(map[string]*v2.AssessmentReviewerFeedback)
+		return nil
+	}
+
+	condition := &assessmentV2.AssessmentUserResultCondition{
+		AssessmentUserIDs: entity.NullStrings{
+			Strings: assessmentUserIDs,
+			Valid:   true,
+		},
+	}
+	var feedbacks []*v2.AssessmentReviewerFeedback
+	err := assessmentV2.GetAssessmentUserResultDA().Query(ctx, condition, &feedbacks)
+	if err != nil {
+		log.Error(ctx, "query reviewer feedback error", log.Err(err), log.Any("condition", condition))
+		return err
+	}
+
+	at.reviewerFeedbackMap = make(map[string]*v2.AssessmentReviewerFeedback, len(feedbacks))
+
+	for _, item := range feedbacks {
+		at.reviewerFeedbackMap[item.AssessmentUserID] = item
+	}
 
 	return nil
 }
 
-func (at *AssessmentDetailInit) initContentsFromScheduleReview() error {
+func (at *AssessmentInit) initContentsFromScheduleReview() error {
 	ctx := at.ctx
 	//op := at.op
+
+	if at.assessment.AssessmentType != v2.AssessmentTypeReviewStudy {
+		at.contentMapFromScheduleReview = make(map[string]*entity.ContentInfoInternal)
+		return nil
+	}
 
 	contentIDs := make([]string, 0)
 	dedupContentID := make(map[string]struct{})
@@ -615,9 +828,14 @@ func (at *AssessmentDetailInit) initContentsFromScheduleReview() error {
 	return nil
 }
 
-func (at *AssessmentDetailInit) initOutcomesFromSchedule() error {
+func (at *AssessmentInit) initOutcomesFromSchedule() error {
 	ctx := at.ctx
 	op := at.op
+
+	if at.assessment.AssessmentType != v2.AssessmentTypeOfflineStudy {
+		at.outcomesFromSchedule = make([]*entity.Outcome, 0)
+		return nil
+	}
 
 	outcomeIDMap, err := GetScheduleModel().GetLearningOutcomeIDs(ctx, op, []string{at.assessment.ScheduleID})
 	if err != nil {
@@ -640,9 +858,17 @@ func (at *AssessmentDetailInit) initOutcomesFromSchedule() error {
 }
 
 // level 3
-func (at *AssessmentDetailInit) initOutcomeMapFromContent() error {
+func (at *AssessmentInit) initOutcomeMapFromContent() error {
 	ctx := at.ctx
 	op := at.op
+
+	if at.assessment.AssessmentType != v2.AssessmentTypeOnlineClass ||
+		at.assessment.AssessmentType != v2.AssessmentTypeOfflineClass ||
+		at.assessment.AssessmentType != v2.AssessmentTypeOnlineStudy {
+
+		at.outcomeMapFromContent = make(map[string]*entity.Outcome)
+		return nil
+	}
 
 	contents := at.contentsFromSchedule
 	if contents == nil {
@@ -678,13 +904,19 @@ func (at *AssessmentDetailInit) initOutcomeMapFromContent() error {
 	return nil
 }
 
-func (at *AssessmentDetailInit) initRoomData() error {
+func (at *AssessmentInit) initRoomData() error {
 	ctx := at.ctx
 
 	roomData := at.liveRoom
 	if roomData == nil {
 		log.Error(ctx, "liveRoom data not init when process room data")
 		return ErrorPreambleDataNotInitialized
+	}
+
+	if len(roomData.ScoresByUser) <= 0 {
+		at.roomUserScoreMap = make(map[string][]*RoomUserScore)
+		at.roomContentTree = make([]*RoomContentTree, 0)
+		return nil
 	}
 
 	roomUserScoreMap, contentTree, err := GetAssessmentExternalService().StudentScores(ctx, roomData.ScoresByUser)
@@ -698,7 +930,7 @@ func (at *AssessmentDetailInit) initRoomData() error {
 	return nil
 }
 
-func (at *AssessmentDetailInit) initCommentResultMap() error {
+func (at *AssessmentInit) initCommentResultMap() error {
 	ctx := at.ctx
 	//op := at.op
 
@@ -742,8 +974,13 @@ func (at *AssessmentDetailInit) initCommentResultMap() error {
 	return nil
 }
 
-func (at *AssessmentDetailInit) initOutcomeFromAssessment() error {
+func (at *AssessmentInit) initOutcomeFromAssessment() error {
 	ctx := at.ctx
+
+	if at.assessment.AssessmentType == v2.AssessmentTypeReviewStudy {
+		at.outcomeMapFromAssessment = make(map[string]*v2.AssessmentUserOutcome)
+		return nil
+	}
 
 	assessmentUsers := at.assessmentUsers
 	if assessmentUsers == nil {
@@ -773,7 +1010,7 @@ func (at *AssessmentDetailInit) initOutcomeFromAssessment() error {
 
 	result := make(map[string]*v2.AssessmentUserOutcome, len(userOutcomes))
 	for _, item := range userOutcomes {
-		key := at.GetKey([]string{
+		key := GetAssessmentKey([]string{
 			item.AssessmentUserID,
 			item.AssessmentContentID,
 			item.OutcomeID,
@@ -786,11 +1023,15 @@ func (at *AssessmentDetailInit) initOutcomeFromAssessment() error {
 	return nil
 }
 
-func (at *AssessmentDetailInit) initContentMapFromLiveRoom() error {
+func (at *AssessmentInit) initContentMapFromLiveRoom() error {
 	ctx := at.ctx
 	//op := adc.op
 
 	roomContents := at.roomContentTree
+	if len(at.roomContentTree) <= 0 {
+		at.contentMapFromLiveRoom = make(map[string]*RoomContentTree)
+		return nil
+	}
 
 	result := make(map[string]*RoomContentTree, len(roomContents))
 	if ok, _ := at.IsNeedConvertLatestContent(); ok {
@@ -822,7 +1063,7 @@ func (at *AssessmentDetailInit) initContentMapFromLiveRoom() error {
 	return nil
 }
 
-func (at *AssessmentDetailInit) summaryRoomScores(userScoreMap map[string][]*RoomUserScore, contentsReply []*v2.AssessmentContentReply) (map[string]float64, map[string]float64) {
+func (at *AssessmentInit) summaryRoomScores(userScoreMap map[string][]*RoomUserScore, contentsReply []*v2.AssessmentContentReply) (map[string]float64, map[string]float64) {
 	contentSummaryTotalScoreMap := make(map[string]float64)
 	contentMap := make(map[string]*v2.AssessmentContentReply)
 	for _, content := range contentsReply {
@@ -842,7 +1083,7 @@ func (at *AssessmentDetailInit) summaryRoomScores(userScoreMap map[string][]*Roo
 	roomUserSummaryScoreMap := make(map[string]float64)
 	for userID, scores := range userScoreMap {
 		for _, resultItem := range scores {
-			key := at.GetKey([]string{
+			key := GetAssessmentKey([]string{
 				userID,
 				resultItem.ContentUniqueID,
 			})
@@ -858,7 +1099,7 @@ func (at *AssessmentDetailInit) summaryRoomScores(userScoreMap map[string][]*Roo
 					contentID = contentItem.ParentID
 				}
 
-				key2 := at.GetKey([]string{
+				key2 := GetAssessmentKey([]string{
 					userID,
 					contentID,
 				})
@@ -871,7 +1112,7 @@ func (at *AssessmentDetailInit) summaryRoomScores(userScoreMap map[string][]*Roo
 	return contentSummaryTotalScoreMap, roomUserSummaryScoreMap
 }
 
-func (at *AssessmentDetailInit) AsyncInitData() error {
+func (at *AssessmentInit) AsyncInitData() error {
 	ctx := at.ctx
 
 	for _, levels := range at.detailInitMap {
@@ -890,11 +1131,11 @@ func (at *AssessmentDetailInit) AsyncInitData() error {
 	return nil
 }
 
-func (at *AssessmentDetailInit) MatchTeacherIDs(processorMap map[v2.AssessmentType]IAssessmentProcessor) []string {
+func (at *AssessmentInit) MatchTeacherIDs() []string {
 	assessmentUsers := at.assessmentUsers
 
 	result := make([]string, 0)
-	processor := processorMap[at.assessment.AssessmentType]
+	processor := AssessmentProcessorMap[at.assessment.AssessmentType]
 
 	for _, assUserItem := range assessmentUsers {
 		if id, ok := processor.ProcessTeacherID(assUserItem); ok {
@@ -905,7 +1146,7 @@ func (at *AssessmentDetailInit) MatchTeacherIDs(processorMap map[v2.AssessmentTy
 	return result
 }
 
-func (at *AssessmentDetailInit) MatchOutcomes() map[string]*v2.AssessmentOutcomeReply {
+func (at *AssessmentInit) MatchOutcomes() map[string]*v2.AssessmentOutcomeReply {
 	contents := at.contentsFromSchedule
 	outcomeMap := at.outcomeMapFromContent
 
@@ -948,8 +1189,8 @@ func (at *AssessmentDetailInit) MatchOutcomes() map[string]*v2.AssessmentOutcome
 	return result
 }
 
-func ConvertAssessmentDetailReply2(ctx context.Context, op *entity.Operator, assessment *v2.Assessment) (*v2.AssessmentDetailReply, error) {
-	detailInit, err := NewAssessmentDetailInit(ctx, op, assessment)
+func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, assessment *v2.Assessment) (*v2.AssessmentDetailReply, error) {
+	detailInit, err := NewAssessmentInitWithDetail(ctx, op, assessment)
 	if err != nil {
 		return nil, err
 	}
@@ -958,44 +1199,35 @@ func ConvertAssessmentDetailReply2(ctx context.Context, op *entity.Operator, ass
 		return nil, err
 	}
 
-	processorMap := make(map[v2.AssessmentType]IAssessmentProcessor)
-	processorMap[v2.AssessmentTypeOnlineClass] = NewOnlineClassAssessment()
-	processorMap[v2.AssessmentTypeOfflineClass] = NewOnlineClassAssessment()
-	processorMap[v2.AssessmentTypeOnlineStudy] = NewOnlineStudyAssessment()
-	processorMap[v2.AssessmentTypeReviewStudy] = NewReviewStudyAssessment()
-	processorMap[v2.AssessmentTypeOfflineStudy] = NewOfflineStudyAssessment()
-
 	schedule := detailInit.schedule
 
-	outcomeMap, err := match.MatchOutcomes()
-	if err != nil {
-		return nil, err
+	outcomeMap := detailInit.MatchOutcomes()
+
+	contents := make([]*v2.AssessmentContentReply, 0)
+	if processor, ok := AssessmentProcessorMap[assessment.AssessmentType]; ok {
+		contents, err = processor.ProcessContents(ctx, detailInit)
+		if err != nil {
+			return nil, err
+		}
+	}
+	students := make([]*v2.AssessmentStudentReply, 0)
+	if processor, ok := AssessmentProcessorMap[assessment.AssessmentType]; ok {
+		students, err = processor.ProcessStudents(ctx, detailInit, contents)
+		if err != nil {
+			return nil, err
+		}
+	}
+	var completeRate float64
+	if processor, ok := AssessmentProcessorMap[assessment.AssessmentType]; ok {
+		completeRate = processor.ProcessCompleteRate(ctx, detailInit.assessmentUsers, detailInit.liveRoom, detailInit.scheduleStuReviewMap, detailInit.reviewerFeedbackMap)
 	}
 
-	contents, err := match.MatchContents()
-	if err != nil {
-		return nil, err
+	diffContentStudents := make([]*v2.AssessmentDiffContentStudentsReply, 0)
+	if processor, ok := AssessmentProcessorMap[assessment.AssessmentType]; ok {
+		diffContentStudents = processor.ProcessDiffContents(ctx, detailInit)
 	}
 
-	students, err := match.MatchStudents(contents)
-	if err != nil {
-		return nil, err
-	}
-
-	completeRateMap, err := match.MatchCompleteRate()
-	if err != nil {
-		return nil, err
-	}
-
-	diffContentStudents, err := match.MatchDiffContentStudents()
-	if err != nil {
-		return nil, err
-	}
-
-	isAnyOneAttempted, err := match.MatchAnyOneAttempted()
-	if err != nil {
-		return nil, err
-	}
+	isAnyOneAttempted := len(detailInit.roomUserScoreMap) > 0
 
 	result := &v2.AssessmentDetailReply{
 		ID:             assessment.ID,
@@ -1009,14 +1241,9 @@ func ConvertAssessmentDetailReply2(ctx context.Context, op *entity.Operator, ass
 		CompleteRate:   0,
 	}
 
-	schedule, ok := scheduleMap[assessment.ScheduleID]
-	if !ok {
-		return nil, constant.ErrRecordNotFound
-	}
-
 	result.Class = detailInit.class
 
-	result.TeacherIDs = detailInit.MatchTeacherIDs(processorMap)
+	result.TeacherIDs = detailInit.MatchTeacherIDs()
 
 	result.Program = detailInit.program
 	result.Subjects = detailInit.subjects
@@ -1035,7 +1262,7 @@ func ConvertAssessmentDetailReply2(ctx context.Context, op *entity.Operator, ass
 
 	result.Contents = contents
 	result.Students = students
-	result.CompleteRate = completeRateMap[assessment.ID]
+	result.CompleteRate = completeRate
 	result.IsAnyOneAttempted = isAnyOneAttempted
 	result.Description = schedule.Description
 

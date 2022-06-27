@@ -121,15 +121,7 @@ func (s *Server) updateAssessmentV2(c *gin.Context) {
 
 	log.Debug(ctx, "request", log.Any("req", req))
 
-	var err error
-	if req.Action == v2.AssessmentActionDraft {
-		err = model.GetAssessmentModelV2().Draft(ctx, op, req)
-	} else if req.Action == v2.AssessmentActionComplete {
-		err = model.GetAssessmentModelV2().Complete(ctx, op, req)
-	} else {
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
+	err := model.GetAssessmentModelV2().Update(ctx, op, req)
 
 	switch err {
 	case nil:
