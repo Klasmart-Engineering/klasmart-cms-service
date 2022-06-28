@@ -8,7 +8,6 @@ import (
 
 	"github.com/KL-Engineering/chlorine"
 	"github.com/KL-Engineering/common-log/log"
-	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	"github.com/KL-Engineering/kidsloop-cms-service/utils"
 )
@@ -29,13 +28,75 @@ type AssessmentServiceGetQuery struct {
 	Fragment string
 }
 
-func WithAssessmentGetScore(score bool) AssessmentServiceOption {
+func WithAssessmentGetScore(short bool) AssessmentServiceOption {
+	if short {
+		return AssessmentGetShortScore()
+	}
+
 	return func(option *AssessmentServiceGetOption) {
 		option.Score = AssessmentServiceGetQuery{}
 
-		if !score {
-			return
+		option.Score.Field = "...scoresByUser"
+		option.Score.Fragment = `
+fragment scoresByUser on Room {
+	scoresByUser {
+		user {
+			user_id
 		}
+		scores {
+			seen
+			content {
+				parent_id
+				content_id
+				name
+				type
+				fileType
+				h5p_id
+				subcontent_id
+			}
+			score {
+				min
+				max
+				sum
+				scoreFrequency
+				mean
+				scores
+				answers {
+					answer
+					score
+					date
+					minimumPossibleScore
+					maximumPossibleScore
+				}
+			}
+			teacherScores {
+				teacher {
+					user_id
+				}
+				student {
+					user_id
+				}
+				content {
+					content_id
+					name
+					type
+					fileType
+					h5p_id
+					subcontent_id
+				}
+				score
+				date
+			}
+		}
+	}
+}`
+	}
+
+}
+
+func AssessmentGetShortScore() AssessmentServiceOption {
+	return func(option *AssessmentServiceGetOption) {
+		option.Score = AssessmentServiceGetQuery{}
 
 		option.Score.Field = "...scoresByUser"
 		option.Score.Fragment = `
@@ -140,153 +201,6 @@ type SetScore struct {
 	Score        float64
 }
 
-func (s *AssessmentService) GetScoresByRoomIDs(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string][]*H5PUserScores, error) {
-	if len(roomIDs) == 0 {
-		return map[string][]*H5PUserScores{}, nil
-	}
-
-	query := `
-query {
-	{{range $i, $e := .}}
-	q{{$i}}: Room(room_id: "{{$e}}") {
-		...scoresByUser
-  	}
-	{{end}}
-}
-fragment scoresByUser on Room {
-	scoresByUser {
-		user {
-			user_id
-			given_name
-			family_name
-		}
-		scores {
-			seen
-			content {
-				parent_id
-				content_id
-				name
-				type
-				fileType
-				h5p_id
-				subcontent_id
-			}
-			score {
-				min
-				max
-				sum
-				scoreFrequency
-				mean
-				scores
-				answers {
-					answer
-					score
-					date
-					minimumPossibleScore
-					maximumPossibleScore
-				}
-				median
-				medians
-			}
-			teacherScores {
-				teacher {
-					user_id
-					given_name
-					family_name
-				}
-				student {
-					user_id
-					given_name
-					family_name
-				}
-				content {
-					content_id
-					name
-					type
-					fileType
-					h5p_id
-					subcontent_id
-				}
-				score
-				date
-			}
-		}
-	}
-}
-`
-
-	temp, err := template.New("").Parse(query)
-	if err != nil {
-		log.Error(ctx, "init template failed", log.Err(err))
-		return nil, err
-	}
-
-	_ids, indexMapping := utils.SliceDeduplicationMap(roomIDs)
-
-	buffer := new(bytes.Buffer)
-	err = temp.Execute(buffer, _ids)
-	if err != nil {
-		log.Error(ctx, "execute template failed", log.Err(err), log.Strings("roomIDs", roomIDs))
-		return nil, err
-	}
-
-	request := chlorine.NewRequest(buffer.String(), chlorine.ReqToken(operator.Token))
-
-	data := map[string]*struct {
-		ScoresByUser []*H5PUserScores `json:"scoresByUser"`
-	}{}
-	response := &chlorine.Response{
-		Data: &data,
-	}
-
-	_, err = GetH5PClient().Run(ctx, request, response)
-	if err != nil {
-		log.Error(ctx, "get room scores failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.String("query", buffer.String()),
-			log.Strings("roomIDs", roomIDs))
-		return nil, err
-	}
-
-	if len(response.Errors) > 0 {
-		log.Warn(ctx, "get room scores failed",
-			log.Err(response.Errors),
-			log.Any("operator", operator),
-			log.String("query", buffer.String()),
-			log.Strings("roomIDs", roomIDs))
-		//return nil, response.Errors
-	}
-
-	for _, studentScores := range data {
-		for _, scoreByUser := range studentScores.ScoresByUser {
-			for _, score := range scoreByUser.Scores {
-				for _, teacherScore := range score.TeacherScores {
-					// date is saved in milliseconds, we are more used to processing by seconds
-					teacherScore.Date = teacherScore.Date / 1000
-				}
-			}
-		}
-	}
-
-	scores := make(map[string][]*H5PUserScores, len(data))
-	for index := range roomIDs {
-		score := data[fmt.Sprintf("q%d", indexMapping[index])]
-		if score == nil {
-			log.Error(ctx, "user content score not found", log.String("roomID", roomIDs[index]))
-			return nil, constant.ErrRecordNotFound
-		}
-
-		scores[roomIDs[index]] = score.ScoresByUser
-	}
-
-	log.Info(ctx, "get room scores success",
-		log.Strings("roomIDs", roomIDs),
-		log.Any("scores", scores))
-
-	return scores, nil
-}
-
 type RoomInfo struct {
 	ScoresByUser             []*H5PUserScores               `json:"scoresByUser"`
 	TeacherCommentsByStudent []*H5PTeacherCommentsByStudent `json:"teacherCommentsByStudent"`
@@ -323,6 +237,7 @@ query {
 `,
 		getOption.Score.Field,
 		getOption.TeacherComment.Field,
+
 		getOption.Score.Fragment,
 		getOption.TeacherComment.Fragment)
 

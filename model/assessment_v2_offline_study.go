@@ -3,137 +3,100 @@ package model
 import (
 	"context"
 	"database/sql"
-	"time"
-
 	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/dbo"
+	"github.com/KL-Engineering/kidsloop-cms-service/config"
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 	"github.com/KL-Engineering/kidsloop-cms-service/da"
 	"github.com/KL-Engineering/kidsloop-cms-service/da/assessmentV2"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
+	"github.com/KL-Engineering/kidsloop-cms-service/external"
+	"time"
 )
 
-func NewOfflineStudyAssessment(at *AssessmentTool, action AssessmentMatchAction) IAssessmentMatch {
-	return &OfflineStudyAssessment{
-		at:     at,
-		action: action,
-		base:   NewBaseAssessment(at, action),
-	}
+func NewOfflineStudyAssessment() IAssessmentProcessor {
+	return &OfflineStudyAssessment{}
 }
 
 type OfflineStudyAssessment struct {
-	EmptyAssessment
-
-	base   BaseAssessment
-	at     *AssessmentTool
-	action AssessmentMatchAction
+	//EmptyAssessment
+	//
+	//assessmentMap map[string]*v2.Assessment
+	ali *AssessmentListInit
 }
 
-func (o *OfflineStudyAssessment) MatchSchedule() (map[string]*entity.Schedule, error) {
-	return o.base.MatchSchedule()
+func (o *OfflineStudyAssessment) ProcessDiffContents(ctx context.Context, at *AssessmentInit) []*v2.AssessmentDiffContentStudentsReply {
+	return make([]*v2.AssessmentDiffContentStudentsReply, 0)
 }
 
-func (o *OfflineStudyAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
-	return o.base.MatchTeacher()
-}
-
-func (o *OfflineStudyAssessment) MatchClass() (map[string]*entity.IDName, error) {
-	return o.base.MatchClass()
-}
-
-func (o *OfflineStudyAssessment) MatchCompleteRate() (map[string]float64, error) {
-	ctx := o.at.ctx
-
-	assessmentUserMap, err := o.at.GetAssessmentUserMap()
-	if err != nil {
-		return nil, err
+func (o *OfflineStudyAssessment) ProcessTeacherID(assUserItem *v2.AssessmentUser) (string, bool) {
+	if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
+		return "", false
 	}
 
-	reviewerFeedbackMap, err := o.at.GetReviewerFeedbackMap()
-	if err != nil {
-		return nil, err
-	}
+	return assUserItem.UserID, true
+}
 
-	studentCount := make(map[string]int)
-	studentCompleteCount := make(map[string]int)
-	for key, users := range assessmentUserMap {
-		for _, userItem := range users {
-			if userItem.UserType == v2.AssessmentUserTypeStudent {
-				studentCount[key]++
+func (o *OfflineStudyAssessment) ProcessCompleteRate(ctx context.Context, assessmentUsers []*v2.AssessmentUser,
+	roomData *external.RoomInfo, stuReviewMap map[string]*entity.ScheduleReview, reviewerFeedbackMap map[string]*v2.AssessmentReviewerFeedback) float64 {
 
-				if _, ok := reviewerFeedbackMap[userItem.ID]; ok {
-					studentCompleteCount[key]++
-				}
+	studentCount := 0
+	studentCompleteCount := 0
+	for _, userItem := range assessmentUsers {
+		if userItem.UserType == v2.AssessmentUserTypeStudent {
+			studentCount++
+
+			if _, ok := reviewerFeedbackMap[userItem.ID]; ok {
+				studentCompleteCount++
 			}
 		}
 	}
 
-	result := make(map[string]float64)
-	for _, item := range o.at.assessments {
-		stuTotal := studentCount[item.ID]
-		stuComplete := studentCompleteCount[item.ID]
-		if stuTotal == 0 || stuComplete == 0 {
-			result[item.ID] = 0
-		} else if stuComplete > stuTotal {
-			log.Warn(ctx, "Completion rate result greater than 1",
-				log.Any("assessment", item),
-				log.Any("assessmentUserMap", assessmentUserMap),
-				log.Any("reviewerFeedbackMap", reviewerFeedbackMap))
-			result[item.ID] = 1
-		} else {
-			result[item.ID] = float64(stuComplete) / float64(stuTotal)
-		}
+	if studentCount == 0 || studentCompleteCount == 0 {
+		return 0
+	} else if studentCompleteCount > studentCount {
+		log.Warn(ctx, "Completion rate result greater than 1",
+			log.Any("assessmentUsers", assessmentUsers),
+			log.Any("reviewerFeedbackMap", reviewerFeedbackMap))
+		return 1
+	} else {
+		return float64(studentCompleteCount) / float64(studentCount)
 	}
-
-	return result, nil
 }
 
-func (o *OfflineStudyAssessment) MatchRemainingTime() (map[string]int64, error) {
-	onlineStudy := NewOnlineStudyAssessment(o.at, o.action)
+func (o *OfflineStudyAssessment) ProcessTeacherName(assUserItem *v2.AssessmentUser, teacherMap map[string]*entity.IDName) (*entity.IDName, bool) {
+	if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
+		return nil, false
+	}
 
-	return onlineStudy.MatchRemainingTime()
+	resultItem := &entity.IDName{
+		ID:   assUserItem.UserID,
+		Name: "",
+	}
+
+	if userItem, ok := teacherMap[assUserItem.UserID]; ok && userItem != nil {
+		resultItem.Name = userItem.Name
+	}
+
+	return resultItem, true
 }
 
-func (o *OfflineStudyAssessment) MatchOutcomes() (map[string]*v2.AssessmentOutcomeReply, error) {
-	outcomes, err := o.at.FirstGetOutcomesFromSchedule()
-	if err != nil {
-		return nil, err
-	}
-
-	result := make(map[string]*v2.AssessmentOutcomeReply, len(outcomes))
-	if len(outcomes) <= 0 {
-		return result, nil
-	}
-
-	for _, item := range outcomes {
-		resultItem := &v2.AssessmentOutcomeReply{
-			OutcomeID:          item.ID,
-			OutcomeName:        item.Name,
-			AssignedTo:         nil,
-			Assumed:            item.Assumed,
-			AssignedToLessPlan: false,
-			AssignedToMaterial: false,
-			ScoreThreshold:     item.ScoreThreshold,
-		}
-		result[item.ID] = resultItem
-	}
-
-	return result, nil
+func (o *OfflineStudyAssessment) ProcessContents(ctx context.Context, at *AssessmentInit) ([]*v2.AssessmentContentReply, error) {
+	return make([]*v2.AssessmentContentReply, 0), nil
 }
 
-func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentContentReply) ([]*v2.AssessmentStudentReply, error) {
-	ctx := o.at.ctx
-	op := o.at.op
+func (o *OfflineStudyAssessment) ProcessStudents(ctx context.Context, at *AssessmentInit, contentsReply []*v2.AssessmentContentReply) ([]*v2.AssessmentStudentReply, error) {
+	op := at.op
 
-	assessmentUsers, err := o.at.GetAssessmentUsers()
-	if err != nil {
-		return nil, err
-	}
+	assessmentUsers := at.assessmentUsers
+	reviewerFeedbackMap := at.reviewerFeedbackMap       //o.at.GetReviewerFeedbackMap()
+	assessmentOutcomeMap := at.outcomeMapFromAssessment //o.at.FirstGetOutcomeFromAssessment()
+	outcomesFromSchedule := at.outcomesFromSchedule     //o.at.FirstGetOutcomesFromSchedule()
 
 	feedbackCond := &da.ScheduleFeedbackCondition{
 		ScheduleID: sql.NullString{
-			String: o.at.first.ScheduleID,
+			String: at.assessment.ScheduleID,
 			Valid:  true,
 		},
 	}
@@ -144,21 +107,6 @@ func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCon
 	scheduleFeedbackMap := make(map[string][]*entity.ScheduleFeedbackView, len(scheduleFeedbacks))
 	for _, item := range scheduleFeedbacks {
 		scheduleFeedbackMap[item.UserID] = append(scheduleFeedbackMap[item.UserID], item)
-	}
-
-	reviewerFeedbackMap, err := o.at.GetReviewerFeedbackMap()
-	if err != nil {
-		return nil, err
-	}
-
-	assessmentOutcomeMap, err := o.at.FirstGetOutcomeFromAssessment()
-	if err != nil {
-		return nil, err
-	}
-
-	outcomesFromSchedule, err := o.at.FirstGetOutcomesFromSchedule()
-	if err != nil {
-		return nil, err
 	}
 
 	result := make([]*v2.AssessmentStudentReply, 0, len(assessmentUsers))
@@ -177,7 +125,7 @@ func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCon
 		studentResultItem := new(v2.AssessmentStudentResultReply)
 		studentResultItem.Outcomes = make([]*v2.AssessmentStudentResultOutcomeReply, 0, len(outcomesFromSchedule))
 		for _, outcomeItem := range outcomesFromSchedule {
-			aoKey := o.at.GetKey([]string{
+			aoKey := GetAssessmentKey([]string{
 				item.ID,
 				"",
 				outcomeItem.ID,
@@ -237,31 +185,36 @@ func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentCon
 	return result, nil
 }
 
-func (o *OfflineStudyAssessment) verifyUpdateRequest(req *v2.AssessmentUpdateReq) error {
-	ctx := o.at.ctx
+func (o *OfflineStudyAssessment) ProcessRemainingTime(ctx context.Context, dueAt int64, assessmentCreateAt int64) int64 {
+	var remainingTime int64
+	if dueAt != 0 {
+		remainingTime = dueAt - time.Now().Unix()
+	} else {
+		remainingTime = time.Unix(assessmentCreateAt, 0).Add(config.Get().Assessment.DefaultRemainingTime).Unix() - time.Now().Unix()
+	}
+	if remainingTime < 0 {
+		remainingTime = 0
+	}
 
+	return remainingTime
+}
+
+func (o *OfflineStudyAssessment) verifyUpdateRequest(ctx context.Context, assessment *v2.Assessment, schedule *entity.Schedule, req *v2.AssessmentUpdateReq) error {
 	// verify assessment status
 	if !req.Action.Valid() {
 		log.Warn(ctx, "req action invalid", log.Any("req", req))
 		return constant.ErrInvalidArgs
 	}
-	if o.at.first.Status == v2.AssessmentStatusComplete {
-		log.Warn(ctx, "assessment is completed", log.Any("assessment", o.at.first))
+	if assessment.Status == v2.AssessmentStatusComplete {
+		log.Warn(ctx, "assessment is completed", log.Any("assessment", assessment))
 		return ErrAssessmentHasCompleted
 	}
 
 	// verify assessment remaining time
-	remainingTimeMap, err := o.MatchRemainingTime()
-	if err != nil {
-		return err
-	}
-	remainingTime, ok := remainingTimeMap[o.at.first.ID]
-	if !ok {
-		log.Warn(ctx, "not found assessment remaining time", log.Any("assessment", o.at.first))
-		return constant.ErrInvalidArgs
-	}
+	remainingTime := o.ProcessRemainingTime(ctx, schedule.DueAt, assessment.CreateAt)
+
 	if remainingTime > 0 {
-		log.Warn(ctx, "assessment remaining time is greater than 0", log.Int64("remainingTime", remainingTime), log.Any("assessment", o.at.first))
+		log.Warn(ctx, "assessment remaining time is greater than 0", log.Int64("remainingTime", remainingTime), log.Any("assessment", assessment))
 		return constant.ErrInvalidArgs
 	}
 
@@ -272,36 +225,27 @@ func (o *OfflineStudyAssessment) verifyUpdateRequest(req *v2.AssessmentUpdateReq
 
 	return nil
 }
-func (o *OfflineStudyAssessment) prepareAssessmentUpdateData(req *v2.AssessmentUpdateReq) (*v2.Assessment, error) {
-	ctx := o.at.ctx
-	//op := o.at.op
+func (o *OfflineStudyAssessment) prepareAssessmentUpdateData(ctx context.Context, assessment *v2.Assessment, req *v2.AssessmentUpdateReq) (*v2.Assessment, error) {
 	now := time.Now().Unix()
 
-	result := o.at.first
-
 	if req.Action == v2.AssessmentActionDraft {
-		result.Status = v2.AssessmentStatusInDraft
+		assessment.Status = v2.AssessmentStatusInDraft
 	} else if req.Action == v2.AssessmentActionComplete {
-		result.Status = v2.AssessmentStatusComplete
-		result.CompleteAt = now
+		assessment.Status = v2.AssessmentStatusComplete
+		assessment.CompleteAt = now
 	} else {
 		log.Warn(ctx, "req action is invalid", log.Any("req", req))
 		return nil, constant.ErrInvalidArgs
 	}
 
-	result.UpdateAt = now
+	assessment.UpdateAt = now
 
-	return result, nil
+	return assessment, nil
 }
 
-func (o *OfflineStudyAssessment) prepareAssessmentUsersUpdateData(req *v2.AssessmentUpdateReq) ([]*v2.AssessmentUser, error) {
-	ctx := o.at.ctx
+func (o *OfflineStudyAssessment) prepareAssessmentUsersUpdateData(ctx context.Context, assessmentUserMap map[string]*v2.AssessmentUser, req *v2.AssessmentUpdateReq) ([]*v2.AssessmentUser, error) {
 	now := time.Now().Unix()
 
-	assessmentUserMap, err := o.at.FirstGetAssessmentUserWithUserIDAndUserTypeMap()
-	if err != nil {
-		return nil, err
-	}
 	result := make([]*v2.AssessmentUser, 0, len(req.Students))
 
 	for _, item := range req.Students {
@@ -310,7 +254,7 @@ func (o *OfflineStudyAssessment) prepareAssessmentUsersUpdateData(req *v2.Assess
 			return nil, constant.ErrInvalidArgs
 		}
 
-		stuKey := o.at.GetKey([]string{
+		stuKey := GetAssessmentKey([]string{
 			item.StudentID,
 			v2.AssessmentUserTypeStudent.String(),
 		})
@@ -337,16 +281,10 @@ func (o *OfflineStudyAssessment) prepareAssessmentUsersUpdateData(req *v2.Assess
 	return result, nil
 }
 
-func (o *OfflineStudyAssessment) prepareUserOutcomesUpdateData(req *v2.AssessmentUpdateReq) ([]*v2.AssessmentUserOutcome, error) {
-	ctx := o.at.ctx
+func (o *OfflineStudyAssessment) prepareUserOutcomesUpdateData(ctx context.Context, assessmentUserMap map[string]*v2.AssessmentUser, req *v2.AssessmentUpdateReq) ([]*v2.AssessmentUserOutcome, error) {
 	now := time.Now().Unix()
 
 	// prepare assessment user data
-	assessmentUserMap, err := o.at.FirstGetAssessmentUserWithUserIDAndUserTypeMap()
-	if err != nil {
-		return nil, err
-	}
-
 	assessmentUserIDs := make([]string, 0)
 	reqStuOutcomeMap := make(map[string]*v2.AssessmentStudentResultOutcomeReq)
 
@@ -356,7 +294,7 @@ func (o *OfflineStudyAssessment) prepareUserOutcomesUpdateData(req *v2.Assessmen
 			return nil, constant.ErrInvalidArgs
 		}
 
-		stuKey := o.at.GetKey([]string{
+		stuKey := GetAssessmentKey([]string{
 			item.StudentID,
 			v2.AssessmentUserTypeStudent.String(),
 		})
@@ -374,7 +312,7 @@ func (o *OfflineStudyAssessment) prepareUserOutcomesUpdateData(req *v2.Assessmen
 		assessmentUserIDs = append(assessmentUserIDs, assessmentUserItem.ID)
 		stuResult := item.Results[0]
 		for _, outcomeReq := range stuResult.Outcomes {
-			reqStuOutcomeMap[o.at.GetKey([]string{assessmentUserItem.ID, outcomeReq.OutcomeID})] = outcomeReq
+			reqStuOutcomeMap[GetAssessmentKey([]string{assessmentUserItem.ID, outcomeReq.OutcomeID})] = outcomeReq
 		}
 	}
 
@@ -385,7 +323,7 @@ func (o *OfflineStudyAssessment) prepareUserOutcomesUpdateData(req *v2.Assessmen
 		},
 	}
 	var userOutcomes []*v2.AssessmentUserOutcome
-	err = assessmentV2.GetAssessmentUserOutcomeDA().Query(ctx, userOutcomeCond, &userOutcomes)
+	err := assessmentV2.GetAssessmentUserOutcomeDA().Query(ctx, userOutcomeCond, &userOutcomes)
 	if err != nil {
 		log.Warn(ctx, "get assessment user outcomes error", log.Any("userOutcomeCond", userOutcomeCond), log.Any("req", req))
 		return nil, err
@@ -393,7 +331,7 @@ func (o *OfflineStudyAssessment) prepareUserOutcomesUpdateData(req *v2.Assessmen
 
 	result := make([]*v2.AssessmentUserOutcome, 0, len(userOutcomes))
 	for _, item := range userOutcomes {
-		if reqStuOutcome, ok := reqStuOutcomeMap[o.at.GetKey([]string{item.AssessmentUserID, item.OutcomeID})]; ok {
+		if reqStuOutcome, ok := reqStuOutcomeMap[GetAssessmentKey([]string{item.AssessmentUserID, item.OutcomeID})]; ok {
 			if !reqStuOutcome.Status.Valid() {
 				log.Warn(ctx, "student outcome status invalid", log.Any("reqStuOutcome", reqStuOutcome), log.Any("req", req))
 				return nil, constant.ErrInvalidArgs
@@ -407,16 +345,10 @@ func (o *OfflineStudyAssessment) prepareUserOutcomesUpdateData(req *v2.Assessmen
 	return result, nil
 }
 
-func (o *OfflineStudyAssessment) prepareReviewerFeedbacksUpdateData(req *v2.AssessmentUpdateReq) ([]*v2.AssessmentReviewerFeedback, []*entity.FeedbackAssignment, error) {
-	ctx := o.at.ctx
-	op := o.at.op
+func (o *OfflineStudyAssessment) prepareReviewerFeedbacksUpdateData(ctx context.Context, op *entity.Operator, assessmentUserMap map[string]*v2.AssessmentUser, req *v2.AssessmentUpdateReq) ([]*v2.AssessmentReviewerFeedback, []*entity.FeedbackAssignment, error) {
 	now := time.Now().Unix()
 
 	// prepare assessment user data
-	assessmentUserMap, err := o.at.FirstGetAssessmentUserWithUserIDAndUserTypeMap()
-	if err != nil {
-		return nil, nil, err
-	}
 
 	assessmentUserIDs := make([]string, 0)
 	reqReviewerCommentMap := make(map[string]string)
@@ -429,7 +361,7 @@ func (o *OfflineStudyAssessment) prepareReviewerFeedbacksUpdateData(req *v2.Asse
 			return nil, nil, constant.ErrInvalidArgs
 		}
 
-		stuKey := o.at.GetKey([]string{
+		stuKey := GetAssessmentKey([]string{
 			item.StudentID,
 			v2.AssessmentUserTypeStudent.String(),
 		})
@@ -460,7 +392,7 @@ func (o *OfflineStudyAssessment) prepareReviewerFeedbacksUpdateData(req *v2.Asse
 		},
 	}
 	var reviewerFeedbacks []*v2.AssessmentReviewerFeedback
-	err = assessmentV2.GetAssessmentUserResultDA().Query(ctx, reviewerFeedbackCond, &reviewerFeedbacks)
+	err := assessmentV2.GetAssessmentUserResultDA().Query(ctx, reviewerFeedbackCond, &reviewerFeedbacks)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -514,30 +446,40 @@ func (o *OfflineStudyAssessment) prepareReviewerFeedbacksUpdateData(req *v2.Asse
 	return waitUpdateReviewerFeedbacks, waitUpdateFeedbackAssignments, nil
 }
 
-func (o *OfflineStudyAssessment) Update(req *v2.AssessmentUpdateReq) error {
-	ctx := o.at.ctx
-
-	err := o.verifyUpdateRequest(req)
+func (o *OfflineStudyAssessment) Update(ctx context.Context, op *entity.Operator, assessment *v2.Assessment, req *v2.AssessmentUpdateReq) error {
+	at, err := NewAssessmentInit(ctx, op, assessment)
 	if err != nil {
 		return err
 	}
 
-	waitUpdateAssessment, err := o.prepareAssessmentUpdateData(req)
+	if err = at.initSchedule(); err != nil {
+		return err
+	}
+	if err = at.initAssessmentUserWithIDTypeMap(); err != nil {
+		return err
+	}
+
+	err = o.verifyUpdateRequest(ctx, assessment, at.schedule, req)
 	if err != nil {
 		return err
 	}
 
-	waitUpdateAssessmentUsers, err := o.prepareAssessmentUsersUpdateData(req)
+	waitUpdateAssessment, err := o.prepareAssessmentUpdateData(ctx, assessment, req)
 	if err != nil {
 		return err
 	}
 
-	waitUpdateUserOutcomes, err := o.prepareUserOutcomesUpdateData(req)
+	waitUpdateAssessmentUsers, err := o.prepareAssessmentUsersUpdateData(ctx, at.assessmentUserIDTypeMap, req)
 	if err != nil {
 		return err
 	}
 
-	waitUpdateReviewerFeedbacks, waitUpdateFeedbackAssignments, err := o.prepareReviewerFeedbacksUpdateData(req)
+	waitUpdateUserOutcomes, err := o.prepareUserOutcomesUpdateData(ctx, at.assessmentUserIDTypeMap, req)
+	if err != nil {
+		return err
+	}
+
+	waitUpdateReviewerFeedbacks, waitUpdateFeedbackAssignments, err := o.prepareReviewerFeedbacksUpdateData(ctx, op, at.assessmentUserIDTypeMap, req)
 	if err != nil {
 		return err
 	}
@@ -590,3 +532,233 @@ func (o *OfflineStudyAssessment) Update(req *v2.AssessmentUpdateReq) error {
 
 	return nil
 }
+
+// old
+//func (o *OfflineStudyAssessment) MatchCompleteRate() map[string]float64 {
+//	ctx := o.ali.ctx
+//
+//	assessmentUserMap := o.ali.assessmentUserMap
+//
+//	reviewerFeedbackMap := o.ali.reviewerFeedbackMap
+//
+//	studentCount := make(map[string]int)
+//	studentCompleteCount := make(map[string]int)
+//	for key, users := range assessmentUserMap {
+//		for _, userItem := range users {
+//			if userItem.UserType == v2.AssessmentUserTypeStudent {
+//				studentCount[key]++
+//
+//				if _, ok := reviewerFeedbackMap[userItem.ID]; ok {
+//					studentCompleteCount[key]++
+//				}
+//			}
+//		}
+//	}
+//
+//	result := make(map[string]float64)
+//	for _, item := range o.assessmentMap {
+//		stuTotal := studentCount[item.ID]
+//		stuComplete := studentCompleteCount[item.ID]
+//		if stuTotal == 0 || stuComplete == 0 {
+//			result[item.ID] = 0
+//		} else if stuComplete > stuTotal {
+//			log.Warn(ctx, "Completion rate result greater than 1",
+//				log.Any("assessment", item),
+//				log.Any("assessmentUserMap", assessmentUserMap),
+//				log.Any("reviewerFeedbackMap", reviewerFeedbackMap))
+//			result[item.ID] = 1
+//		} else {
+//			result[item.ID] = float64(stuComplete) / float64(stuTotal)
+//		}
+//	}
+//
+//	return result
+//}
+//
+//func (o *OfflineStudyAssessment) MatchTeacherName() map[string][]*entity.IDName {
+//	assessmentUserMap := o.ali.assessmentUserMap
+//	teacherMap := o.ali.teacherMap
+//
+//	result := make(map[string][]*entity.IDName, len(o.assessmentMap))
+//	for _, item := range o.assessmentMap {
+//		if assUserItems, ok := assessmentUserMap[item.ID]; ok {
+//			for _, assUserItem := range assUserItems {
+//				if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
+//					continue
+//				}
+//
+//				resultItem := &entity.IDName{
+//					ID:   assUserItem.UserID,
+//					Name: "",
+//				}
+//
+//				if userItem, ok := teacherMap[assUserItem.UserID]; ok && userItem != nil {
+//					resultItem.Name = userItem.Name
+//				}
+//				result[item.ID] = append(result[item.ID], resultItem)
+//			}
+//		}
+//	}
+//
+//	return result
+//}
+//
+//func (o *OfflineStudyAssessment) MatchSchedule() (map[string]*entity.Schedule, error) {
+//	return o.base.MatchSchedule()
+//}
+//
+//func (o *OfflineStudyAssessment) MatchTeacher() (map[string][]*entity.IDName, error) {
+//	return o.base.MatchTeacher()
+//}
+//
+//func (o *OfflineStudyAssessment) MatchClass() (map[string]*entity.IDName, error) {
+//	return o.base.MatchClass()
+//}
+//
+//func (o *OfflineStudyAssessment) MatchRemainingTime() (map[string]int64, error) {
+//	onlineStudy := NewOnlineStudyAssessment(o.at, o.action)
+//
+//	return onlineStudy.MatchRemainingTime()
+//}
+//
+//func (o *OfflineStudyAssessment) MatchOutcomes() (map[string]*v2.AssessmentOutcomeReply, error) {
+//	outcomes, err := o.at.FirstGetOutcomesFromSchedule()
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	result := make(map[string]*v2.AssessmentOutcomeReply, len(outcomes))
+//	if len(outcomes) <= 0 {
+//		return result, nil
+//	}
+//
+//	for _, item := range outcomes {
+//		resultItem := &v2.AssessmentOutcomeReply{
+//			OutcomeID:          item.ID,
+//			OutcomeName:        item.Name,
+//			AssignedTo:         nil,
+//			Assumed:            item.Assumed,
+//			AssignedToLessPlan: false,
+//			AssignedToMaterial: false,
+//			ScoreThreshold:     item.ScoreThreshold,
+//		}
+//		result[item.ID] = resultItem
+//	}
+//
+//	return result, nil
+//}
+//
+//func (o *OfflineStudyAssessment) MatchStudents(contentsReply []*v2.AssessmentContentReply) ([]*v2.AssessmentStudentReply, error) {
+//	ctx := o.at.ctx
+//	op := o.at.op
+//
+//	assessmentUsers, err := o.at.GetAssessmentUsers()
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	feedbackCond := &da.ScheduleFeedbackCondition{
+//		ScheduleID: sql.NullString{
+//			String: o.at.first.ScheduleID,
+//			Valid:  true,
+//		},
+//	}
+//	scheduleFeedbacks, err := GetScheduleFeedbackModel().Query(ctx, op, feedbackCond)
+//	if err != nil {
+//		return nil, err
+//	}
+//	scheduleFeedbackMap := make(map[string][]*entity.ScheduleFeedbackView, len(scheduleFeedbacks))
+//	for _, item := range scheduleFeedbacks {
+//		scheduleFeedbackMap[item.UserID] = append(scheduleFeedbackMap[item.UserID], item)
+//	}
+//
+//	reviewerFeedbackMap, err := o.at.GetReviewerFeedbackMap()
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	assessmentOutcomeMap, err := o.at.FirstGetOutcomeFromAssessment()
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	outcomesFromSchedule, err := o.at.FirstGetOutcomesFromSchedule()
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	result := make([]*v2.AssessmentStudentReply, 0, len(assessmentUsers))
+//	for _, item := range assessmentUsers {
+//		if item.UserType != v2.AssessmentUserTypeStudent {
+//			continue
+//		}
+//
+//		resultItem := &v2.AssessmentStudentReply{
+//			StudentID:     item.UserID,
+//			Status:        item.StatusByUser,
+//			ProcessStatus: item.StatusBySystem,
+//			Results:       make([]*v2.AssessmentStudentResultReply, 0),
+//		}
+//
+//		studentResultItem := new(v2.AssessmentStudentResultReply)
+//		studentResultItem.Outcomes = make([]*v2.AssessmentStudentResultOutcomeReply, 0, len(outcomesFromSchedule))
+//		for _, outcomeItem := range outcomesFromSchedule {
+//			aoKey := o.at.GetKey([]string{
+//				item.ID,
+//				"",
+//				outcomeItem.ID,
+//			})
+//
+//			stuOutcomeReplyItem := &v2.AssessmentStudentResultOutcomeReply{
+//				OutcomeID: outcomeItem.ID,
+//				Status:    v2.AssessmentUserOutcomeStatusUnknown,
+//			}
+//			if outcomeItem.Assumed {
+//				stuOutcomeReplyItem.Status = v2.AssessmentUserOutcomeStatusAchieved
+//			}
+//			if assOutcomeItem, ok := assessmentOutcomeMap[aoKey]; ok && assOutcomeItem.Status != "" {
+//				stuOutcomeReplyItem.Status = assOutcomeItem.Status
+//			}
+//
+//			studentResultItem.Outcomes = append(studentResultItem.Outcomes, stuOutcomeReplyItem)
+//		}
+//
+//		reviewerFeedback, ok := reviewerFeedbackMap[item.ID]
+//		if !ok {
+//			if len(studentResultItem.Outcomes) > 0 {
+//				resultItem.Results = append(resultItem.Results, studentResultItem)
+//			}
+//
+//			result = append(result, resultItem)
+//			continue
+//		}
+//
+//		resultItem.ReviewerComment = reviewerFeedback.ReviewerComment
+//		studentResultItem.AssessScore = v2.AssessmentUserAssessAverage
+//		if reviewerFeedback.AssessScore > 0 {
+//			studentResultItem.AssessScore = reviewerFeedback.AssessScore
+//		}
+//		studentResultItem.Attempted = true
+//
+//		if studentFeedbackItems, ok := scheduleFeedbackMap[item.UserID]; ok {
+//			studentResultItem.StudentFeedbacks = make([]*v2.StudentResultFeedBacksReply, 0, len(studentFeedbackItems))
+//			for _, feedbackItem := range studentFeedbackItems {
+//				feedbackReply := &v2.StudentResultFeedBacksReply{
+//					ID:          feedbackItem.ID,
+//					ScheduleID:  feedbackItem.ScheduleID,
+//					UserID:      feedbackItem.UserID,
+//					Comment:     feedbackItem.Comment,
+//					CreateAt:    feedbackItem.CreateAt,
+//					Assignments: feedbackItem.Assignments,
+//				}
+//				studentResultItem.StudentFeedbacks = append(studentResultItem.StudentFeedbacks, feedbackReply)
+//			}
+//		}
+//
+//		resultItem.Results = append(resultItem.Results, studentResultItem)
+//
+//		result = append(result, resultItem)
+//	}
+//
+//	return result, nil
+//}

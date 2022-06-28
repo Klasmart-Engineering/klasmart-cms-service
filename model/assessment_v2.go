@@ -5,12 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/dbo"
+	"strings"
+	"sync"
 
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 	"github.com/KL-Engineering/kidsloop-cms-service/da"
@@ -27,17 +25,28 @@ var (
 
 	ErrAssessmentNotAllowDelete = errors.New("assessment has been processed and cannot be deleted")
 	//ErrAssessmentHasCompleted   = errors.New("assessment has completed")
+
+	AssessmentProcessorMap map[v2.AssessmentType]IAssessmentProcessor
 )
 
 type assessmentModelV2 struct {
 	AmsServices external.AmsServices
 }
 
-type AssessmentConfigFunc func() error
+type IAssessmentProcessor interface {
+	ProcessCompleteRate(ctx context.Context, assessmentUsers []*v2.AssessmentUser, roomData *external.RoomInfo, stuReviewMap map[string]*entity.ScheduleReview, reviewerFeedbackMap map[string]*v2.AssessmentReviewerFeedback) float64
+	ProcessTeacherName(assUserItem *v2.AssessmentUser, teacherMap map[string]*entity.IDName) (*entity.IDName, bool)
+	ProcessTeacherID(assUserItem *v2.AssessmentUser) (string, bool)
+	ProcessContents(ctx context.Context, at *AssessmentInit) ([]*v2.AssessmentContentReply, error)
+	ProcessDiffContents(ctx context.Context, at *AssessmentInit) []*v2.AssessmentDiffContentStudentsReply
+	ProcessStudents(context.Context, *AssessmentInit, []*v2.AssessmentContentReply) ([]*v2.AssessmentStudentReply, error)
+	ProcessRemainingTime(ctx context.Context, dueAt int64, assessmentCreateAt int64) int64
+
+	Update(ctx context.Context, op *entity.Operator, assessment *v2.Assessment, req *v2.AssessmentUpdateReq) error
+}
 
 type IAssessmentModelV2 interface {
-	Draft(ctx context.Context, op *entity.Operator, req *v2.AssessmentUpdateReq) error
-	Complete(ctx context.Context, op *entity.Operator, req *v2.AssessmentUpdateReq) error
+	Update(ctx context.Context, op *entity.Operator, req *v2.AssessmentUpdateReq) error
 
 	Page(ctx context.Context, op *entity.Operator, input *v2.AssessmentQueryReq) (*v2.AssessmentPageReply, error)
 	GetByID(ctx context.Context, op *entity.Operator, id string) (*v2.AssessmentDetailReply, error)
@@ -53,16 +62,14 @@ func GetAssessmentModelV2() IAssessmentModelV2 {
 		assessmentModelV2Instance = &assessmentModelV2{
 			AmsServices: external.GetAmsServices(),
 		}
+		AssessmentProcessorMap = make(map[v2.AssessmentType]IAssessmentProcessor)
+		AssessmentProcessorMap[v2.AssessmentTypeOnlineClass] = NewOnlineClassAssessment()
+		AssessmentProcessorMap[v2.AssessmentTypeOfflineClass] = NewOnlineClassAssessment()
+		AssessmentProcessorMap[v2.AssessmentTypeOnlineStudy] = NewOnlineStudyAssessment()
+		AssessmentProcessorMap[v2.AssessmentTypeReviewStudy] = NewReviewStudyAssessment()
+		AssessmentProcessorMap[v2.AssessmentTypeOfflineStudy] = NewOfflineStudyAssessment()
 	})
 	return assessmentModelV2Instance
-}
-
-func (a *assessmentModelV2) Draft(ctx context.Context, op *entity.Operator, req *v2.AssessmentUpdateReq) error {
-	return a.update(ctx, op, v2.AssessmentStatusInDraft, req)
-}
-
-func (a *assessmentModelV2) Complete(ctx context.Context, op *entity.Operator, req *v2.AssessmentUpdateReq) error {
-	return a.update(ctx, op, v2.AssessmentStatusComplete, req)
 }
 
 func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *v2.AssessmentQueryReq) (*v2.AssessmentPageReply, error) {
@@ -71,13 +78,26 @@ func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *
 		return nil, err
 	}
 
-	condition.AssessmentType = sql.NullString{
-		String: req.AssessmentType.String(),
-		Valid:  true,
+	condition.AssessmentTypes.Strings = strings.Split(req.AssessmentType.String(), ",")
+	condition.AssessmentTypes.Valid = req.AssessmentType != ""
+
+	if req.Status != "" {
+		statusMap := make(map[string]struct{})
+		for _, item := range condition.Status.Strings {
+			statusMap[item] = struct{}{}
+		}
+
+		condition.Status.Strings = make([]string, 0)
+		statusReq := strings.Split(req.Status, ",")
+		for _, item := range statusReq {
+			if _, ok := statusMap[item]; ok {
+				condition.Status.Strings = append(condition.Status.Strings, item)
+			}
+		}
+
+		condition.Status.Valid = true
 	}
 
-	condition.Status.Strings = strings.Split(req.Status, ",")
-	condition.Status.Valid = len(condition.Status.Strings) > 0
 	condition.OrderBy = assessmentV2.NewAssessmentOrderBy(req.OrderBy)
 	condition.Pager = dbo.Pager{
 		Page:     req.PageIndex,
@@ -116,7 +136,7 @@ func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *
 		}, nil
 	}
 
-	result, err := ConvertAssessmentPageReply(ctx, op, req.AssessmentType, assessments)
+	result, err := ConvertAssessmentPageReply(ctx, op, assessments)
 	if err != nil {
 		return nil, err
 	}
@@ -639,20 +659,23 @@ func (a *assessmentModelV2) PageForHomePage(ctx context.Context, op *entity.Oper
 		}, nil
 	}
 
-	at, err := NewAssessmentTool(ctx, op, assessments)
+	at, err := NewAssessmentListInit(ctx, op, assessments)
 	if err != nil {
 		return nil, err
 	}
 
-	assessmentUserMap, err := at.GetAssessmentUserMap()
+	err = at.initAssessmentUserMap()
 	if err != nil {
 		return nil, err
 	}
 
-	userMap, err := at.GetTeacherMap()
+	err = at.initTeacherMap()
 	if err != nil {
 		return nil, err
 	}
+
+	assessmentUserMap := at.assessmentUserMap
+	teacherMap := at.teacherMap
 
 	assTeacherMap := make(map[string][]*entity.IDName, len(assessments))
 	for _, item := range assessments {
@@ -666,7 +689,7 @@ func (a *assessmentModelV2) PageForHomePage(ctx context.Context, op *entity.Oper
 					continue
 				}
 
-				if userItem, ok := userMap[assUserItem.UserID]; ok && userItem != nil {
+				if userItem, ok := teacherMap[assUserItem.UserID]; ok && userItem != nil {
 					assTeacherMap[item.ID] = append(assTeacherMap[item.ID], userItem)
 				}
 			}
@@ -772,7 +795,7 @@ func (a *assessmentModelV2) queryFeedbackInfo(ctx context.Context, operator *ent
 }
 
 // TODO need refactor
-func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, status v2.AssessmentStatus, req *v2.AssessmentUpdateReq) error {
+func (a *assessmentModelV2) Update(ctx context.Context, op *entity.Operator, req *v2.AssessmentUpdateReq) error {
 	if len(req.Students) <= 0 {
 		log.Warn(ctx, "students is empty", log.Any("req", req))
 		return constant.ErrInvalidArgs
@@ -785,7 +808,6 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		return err
 	}
 
-	now := time.Now().Unix()
 	waitUpdatedAssessment := new(v2.Assessment)
 	err = assessmentV2.GetAssessmentDA().Get(ctx, req.ID, waitUpdatedAssessment)
 	if err == dbo.ErrRecordNotFound {
@@ -799,493 +821,5 @@ func (a *assessmentModelV2) update(ctx context.Context, op *entity.Operator, sta
 		return ErrAssessmentHasCompleted
 	}
 
-	at, err := NewAssessmentTool(ctx, op, []*v2.Assessment{waitUpdatedAssessment})
-	if err != nil {
-		return err
-	}
-	if waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeOfflineStudy {
-		match, _ := GetAssessmentMatch(waitUpdatedAssessment.AssessmentType, at, AssessmentMatchActionDetail)
-		return match.Update(req)
-	}
-
-	userIDAndUserTypeMap, err := at.FirstGetAssessmentUserWithUserIDAndUserTypeMap()
-	if err != nil {
-		return err
-	}
-
-	reviewerFeedbackMap, err := at.GetReviewerFeedbackMap()
-	if err != nil {
-		return err
-	}
-
-	waitAddReviewerFeedbacks := make([]*v2.AssessmentReviewerFeedback, 0)
-	waitUpdatedReviewerFeedbacks := make([]*v2.AssessmentReviewerFeedback, 0)
-
-	waitUpdatedUsers := make([]*v2.AssessmentUser, 0)
-	for _, item := range req.Students {
-		existItem, ok := userIDAndUserTypeMap[at.GetKey([]string{item.StudentID, v2.AssessmentUserTypeStudent.String()})]
-		if !ok {
-			log.Warn(ctx, "student not exist", log.Any("userIDAndUserTypeMap", userIDAndUserTypeMap), log.Any("reqItem", item))
-			return constant.ErrInvalidArgs
-		}
-		if !item.Status.Valid() {
-			log.Warn(ctx, "student status invalid", log.Any("userIDAndUserTypeMap", userIDAndUserTypeMap), log.Any("reqItem", item))
-			return constant.ErrInvalidArgs
-		}
-		existItem.StatusByUser = item.Status
-
-		if req.Action == v2.AssessmentActionComplete {
-			if existItem.StatusBySystem == v2.AssessmentUserSystemStatusDone || existItem.StatusBySystem == v2.AssessmentUserSystemStatusResubmitted {
-				existItem.StatusBySystem = v2.AssessmentUserSystemStatusCompleted
-				existItem.CompletedAt = now
-			}
-		}
-		existItem.UpdateAt = now
-
-		if reviewerFeedbackItem, ok := reviewerFeedbackMap[existItem.ID]; ok {
-			if reviewerFeedbackItem.ReviewerComment != item.ReviewerComment {
-				reviewerFeedbackItem.ReviewerComment = item.ReviewerComment
-				reviewerFeedbackItem.ReviewerID = op.UserID
-				reviewerFeedbackItem.UpdateAt = now
-				waitUpdatedReviewerFeedbacks = append(waitUpdatedReviewerFeedbacks, reviewerFeedbackItem)
-			}
-		} else if item.ReviewerComment != "" {
-			reviewerFeedbackItem := &v2.AssessmentReviewerFeedback{
-				ID:                utils.NewID(),
-				AssessmentUserID:  existItem.ID,
-				ReviewerID:        op.UserID,
-				StudentFeedbackID: "",
-				AssessScore:       0,
-				ReviewerComment:   item.ReviewerComment,
-				CreateAt:          now,
-				UpdateAt:          0,
-				DeleteAt:          0,
-			}
-			waitAddReviewerFeedbacks = append(waitAddReviewerFeedbacks, reviewerFeedbackItem)
-		}
-		waitUpdatedUsers = append(waitUpdatedUsers, existItem)
-	}
-
-	roomDataMap, err := at.GetExternalAssessmentServiceData()
-	if err != nil {
-		return err
-	}
-	roomData, hasScore := roomDataMap[waitUpdatedAssessment.ScheduleID]
-	canSetScoreContentMap := make(map[string]map[string]*AllowEditScoreContent)
-	if hasScore {
-		canSetScoreContentMap, err = GetAssessmentExternalService().AllowEditScoreContent(ctx, roomData.ScoresByUser)
-		if err != nil {
-			return err
-		}
-	}
-
-	if waitUpdatedAssessment.AssessmentType == v2.AssessmentTypeReviewStudy {
-		return a.updateReviewStudyAssessment(ctx, op, updateReviewStudyAssessmentInput{
-			status:                      status,
-			req:                         req,
-			waitUpdatedAssessment:       waitUpdatedAssessment,
-			waitUpdatedUsers:            waitUpdatedUsers,
-			userIDAndUserTypeMap:        userIDAndUserTypeMap,
-			at:                          at,
-			canSetScoreContentMap:       canSetScoreContentMap,
-			waitAddReviewerFeedbacks:    waitAddReviewerFeedbacks,
-			waitUpdateReviewerFeedbacks: waitUpdatedReviewerFeedbacks,
-		})
-	}
-
-	scheduleContents, err := at.FirstGetContentsFromSchedule()
-	if err != nil {
-		return err
-	}
-
-	assessmentContentMap, err := at.FirstGetAssessmentContentMap()
-	if err != nil {
-		return err
-	}
-
-	waitAddContentMap := make(map[string]*v2.AssessmentContent)
-	for _, item := range scheduleContents {
-		if _, ok := assessmentContentMap[item.ID]; !ok {
-			waitAddContentMap[item.ID] = &v2.AssessmentContent{
-				ID:           utils.NewID(),
-				AssessmentID: waitUpdatedAssessment.ID,
-				ContentID:    item.ID,
-				ContentType:  item.ContentType,
-				Status:       v2.AssessmentContentStatusNotCovered,
-				CreateAt:     now,
-			}
-		}
-	}
-
-	waitUpdateContents := make([]*v2.AssessmentContent, 0, len(assessmentContentMap))
-	for _, item := range req.Contents {
-		if contentItem, ok := assessmentContentMap[item.ContentID]; ok {
-			if !item.Status.Valid() {
-				log.Warn(ctx, "content status is invalid", log.Any("item", item), log.Any("req.Contents", req.Contents))
-				return constant.ErrInvalidArgs
-			}
-			contentItem.Status = item.Status
-			contentItem.ReviewerComment = item.ReviewerComment
-			contentItem.UpdateAt = now
-			waitUpdateContents = append(waitUpdateContents, contentItem)
-		} else {
-			if waitAddContentItem, ok := waitAddContentMap[item.ContentID]; ok {
-				if !item.Status.Valid() {
-					log.Warn(ctx, "content status is invalid", log.Any("item", item), log.Any("req.Contents", req.Contents))
-					return constant.ErrInvalidArgs
-				}
-				waitAddContentItem.ReviewerComment = item.ReviewerComment
-				waitAddContentItem.Status = item.Status
-				waitAddContentItem.CreateAt = now
-			}
-		}
-	}
-
-	waitAddContents := make([]*v2.AssessmentContent, 0, len(waitAddContentMap))
-	for _, item := range waitAddContentMap {
-		waitAddContents = append(waitAddContents, item)
-	}
-	allAssessmentContents := append(waitUpdateContents, waitAddContents...)
-
-	// outcome
-	contentOutcomeIDMap := make(map[string][]string, len(scheduleContents))
-	for _, item := range scheduleContents {
-		contentOutcomeIDMap[item.ID] = item.OutcomeIDs
-	}
-
-	outcomeIDs := make([]string, 0)
-	for _, item := range scheduleContents {
-		outcomeIDs = append(outcomeIDs, item.OutcomeIDs...)
-	}
-	outcomeIDs = utils.SliceDeduplicationExcludeEmpty(outcomeIDs)
-	outcomes, err := GetOutcomeModel().GetByIDs(ctx, op, dbo.MustGetDB(ctx), outcomeIDs)
-	if err != nil {
-		return err
-	}
-	outcomeMap := make(map[string]*entity.Outcome)
-	for _, item := range outcomes {
-		outcomeMap[item.ID] = item
-	}
-
-	outcomeFromAssessmentMap, err := at.FirstGetOutcomeFromAssessment()
-	if err != nil {
-		return err
-	}
-
-	waitAddAssessmentOutcomeMap := make(map[string]*v2.AssessmentUserOutcome)
-	for _, userItem := range userIDAndUserTypeMap {
-		if userItem.UserType == v2.AssessmentUserTypeTeacher {
-			continue
-		}
-		for _, contentItem := range allAssessmentContents {
-			if outcomeIDs, ok := contentOutcomeIDMap[contentItem.ContentID]; ok {
-				for _, outcomeID := range outcomeIDs {
-					if outcomeItem, ok := outcomeMap[outcomeID]; ok {
-						key := at.GetKey([]string{userItem.ID, contentItem.ID, outcomeID})
-						if _, ok := outcomeFromAssessmentMap[key]; ok {
-							continue
-						}
-						waitAddOutcomeItem := &v2.AssessmentUserOutcome{
-							ID:                  utils.NewID(),
-							AssessmentUserID:    userItem.ID,
-							AssessmentContentID: contentItem.ID,
-							OutcomeID:           outcomeID,
-							CreateAt:            now,
-						}
-						if outcomeItem.Assumed {
-							waitAddOutcomeItem.Status = v2.AssessmentUserOutcomeStatusAchieved
-						}
-
-						waitAddAssessmentOutcomeMap[key] = waitAddOutcomeItem
-					}
-				}
-			}
-		}
-	}
-
-	// user comment,score, outcomes
-	newScores := make([]*external.H5PSetScoreRequest, 0)
-
-	contentReqMap := make(map[string]*v2.AssessmentUpdateContentReq)
-	for _, item := range req.Contents {
-		contentReqMap[item.ContentID] = item
-	}
-
-	allAssessmentContentMap := make(map[string]*v2.AssessmentContent)
-	for _, item := range allAssessmentContents {
-		allAssessmentContentMap[item.ContentID] = item
-	}
-	waitUpdateAssessmentOutcomes := make([]*v2.AssessmentUserOutcome, 0)
-
-	for _, stuItem := range req.Students {
-		if stuItem.Status == v2.AssessmentUserStatusNotParticipate {
-			continue
-		}
-		// verify student data
-		assessmentUserItem, ok := userIDAndUserTypeMap[at.GetKey([]string{stuItem.StudentID, v2.AssessmentUserTypeStudent.String()})]
-		if !ok {
-			log.Warn(ctx, "student not exist", log.Any("userIDAndUserTypeMap", userIDAndUserTypeMap), log.Any("stuItem", stuItem))
-			return constant.ErrInvalidArgs
-		}
-
-		for _, stuResult := range stuItem.Results {
-			// verify student content data
-			if assessmentContentItem, ok := allAssessmentContentMap[stuResult.ContentID]; ok {
-				for _, outcomeItem := range stuResult.Outcomes {
-					if !outcomeItem.Status.Valid() {
-						log.Warn(ctx, "student outcome status invalid", log.Any("req", req), log.Any("outcomeItem", outcomeItem))
-						return constant.ErrInvalidArgs
-					}
-					key := at.GetKey([]string{assessmentUserItem.ID, assessmentContentItem.ID, outcomeItem.OutcomeID})
-					if outcomeFromAssessmentItem, ok := outcomeFromAssessmentMap[key]; ok {
-						outcomeFromAssessmentItem.Status = outcomeItem.Status
-						outcomeFromAssessmentItem.UpdateAt = now
-						waitUpdateAssessmentOutcomes = append(waitUpdateAssessmentOutcomes, outcomeFromAssessmentItem)
-					} else if waitAddOutcomeItem, ok := waitAddAssessmentOutcomeMap[key]; ok {
-						waitAddOutcomeItem.Status = outcomeItem.Status
-					} else {
-						log.Warn(ctx, "student outcome invalid", log.Any("outcomeFromAssessmentMap", outcomeFromAssessmentMap), log.Any("waitAddAssessmentOutcomeMap", waitAddAssessmentOutcomeMap), log.Any("stuItem", stuItem))
-						continue
-					}
-				}
-			}
-			if contentItem, ok := contentReqMap[stuResult.ContentID]; ok {
-				if stuContentMap, ok := canSetScoreContentMap[stuItem.StudentID]; ok {
-					if canSetScoreContentItem, ok := stuContentMap[contentItem.ContentID]; ok {
-						newScore := &external.H5PSetScoreRequest{
-							RoomID:    waitUpdatedAssessment.ScheduleID,
-							StudentID: stuItem.StudentID,
-							Score:     stuResult.Score,
-						}
-
-						newScore.ContentID = canSetScoreContentItem.ContentID
-						newScore.SubContentID = canSetScoreContentItem.SubContentID
-
-						newScores = append(newScores, newScore)
-					}
-				}
-			}
-		}
-	}
-
-	// update student comment
-	err = a.updateStudentScore(ctx, op, &updateStudentCommentAndScoreInput{
-		assessmentType: waitUpdatedAssessment.AssessmentType,
-		scheduleID:     waitUpdatedAssessment.ScheduleID,
-		newScores:      newScores,
-		at:             at,
-	})
-	if err != nil {
-		return err
-	}
-
-	waitUpdatedAssessment.UpdateAt = now
-	waitUpdatedAssessment.Status = status
-	if status == v2.AssessmentStatusComplete {
-		waitUpdatedAssessment.CompleteAt = now
-	}
-
-	waitAddAssessmentOutcomes := make([]*v2.AssessmentUserOutcome, 0, len(waitAddAssessmentOutcomeMap))
-	for _, item := range waitAddAssessmentOutcomeMap {
-		waitAddAssessmentOutcomes = append(waitAddAssessmentOutcomes, item)
-	}
-
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		if _, err := assessmentV2.GetAssessmentDA().UpdateTx(ctx, tx, waitUpdatedAssessment); err != nil {
-			return err
-		}
-
-		if len(waitUpdatedUsers) > 0 {
-			if _, err = assessmentV2.GetAssessmentUserDA().UpdateTx(ctx, tx, waitUpdatedUsers); err != nil {
-				return err
-			}
-		}
-
-		if len(waitAddContents) > 0 {
-			if _, err = assessmentV2.GetAssessmentContentDA().InsertTx(ctx, tx, waitAddContents); err != nil {
-				return err
-			}
-		}
-
-		if len(waitUpdateContents) > 0 {
-			if _, err = assessmentV2.GetAssessmentContentDA().UpdateTx(ctx, tx, waitUpdateContents); err != nil {
-				return err
-			}
-		}
-
-		if len(waitAddAssessmentOutcomes) > 0 {
-			if _, err = assessmentV2.GetAssessmentUserOutcomeDA().InsertTx(ctx, tx, waitAddAssessmentOutcomes); err != nil {
-				return err
-			}
-		}
-
-		if len(waitUpdateAssessmentOutcomes) > 0 {
-			if _, err = assessmentV2.GetAssessmentUserOutcomeDA().UpdateTx(ctx, tx, waitUpdateAssessmentOutcomes); err != nil {
-				return err
-			}
-		}
-
-		if len(waitAddReviewerFeedbacks) > 0 {
-			if _, err := assessmentV2.GetAssessmentUserResultDA().InsertTx(ctx, tx, waitAddReviewerFeedbacks); err != nil {
-				return err
-			}
-		}
-
-		if len(waitUpdatedReviewerFeedbacks) > 0 {
-			if _, err := assessmentV2.GetAssessmentUserResultDA().UpdateTx(ctx, tx, waitUpdatedReviewerFeedbacks); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-type updateStudentCommentAndScoreInput struct {
-	assessmentType v2.AssessmentType
-	scheduleID     string
-	newScores      []*external.H5PSetScoreRequest
-	at             *AssessmentTool
-}
-
-func (a *assessmentModelV2) updateStudentScore(ctx context.Context, op *entity.Operator, input *updateStudentCommentAndScoreInput) error {
-	match, _ := GetAssessmentMatch(input.assessmentType, input.at, AssessmentMatchActionDetail)
-	isAnyoneAttempted, _ := match.MatchAnyOneAttempted()
-	if !isAnyoneAttempted {
-		return nil
-	}
-
-	// update student score
-	if len(input.newScores) > 0 {
-		if _, err := external.GetH5PRoomScoreServiceProvider().BatchSet(ctx, op, input.newScores); err != nil {
-			log.Warn(ctx, "set student score error", log.Err(err), log.Any("newScores", input.newScores))
-			return err
-		}
-	}
-
-	return nil
-}
-
-type updateReviewStudyAssessmentInput struct {
-	status                      v2.AssessmentStatus
-	req                         *v2.AssessmentUpdateReq
-	waitUpdatedAssessment       *v2.Assessment
-	waitUpdatedUsers            []*v2.AssessmentUser
-	userIDAndUserTypeMap        map[string]*v2.AssessmentUser
-	at                          *AssessmentTool
-	canSetScoreContentMap       map[string]map[string]*AllowEditScoreContent
-	waitAddReviewerFeedbacks    []*v2.AssessmentReviewerFeedback
-	waitUpdateReviewerFeedbacks []*v2.AssessmentReviewerFeedback
-}
-
-func (a *assessmentModelV2) updateReviewStudyAssessment(ctx context.Context, op *entity.Operator, input updateReviewStudyAssessmentInput) error {
-	match, _ := GetAssessmentMatch(input.waitUpdatedAssessment.AssessmentType, input.at, AssessmentMatchActionDetail)
-	remainingTimeMap, err := match.MatchRemainingTime()
-	if err != nil {
-		return err
-	}
-	remainingTime, ok := remainingTimeMap[input.waitUpdatedAssessment.ID]
-	if !ok {
-		log.Warn(ctx, "not found assessment remaining time", log.Any("waitUpdateAssessment", input.waitUpdatedAssessment))
-		return constant.ErrInvalidArgs
-	}
-	if remainingTime > 0 {
-		log.Warn(ctx, "assessment remaining time is greater than 0", log.Int64("remainingTime", remainingTime), log.Any("waitUpdateAssessment", input.waitUpdatedAssessment))
-		return constant.ErrInvalidArgs
-	}
-
-	// user comment,score
-	newScores := make([]*external.H5PSetScoreRequest, 0)
-
-	contentReqMap := make(map[string]*v2.AssessmentUpdateContentReq)
-	for _, item := range input.req.Contents {
-		contentReqMap[item.ContentID] = item
-	}
-
-	for _, stuItem := range input.req.Students {
-		if stuItem.Status == v2.AssessmentUserStatusNotParticipate {
-			continue
-		}
-		// verify student data
-		_, ok := input.userIDAndUserTypeMap[input.at.GetKey([]string{stuItem.StudentID, v2.AssessmentUserTypeStudent.String()})]
-		if !ok {
-			log.Warn(ctx, "student not exist", log.Any("userIDAndUserTypeMap", input.userIDAndUserTypeMap), log.Any("stuItem", stuItem))
-			return constant.ErrInvalidArgs
-		}
-
-		for _, stuResult := range stuItem.Results {
-			if contentItem, ok := contentReqMap[stuResult.ContentID]; ok {
-				if stuContentMap, ok := input.canSetScoreContentMap[stuItem.StudentID]; ok {
-					if canSetScoreContentItem, ok := stuContentMap[contentItem.ContentID]; ok {
-						newScore := &external.H5PSetScoreRequest{
-							RoomID:    input.waitUpdatedAssessment.ScheduleID,
-							StudentID: stuItem.StudentID,
-							Score:     stuResult.Score,
-						}
-
-						newScore.ContentID = canSetScoreContentItem.ContentID
-						newScore.SubContentID = canSetScoreContentItem.SubContentID
-
-						newScores = append(newScores, newScore)
-					}
-				}
-			}
-		}
-	}
-
-	// update student comment
-	err = a.updateStudentScore(ctx, op, &updateStudentCommentAndScoreInput{
-		assessmentType: v2.AssessmentTypeReviewStudy,
-		scheduleID:     input.waitUpdatedAssessment.ScheduleID,
-		newScores:      newScores,
-		at:             input.at,
-	})
-	if err != nil {
-		return err
-	}
-
-	now := time.Now().Unix()
-	input.waitUpdatedAssessment.UpdateAt = now
-	input.waitUpdatedAssessment.Status = input.status
-	if input.status == v2.AssessmentStatusComplete {
-		input.waitUpdatedAssessment.CompleteAt = now
-	}
-
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		if _, err := assessmentV2.GetAssessmentDA().UpdateTx(ctx, tx, input.waitUpdatedAssessment); err != nil {
-			return err
-		}
-
-		if len(input.waitUpdatedUsers) > 0 {
-			if _, err := assessmentV2.GetAssessmentUserDA().UpdateTx(ctx, tx, input.waitUpdatedUsers); err != nil {
-				return err
-			}
-		}
-
-		if len(input.waitAddReviewerFeedbacks) > 0 {
-			if _, err := assessmentV2.GetAssessmentUserResultDA().InsertTx(ctx, tx, input.waitAddReviewerFeedbacks); err != nil {
-				return err
-			}
-		}
-
-		if len(input.waitUpdateReviewerFeedbacks) > 0 {
-			if _, err := assessmentV2.GetAssessmentUserResultDA().UpdateTx(ctx, tx, input.waitUpdateReviewerFeedbacks); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return AssessmentProcessorMap[waitUpdatedAssessment.AssessmentType].Update(ctx, op, waitUpdatedAssessment, req)
 }

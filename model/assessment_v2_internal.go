@@ -168,11 +168,12 @@ func (a *assessmentInternalModel) LockAssessmentContentAndOutcome(ctx context.Co
 
 	now := time.Now().Unix()
 
-	at, err := NewAssessmentTool(ctx, op, []*v2.Assessment{assessment})
+	at, err := NewAssessmentInit(ctx, op, assessment)
 	if err != nil {
 		return err
 	}
-	contentsFromSchedule, err := at.firstGetLockedContentBySchedule(schedule)
+
+	contentsFromSchedule, err := at.getLockedContentBySchedule(schedule)
 	if err != nil {
 		return err
 	}
@@ -209,15 +210,11 @@ func (a *assessmentInternalModel) LockAssessmentContentAndOutcome(ctx context.Co
 	assessmentUserIDs := make([]string, 0)
 
 	if len(outcomeIDs) > 0 {
-		assessmentUserMap, err := at.GetAssessmentUserMap()
-		if err != nil {
+		if err := at.initAssessmentUsers(); err != nil {
 			return err
 		}
-		assessmentUsers, ok := assessmentUserMap[assessment.ID]
-		if !ok {
-			log.Error(ctx, "can not found assessment users", log.String("assessmentID", assessment.ID), log.Any("assessmentUserMap", assessmentUserMap))
-			return constant.ErrRecordNotFound
-		}
+
+		assessmentUsers := at.assessmentUsers
 
 		latestOutcomeMap, _, err := GetOutcomeModel().GetLatestOutcomes(ctx, op, dbo.MustGetDB(ctx), outcomeIDs)
 		if err != nil {
