@@ -27,6 +27,7 @@ func GetAssessmentStatusByReq() map[AssessmentStatusForApiCompliant][]string {
 			AssessmentStatusNotStarted.String(),
 			AssessmentStatusStarted.String(),
 			AssessmentStatusInDraft.String(),
+			AssessmentStatusPending.String(),
 		},
 		AssessmentStatusCompliantCompleted: []string{
 			AssessmentStatusComplete.String(),

@@ -11,17 +11,17 @@ import (
 	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 )
 
-const assessmentOpToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ2NTNmODgwLWI5MjAtNDM1Zi04ZjJkLTk4YjVkNDYyMWViOCIsImVtYWlsIjoic2Nob29sXzAzMDMyOUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1MjY5Njk4NywiaXNzIjoia2lkc2xvb3AifQ.Es38iEiSREXnI3BiXQcEFgYpNEPUX5sf24auOxmScO-2Y5P2f-HruL0KLL0tHX7_UQ2fSFe0-5eX_dLCe5LUPreLA1IuoxU_1wUUEFctL05qwOT57m3rsGotAC9WVMO5TnxiFeWjTISjMyjnz2-1285-WJbN4d3UUfFkALwH9qbmAhnQyXqLpNeKg_r8DhHrLc_WoyymKKFy2N48eE8of5mHGL8YjTyRyb5DUrqGe0S9k7woS9O1zyPYXEAxzii7ND1foDSTHU4dXL4jaBRBpSYyVYubBZvvGE9xy8cvP8KGQMXrQ-TBoAJKZ4ZBUCtoWuKRRyf6AmftfRfFtt8t5Q"
+const assessmentOpToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1NjM5NDE3MywiaXNzIjoia2lkc2xvb3AifQ.MFG44Dl2d67JIgC2m3-f-2aqPSLKQtkvXp0RswwJhXRWiDrFPNJRM6FL6F2iUZ0aKdWOFqz4LQyV8n10U0WO-jO_AFc9ovwCyVEwkOei1xD9oZXEgZrsD9JF3gXhcNBfPkKfFEUaBEgVtUW31fHIDujyoaTqs_eDbn52FB7gV1MyTAxII-4U1685_-vsPK7DNaoI85PPspac-6LkBaAzfXlmQGoy-9aiBTexQ31OGNbtPBi1hL-XZ4tfomB_jh4a5L3f8YaGbRZ9AEGH2lHZ9rtQdYD7y5o0ML4g1mZ5LO76r-S3Xsi280t6Qlfk5YqJcCo0W7tE7OP39-7emsTXUg"
 
 func TestAssessmentModel_GetByID(t *testing.T) {
 	ctx := context.Background()
 	op := &entity.Operator{
-		UserID: "d653f880-b920-435f-8f2d-98b5d4621eb8",
-		OrgID:  "f27efd10-000e-4542-bef2-0ccda39b93d3",
+		UserID: "c57ef68d-a635-451d-b997-aebc3c29b99a",
+		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 		Token:  "",
 	}
 	op.Token = assessmentOpToken
-	result, err := GetAssessmentModelV2().GetByID(ctx, op, "620cabf670095932b84e2ebd")
+	result, err := GetAssessmentModelV2().GetByID(ctx, op, "617f9fa688932e7cb3892fca")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,8 +32,8 @@ func TestAssessmentModel_GetByID(t *testing.T) {
 func TestAssessmentModel_Query(t *testing.T) {
 	ctx := context.Background()
 	op := &entity.Operator{
-		UserID: "d653f880-b920-435f-8f2d-98b5d4621eb8",
-		OrgID:  "f27efd10-000e-4542-bef2-0ccda39b93d3",
+		UserID: "c57ef68d-a635-451d-b997-aebc3c29b99a",
+		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
 		Token:  "",
 	}
 	op.Token = assessmentOpToken
@@ -42,7 +42,7 @@ func TestAssessmentModel_Query(t *testing.T) {
 		//QueryType:      v2.QueryTypeTeacherName,
 		AssessmentType: v2.AssessmentTypeOnlineStudy,
 		OrderBy:        "-create_at",
-		Status:         "Started,Draft,Complete",
+		Status:         "Draft,Complete",
 		PageIndex:      1,
 		PageSize:       20,
 	})

@@ -79,10 +79,25 @@ func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *
 	}
 
 	condition.AssessmentTypes.Strings = strings.Split(req.AssessmentType.String(), ",")
-	condition.AssessmentTypes.Valid = len(condition.AssessmentTypes.Strings) > 0
+	condition.AssessmentTypes.Valid = req.AssessmentType != ""
 
-	condition.Status.Strings = strings.Split(req.Status, ",")
-	condition.Status.Valid = len(condition.Status.Strings) > 0
+	if req.Status != "" {
+		statusMap := make(map[string]struct{})
+		for _, item := range condition.Status.Strings {
+			statusMap[item] = struct{}{}
+		}
+
+		condition.Status.Strings = make([]string, 0)
+		statusReq := strings.Split(req.Status, ",")
+		for _, item := range statusReq {
+			if _, ok := statusMap[item]; ok {
+				condition.Status.Strings = append(condition.Status.Strings, item)
+			}
+		}
+
+		condition.Status.Valid = true
+	}
+
 	condition.OrderBy = assessmentV2.NewAssessmentOrderBy(req.OrderBy)
 	condition.Pager = dbo.Pager{
 		Page:     req.PageIndex,
