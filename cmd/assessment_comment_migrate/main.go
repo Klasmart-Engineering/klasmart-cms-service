@@ -63,7 +63,7 @@ func main() {
 
 	// connect mysql
 	err := initMysqlConfig(&args{
-		DSN: cms_mysql_dsn, //"root:Passw0rd@tcp(127.0.0.1:3306)/kidsloop_alpha_cms?charset=utf8mb4&parseTime=True&loc=Local",
+		DSN: cms_mysql_dsn,
 	})
 	if err != nil {
 		fmt.Println("init cms db connection error,", err)
@@ -72,7 +72,7 @@ func main() {
 
 	// connect postgres
 	postgresDB, err = initPostgresConfig(&args{
-		DSN: assessment_postgres_dsn, // "host=localhost user=postgres password=123456 dbname=assessmentdb port=5432 sslmode=disable TimeZone=Asia/Shanghai",
+		DSN: assessment_postgres_dsn,
 	})
 	if err != nil {
 		log.Panic(ctx, "connect postgres error", log.Err(err))

@@ -65,7 +65,7 @@ func (c *AssessmentPermission) SearchAllPermissions(ctx context.Context, op *ent
 	}
 	c.OrgPermission.Status.Valid = len(c.OrgPermission.Status.Strings) > 0
 	if c.OrgPermission.Status.Valid {
-		log.Debug(ctx, "user has org permission", log.Any("OrgPermission", c.OrgPermission))
+		log.Info(ctx, "user has org permission", log.Any("OrgPermission", c.OrgPermission))
 		return nil
 	}
 
@@ -106,7 +106,7 @@ func (c *AssessmentPermission) SearchAllPermissions(ctx context.Context, op *ent
 			}
 		}
 
-		log.Debug(ctx, "user has school permission", log.Any("SchoolPermission", c.SchoolPermission))
+		log.Info(ctx, "user has school permission", log.Any("SchoolPermission", c.SchoolPermission))
 
 		//return nil
 	}
@@ -130,7 +130,7 @@ func (c *AssessmentPermission) SearchAllPermissions(ctx context.Context, op *ent
 		return constant.ErrForbidden
 	}
 
-	log.Debug(ctx, "user has my permission", log.Any("MyPermission", c.MyPermission))
+	log.Info(ctx, "user has my permission", log.Any("MyPermission", c.MyPermission))
 
 	return nil
 }

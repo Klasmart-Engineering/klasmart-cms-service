@@ -11,7 +11,7 @@ import (
 	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 )
 
-const assessmentOpToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM1N2VmNjhkLWE2MzUtNDUxZC1iOTk3LWFlYmMzYzI5Yjk5YSIsImVtYWlsIjoib3JnYmFkYUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1NjM5NDE3MywiaXNzIjoia2lkc2xvb3AifQ.MFG44Dl2d67JIgC2m3-f-2aqPSLKQtkvXp0RswwJhXRWiDrFPNJRM6FL6F2iUZ0aKdWOFqz4LQyV8n10U0WO-jO_AFc9ovwCyVEwkOei1xD9oZXEgZrsD9JF3gXhcNBfPkKfFEUaBEgVtUW31fHIDujyoaTqs_eDbn52FB7gV1MyTAxII-4U1685_-vsPK7DNaoI85PPspac-6LkBaAzfXlmQGoy-9aiBTexQ31OGNbtPBi1hL-XZ4tfomB_jh4a5L3f8YaGbRZ9AEGH2lHZ9rtQdYD7y5o0ML4g1mZ5LO76r-S3Xsi280t6Qlfk5YqJcCo0W7tE7OP39-7emsTXUg"
+const assessmentOpToken = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZjMGEwZDc5LTg2YmEtNDYxZS04MzhlLTkxNjEyOWRiNjE2OSIsImVtYWlsIjoidGVhY2hlcjAyXzAwMUB5b3BtYWlsLmNvbSIsImV4cCI6MTY1NjU2Mzc5NiwiaXNzIjoia2lkc2xvb3AifQ.QvukPMsnNzNX5adneKEo_Kd7cP18E3gnF0Lyy1q707GkGj5t1SlMxH5UD9h4Z_IRDuk9Yg1KxyOgqQzwc5h9idBnk-8TlQu0sPkZ4vwMKhqR7YwkQYx2PZRAifxUrD7dBPjj2hO_tncvX3s68Y9jkExMP2aVfQ3ML9A-JHt77RHR1yadQr80lto9JAVAlCqQKD4WCDKJyWIY__OJyk43PHFDkjrcg632rcBGLfjX-UgZ1o-P5kk6pbg4LBjxnPSKAyFWzMIYY0xit94tn64i5yG8Eg65DZnGo02_2-BPseL-n0ejpBhhRYkLkqa7GHbQulmifTx2VT8KdW-Un3lrpg"
 
 func TestAssessmentModel_GetByID(t *testing.T) {
 	ctx := context.Background()
@@ -29,11 +29,15 @@ func TestAssessmentModel_GetByID(t *testing.T) {
 	t.Log(result)
 }
 
+//https://cms.alpha.kidsloop.net/v1/assessments_v2?
+//page=1&page_size=20&status=Started&
+//order_by=-create_at&query_key=+&
+//org_id=f27efd10-000e-4542-bef2-0ccda39b93d3&org_id=f27efd10-000e-4542-bef2-0ccda39b93d3
 func TestAssessmentModel_Query(t *testing.T) {
 	ctx := context.Background()
 	op := &entity.Operator{
-		UserID: "c57ef68d-a635-451d-b997-aebc3c29b99a",
-		OrgID:  "6300b3c5-8936-497e-ba1f-d67164b59c65",
+		UserID: "6c0a0d79-86ba-461e-838e-916129db6169",
+		OrgID:  "f27efd10-000e-4542-bef2-0ccda39b93d3",
 		Token:  "",
 	}
 	op.Token = assessmentOpToken
@@ -42,7 +46,7 @@ func TestAssessmentModel_Query(t *testing.T) {
 		//QueryType:      v2.QueryTypeTeacherName,
 		AssessmentType: v2.AssessmentTypeOnlineStudy,
 		OrderBy:        "-create_at",
-		Status:         "Draft,Complete",
+		Status:         "Started",
 		PageIndex:      1,
 		PageSize:       20,
 	})
