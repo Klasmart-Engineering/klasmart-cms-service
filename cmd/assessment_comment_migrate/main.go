@@ -166,6 +166,9 @@ func main() {
 		if _, ok := existFeedbackMap[assessmentUserID]; ok {
 			continue
 		}
+		if item.Comment == "" {
+			continue
+		}
 
 		feedItem := &v2.AssessmentReviewerFeedback{
 			ID:                utils.NewID(),
