@@ -122,6 +122,8 @@ func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *
 		condition.TeacherIDs.Valid = true
 	}
 
+	log.Info(ctx, "condition info", log.Any("condition", condition))
+
 	var assessments []*v2.Assessment
 	total, err := assessmentV2.GetAssessmentDA().Page(ctx, condition, &assessments)
 	if err != nil {
@@ -761,13 +763,16 @@ func (a *assessmentModelV2) getConditionByPermission(ctx context.Context, op *en
 			}
 		}
 		if permission.MyPermission.Status.Valid {
+			condition.Status.Strings = append(condition.Status.Strings, permission.MyPermission.Status.Strings...)
+			condition.Status.Strings = utils.SliceDeduplicationExcludeEmpty(condition.Status.Strings)
+			condition.Status.Valid = true
 			condition.TeacherIDs.Strings = append(condition.TeacherIDs.Strings, permission.MyPermission.UserID)
 		}
 
 		condition.TeacherIDs.Valid = true
 	}
 
-	log.Debug(ctx, "permission info", log.Any("permission", permission), log.Any("condition", condition))
+	log.Info(ctx, "permission info", log.Any("permission", permission), log.Any("condition", condition))
 
 	return condition, nil
 }
