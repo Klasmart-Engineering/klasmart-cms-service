@@ -64,7 +64,7 @@ func GetAssessmentModelV2() IAssessmentModelV2 {
 		}
 		AssessmentProcessorMap = make(map[v2.AssessmentType]IAssessmentProcessor)
 		AssessmentProcessorMap[v2.AssessmentTypeOnlineClass] = NewOnlineClassAssessment()
-		AssessmentProcessorMap[v2.AssessmentTypeOfflineClass] = NewOnlineClassAssessment()
+		AssessmentProcessorMap[v2.AssessmentTypeOfflineClass] = NewOfflineClassAssessment()
 		AssessmentProcessorMap[v2.AssessmentTypeOnlineStudy] = NewOnlineStudyAssessment()
 		AssessmentProcessorMap[v2.AssessmentTypeReviewStudy] = NewReviewStudyAssessment()
 		AssessmentProcessorMap[v2.AssessmentTypeOfflineStudy] = NewOfflineStudyAssessment()
