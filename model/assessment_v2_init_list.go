@@ -712,13 +712,6 @@ func ConvertAssessmentPageReply(ctx context.Context, op *entity.Operator, assess
 		return nil, err
 	}
 
-	processorMap := make(map[v2.AssessmentType]IAssessmentProcessor)
-	processorMap[v2.AssessmentTypeOnlineClass] = NewOnlineClassAssessment()
-	processorMap[v2.AssessmentTypeOfflineClass] = NewOnlineClassAssessment()
-	processorMap[v2.AssessmentTypeOnlineStudy] = NewOnlineStudyAssessment()
-	processorMap[v2.AssessmentTypeReviewStudy] = NewReviewStudyAssessment()
-	processorMap[v2.AssessmentTypeOfflineStudy] = NewOfflineStudyAssessment()
-
 	scheduleMap := listInit.scheduleMap
 	lessPlanMap := listInit.lessPlanMap
 	programMap := listInit.MatchProgram()
@@ -726,10 +719,10 @@ func ConvertAssessmentPageReply(ctx context.Context, op *entity.Operator, assess
 	classMap := listInit.MatchClass()
 
 	// complete rate
-	completeRateMap := listInit.MatchCompleteRate(processorMap)
+	completeRateMap := listInit.MatchCompleteRate()
 
 	// teacherName
-	teacherNameMap := listInit.MatchTeacherName(processorMap)
+	teacherNameMap := listInit.MatchTeacherName()
 
 	result := make([]*v2.AssessmentQueryReply, len(assessments))
 
@@ -768,13 +761,13 @@ func ConvertAssessmentPageReply(ctx context.Context, op *entity.Operator, assess
 	return result, nil
 }
 
-func (at *AssessmentListInit) MatchTeacherName(processorMap map[v2.AssessmentType]IAssessmentProcessor) map[string][]*entity.IDName {
+func (at *AssessmentListInit) MatchTeacherName() map[string][]*entity.IDName {
 	assessmentUserMap := at.assessmentUserMap
 	teacherMap := at.teacherMap
 
 	result := make(map[string][]*entity.IDName, len(at.assessmentMap))
 	for _, item := range at.assessmentMap {
-		processor := processorMap[item.AssessmentType]
+		processor := AssessmentProcessorMap[item.AssessmentType]
 
 		if assUserItems, ok := assessmentUserMap[item.ID]; ok {
 			for _, assUserItem := range assUserItems {
@@ -788,7 +781,7 @@ func (at *AssessmentListInit) MatchTeacherName(processorMap map[v2.AssessmentTyp
 	return result
 }
 
-func (at *AssessmentListInit) MatchCompleteRate(processorMap map[v2.AssessmentType]IAssessmentProcessor) map[string]float64 {
+func (at *AssessmentListInit) MatchCompleteRate() map[string]float64 {
 	ctx := at.ctx
 
 	assessmentUserMap := at.assessmentUserMap
@@ -801,7 +794,7 @@ func (at *AssessmentListInit) MatchCompleteRate(processorMap map[v2.AssessmentTy
 	for _, item := range at.assessmentMap {
 		assessmentUsers := assessmentUserMap[item.ID]
 		if roomData, ok := roomDataMap[item.ScheduleID]; ok {
-			processor := processorMap[item.AssessmentType]
+			processor := AssessmentProcessorMap[item.AssessmentType]
 
 			var stuReviewMap map[string]*entity.ScheduleReview
 			if scheduleReviewMap != nil {
