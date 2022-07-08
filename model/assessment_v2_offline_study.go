@@ -11,7 +11,6 @@ import (
 	"github.com/KL-Engineering/kidsloop-cms-service/da/assessmentV2"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
-	"github.com/KL-Engineering/kidsloop-cms-service/external"
 	"time"
 )
 
@@ -36,33 +35,6 @@ func (o *OfflineStudyAssessment) ProcessTeacherID(assUserItem *v2.AssessmentUser
 	}
 
 	return assUserItem.UserID, true
-}
-
-func (o *OfflineStudyAssessment) ProcessCompleteRate(ctx context.Context, assessmentUsers []*v2.AssessmentUser,
-	roomData *external.RoomInfo, stuReviewMap map[string]*entity.ScheduleReview, reviewerFeedbackMap map[string]*v2.AssessmentReviewerFeedback) float64 {
-
-	studentCount := 0
-	studentCompleteCount := 0
-	for _, userItem := range assessmentUsers {
-		if userItem.UserType == v2.AssessmentUserTypeStudent {
-			studentCount++
-
-			if _, ok := reviewerFeedbackMap[userItem.ID]; ok {
-				studentCompleteCount++
-			}
-		}
-	}
-
-	if studentCount == 0 || studentCompleteCount == 0 {
-		return 0
-	} else if studentCompleteCount > studentCount {
-		log.Warn(ctx, "Completion rate result greater than 1",
-			log.Any("assessmentUsers", assessmentUsers),
-			log.Any("reviewerFeedbackMap", reviewerFeedbackMap))
-		return 1
-	} else {
-		return float64(studentCompleteCount) / float64(studentCount)
-	}
 }
 
 func (o *OfflineStudyAssessment) ProcessTeacherName(assUserItem *v2.AssessmentUser, teacherMap map[string]*entity.IDName) (*entity.IDName, bool) {

@@ -50,6 +50,7 @@ type AssessmentQueryReply struct {
 	Title          string           `json:"title"`
 	AssessmentType AssessmentType   `json:"assessment_type"`
 	Status         AssessmentStatus `json:"status"`
+	ScheduleID     string           `json:"schedule_id"`
 
 	// onlineClass,offlineClass,OnlineStudy
 	LessonPlan *entity.IDName `json:"lesson_plan"`

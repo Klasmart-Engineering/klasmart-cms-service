@@ -277,7 +277,7 @@ func (at *AssessmentListInit) initLiveRoomStudentsScore() error {
 
 	roomDataMap, err := external.GetAssessmentServiceProvider().Get(ctx, op,
 		scheduleIDs,
-		external.WithAssessmentGetScore(true))
+		external.WithAssessmentGetCompletionPercentages())
 	if err != nil {
 		log.Warn(ctx, "external service error",
 			log.Err(err), log.Strings("scheduleIDs", scheduleIDs), log.Any("op", at.op))
@@ -729,6 +729,7 @@ func ConvertAssessmentPageReply(ctx context.Context, op *entity.Operator, assess
 	for i, item := range assessments {
 		replyItem := &v2.AssessmentQueryReply{
 			ID:             item.ID,
+			ScheduleID:     item.ScheduleID,
 			AssessmentType: item.AssessmentType,
 			Title:          item.Title,
 			ClassEndAt:     item.ClassEndAt,
@@ -755,7 +756,7 @@ func ConvertAssessmentPageReply(ctx context.Context, op *entity.Operator, assess
 		replyItem.Subjects = subjectMap[item.ID]
 		replyItem.DueAt = schedule.DueAt
 		replyItem.ClassInfo = classMap[item.ID]
-		replyItem.CompleteRate = completeRateMap[item.ID]
+		replyItem.CompleteRate = completeRateMap[item.ScheduleID]
 	}
 
 	return result, nil
@@ -782,27 +783,10 @@ func (at *AssessmentListInit) MatchTeacherName() map[string][]*entity.IDName {
 }
 
 func (at *AssessmentListInit) MatchCompleteRate() map[string]float64 {
-	ctx := at.ctx
-
-	assessmentUserMap := at.assessmentUserMap
-	roomDataMap := at.liveRoomMap
-	scheduleReviewMap := at.scheduleStuReviewMap
-	reviewerFeedbackMap := at.reviewerFeedbackMap
-
 	result := make(map[string]float64)
 
-	for _, item := range at.assessmentMap {
-		assessmentUsers := assessmentUserMap[item.ID]
-		if roomData, ok := roomDataMap[item.ScheduleID]; ok {
-			processor := AssessmentProcessorMap[item.AssessmentType]
-
-			var stuReviewMap map[string]*entity.ScheduleReview
-			if scheduleReviewMap != nil {
-				stuReviewMap = scheduleReviewMap[item.ScheduleID]
-			}
-			rate := processor.ProcessCompleteRate(ctx, assessmentUsers, roomData, stuReviewMap, reviewerFeedbackMap)
-			result[item.ID] = rate
-		}
+	for key, item := range at.liveRoomMap {
+		result[key] = item.CompletionPercentage
 	}
 
 	return result

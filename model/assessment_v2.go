@@ -34,7 +34,6 @@ type assessmentModelV2 struct {
 }
 
 type IAssessmentProcessor interface {
-	ProcessCompleteRate(ctx context.Context, assessmentUsers []*v2.AssessmentUser, roomData *external.RoomInfo, stuReviewMap map[string]*entity.ScheduleReview, reviewerFeedbackMap map[string]*v2.AssessmentReviewerFeedback) float64
 	ProcessTeacherName(assUserItem *v2.AssessmentUser, teacherMap map[string]*entity.IDName) (*entity.IDName, bool)
 	ProcessTeacherID(assUserItem *v2.AssessmentUser) (string, bool)
 	ProcessContents(ctx context.Context, at *AssessmentInit) ([]*v2.AssessmentContentReply, error)

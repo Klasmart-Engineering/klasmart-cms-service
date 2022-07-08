@@ -5,7 +5,6 @@ import (
 	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
 	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
-	"github.com/KL-Engineering/kidsloop-cms-service/external"
 )
 
 func NewOnlineStudyAssessment() IAssessmentProcessor {
@@ -31,20 +30,6 @@ func (o *OnlineStudyAssessment) ProcessTeacherID(assUserItem *v2.AssessmentUser)
 	}
 
 	return assUserItem.UserID, true
-}
-
-func (o *OnlineStudyAssessment) ProcessCompleteRate(ctx context.Context, assessmentUsers []*v2.AssessmentUser,
-	roomData *external.RoomInfo, stuReviewMap map[string]*entity.ScheduleReview, reviewerFeedbackMap map[string]*v2.AssessmentReviewerFeedback) float64 {
-	studentCount := 0
-	for _, userItem := range assessmentUsers {
-		if userItem.UserType == v2.AssessmentUserTypeStudent {
-			studentCount++
-		}
-	}
-
-	rate := GetAssessmentExternalService().calcRoomCompleteRateWhenUseSomeContent(ctx, roomData.ScoresByUser, studentCount)
-
-	return rate
 }
 
 func (o *OnlineStudyAssessment) ProcessTeacherName(assUserItem *v2.AssessmentUser, teacherMap map[string]*entity.IDName) (*entity.IDName, bool) {

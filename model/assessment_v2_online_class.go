@@ -373,10 +373,6 @@ func (o *OnlineClassAssessment) Update(ctx context.Context, op *entity.Operator,
 	return nil
 }
 
-func (o *OnlineClassAssessment) ProcessCompleteRate(ctx context.Context, assessmentUsers []*v2.AssessmentUser, roomData *external.RoomInfo, stuReviewMap map[string]*entity.ScheduleReview, reviewerFeedbackMap map[string]*v2.AssessmentReviewerFeedback) float64 {
-	return 0
-}
-
 func (o *OnlineClassAssessment) ProcessTeacherName(assUserItem *v2.AssessmentUser, teacherMap map[string]*entity.IDName) (*entity.IDName, bool) {
 	if teacherID, ok := o.ProcessTeacherID(assUserItem); ok {
 		resultItem := &entity.IDName{

@@ -217,28 +217,6 @@ func (o *ReviewStudyAssessment) ProcessTeacherID(assUserItem *v2.AssessmentUser)
 	return assUserItem.UserID, true
 }
 
-func (o *ReviewStudyAssessment) ProcessCompleteRate(ctx context.Context, assessmentUsers []*v2.AssessmentUser,
-	roomData *external.RoomInfo, stuReviewMap map[string]*entity.ScheduleReview, reviewerFeedbackMap map[string]*v2.AssessmentReviewerFeedback) float64 {
-
-	studentCount := 0
-	for _, userItem := range assessmentUsers {
-		if userItem.UserType == v2.AssessmentUserTypeStudent {
-			studentCount++
-		}
-	}
-
-	var contentTotalCount int
-	for _, stuContentItem := range stuReviewMap {
-		if stuContentItem.LiveLessonPlan == nil {
-			log.Warn(ctx, "student content is empty", log.Any("stuContentItem", stuContentItem))
-			continue
-		}
-		contentTotalCount += len(stuContentItem.LiveLessonPlan.LessonMaterials)
-	}
-
-	return GetAssessmentExternalService().calcRoomCompleteRateWhenUseDiffContent(ctx, roomData.ScoresByUser, contentTotalCount)
-}
-
 func (o *ReviewStudyAssessment) ProcessTeacherName(assUserItem *v2.AssessmentUser, teacherMap map[string]*entity.IDName) (*entity.IDName, bool) {
 	if assUserItem.UserType != v2.AssessmentUserTypeTeacher {
 		return nil, false

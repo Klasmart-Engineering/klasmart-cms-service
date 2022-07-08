@@ -218,7 +218,7 @@ func (s *Server) getStudentAssessments(c *gin.Context) {
 	conditions.OrgID = op.OrgID
 	conditions.StudentID = op.UserID
 
-	log.Debug(ctx, "request params", log.Any("conditions", conditions))
+	log.Info(ctx, "request params", log.Any("conditions", conditions))
 
 	total, result, err := model.GetAssessmentModelV2().QueryStudentAssessment(ctx, op, conditions)
 
@@ -280,7 +280,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 		return
 	}
 
-	log.Debug(ctx, "add assessment jwt: fill args", log.Any("args", args), log.String("token", body.Token))
+	log.Info(ctx, "add assessment jwt: fill args", log.Any("args", args), log.String("token", body.Token))
 
 	operator := s.getOperator(c)
 	err := model.GetLiveRoomEventBusModel().PubEndClass(ctx, operator, args)
