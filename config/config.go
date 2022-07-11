@@ -546,26 +546,26 @@ func loadAssessmentConfig(ctx context.Context) {
 
 func LoadAMSConfig(ctx context.Context) {
 	config.AMS.EndPoint = assertGetEnv("ams_endpoint")
-	//publicKey := os.Getenv("jwt_public_key_string")
-	//if publicKey != "" {
-	//	// debug mode: HS256/HS512
-	//	config.AMS.TokenVerifyKey = []byte(publicKey)
-	//} else {
-	//	publicKeyPath := os.Getenv("jwt_public_key_path") //"./jwt_public_key.pem"
-	//	content, err := ioutil.ReadFile(publicKeyPath)
-	//	if err != nil {
-	//		log.Panic(ctx, "loadAMSConfig:load public key failed", log.Err(err), log.String("publicKeyPath", publicKeyPath))
-	//	}
-	//
-	//	key, err := jwt.ParseRSAPublicKeyFromPEM(content)
-	//	if err != nil {
-	//		log.Panic(ctx, "loadAMSConfig:ParseRSAPublicKeyFromPEM failed", log.Err(err))
-	//	}
-	//	config.AMS.TokenVerifyKey = key
-	//}
-	//config.AMS.AuthorizedKey = os.Getenv("user_service_api_key")
-	//useDeprecatedQuery, err := strconv.ParseBool(os.Getenv("use_deprecated_query"))
-	//config.AMS.UseDeprecatedQuery = err != nil || useDeprecatedQuery
+	publicKey := os.Getenv("jwt_public_key_string")
+	if publicKey != "" {
+		// debug mode: HS256/HS512
+		config.AMS.TokenVerifyKey = []byte(publicKey)
+	} else {
+		publicKeyPath := os.Getenv("jwt_public_key_path") //"./jwt_public_key.pem"
+		content, err := ioutil.ReadFile(publicKeyPath)
+		if err != nil {
+			log.Panic(ctx, "loadAMSConfig:load public key failed", log.Err(err), log.String("publicKeyPath", publicKeyPath))
+		}
+
+		key, err := jwt.ParseRSAPublicKeyFromPEM(content)
+		if err != nil {
+			log.Panic(ctx, "loadAMSConfig:ParseRSAPublicKeyFromPEM failed", log.Err(err))
+		}
+		config.AMS.TokenVerifyKey = key
+	}
+	config.AMS.AuthorizedKey = os.Getenv("user_service_api_key")
+	useDeprecatedQuery, err := strconv.ParseBool(os.Getenv("use_deprecated_query"))
+	config.AMS.UseDeprecatedQuery = err != nil || useDeprecatedQuery
 }
 
 func LoadH5PServiceConfig(ctx context.Context) {
