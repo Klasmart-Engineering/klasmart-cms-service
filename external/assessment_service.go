@@ -317,10 +317,18 @@ query {
 	// key:roomId
 	var completionPercentages []float64
 	if item, ok := data["completionPercentages"]; ok {
-		items := item.([]interface{})
-		completionPercentages = make([]float64, 0, len(items))
-		for _, completion := range items {
-			completionPercentages = append(completionPercentages, completion.(float64))
+		if items, ok := item.([]interface{}); ok {
+			completionPercentages = make([]float64, 0, len(items))
+			for _, completion := range items {
+				completionFloat, ok := completion.(float64)
+				if !ok {
+					log.Warn(ctx, "completion data is not float64", log.Any("completion", completion))
+				}
+				// The conversion type failed, also added to the array as a placeholder
+				completionPercentages = append(completionPercentages, completionFloat)
+			}
+		} else {
+			log.Warn(ctx, "completionPercentages data is not array", log.Any("completionPercentages", item))
 		}
 	}
 
