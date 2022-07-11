@@ -7,7 +7,6 @@ import (
 	"github.com/KL-Engineering/dbo"
 	"github.com/KL-Engineering/kidsloop-cms-service/constant"
 	"github.com/KL-Engineering/kidsloop-cms-service/da/assessmentV2"
-	"github.com/KL-Engineering/kidsloop-cms-service/external"
 	"time"
 
 	"github.com/KL-Engineering/kidsloop-cms-service/entity"
@@ -217,10 +216,6 @@ func (o *OfflineClassAssessment) ProcessContents(ctx context.Context, at *Assess
 	}
 
 	return result, nil
-}
-
-func (o *OfflineClassAssessment) ProcessCompleteRate(ctx context.Context, assessmentUsers []*v2.AssessmentUser, roomData *external.RoomInfo, stuReviewMap map[string]*entity.ScheduleReview, reviewerFeedbackMap map[string]*v2.AssessmentReviewerFeedback) float64 {
-	return 0
 }
 
 func (o *OfflineClassAssessment) ProcessStudents(ctx context.Context, at *AssessmentInit, contents []*v2.AssessmentContentReply) ([]*v2.AssessmentStudentReply, error) {

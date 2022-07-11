@@ -275,8 +275,9 @@ func (at *AssessmentInit) initLiveRoom() error {
 
 	roomDataMap, err := external.GetAssessmentServiceProvider().Get(ctx, op,
 		[]string{at.assessment.ScheduleID},
-		external.WithAssessmentGetScore(false),
-		external.WithAssessmentGetTeacherComment(true))
+		external.WithAssessmentGetCompletionPercentages(),
+		external.WithAssessmentGetScore(),
+		external.WithAssessmentGetTeacherComment())
 	if err != nil {
 		log.Warn(ctx, "external service error",
 			log.Err(err), log.Any("assessment", at.assessment), log.Any("op", at.op))
@@ -1250,10 +1251,6 @@ func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, asse
 			return nil, err
 		}
 	}
-	var completeRate float64
-	if processor, ok := AssessmentProcessorMap[assessment.AssessmentType]; ok {
-		completeRate = processor.ProcessCompleteRate(ctx, detailInit.assessmentUsers, detailInit.liveRoom, detailInit.scheduleStuReviewMap, detailInit.reviewerFeedbackMap)
-	}
 
 	diffContentStudents := make([]*v2.AssessmentDiffContentStudentsReply, 0)
 	if processor, ok := AssessmentProcessorMap[assessment.AssessmentType]; ok {
@@ -1300,7 +1297,11 @@ func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, asse
 
 	result.Contents = contents
 	result.Students = students
-	result.CompleteRate = completeRate
+
+	if detailInit.liveRoom != nil {
+		result.CompleteRate = detailInit.liveRoom.CompletionPercentage
+	}
+
 	result.IsAnyOneAttempted = isAnyOneAttempted || len(detailInit.roomUserScoreMap) > 0
 	result.Description = schedule.Description
 
