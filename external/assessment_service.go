@@ -323,9 +323,10 @@ query {
 				completionFloat, ok := completion.(float64)
 				if !ok {
 					log.Warn(ctx, "completion data is not float64", log.Any("completion", completion))
+					completionFloat = 0
 				}
 				// The conversion type failed, also added to the array as a placeholder
-				completionPercentages = append(completionPercentages, 0)
+				completionPercentages = append(completionPercentages, completionFloat)
 			}
 		} else {
 			log.Warn(ctx, "completionPercentages data is not array", log.Any("completionPercentages", item))
