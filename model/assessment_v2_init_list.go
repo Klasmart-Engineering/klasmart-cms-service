@@ -265,7 +265,8 @@ func (at *AssessmentListInit) initLiveRoomStudentsScore() error {
 	scheduleIDs := make([]string, 0, len(at.assessments))
 	for _, item := range at.assessments {
 		if item.AssessmentType == v2.AssessmentTypeOnlineStudy ||
-			item.AssessmentType == v2.AssessmentTypeReviewStudy {
+			item.AssessmentType == v2.AssessmentTypeReviewStudy ||
+			item.AssessmentType == v2.AssessmentTypeOnlineClass {
 			scheduleIDs = append(scheduleIDs, item.ScheduleID)
 		}
 	}
@@ -783,31 +784,29 @@ func (at *AssessmentListInit) MatchTeacherName() map[string][]*entity.IDName {
 }
 
 func (at *AssessmentListInit) MatchCompleteRate() map[string]float64 {
+	ctx := at.ctx
 	result := make(map[string]float64)
 
 	for key, item := range at.liveRoomMap {
 		result[key] = item.CompletionPercentage
 	}
 
+	// Calculate the completion rate of offline Study schedule
+	if len(at.reviewerFeedbackMap) <= 0 {
+		return result
+	}
+
+	offlineStudy := &OfflineStudyAssessment{}
+	for _, item := range at.assessmentMap {
+		if item.AssessmentType != v2.AssessmentTypeOfflineStudy {
+			continue
+		}
+		assessmentUsers, ok := at.assessmentUserMap[item.ID]
+		if !ok {
+			continue
+		}
+		result[item.ScheduleID] = offlineStudy.ProcessCompleteRate(ctx, assessmentUsers, at.reviewerFeedbackMap)
+	}
+
 	return result
 }
-
-//func GetAssessmentMatch2(assessmentType v2.AssessmentType, at *AssessmentTool, action AssessmentMatchAction) IAssessmentMatch {
-//	var match IAssessmentMatch
-//	switch assessmentType {
-//	case v2.AssessmentTypeOnlineClass:
-//		match = NewOnlineClassAssessment(at, action)
-//	case v2.AssessmentTypeOfflineClass:
-//		match = NewOfflineClassAssessment(at, action)
-//	case v2.AssessmentTypeOnlineStudy:
-//		match = NewOnlineStudyAssessment(at, action)
-//	case v2.AssessmentTypeReviewStudy:
-//		match = NewReviewStudyAssessment(at, action)
-//	case v2.AssessmentTypeOfflineStudy:
-//		match = NewOfflineStudyAssessment(at, action)
-//	default:
-//		match = NewEmptyAssessment()
-//	}
-//
-//	return match
-//}

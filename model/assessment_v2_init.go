@@ -1301,6 +1301,10 @@ func ConvertAssessmentDetailReply(ctx context.Context, op *entity.Operator, asse
 	if detailInit.liveRoom != nil {
 		result.CompleteRate = detailInit.liveRoom.CompletionPercentage
 	}
+	if assessment.AssessmentType == v2.AssessmentTypeOfflineStudy {
+		offlineStudy := &OfflineStudyAssessment{}
+		result.CompleteRate = offlineStudy.ProcessCompleteRate(ctx, detailInit.assessmentUsers, detailInit.reviewerFeedbackMap)
+	}
 
 	result.IsAnyOneAttempted = isAnyOneAttempted || len(detailInit.roomUserScoreMap) > 0
 	result.Description = schedule.Description
