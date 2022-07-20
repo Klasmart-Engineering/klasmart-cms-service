@@ -55,6 +55,7 @@ jobs:
     
     - name: package and update lambda
       run: |
+        ls -la
         aws s3 cp swagger.json s3://$BUCKET_KEYS/alpha/latest/swagger/ --recursive
   
     # - name: Upload result
