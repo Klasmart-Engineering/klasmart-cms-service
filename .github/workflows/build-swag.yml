@@ -45,36 +45,36 @@ jobs:
     - name: COPY JSON File
       run: |
         cp docs/swagger.json .
+        ls -la docs/
         ls -la
 
     - name: Upload result
       uses: actions/upload-artifact@v3
       with:
         name: swag
-        path: swagger.json
+        path: docs
         if-no-files-found: error
         retention-days: 3
 
-  deploy:
-    name: Deploy
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
-          aws-region: ${{ env.AWS_REGION }}
+  # deploy:
+  #   name: Deploy
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v1
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
+  #         aws-region: ${{ env.AWS_REGION }}
 
-      - name: Download result
-        uses: actions/download-artifact@v3
-        with:
-          name: swag
-      - name: Display structure of downloaded files
-        run: |
-          ls -la
-          echo $PWD
-      - name: upload to s3
-        run: |
-          aws s3 sync swagger.json s3://$BUCKET_KEYS/alpha/latest/swagger
+  #     - name: Download result
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: swag
+  #     - name: Display structure of downloaded files
+  #       run: |
+  #         ls -la
+  #         echo $PWD
+  #     - name: upload to s3
+  #       run: aws s3 sync swagger.json s3://$BUCKET_KEYS/alpha/latest/swagger
