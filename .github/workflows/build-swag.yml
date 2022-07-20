@@ -74,7 +74,5 @@ jobs:
       - name: Display structure of downloaded files
         run: |
           ls -la
-          echo $PWD
-          touch aa.txt
       - name: upload to s3
-        run: aws s3 sync aa.txt s3://$BUCKET_KEYS/alpha/latest/swagger
+        run: aws s3 cp *.json s3://$BUCKET_KEYS/alpha/latest/swagger
