@@ -74,7 +74,7 @@ jobs:
       - name: Display structure of downloaded files
         run: |
           ls -la
-          echo $pwd
-      - name: deploy to s3
+          echo $PWD
+      - name: upload to s3
         run: |
-          aws s3 cp swagger.json s3://$BUCKET_KEYS/alpha/latest/swagger --recursive
+          aws s3 sync swagger.json s3://$BUCKET_KEYS/alpha/latest/swagger
