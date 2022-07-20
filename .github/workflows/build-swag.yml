@@ -12,7 +12,7 @@ env:
   AWS_REGION: ap-northeast-2
 
 jobs:
-  build-swag:
+  build:
     name: Build
     runs-on: ubuntu-latest
     steps:
@@ -33,12 +33,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
-        aws-region: ${{ env.AWS_REGION }}
 
     - name: Build SWAG
       run: |
@@ -52,27 +46,35 @@ jobs:
       run: |
         cp docs/swagger.json .
         ls -la
-        echo $pwd
-        aws s3 cp swagger.json s3://$BUCKET_KEYS/alpha/latest/swagger --recursive
 
-    # - name: Upload result
-    #   uses: actions/upload-artifact@v3
-    #   with:
-    #     name: swag
-    #     path: swagger.json
-    #     if-no-files-found: error
-    #     retention-days: 3
+    - name: Upload result
+      uses: actions/upload-artifact@v3
+      with:
+        name: swag
+        path: swagger.json
+        if-no-files-found: error
+        retention-days: 3
 
-  # deploy:
-  #   name: Deploy
-  #   needs: build-swag
-  #   runs-on: ubuntu-latest
-  #   steps:
-      # - name: Download result
-      #   uses: actions/download-artifact@v3
-      #   with:
-      #     name: swag
-      # - name: Display structure of downloaded files
-      #   run: ls -la
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      
+      - name: Download result
+        uses: actions/download-artifact@v3
+        with:
+          name: swag
+      - name: Display structure of downloaded files
+        run: |
+          ls -la
+          echo $pwd
+      - name: deploy to s3
+        run: |
+          aws s3 cp swagger.json s3://$BUCKET_KEYS/alpha/latest/swagger --recursive
