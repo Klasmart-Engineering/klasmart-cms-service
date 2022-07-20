@@ -46,6 +46,17 @@ jobs:
         cp docs/swagger.json .
         ls -la
 
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: package and update lambda
+      run: |
+        aws s3 cp swagger.json s3://$BUCKET_KEYS/alpha/latest/swagger/ --recursive
+  
     # - name: Upload result
     #   uses: actions/upload-artifact@v3
     #   with:
@@ -54,11 +65,11 @@ jobs:
     #     if-no-files-found: error
     #     retention-days: 3
 
-  deploy:
-    name: Deploy
-    needs: build-swag
-    runs-on: ubuntu-latest
-    steps:
+  # deploy:
+  #   name: Deploy
+  #   needs: build-swag
+  #   runs-on: ubuntu-latest
+  #   steps:
       # - name: Download result
       #   uses: actions/download-artifact@v3
       #   with:
@@ -66,13 +77,4 @@ jobs:
       # - name: Display structure of downloaded files
       #   run: ls -la
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
-          aws-region: ${{ env.AWS_REGION }}
       
-      - name: package and update lambda
-        run: |
-          aws s3 cp swagger.json s3://$BUCKET_KEYS/alpha/latest/swagger/ --recursive
