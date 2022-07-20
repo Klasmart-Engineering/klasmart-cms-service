@@ -1,16 +1,15 @@
 name: Deploy to Swagger
 
 on:
-  pull_request:
-    branches: [main]
-    types: [closed]
+  push:
+    branches:
+      - swag-byron
+      - main
+  workflow_dispatch:
 
 env:
-  SERVER_PRIVATE_KEY: ${{ secrets.SERVER_PRIVATE_KEY }}
-  SERVER_USER: ${{ secrets.SERVER_USER }}
-  SERVER_IP: ${{ secrets.SERVER_IP }}
-  SERVER_PORT: ${{secrets.SERVER_PORT}}
-  SERVER_DESTINATION: ${{secrets.SERVER_DESTINATION}}
+  BUCKET_KEYS: kidsloop-alpha-cms-intent-turtle
+  AWS_REGION: ap-northeast-2
 
 jobs:
   build-swag:
@@ -45,15 +44,14 @@ jobs:
       run: swag init
     - name: COPY JSON File
       run: |
-        cp docs/swagger.json api.swagger.json
+        cp docs/swagger.json .
         ls -la
-        echo $PWD
 
     - name: Upload result
       uses: actions/upload-artifact@v3
       with:
         name: swag
-        path: api.swagger.json
+        path: swagger.json
         if-no-files-found: error
         retention-days: 3
 
@@ -70,13 +68,13 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -la
 
-      - name: Deploy to Server
-        uses: AEnterprise/rsync-deploy@v1.0
-        env:
-          DEPLOY_KEY: ${{ env.SERVER_PRIVATE_KEY }}
-          ARGS: "-avz --delete"
-          SERVER_PORT: ${{ env.SERVER_PORT }}
-          FOLDER: ./
-          SERVER_IP: ${{ env.SERVER_IP }}
-          USERNAME: ${{ env.SERVER_USER }}
-          SERVER_DESTINATION: ${{ env.SERVER_DESTINATION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_ALPHA_DEV }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_ALPHA_DEV }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: package and update lambda
+        run: |
+          aws s3 cp swagger.json s3://$BUCKET_KEYS/alpha/latest/swagger/ --recursive
