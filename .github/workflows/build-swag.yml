@@ -76,4 +76,4 @@ jobs:
           ls -la
           echo $PWD
       - name: upload to s3
-        run: aws s3 sync swagger.json s3://$BUCKET_KEYS/alpha/latest/swagger
+        run: aws s3 sync $PWD/swagger.json s3://$BUCKET_KEYS/alpha/latest/swagger
