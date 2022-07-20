@@ -50,9 +50,10 @@ jobs:
       run: swag init
     - name: COPY JSON File
       run: |
-        cp docs/swagger.json swagger.json
+        cp docs/swagger.json .
         ls -la
-        aws s3 cp swagger.json s3://$BUCKET_KEYS/alpha/latest/swagger/ --recursive
+        echo $pwd
+        aws s3 cp swagger.json s3://$BUCKET_KEYS/alpha/latest/swagger --recursive
 
     # - name: Upload result
     #   uses: actions/upload-artifact@v3
