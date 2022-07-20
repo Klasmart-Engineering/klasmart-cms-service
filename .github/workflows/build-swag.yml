@@ -75,4 +75,4 @@ jobs:
         run: |
           ls -la
       - name: upload to s3
-        run: aws s3 cp *.json s3://$BUCKET_KEYS/alpha/latest/swagger
+        run: aws s3 cp *.json s3://$BUCKET_KEYS/alpha/latest/swagger/
