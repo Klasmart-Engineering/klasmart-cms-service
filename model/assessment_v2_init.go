@@ -1183,6 +1183,7 @@ func (at *AssessmentInit) MatchTeacherIDs() []string {
 func (at *AssessmentInit) MatchOutcomes() map[string]*v2.AssessmentOutcomeReply {
 	contents := at.contentsFromSchedule
 	outcomeMap := at.outcomeMapFromContent
+	outcomeFromSchedule := at.outcomesFromSchedule
 
 	result := make(map[string]*v2.AssessmentOutcomeReply, len(outcomeMap))
 
@@ -1218,6 +1219,22 @@ func (at *AssessmentInit) MatchOutcomes() map[string]*v2.AssessmentOutcomeReply 
 		if outcomeItem.AssignedToMaterial {
 			outcomeItem.AssignedTo = append(outcomeItem.AssignedTo, v2.AssessmentOutcomeAssignTypeLessonMaterial)
 		}
+	}
+
+	for _, item := range outcomeFromSchedule {
+		if _, ok := result[item.ID]; ok {
+			continue
+		}
+		resultItem := &v2.AssessmentOutcomeReply{
+			OutcomeID:          item.ID,
+			OutcomeName:        item.Name,
+			AssignedTo:         nil,
+			Assumed:            item.Assumed,
+			AssignedToLessPlan: false,
+			AssignedToMaterial: false,
+			ScoreThreshold:     item.ScoreThreshold,
+		}
+		result[item.ID] = resultItem
 	}
 
 	return result
