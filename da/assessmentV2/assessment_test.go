@@ -3,6 +3,7 @@ package assessmentV2
 import (
 	"context"
 	"database/sql"
+	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
 	"testing"
 
 	"github.com/KL-Engineering/dbo"
@@ -101,4 +102,39 @@ func TestGetAssessmentUserResultDBView(t *testing.T) {
 
 	t.Log(total)
 	t.Log(result)
+}
+
+func TestQueryAssessment(t *testing.T) {
+	ctx := context.Background()
+	testUtils.InitConfig(ctx)
+	da.InitMySQL(ctx)
+	var data []*v2.Assessment
+	err := GetAssessmentDA().Query(ctx, &AssessmentCondition{
+		Status: entity.NullStrings{
+			Strings: []string{
+				v2.AssessmentStatusPending.String(),
+				v2.AssessmentStatusNotStarted.String(),
+				v2.AssessmentStatusStarted.String(),
+				v2.AssessmentStatusInDraft.String(),
+			},
+			Valid: true,
+		},
+		ClassIDs: entity.NullStrings{
+			Strings: []string{"fbadc2ed-4bbb-4c19-9b8f-ddf590513f531"},
+			Valid:   true,
+		},
+		DueAtLe: sql.NullInt64{
+			Int64: 1658459598,
+			Valid: true,
+		},
+		Pager: dbo.Pager{
+			Page:     1,
+			PageSize: 10,
+		},
+	}, &data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(data)
 }

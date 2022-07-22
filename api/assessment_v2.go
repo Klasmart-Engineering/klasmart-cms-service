@@ -26,6 +26,8 @@ import (
 // @Param query_key query string false "query key search"
 // @Param query_type query string false "query type" enums(TeacherID)
 // @Param assessment_type query string false "assessment type,multiple states are separated by commas,optional value is :OnlineClass,OfflineClass,OnlineStudy,ReviewStudy,OfflineStudy"
+// @Param due_at_le query integer false "get less than due_at data"
+// @Param class_id query string false "query by class id"
 // @Param page query int false "page number" default(1)
 // @Param page_size query integer false "page size" format(int) default(10)
 // @Param order_by query string false "query order by" enums(class_end_at,-class_end_at,complete_at,-complete_at,create_at,-create_at) default(-create_at)
