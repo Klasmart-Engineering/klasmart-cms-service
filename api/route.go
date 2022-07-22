@@ -164,6 +164,8 @@ func (s Server) registeRoute() {
 		reports.POST("/reports/student_progress/assignment_completion", s.mustLogin, s.getAssignmentsCompletion)
 		reports.GET("/reports/student_progress/app/insight_message", s.mustLogin, s.getAppInsightMessage)
 		reports.POST("/reports/learner_usage/overview", s.mustLogin, s.getLearnerUsageOverview)
+
+		reports.GET("/reports/class_widget", s.mustLogin, s.getClassWidget)
 	}
 
 	outcomes := s.engine.Group("/v1")

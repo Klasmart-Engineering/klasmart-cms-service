@@ -345,3 +345,37 @@ func (s *Server) listTeachingLoadReport(c *gin.Context) {
 		s.defaultErrorHandler(c, err)
 	}
 }
+
+// @Summary  getClassWidget
+// @Tags reports
+// @ID getClassWidget
+// @Accept json
+// @Produce json
+// @Param class_id query string true "class_id"
+// @Param end_time query int true "end_time" default(0)
+// @Success 200 {object} entity.AppInsightMessageResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /reports/class_widget [get]
+func (s *Server) getClassWidget(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var request entity.ReportClassWidgetRequest
+	err := c.ShouldBindQuery(&request)
+	if err != nil {
+		log.Warn(ctx, "c.ShouldBindQuery error",
+			log.Err(err),
+			log.Any("request", request))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	result, err := model.GetReportModel().GetClassWidget(ctx, op, &request)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		s.defaultErrorHandler(c, err)
+	}
+}

@@ -2,9 +2,13 @@ package model
 
 import (
 	"context"
-	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
+	"database/sql"
 	"sync"
 	"time"
+
+	"github.com/KL-Engineering/kidsloop-cms-service/da/assessmentV2"
+	v2 "github.com/KL-Engineering/kidsloop-cms-service/entity/v2"
+	"github.com/KL-Engineering/kidsloop-cms-service/utils/errgroup"
 
 	"github.com/KL-Engineering/common-log/log"
 	"github.com/KL-Engineering/dbo"
@@ -43,6 +47,7 @@ type IReportModel interface {
 	GetLearnerUsageOverview(ctx context.Context, op *entity.Operator, permissions map[external.PermissionName]bool, request *entity.LearnerUsageRequest) (response *entity.LearnerUsageResponse, err error)
 	GetLearnerReportOverview(ctx context.Context, op *entity.Operator, cond *entity.LearnerReportOverviewCondition) (res entity.LearnerReportOverview, err error)
 	GetAppInsightMessage(ctx context.Context, op *entity.Operator, req *entity.AppInsightMessageRequest) (res *entity.AppInsightMessageResponse, err error)
+	GetClassWidget(ctx context.Context, op *entity.Operator, req *entity.ReportClassWidgetRequest) (res *entity.ReportClassWidgetResponse, err error)
 }
 
 var (
@@ -1600,4 +1605,122 @@ func (m *reportModel) getStudentInClass(ctx context.Context, operator *entity.Op
 
 func (m *reportModel) GetLessonPlanFilter(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string) ([]*entity.ScheduleShortInfo, error) {
 	return da.GetReportDA().GetLessonPlanFilter(ctx, operator, classID)
+}
+
+func (m *reportModel) GetClassWidget(ctx context.Context, op *entity.Operator, req *entity.ReportClassWidgetRequest) (res *entity.ReportClassWidgetResponse, err error) {
+	g := new(errgroup.Group)
+	var lessonCount int
+	var studyCount int
+	var assessmentCount int
+
+	g.Go(func() error {
+		scheduleDaCondition := &da.ScheduleCondition{
+			OrgID: sql.NullString{
+				String: op.OrgID,
+				Valid:  true,
+			},
+			RosterClassID: sql.NullString{
+				String: req.ClassID,
+				Valid:  true,
+			},
+			ClassTypes: entity.NullStrings{
+				Strings: []string{string(entity.ScheduleClassTypeOnlineClass), string(entity.ScheduleClassTypeOfflineClass)},
+				Valid:   true,
+			},
+			StartAtGe: sql.NullInt64{
+				Int64: req.ScheduleStartAtGte,
+				Valid: true,
+			},
+			StartAtLt: sql.NullInt64{
+				Int64: req.ScheduleStartAtLt,
+				Valid: true,
+			},
+		}
+		lessonCount, err = da.GetScheduleDA().Count(ctx, scheduleDaCondition, &entity.Schedule{})
+		if err != nil {
+			log.Error(ctx, "da.GetScheduleDA().Count error",
+				log.Err(err),
+				log.Any("condition", scheduleDaCondition))
+			return err
+		}
+
+		return nil
+	})
+
+	g.Go(func() error {
+		scheduleDaCondition := &da.ScheduleCondition{
+			OrgID: sql.NullString{
+				String: op.OrgID,
+				Valid:  true,
+			},
+			RosterClassID: sql.NullString{
+				String: req.ClassID,
+				Valid:  true,
+			},
+			ClassTypes: entity.NullStrings{
+				Strings: []string{string(entity.ScheduleClassTypeHomework)},
+				Valid:   true,
+			},
+			DueAtGe: sql.NullInt64{
+				Int64: req.ScheduleDueAtGte,
+				Valid: true,
+			},
+			DueAtLt: sql.NullInt64{
+				Int64: req.ScheduleDueAtLt,
+				Valid: true,
+			},
+		}
+		studyCount, err = da.GetScheduleDA().Count(ctx, scheduleDaCondition, &entity.Schedule{})
+		if err != nil {
+			log.Error(ctx, "da.GetScheduleDA().Count error",
+				log.Err(err),
+				log.Any("condition", scheduleDaCondition))
+			return err
+		}
+
+		return nil
+	})
+
+	g.Go(func() error {
+		assessmentDaCondition := &assessmentV2.AssessmentCondition{
+			OrgID: sql.NullString{
+				String: op.OrgID,
+				Valid:  true,
+			},
+			// TODO
+			// ClassID: sql.NullString{
+			// 	String: req.ClassID,
+			// 	Valid:  true,
+			// },
+			// DueAtGe: sql.NullInt64{
+			// 	Int64: req.AssessmentDueAtGte,
+			// 	Valid: true,
+			// },
+			// DueAtLt: sql.NullInt64{
+			// 	Int64: req.AssessmentDueAtLt,
+			// 	Valid: true,
+			// },
+		}
+		assessmentCount, err = assessmentV2.GetAssessmentDA().Count(ctx, assessmentDaCondition, &v2.Assessment{})
+		if err != nil {
+			log.Error(ctx, "assessmentV2.GetAssessmentDA().Count error",
+				log.Err(err),
+				log.Any("condition", assessmentDaCondition))
+			return err
+		}
+
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		log.Error(ctx, "GetClassWidget error",
+			log.Err(err))
+		return nil, err
+	}
+
+	return &entity.ReportClassWidgetResponse{
+		LessonCount:     lessonCount,
+		StudyCount:      studyCount,
+		AssessmentCount: assessmentCount,
+	}, nil
 }
