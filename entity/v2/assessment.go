@@ -15,7 +15,7 @@ type AssessmentQueryReq struct {
 	OrderBy        string              `form:"order_by"`
 	Status         string              `form:"status"`
 	DueAtLe        int64               `form:"due_at_le"`
-	ClassID        int64               `form:"class_id"`
+	ClassID        string              `form:"class_id"`
 	PageIndex      int                 `form:"page"`
 	PageSize       int                 `form:"page_size"`
 }
