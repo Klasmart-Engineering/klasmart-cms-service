@@ -345,3 +345,41 @@ func (s *Server) listTeachingLoadReport(c *gin.Context) {
 		s.defaultErrorHandler(c, err)
 	}
 }
+
+// @Summary  getClassWidget
+// @Tags reports
+// @ID getClassWidget
+// @Accept json
+// @Produce json
+// @Param class_id query string true "class_id"
+// @Param schedule_start_at_gte query int true "schedule_start_at_gte"
+// @Param schedule_start_at_lt query int true "schedule_start_at_lt"
+// @Param schedule_due_at_gte query int true "schedule_due_at_gte"
+// @Param schedule_due_at_lt query int true "schedule_due_at_lt"
+// @Param assessment_due_at_le query int true "assessment_due_at_le"
+// @Success 200 {object} entity.ReportClassWidgetResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /reports/class_widget [get]
+func (s *Server) getClassWidget(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var request entity.ReportClassWidgetRequest
+	err := c.ShouldBindQuery(&request)
+	if err != nil {
+		log.Warn(ctx, "c.ShouldBindQuery error",
+			log.Err(err),
+			log.Any("request", request))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	result, err := model.GetReportModel().GetClassWidget(ctx, op, &request)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		s.defaultErrorHandler(c, err)
+	}
+}

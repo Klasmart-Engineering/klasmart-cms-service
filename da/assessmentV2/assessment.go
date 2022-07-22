@@ -254,6 +254,8 @@ type AssessmentCondition struct {
 	AssessmentType  sql.NullString
 	AssessmentTypes entity.NullStrings
 	TeacherIDs      entity.NullStrings
+	ClassIDs        entity.NullStrings
+	DueAtLe         sql.NullInt64
 
 	UpdateAtGe   sql.NullInt64
 	UpdateAtLe   sql.NullInt64
@@ -343,6 +345,21 @@ user_id in (?) and
 	if c.UpdateAtLe.Valid {
 		wheres = append(wheres, "update_at <= ?")
 		params = append(params, c.UpdateAtLe.Int64)
+	}
+
+	if c.ClassIDs.Valid {
+		sql := fmt.Sprintf("exists(select 1 from %s where relation_id in (?) and relation_type in (?) and %s.schedule_id = %s.schedule_id)",
+			constant.TableNameScheduleRelation, constant.TableNameAssessmentV2, constant.TableNameScheduleRelation)
+		wheres = append(wheres, sql)
+		params = append(params, c.ClassIDs.Strings, []entity.ScheduleRelationType{
+			entity.ScheduleRelationTypeClassRosterClass,
+		})
+	}
+	if c.DueAtLe.Valid {
+		sql := fmt.Sprintf("exists(select 1 from %s where due_at <= ? and due_at > 0 and %s.id = %s.schedule_id)",
+			constant.TableNameSchedule, constant.TableNameSchedule, constant.TableNameAssessmentV2)
+		wheres = append(wheres, sql)
+		params = append(params, c.DueAtLe.Int64)
 	}
 
 	if c.DeleteAt.Valid {

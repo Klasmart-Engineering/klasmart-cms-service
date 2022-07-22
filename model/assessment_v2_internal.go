@@ -37,6 +37,11 @@ type IAssessmentInternalModelV2 interface {
 	AnyoneAttemptedByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string]*v2.AssessmentAnyoneAttemptedReply, error)
 	Query(ctx context.Context, op *entity.Operator, condition *assessmentV2.AssessmentCondition) ([]*v2.Assessment, error)
 	UpdateWhenReviewScheduleSuccess(ctx context.Context, tx *dbo.DBContext, scheduleID string) error
+	CountByCondition(ctx context.Context, condition *assessmentV2.AssessmentCondition) (int, error)
+}
+
+func (a *assessmentInternalModel) CountByCondition(ctx context.Context, condition *assessmentV2.AssessmentCondition) (int, error) {
+	return assessmentV2.GetAssessmentDA().Count(ctx, condition, &v2.Assessment{})
 }
 
 func (a *assessmentInternalModel) ScheduleEndClassCallback(ctx context.Context, op *entity.Operator, req *v2.ScheduleEndClassCallBackReq) error {

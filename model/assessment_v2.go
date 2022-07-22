@@ -80,6 +80,16 @@ func (a *assessmentModelV2) Page(ctx context.Context, op *entity.Operator, req *
 	condition.AssessmentTypes.Strings = strings.Split(req.AssessmentType.String(), ",")
 	condition.AssessmentTypes.Valid = req.AssessmentType != ""
 
+	condition.ClassIDs = entity.NullStrings{
+		Strings: []string{req.ClassID},
+		Valid:   req.ClassID != "",
+	}
+
+	condition.DueAtLe = sql.NullInt64{
+		Int64: req.DueAtLe,
+		Valid: req.DueAtLe > 0,
+	}
+
 	if req.Status != "" {
 		statusMap := make(map[string]struct{})
 		for _, item := range condition.Status.Strings {

@@ -470,3 +470,18 @@ const (
 	ListTeachingLoadReportOptionAll        ListTeachingLoadReportOption = "all"
 	ListTeachingLoadReportOptionNoAssigned ListTeachingLoadReportOption = "no_assigned"
 )
+
+type ReportClassWidgetRequest struct {
+	ClassID            string `json:"class_id" binding:"required"`
+	ScheduleStartAtGte int64  `json:"schedule_start_at_gte" binding:"required"`
+	ScheduleStartAtLt  int64  `json:"schedule_start_at_lt" binding:"required"`
+	ScheduleDueAtGte   int64  `json:"schedule_due_at_gte" binding:"required"`
+	ScheduleDueAtLt    int64  `json:"schedule_due_at_lt" binding:"required"`
+	AssessmentDueAtLe  int64  `json:"assessment_due_at_le" binding:"required"`
+}
+
+type ReportClassWidgetResponse struct {
+	LessonCount     int `json:"lesson_count"`
+	StudyCount      int `json:"study_count"`
+	AssessmentCount int `json:"assessment_count"`
+}
