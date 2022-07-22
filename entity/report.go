@@ -477,8 +477,7 @@ type ReportClassWidgetRequest struct {
 	ScheduleStartAtLt  int64  `json:"schedule_start_at_lt" binding:"required"`
 	ScheduleDueAtGte   int64  `json:"schedule_due_at_gte" binding:"required"`
 	ScheduleDueAtLt    int64  `json:"schedule_due_at_lt" binding:"required"`
-	AssessmentDueAtGte int64  `json:"assessment_due_at_gte" binding:"required"`
-	AssessmentDueAtLt  int64  `json:"assessment_due_at_lt" binding:"required"`
+	AssessmentDueAtLe  int64  `json:"assessment_due_at_le" binding:"required"`
 }
 
 type ReportClassWidgetResponse struct {

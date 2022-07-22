@@ -1687,19 +1687,23 @@ func (m *reportModel) GetClassWidget(ctx context.Context, op *entity.Operator, r
 				String: op.OrgID,
 				Valid:  true,
 			},
-			// TODO
-			// ClassID: sql.NullString{
-			// 	String: req.ClassID,
-			// 	Valid:  true,
-			// },
-			// DueAtGe: sql.NullInt64{
-			// 	Int64: req.AssessmentDueAtGte,
-			// 	Valid: true,
-			// },
-			// DueAtLt: sql.NullInt64{
-			// 	Int64: req.AssessmentDueAtLt,
-			// 	Valid: true,
-			// },
+			ClassIDs: entity.NullStrings{
+				Strings: []string{req.ClassID},
+				Valid:   true,
+			},
+			DueAtLe: sql.NullInt64{
+				Int64: req.AssessmentDueAtLe,
+				Valid: true,
+			},
+			Status: entity.NullStrings{
+				Strings: []string{
+					v2.AssessmentStatusPending.String(),
+					v2.AssessmentStatusNotStarted.String(),
+					v2.AssessmentStatusStarted.String(),
+					v2.AssessmentStatusInDraft.String(),
+				},
+				Valid: true,
+			},
 		}
 		assessmentCount, err = assessmentV2.GetAssessmentDA().Count(ctx, assessmentDaCondition, &v2.Assessment{})
 		if err != nil {

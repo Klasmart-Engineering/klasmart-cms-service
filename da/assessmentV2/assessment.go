@@ -356,7 +356,7 @@ user_id in (?) and
 		})
 	}
 	if c.DueAtLe.Valid {
-		sql := fmt.Sprintf("exists(select 1 from %s where due_at < ? and due_at > 0 and %s.id = %s.schedule_id)",
+		sql := fmt.Sprintf("exists(select 1 from %s where due_at <= ? and due_at > 0 and %s.id = %s.schedule_id)",
 			constant.TableNameSchedule, constant.TableNameSchedule, constant.TableNameAssessmentV2)
 		wheres = append(wheres, sql)
 		params = append(params, c.DueAtLe.Int64)
