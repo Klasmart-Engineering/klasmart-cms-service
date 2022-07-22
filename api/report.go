@@ -356,8 +356,7 @@ func (s *Server) listTeachingLoadReport(c *gin.Context) {
 // @Param schedule_start_at_lt query int true "schedule_start_at_lt"
 // @Param schedule_due_at_gte query int true "schedule_due_at_gte"
 // @Param schedule_due_at_lt query int true "schedule_due_at_lt"
-// @Param assessment_due_at_gte query int true "assessment_due_at_gte"
-// @Param assessment_due_at_lt query int true "assessment_due_at_lt"
+// @Param assessment_due_at_le query int true "assessment_due_at_le"
 // @Success 200 {object} entity.ReportClassWidgetResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
