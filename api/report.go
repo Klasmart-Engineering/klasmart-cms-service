@@ -352,8 +352,13 @@ func (s *Server) listTeachingLoadReport(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param class_id query string true "class_id"
-// @Param end_time query int true "end_time" default(0)
-// @Success 200 {object} entity.AppInsightMessageResponse
+// @Param schedule_start_at_gte query int true "schedule_start_at_gte"
+// @Param schedule_start_at_lt query int true "schedule_start_at_lt"
+// @Param schedule_due_at_gte query int true "schedule_due_at_gte"
+// @Param schedule_due_at_lt query int true "schedule_due_at_lt"
+// @Param assessment_due_at_gte query int true "assessment_due_at_gte"
+// @Param assessment_due_at_lt query int true "assessment_due_at_lt"
+// @Success 200 {object} entity.ReportClassWidgetResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
