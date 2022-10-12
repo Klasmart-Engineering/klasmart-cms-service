@@ -28,7 +28,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Build and Push Container
-        uses: KL-Engineering/kidsloop-action-center/.github/actions/gocache@v1.0.0
+        # uses: KL-Engineering/kidsloop-action-center/.github/actions/gocache@v1.0.0
+        uses: ./.github/actions/gocache
         with:
           GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN_SETH }}
 
@@ -53,7 +54,8 @@ jobs:
           echo "$STM_INTERNAL_PUBLIC_KEY" | base64 -d > deploy/stm_internal_public_key.pem
 
       - name: Build and Push Container
-        uses: KL-Engineering/kidsloop-action-center/.github/actions/docker-build-and-push@v1.0.0
+        # uses: KL-Engineering/kidsloop-action-center/.github/actions/docker-build-and-push@v1.0.0
+        uses: ./.github/actions/docker-build-and-push
         with:
           environment: ${{ needs.generate-version.outputs.tag }}
           region: global
