@@ -22,7 +22,7 @@ env:
   SERVER_PORT: ${{secrets.SERVER_PORT}}
   SERVER_DESTINATION: ${{secrets.SERVER_DESTINATION}}
 
-  GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+  GIT_TOKEN: ${{ secrets.PACKAGES_TOKEN_SETH }}
 
 jobs:
   build-to-ecr:
